@@ -1,22 +1,70 @@
 import {BattleAgent} from "../../agent";
 import {FormatType} from "../../formats";
-import {UnorderedParser} from "./UnorderedParser";
+import {BattleParser} from "../BattleParser";
 
 /**
- * Callback to reject an {@link UnorderedDeadline} pathway.
+ * Creates an unordered Parser.
  *
- * @param name UnorderedDeadline's name for logging/debugging.
+ * @template T Format type.
+ * @template TAgent Battle agent type.
+ * @template TResult Parser's result type.
+ * @param name Name for logging/debugging.
+ * @param innerParser Parser function to wrap.
+ * @param reject Callback if the parser never accepts an event.
+ * @see {@link Parser}
+ */
+export function parser<
+    T extends FormatType = FormatType,
+    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TResult = unknown,
+>(
+    name: string | (() => string),
+    innerParser: InnerParser<T, TAgent, [], TResult>,
+    reject?: RejectCallback,
+): Parser<T, TAgent, TResult> {
+    return new Parser(name, innerParser, reject);
+}
+
+/**
+ * Function type for tentatively parsing battle events.
+ *
+ * @template T Format type.
+ * @template TAgent Battle agent type.
+ * @template TArgs Additional parameter types.
+ * @template TResult Result type.
+ * @param ctx General args.
+ * @param accept Callback for when the parser commits to parsing, just before
+ * consuming the first event since calling the parser. If it isn't called when
+ * consuming events, it can be used to erase/glob events that should be ignored.
+ * @param args Additional args.
+ * @returns A custom result value to be handled by the caller.
+ */
+export type InnerParser<
+    T extends FormatType = FormatType,
+    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TArgs extends unknown[] = unknown[],
+    TResult = unknown,
+> = BattleParser<T, TAgent, [accept: AcceptCallback, ...args: TArgs], TResult>;
+
+/** Callback to accept an {@link InnerParser} pathway. */
+export type AcceptCallback = () => void;
+
+/**
+ * Callback to reject a {@link Parser} pathway.
+ *
+ * @param name Parser's name for logging/debugging.
  */
 export type RejectCallback = (name: string) => void;
 
 /**
- * BattleParser wrapper that can be put on an event-based deadline.
+ * BattleParser wrapper that can be parsed in any order along with other
+ * Parsers.
  *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult Result type.
  */
-export class UnorderedDeadline<
+export class Parser<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
     TResult = unknown,
@@ -27,49 +75,17 @@ export class UnorderedDeadline<
     }
 
     /**
-     * Creates an UnorderedDeadline.
+     * Creates an unordered Parser.
      *
      * @param name Name for logging/debugging.
      * @param parser Parser function to wrap.
      * @param _reject Callback if the parser never accepts an event.
      */
-    protected constructor(
+    public constructor(
         private readonly _name: string | (() => string),
-        public readonly parse: UnorderedParser<T, TAgent, [], TResult>,
+        public readonly parse: InnerParser<T, TAgent, [], TResult>,
         private readonly _reject?: RejectCallback,
     ) {}
-
-    /**
-     * Creates an UnorderedDeadline.
-     *
-     * @template T Format type.
-     * @template TAgent Battle agent type.
-     * @template TArgs BattleParser's additional parameter types.
-     * @template TResult BattleParser's result type.
-     * @param name Name for logging/debugging.
-     * @param parser Parser function to wrap.
-     * @param reject Callback if the parser never accepts an event. The callback
-     * will be supplied the `name` parameter that was given here.
-     * @param args Additional arguments to supply to the parser. This parameter
-     * is provided for convenience.
-     */
-    public static create<
-        T extends FormatType = FormatType,
-        TAgent extends BattleAgent<T> = BattleAgent<T>,
-        TArgs extends unknown[] = unknown[],
-        TResult = unknown,
-    >(
-        name: string | (() => string),
-        parser: UnorderedParser<T, TAgent, TArgs, TResult>,
-        reject?: RejectCallback,
-        ...args: TArgs
-    ): UnorderedDeadline<T, TAgent, TResult> {
-        return new UnorderedDeadline(
-            name,
-            async (ctx, accept) => await parser(ctx, accept, ...args),
-            reject,
-        );
-    }
 
     /**
      * Method to call when the parser never accepts an event by some deadline.
@@ -79,20 +95,20 @@ export class UnorderedDeadline<
     }
 
     /**
-     * Wraps this UnorderedDeadline to transform its parser result.
+     * Wraps this Parser to transform its parser result.
      *
      * @template TResult2 Transformed result type.
      * @param name Name of the transform operation for logging/debugging.
      * @param f Result transform function.
      * @param reject Callback if the parser never accepts an event.
-     * @returns An UnorderedDeadline that applies `f` to `this` parser's result.
+     * @returns A Parser that applies `f` to `this` parser's result.
      */
     public transform<TResult2 = unknown>(
         name: string | (() => string),
         f: (result: TResult) => TResult2,
         reject?: RejectCallback,
-    ): UnorderedDeadline<T, TAgent, TResult2> {
-        return new UnorderedDeadline(
+    ): Parser<T, TAgent, TResult2> {
+        return new Parser(
             () =>
                 `transform(${typeof name === "string" ? name : name()}),\n` +
                 this.toString(1, 0),

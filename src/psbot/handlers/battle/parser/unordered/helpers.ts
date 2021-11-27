@@ -2,11 +2,10 @@ import {BattleAgent} from "../../agent";
 import {FormatType} from "../../formats";
 import {BattleParserContext} from "../BattleParser";
 import {tryPeek} from "../helpers";
-import {UnorderedDeadline} from "./UnorderedDeadline";
-import {AcceptCallback, UnorderedParser} from "./UnorderedParser";
+import {Parser, AcceptCallback, InnerParser} from "./Parser";
 
 /**
- * Invokes a group of {@link UnorderedDeadline} parsers in any order.
+ * Invokes a group of unordered {@link Parser}s in any order.
  *
  * @template T Format type.
  * @template TAgent Battle agent type.
@@ -15,12 +14,13 @@ import {AcceptCallback, UnorderedParser} from "./UnorderedParser";
  * @param parsers BattleParsers to consider, wrapped to include a deadline
  * callback, in order of descending priority.
  * @param filter Optional parser that runs before each expected parser, usually
- * to consume events that should be ignored. If it accepts, all of the pending
- * parsers are immediately rejected and this function returns.
+ * to consume events that should be ignored. If it calls its
+ * {@link AcceptCallback `accept()`} callback, then all of the pending parsers
+ * are immediately rejected and this function returns.
  * @param accept Optional accept callback that gets called when the first parser
  * accepts.
- * @returns The results of the successful BattleParsers that were able to
- * consume an event, in the order that they were parsed.
+ * @returns An array containing the results of the Parsers that were able to
+ * successfully parse, in the order that they were parsed.
  */
 export async function all<
     T extends FormatType = FormatType,
@@ -28,8 +28,8 @@ export async function all<
     TResult = unknown,
 >(
     ctx: BattleParserContext<T, TAgent>,
-    parsers: UnorderedDeadline<T, TAgent, TResult>[],
-    filter?: UnorderedParser<T, TAgent, []>,
+    parsers: Parser<T, TAgent, TResult>[],
+    filter?: InnerParser<T, TAgent, []>,
     accept?: AcceptCallback,
 ): Promise<TResult[]> {
     const results: TResult[] = [];
@@ -104,16 +104,16 @@ export async function all<
 }
 
 /**
- * Expects one of the {@link UnorderedDeadline} parsers to parse, rejecting all
- * the others that didn't parse.
+ * Expects one of the unordered {@link Parser}s to parse, rejecting all the
+ * others that didn't parse.
  *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult BattleParser's result type.
  * @param ctx Parser context.
- * @param parsers BattleParsers to consider, wrapped to include a deadline
- * callback, in order of descending priority.
- * @returns The result of the parser that accepted an event, if any.
+ * @param parsers Parsers to consider, in order of descending priority.
+ * @returns An array containing the result of the parser that accepted an event,
+ * otherwise an empty array if they all failed to parse.
  */
 export async function oneOf<
     T extends FormatType = FormatType,
@@ -121,10 +121,10 @@ export async function oneOf<
     TResult = unknown,
 >(
     ctx: BattleParserContext<T, TAgent>,
-    parsers: UnorderedDeadline<T, TAgent, TResult>[],
+    parsers: Parser<T, TAgent, TResult>[],
 ): Promise<[] | [TResult]> {
     let result: [] | [TResult] = [];
-    let done: UnorderedDeadline<T, TAgent, TResult> | undefined;
+    let done: Parser<T, TAgent, TResult> | undefined;
     while (!done) {
         // No events to parse.
         const preParse = await tryPeek(ctx);
@@ -150,17 +150,16 @@ export async function oneOf<
 }
 
 /**
- * Expects an {@link UnorderedDeadline} parser to parse, or rejects it if it
- * couldn't.
+ * Expects an unordered {@link Parser} to parse, or rejects it if it couldn't.
  *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult BattleParser's result type.
  * @param ctx Parser context.
- * @param parser BattleParser to consider, wrapped to include a deadline
- * callback.
+ * @param parser Parser to consider.
  * @param accept Optional callback to accept this pathway.
- * @returns The result of the parser if it accepted an event.
+ * @returns An array containing the result of the parser if it accepted an
+ * event, or an empty array if it failed to parse.
  */
 export async function parse<
     T extends FormatType = FormatType,
@@ -168,7 +167,7 @@ export async function parse<
     TResult = unknown,
 >(
     ctx: BattleParserContext<T, TAgent>,
-    parser: UnorderedDeadline<T, TAgent, TResult>,
+    parser: Parser<T, TAgent, TResult>,
     accept?: AcceptCallback,
 ): Promise<[] | [TResult]> {
     let accepted = false;

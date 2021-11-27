@@ -1,5 +1,6 @@
 /** @file Handles parsing a player's main action. */
 import {SideID} from "@pkmn/types";
+import {BattleAgent} from "../../../../agent";
 import {
     BattleParserContext,
     eventLoop,
@@ -53,13 +54,14 @@ export async function playerActions(ctx: BattleParserContext<"gen4">) {
     }
 }
 
-const playerSwitchAction = (side: SideID, actioned: PlayerActionsState) =>
-    unordered.UnorderedDeadline.create(
+const playerSwitchAction = (
+    side: SideID,
+    actioned: PlayerActionsState,
+): unordered.Parser<"gen4", BattleAgent<"gen4">, SwitchActionResult> =>
+    unordered.parser(
         `${side} action switch`,
-        playerSwitchActionImpl,
-        undefined /*reject*/,
-        side,
-        actioned,
+        async (ctx, accept) =>
+            await playerSwitchActionImpl(ctx, accept, side, actioned),
     );
 
 async function playerSwitchActionImpl(
@@ -75,13 +77,14 @@ async function playerSwitchActionImpl(
     return await switchAction(ctx, side, accept);
 }
 
-const playerMoveAction = (side: SideID, actioned: PlayerActionsState) =>
-    unordered.UnorderedDeadline.create(
+const playerMoveAction = (
+    side: SideID,
+    actioned: PlayerActionsState,
+): unordered.Parser<"gen4", BattleAgent<"gen4">, MoveActionResult> =>
+    unordered.parser(
         `${side} action move`,
-        playerMoveActionImpl,
-        undefined /*reject*/,
-        side,
-        actioned,
+        async (ctx, accept) =>
+            await playerMoveActionImpl(ctx, accept, side, actioned),
     );
 
 async function playerMoveActionImpl(
@@ -102,7 +105,7 @@ async function filter(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
 ) {
-    await eventLoop(ctx, async function filterLoop(_ctx) {
+    await eventLoop(ctx, async function actionFilterLoop(_ctx) {
         const event = await peek(_ctx);
         switch (event.args[0]) {
             // Terminating events.

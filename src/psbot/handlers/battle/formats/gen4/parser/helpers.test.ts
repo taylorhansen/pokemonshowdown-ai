@@ -72,7 +72,7 @@ export function setupBattleParser<
 
 /**
  * Creates a {@link ParserContext} initialization function for an
- * {@link UnorderedDeadline}.
+ * {@link unordered.Parser}.
  *
  * @template T Format type.
  * @template TArgs Parser ctor args, minus the {@link BattleParserContext} which
@@ -80,11 +80,11 @@ export function setupBattleParser<
  * @template TResult Parser result. Wrapped into an array by
  * {@link unordered.parse}.
  * @param startArgs Arguments for starting the BattleParser.
- * @param parserCtor Function to create the UnorderedDeadline.
+ * @param parserCtor Function to create the unordered Parser.
  * @returns A function that initializes a {@link BattleParser} to evaluate the
- * UnorderedDeadline, returning the parser's ParserContext.
+ * unordered Parser, returning the parser's ParserContext.
  */
-export function setupUnorderedDeadline<
+export function setupUnorderedParser<
     T extends FormatType = FormatType,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
@@ -93,11 +93,11 @@ export function setupUnorderedDeadline<
     parserCtor: (
         ctx: BattleParserContext<T>,
         ...args: TArgs
-    ) => unordered.UnorderedDeadline<T, BattleAgent<T>, TResult>,
+    ) => unordered.Parser<T, BattleAgent<T>, TResult>,
 ): (...args: TArgs) => ParserContext<[] | [TResult]> {
     return setupBattleParser(
         startArgs,
-        // Create a BattleParser that evaluates the UnorderedDeadline.
+        // Create a BattleParser that evaluates the unordereed Parser.
         async (ctx, ...args) =>
             await unordered.parse(ctx, parserCtor(ctx, ...args)),
     );

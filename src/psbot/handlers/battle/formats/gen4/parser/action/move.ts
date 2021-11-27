@@ -3,6 +3,7 @@ import {Protocol} from "@pkmn/protocol";
 import {SideID} from "@pkmn/types";
 import {toIdName} from "../../../../../../helpers";
 import {Event} from "../../../../../../parser";
+import {BattleAgent} from "../../../../agent";
 import {
     BattleParserContext,
     consume,
@@ -179,12 +180,10 @@ async function preMove(
 }
 
 const cantEvent = (side: SideID, reasons: readonly string[]) =>
-    unordered.UnorderedDeadline.create(
+    unordered.parser(
         `${side} pre-move inactive [${reasons.join(", ")}]`,
-        cantEventImpl,
-        undefined /*reject*/,
-        side,
-        reasons,
+        async (ctx: BattleParserContext<"gen4">, accept) =>
+            await cantEventImpl(ctx, accept, side, reasons),
     );
 
 async function cantEventImpl(
@@ -205,12 +204,12 @@ async function cantEventImpl(
     return reason === "slp" ? "slp" : true;
 }
 
-const attract = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const attract = (
+    side: SideID,
+): unordered.Parser<"gen4", BattleAgent<"gen4">, true | undefined> =>
+    unordered.parser(
         `${side} pre-move attract`,
-        attractImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await attractImpl(ctx, accept, side),
     );
 
 async function attractImpl(
@@ -240,12 +239,12 @@ async function attractImpl(
     await base["|cant|"](ctx);
 }
 
-const confusion = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const confusion = (
+    side: SideID,
+): unordered.Parser<"gen4", BattleAgent<"gen4">, true | undefined> =>
+    unordered.parser(
         `${side} pre-move confusion`,
-        confusionImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await confusionImpl(ctx, accept, side),
     );
 
 async function confusionImpl(
@@ -1358,7 +1357,7 @@ async function postHit(
     ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs,
 ): Promise<void> {
-    const parsers: unordered.UnorderedDeadline<"gen4">[] = [];
+    const parsers: unordered.Parser<"gen4">[] = [];
     // TODO(doubles): Actually track targets.
     const otherSide = args.side === "p1" ? "p2" : "p1";
     const {effects} = args.move.data;
@@ -1449,7 +1448,7 @@ async function postHit(
         );
     }
 
-    // FIXME: The EventInferences used in these functions lock in their
+    // FIXME: The inference Parser used in these functions lock in their
     // activation conditions at the time of the onUpdate() call, but they aren't
     // updated if a move effect changes those conditions (e.g. via a status
     // move).
@@ -1472,8 +1471,8 @@ async function postHit(
 
 //#region Count-status effect.
 
-const perish = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const perish = (side: SideID): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} move countStatus all perish`,
         perishImpl,
         effectDidntHappen,
@@ -1519,12 +1518,11 @@ async function perishImpl(
     await base["|-fieldactivate|"](ctx);
 }
 
-const stockpile = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const stockpile = (side: SideID): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} move countStatus ${side} stockpile`,
-        stockpileImpl,
+        async (ctx, accept) => await stockpileImpl(ctx, accept, side),
         effectDidntHappen,
-        side,
     );
 
 async function stockpileImpl(
@@ -1546,13 +1544,16 @@ async function stockpileImpl(
 
 //#region Damage effect.
 
-const percentDamage = (side: SideID, targetSide: SideID, percent: number) =>
-    unordered.UnorderedDeadline.create(
+const percentDamage = (
+    side: SideID,
+    targetSide: SideID,
+    percent: number,
+): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} move damage ${targetSide} percent ${percent}%`,
-        percentDamageImpl,
+        async (ctx, accept) =>
+            await percentDamageImpl(ctx, accept, side, percent),
         effectDidntHappen,
-        side,
-        percent,
     );
 
 async function percentDamageImpl(
@@ -1569,14 +1570,16 @@ async function percentDamageImpl(
     if (res === "silent") accept();
 }
 
-const splitDamage = (side1: SideID, side2: SideID, moveName: string) =>
-    unordered.UnorderedDeadline.create(
+const splitDamage = (
+    side1: SideID,
+    side2: SideID,
+    moveName: string,
+): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side1} move damage split ${side2}`,
-        splitDamageImpl,
+        async (ctx, accept) =>
+            await splitDamageImpl(ctx, accept, side1, side2, moveName),
         effectDidntHappen,
-        side1,
-        side2,
-        moveName,
     );
 
 async function splitDamageImpl(
@@ -1620,8 +1623,8 @@ async function splitDamageImpl(
 function boost(
     ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs,
-): unordered.UnorderedDeadline<"gen4">[] {
-    const result: unordered.UnorderedDeadline<"gen4">[] = [];
+): unordered.Parser<"gen4">[] {
+    const result: unordered.Parser<"gen4">[] = [];
     const effect = args.move.data.effects?.boost;
     if (!effect) return result;
 
@@ -1644,7 +1647,7 @@ function boost(
 
         const tableSnapshot = new Map(table);
         result.push(
-            unordered.UnorderedDeadline.create<"gen4">(
+            unordered.parser(
                 () =>
                     `${args.side} move boost ${targetSide} ` +
                     `${effect.set ? "set" : "add"} ` +
@@ -1696,8 +1699,8 @@ function boost(
 function status(
     ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs,
-): unordered.UnorderedDeadline<"gen4">[] {
-    const result: unordered.UnorderedDeadline<"gen4">[] = [];
+): unordered.Parser<"gen4">[] {
+    const result: unordered.Parser<"gen4">[] = [];
     const effect = args.move.data.effects?.status;
     if (!effect) return result;
     for (const tgt of ["self", "hit"] as dex.MoveEffectTarget[]) {
@@ -1731,16 +1734,15 @@ function status(
         }
 
         result.push(
-            // TODO: Rework to use EventInference interface.
-            unordered.UnorderedDeadline.create(
+            // TODO: Rework to use inference Parser interface.
+            unordered.parser(
                 `${args.side} move status ${targetSide} ` +
                     `[${statusTypes.join(", ")}]`,
-                statusImpl,
+                async (_ctx, accept) =>
+                    await statusImpl(_ctx, accept, targetSide, statusTypes),
                 effect.chance && effect.chance !== 100
                     ? undefined
                     : () => statusReject(ctx, args, tgt, statusTypes),
-                targetSide,
-                statusTypes,
             ),
         );
     }
@@ -1850,7 +1852,7 @@ function drain(
     ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs,
     targetRef: SideID,
-): unordered.UnorderedDeadline<"gen4">[] {
+): unordered.Parser<"gen4">[] {
     // Drain effect could either be handled normally or by ability on-moveDrain.
     let handled = false;
     return [
@@ -1866,7 +1868,7 @@ function drain(
                 }
                 handled = true;
             }),
-        unordered.UnorderedDeadline.create<"gen4">(
+        unordered.parser(
             `${args.side} move drain`,
             async function drainImpl(_ctx, accept) {
                 if (handled) {
@@ -1927,7 +1929,7 @@ async function otherEffects(
     ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs,
 ): Promise<void> {
-    const parsers: unordered.UnorderedDeadline<"gen4">[] = [];
+    const parsers: unordered.Parser<"gen4">[] = [];
     // TODO(doubles): Actually track targets.
     const otherSide = args.side === "p1" ? "p2" : "p1";
     const {effects} = args.move.data;
@@ -1975,16 +1977,13 @@ const swapBoosts = (
     side1: SideID,
     side2: SideID,
     boosts: Partial<dex.BoostTable<true>>,
-) =>
-    unordered.UnorderedDeadline.create(
+): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side1} move swap-boosts ${side2} ` +
             `[${Object.keys(boosts).join(", ")}]`,
-        swapBoostsImpl,
+        async (ctx, accept) =>
+            await swapBoostsImpl(ctx, accept, move, side1, side2, boosts),
         effectDidntHappen,
-        move,
-        side1,
-        side2,
-        boosts,
     );
 
 async function swapBoostsImpl(
@@ -2033,8 +2032,8 @@ async function swapBoostsImpl(
 function teamEffect(
     args: ExecuteArgs,
     otherSide: SideID,
-): unordered.UnorderedDeadline<"gen4">[] {
-    const result: unordered.UnorderedDeadline<"gen4">[] = [];
+): unordered.Parser<"gen4">[] {
+    const result: unordered.Parser<"gen4">[] = [];
     const effects = args.move.data.effects?.team;
     if (!effects) return result;
     for (const tgt of Object.keys(effects) as dex.MoveEffectTarget[]) {
@@ -2042,12 +2041,11 @@ function teamEffect(
         if (!effect) continue;
         const side = tgt === "self" ? args.side : otherSide;
         result.push(
-            unordered.UnorderedDeadline.create(
+            unordered.parser(
                 `${args.side} move team ${side} ${effect}`,
-                teamEffectImpl,
+                async (ctx, accept) =>
+                    await teamEffectImpl(ctx, accept, side, effect),
                 effectDidntHappen,
-                side,
-                effect,
             ),
         );
     }
@@ -2152,14 +2150,12 @@ const fieldEffect = (
     source: Pokemon,
     effect: dex.FieldEffectType,
     toggle?: boolean,
-) =>
-    unordered.UnorderedDeadline.create(
+): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} move field ${effect}${toggle ? " toggle" : ""}`,
-        fieldEffectImpl,
+        async (ctx, accept) =>
+            await fieldEffectImpl(ctx, accept, source, effect, toggle),
         effectDidntHappen,
-        source,
-        effect,
-        toggle,
     );
 
 async function fieldEffectImpl(
@@ -2217,13 +2213,14 @@ async function fieldEffectImpl(
 
 //#region Change-type effects.
 
-const changeType = (side: SideID, effect: "conversion") =>
-    unordered.UnorderedDeadline.create(
+const changeType = (
+    side: SideID,
+    effect: "conversion",
+): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} move change-type ${effect}`,
-        changeTypeImpl,
+        async (ctx, accept) => await changeTypeImpl(ctx, accept, side, effect),
         effectDidntHappen,
-        side,
-        effect,
     );
 
 async function changeTypeImpl(
@@ -2271,12 +2268,11 @@ async function changeTypeImpl(
 
 //#region Disable-move effect.
 
-const disableMove = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const disableMove = (side: SideID): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} move disable`,
-        disableMoveImpl,
+        async (ctx, accept) => await disableMoveImpl(ctx, accept, side),
         effectDidntHappen,
-        side,
     );
 
 async function disableMoveImpl(

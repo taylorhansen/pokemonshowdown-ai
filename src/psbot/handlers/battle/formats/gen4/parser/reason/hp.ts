@@ -6,10 +6,10 @@ import * as chance from "./chance";
 /**
  * Checks if a Pokemon has been reduced to 1 hp.
  *
- * @returns A Set of assertions if it's possible to be at 1hp, or null if
- * it's not possible.
+ * @returns A Set of Reasons if it's possible to be at 1hp, or `null` if it's
+ * not possible.
  */
-export function isAt1(mon: Pokemon): Set<inference.SubReason> | null {
+export function isAt1(mon: Pokemon): Set<inference.logic.Reason> | null {
     const hpDisplay = mon.hp.current;
 
     // 0 hp.
@@ -23,10 +23,10 @@ export function isAt1(mon: Pokemon): Set<inference.SubReason> | null {
     // Look through each possible maxhp stat number to see if it's definite or
     // possible that we're at 1 hp.
     // TODO: What about pixel-based displays rather than percent?
-    // Note: Pixel-accurate equation is pixels = floor(hp/maxhp * 48), with
-    // an additional check to force pixels=1 if hp>1 but the pixels round down
-    // to 0.
-    let result: Set<inference.SubReason> | null = null;
+    // Note: Pixel-accurate equation is pixels = floor(hp/maxhp * 48), with an
+    // additional check to force pixels=1 if hp>1 but the pixels round down to
+    // 0.
+    let result: Set<inference.logic.Reason> | null = null;
     let guaranteed = true;
     const {max: maxhpHi, min: maxhpLo} = mon.traits.stats.hp;
     for (let i = maxhpLo; i <= maxhpHi; ++i) {

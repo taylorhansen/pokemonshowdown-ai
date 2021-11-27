@@ -17,15 +17,16 @@ export async function updateItems(ctx: BattleParserContext<"gen4">) {
     );
 }
 
-//#region on-x EventInference functions.
+//#region on-x Inference Parser functions.
 
 /**
- * Creates an EventInference parser that expects an on-`preMove` item to
+ * Creates an {@link inference.Parser} that expects an on-`preMove` item to
  * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
- * @returns An EventInference that returns `"moveFirst"` if the holder is moving
- * first in its priority bracket due to the item, or otherwise `undefined`.
+ * @returns An inference Parser that returns `"moveFirst"` if the holder is
+ * moving first in its priority bracket due to the item, or otherwise
+ * `undefined`.
  */
 export const onPreMove = onX(
     "onPreMove",
@@ -44,12 +45,13 @@ export const onPreMove = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`moveCharge` item to
+ * Creates an {@link inference.Parser} that expects an on-`moveCharge` item to
  * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
- * @returns An EventInference that returns `"shorten"` if the holder's two-turn
- * move is being shortend to one due to the item, or otherwise `undefined`.
+ * @returns An inference Parser that returns `"shorten"` if the holder's
+ * two-turn move is being shortend to one due to the item, or otherwise
+ * `undefined`.
  */
 export const onMoveCharge = onX(
     "onMoveCharge",
@@ -68,12 +70,12 @@ export const onMoveCharge = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`preHit` item to activate
- * if possible.
+ * Creates an {@link inference.Parser} that expects an on-`preHit` item to
+ * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
  * @param hitBy Move+user the holder is being hit by.
- * @returns An EventInference that returns info about the item that activated,
+ * @returns An inference Parser that returns info about the item that activated,
  * if any.
  */
 export const onPreHit = onX(
@@ -93,11 +95,11 @@ export const onPreHit = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`tryOhko` item to
+ * Creates an {@link inference.Parser} that expects an on-`tryOhko` item to
  * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
- * @returns An EventInference for handling item possibilities.
+ * @returns An inference Parser for handling item possibilities.
  */
 export const onTryOhko = onX(
     "onTryOhko",
@@ -116,12 +118,12 @@ export const onTryOhko = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`super` item to activate
- * if possible.
+ * Creates an {@link inference.Parser} that expects an on-`super` item to
+ * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
  * @param hitBy Move+user the holder was hit by.
- * @returns An EventInference for handling item possibilities.
+ * @returns An inference Parser for handling item possibilities.
  */
 export const onSuper = onX(
     "onSuper",
@@ -140,12 +142,12 @@ export const onSuper = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`postHit` item to
+ * Creates an {@link inference.Parser} that expects an on-`postHit` item to
  * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
  * @param hitBy Move+user ref the holder was hit by.
- * @returns An EventInference for handling item possibilities.
+ * @returns An inference Parser for handling item possibilities.
  */
 export const onPostHit = onX(
     "onPostHit",
@@ -168,11 +170,11 @@ export const onPostHit = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`movePostDamage` item to
- * activate if possible.
+ * Creates an {@link inference.Parser} that expects an on-`movePostDamage` item
+ * to activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
- * @returns An EventInference for handling item possibilities.
+ * @returns An inference Parser for handling item possibilities.
  */
 export const onMovePostDamage = onX(
     "onMovePostDamage",
@@ -191,11 +193,11 @@ export const onMovePostDamage = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`update` item to activate
- * if possible.
+ * Creates an {@link inference.Parser} that expects an on-`update` item to
+ * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
- * @returns An EventInference for handling item possibilities.
+ * @returns An inference Parser for handling item possibilities.
  */
 export const onUpdate = onX(
     "onUpdate",
@@ -214,11 +216,11 @@ export const onUpdate = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`residual` item to
+ * Creates an {@link inference.Parser} that expects an on-`residual` item to
  * activate if possible.
  *
  * @param side Pokemon reference who could have such an item.
- * @returns An EventInference for handling item possibilities.
+ * @returns An inference Parser for handling item possibilities.
  */
 export const onResidual = onX(
     "onResidual",
@@ -238,7 +240,7 @@ export const onResidual = onX(
 
 //#endregion
 
-//#region on-x EventInference function helpers.
+//#region on-x Inference Parser function helpers.
 
 function onX<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
@@ -246,31 +248,37 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(
         ctx: BattleParserContext<"gen4">,
         side: SideID,
         ...args: TArgs
-    ) => Map<dex.Item, inference.SubInference>,
-    inferenceParser: inference.InferenceParser<
+    ) => Map<dex.Item, inference.logic.Reason>,
+    inferenceParser: inference.InnerParser<
         "gen4",
         BattleAgent<"gen4">,
         [
             side: SideID,
-            items: Map<dex.Item, inference.SubInference>,
+            items: Map<dex.Item, inference.logic.Reason>,
             ...args: TArgs
         ],
         TResult
     >,
-) {
+): (
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    ...args: TArgs
+) => unordered.Parser<"gen4", BattleAgent<"gen4">, TResult> {
     const onString = name.substr(2, 1).toLowerCase() + name.substr(3);
 
     // Use computed property to force function name in stack trace.
     return {
-        [name](ctx: BattleParserContext<"gen4">, side: SideID, ...args: TArgs) {
+        [name](
+            ctx: BattleParserContext<"gen4">,
+            side: SideID,
+            ...args: TArgs
+        ): unordered.Parser<"gen4", BattleAgent<"gen4">, TResult> {
             const items = f(ctx, side, ...args);
-            return new inference.EventInference(
+            return inference.parser(
                 `${side} item on-${onString}`,
                 new Set(items.values()),
-                inferenceParser,
-                side,
-                items,
-                ...args,
+                async (_ctx, accept) =>
+                    await inferenceParser(_ctx, accept, side, items, ...args),
             );
         },
     }[name];
@@ -279,7 +287,7 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(
 // eslint-disable-next-line @typescript-eslint/naming-convention
 function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
-    unorderedParser: unordered.UnorderedParser<
+    unorderedParser: unordered.InnerParser<
         "gen4",
         BattleAgent<"gen4">,
         [item: dex.Item, side: SideID, ...args: TArgs],
@@ -296,23 +304,26 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
             ctx: BattleParserContext<"gen4">,
             accept: inference.AcceptCallback,
             side: SideID,
-            items: Map<dex.Item, inference.SubInference>,
+            items: Map<dex.Item, inference.logic.Reason>,
             ...args: TArgs
         ): Promise<TResult | undefined> {
-            const parsers: unordered.UnorderedDeadline<
+            const parsers: unordered.Parser<
                 "gen4",
                 BattleAgent<"gen4">,
                 [item: dex.Item, res: TResult]
             >[] = [];
             for (const item of items.keys()) {
                 parsers.push(
-                    unordered.UnorderedDeadline.create(
+                    unordered.parser(
                         `item on-${onString} inference`,
-                        unorderedParser,
-                        undefined /*reject*/,
-                        item,
-                        side,
-                        ...args,
+                        async (_ctx, _accept) =>
+                            await unorderedParser(
+                                _ctx,
+                                _accept,
+                                item,
+                                side,
+                                ...args,
+                            ),
                     ),
                 );
             }
@@ -329,13 +340,13 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
 // eslint-disable-next-line @typescript-eslint/naming-convention
 function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
-    parser: unordered.UnorderedParser<
+    parser: unordered.InnerParser<
         "gen4",
         BattleAgent<"gen4">,
         [item: dex.Item, side: SideID, ...args: TArgs],
         TResult
     >,
-): unordered.UnorderedParser<
+): unordered.InnerParser<
     "gen4",
     BattleAgent<"gen4">,
     [item: dex.Item, side: SideID, ...args: TArgs],
@@ -361,23 +372,23 @@ function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
  *
  * @param mon Pokemon to search.
  * @param prove Callback for filtering eligible items. Should return a set of
- * {@link inference.SubReason reasons} that would prove that the item could
+ * {@link inference.logic.Reason reasons} that would prove that the item could
  * activate, or null if it can't.
- * @returns A Map of {@link dex.Item} to a {@link inference.SubInference}
+ * @returns A Map of {@link dex.Item}s to {@link inference.logic.Reason}s
  * modeling its restrictions given by the predicate.
  */
 function getItems(
     mon: Pokemon,
-    prove: (item: dex.Item) => Set<inference.SubReason> | null,
-): Map<dex.Item, inference.SubInference> {
-    const res = new Map<dex.Item, inference.SubInference>();
+    prove: (item: dex.Item) => Set<inference.logic.Reason> | null,
+): Map<dex.Item, inference.logic.Reason> {
+    const res = new Map<dex.Item, inference.logic.Reason>();
     if (mon.volatile.embargo.isActive) return res;
     for (const name of mon.item.possibleValues) {
         const item = dex.getItem(mon.item.map[name]);
         const reasons = prove(item);
         if (!reasons) continue;
         reasons.add(reason.item.has(mon, new Set([name])));
-        res.set(item, new inference.SubInference(reasons));
+        res.set(item, inference.logic.and(reasons));
     }
     return res;
 }

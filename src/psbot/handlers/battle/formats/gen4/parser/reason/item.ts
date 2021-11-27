@@ -2,30 +2,29 @@
 import {inference} from "../../../../parser";
 import {Pokemon} from "../../state/Pokemon";
 import {PossibilityClass} from "../../state/PossibilityClass";
-import {subsetOrIndependent} from "./helpers";
+import {subsetOrIndependent} from "./subsets";
 
-/** Creates a SubReason that asserts that the pokemon has the given item. */
-export function has(mon: Pokemon, items: Set<string>): inference.SubReason {
+/** Creates a Reason that asserts that the pokemon has the given item. */
+export function has(mon: Pokemon, items: Set<string>): inference.logic.Reason {
     return new HasItem(mon, items, false /*negative*/);
 }
 
 /**
- * Creates a SubReason that asserts that the pokemon doesn't have the given
- * item.
+ * Creates a Reason that asserts that the pokemon doesn't have the given item.
  */
 export function doesntHave(
     mon: Pokemon,
     items: Set<string>,
-): inference.SubReason {
+): inference.logic.Reason {
     return new HasItem(mon, items, true /*negative*/);
 }
 
-/** Creates a SubReason that asserts that the pokemon has an unknown item. */
-export function hasUnknown(mon: Pokemon): inference.SubReason {
+/** Creates a Reason that asserts that the pokemon has an unknown item. */
+export function hasUnknown(mon: Pokemon): inference.logic.Reason {
     return doesntHave(mon, new Set(["none"]));
 }
 
-class HasItem extends inference.SubReason {
+class HasItem extends inference.logic.Reason {
     /** Item snapshot for making inferences in retrospect. */
     private readonly item: PossibilityClass<string>;
 
@@ -67,8 +66,8 @@ class HasItem extends inference.SubReason {
     }
 
     protected override delayImpl(
-        cb: inference.DelayCallback,
-    ): inference.CancelCallback {
+        cb: inference.logic.DelayCallback,
+    ): inference.logic.CancelCallback {
         return this.item.onUpdate(
             this.items,
             this.negative ? kept => cb(!kept) : cb,

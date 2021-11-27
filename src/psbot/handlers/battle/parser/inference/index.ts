@@ -1,3 +1,2 @@
-export * from "./EventInference";
-export * from "./SubInference";
-export * from "./SubReason";
+export * as logic from "./logic";
+export * from "./Parser";

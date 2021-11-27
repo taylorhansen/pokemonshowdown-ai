@@ -3,6 +3,7 @@ import {Protocol} from "@pkmn/protocol";
 import {SideID} from "@pkmn/types";
 import {toIdName} from "../../../../../../helpers";
 import {Event} from "../../../../../../parser";
+import {BattleAgent} from "../../../../agent";
 import {
     BattleParserContext,
     consume,
@@ -92,13 +93,16 @@ async function multipleSwitchEvents(
     );
 }
 
-const unorderedSwitchEvent = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const unorderedSwitchEvent = (
+    side: SideID,
+): unordered.Parser<
+    "gen4",
+    BattleAgent<"gen4">,
+    [side: SideID, mon: Pokemon] | null
+> =>
+    unordered.parser(
         `${side} switch`,
-        async (
-            ctx: BattleParserContext<"gen4">,
-            accept: unordered.AcceptCallback,
-        ) => await switchEvent(ctx, side, accept),
+        async (ctx, accept) => await switchEvent(ctx, side, accept),
         () => {
             throw new Error(`Expected |switch| event for ${side}`);
         },
@@ -112,12 +116,12 @@ async function multipleSwitchEffects(
     return await unordered.all(ctx, sides.map(unorderedSwitchEffects));
 }
 
-const unorderedSwitchEffects = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const unorderedSwitchEffects = (side: SideID): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} switch effects`,
-        unorderedSwitchEffectsImpl,
+        async (ctx, accept) =>
+            await unorderedSwitchEffectsImpl(ctx, accept, side),
         effectDidntHappen,
-        side,
     );
 
 async function unorderedSwitchEffectsImpl(
@@ -324,7 +328,7 @@ async function switchEffects(
 
     const team = ctx.state.getTeam(side);
 
-    const entryEffects: unordered.UnorderedDeadline<"gen4">[] = [];
+    const entryEffects: unordered.Parser<"gen4">[] = [];
     // Entry hazards.
     if (team.status.spikes > 0) entryEffects.push(spikes(team.side));
     if (team.status.stealthrock > 0) entryEffects.push(stealthrock(team.side));
@@ -364,12 +368,10 @@ async function switchEffects(
 
 //#region Entry hazards.
 
-const spikes = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const spikes = (side: SideID): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} spikes`,
-        spikesImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await spikesImpl(ctx, accept, side),
     );
 
 async function spikesImpl(
@@ -410,12 +412,10 @@ async function spikesImpl(
     }
 }
 
-const stealthrock = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const stealthrock = (side: SideID): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} stealthrock`,
-        stealthrockImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await stealthrockImpl(ctx, accept, side),
     );
 
 async function stealthrockImpl(
@@ -453,12 +453,10 @@ async function stealthrockImpl(
     }
 }
 
-const toxicspikes = (side: SideID) =>
-    unordered.UnorderedDeadline.create(
+const toxicspikes = (side: SideID): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} toxicspikes`,
-        toxicspikesImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await toxicspikesImpl(ctx, accept, side),
     );
 
 async function toxicspikesImpl(
@@ -518,13 +516,14 @@ async function toxicspikesImpl(
 
 //#region Healingwish effects.
 
-const healingwish = (side: SideID, type: "healingwish" | "lunardance") =>
-    unordered.UnorderedDeadline.create(
+const healingwish = (
+    side: SideID,
+    type: "healingwish" | "lunardance",
+): unordered.Parser<"gen4"> =>
+    unordered.parser(
         `${side} ${type}`,
-        healingwishImpl,
+        async (ctx, accept) => await healingwishImpl(ctx, accept, side, type),
         effectDidntHappen,
-        side,
-        type,
     );
 
 async function healingwishImpl(

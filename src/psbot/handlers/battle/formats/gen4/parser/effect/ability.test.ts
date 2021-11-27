@@ -15,7 +15,7 @@ import {
 import {createInitialContext} from "../Context.test";
 import {ParserHelpers} from "../ParserHelpers.test";
 import {
-    setupUnorderedDeadline,
+    setupUnorderedParser,
     toAbilityName,
     toEffectName,
     toHPStatus,
@@ -60,7 +60,7 @@ export const test = () =>
         };
 
         describe("onSwitchOut()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onSwitchOut,
             );
@@ -138,7 +138,7 @@ export const test = () =>
         });
 
         describe("onStart()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onStart,
             );
@@ -680,7 +680,7 @@ export const test = () =>
         });
 
         describe("onBlock()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onBlock,
             );
@@ -1152,7 +1152,7 @@ export const test = () =>
         });
 
         describe("onTryUnboost()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onTryUnboost,
             );
@@ -1246,7 +1246,7 @@ export const test = () =>
 
         describe("onMoveDamage()", function () {
             /** Initializes the onMoveDamage parser. */
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onMoveDamage,
             );
@@ -1664,7 +1664,7 @@ export const test = () =>
         });
 
         describe("onMoveDrain()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onMoveDrain,
             );
@@ -1728,7 +1728,7 @@ export const test = () =>
         });
 
         describe("onWeather()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onWeather,
             );
@@ -1924,7 +1924,7 @@ export const test = () =>
         });
 
         describe("onUpdate()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onUpdate,
             );
@@ -2307,7 +2307,7 @@ export const test = () =>
         });
 
         describe("onStartOrUpdate()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onStartOrUpdate,
             );
@@ -2599,7 +2599,7 @@ export const test = () =>
         });
 
         describe("onResidual()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectAbility.onResidual,
             );

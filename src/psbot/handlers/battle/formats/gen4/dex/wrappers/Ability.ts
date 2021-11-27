@@ -65,11 +65,12 @@ export class Ability {
      * Checks whether the ability can activate on-`switchOut`.
      *
      * @param mon Potential ability holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canSwitchOut(mon: ReadonlyPokemon): Set<inference.SubReason> | null {
+    public canSwitchOut(
+        mon: ReadonlyPokemon,
+    ): Set<inference.logic.Reason> | null {
         return mon.majorStatus.current && this.data.on?.switchOut?.cure
             ? new Set()
             : null;
@@ -102,7 +103,6 @@ export class Ability {
         if (!event) return;
         const [, identStr] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
-        // TODO: Provide reasons for failure to parse.
         if (ident.player !== side) return;
         const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
         if (from.type && from.type !== "ability") return;
@@ -121,14 +121,13 @@ export class Ability {
      *
      * @param mon Potential ability holder.
      * @param opp Opponent.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canStart(
         mon: Pokemon,
         opp: Pokemon,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         if (!this.data.on?.start) return null;
         // Anticipation.
         if (this.data.on.start.anticipate) {
@@ -544,15 +543,14 @@ export class Ability {
      *
      * @param weatherType Current weather.
      * @param hitBy Move+user that the holder is being hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canBlock(
         weatherType: WeatherType | "none",
         hitBy: MoveAndUser,
-    ): Set<inference.SubReason> | null {
-        let res: Set<inference.SubReason> | null = null;
+    ): Set<inference.logic.Reason> | null {
+        let res: Set<inference.logic.Reason> | null = null;
 
         // Block status due to ability immunity.
         // Note: Only the main status effects can be visibly blocked.
@@ -571,7 +569,7 @@ export class Ability {
 
         // Block move due to ability type immunity.
         if (this.data.on?.block?.move?.type === "nonSuper") {
-            // TODO: Type effectiveness assertions/SubReasons.
+            // TODO: Type effectiveness assertions/Reasons.
             (res ??= new Set()).add(reason.chance.create());
         }
         // Side/field status moves don't count.
@@ -927,21 +925,20 @@ export class Ability {
      *
      * @param source Pokemon that is the source of the unboost.
      * @param boosts Boosts that will be applied.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canBlockUnboost(
         source: Pokemon,
         boosts: Partial<BoostTable>,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         if (!this.data.on?.tryUnboost?.block) return null;
         const blockUnboost = this.data.on.tryUnboost.block;
 
         const res = (Object.keys(boosts) as BoostID[]).some(
             b => boosts[b]! < 0 && blockUnboost[b],
         )
-            ? new Set<inference.SubReason>()
+            ? new Set<inference.logic.Reason>()
             : null;
 
         // Moldbreaker check.
@@ -1017,15 +1014,14 @@ export class Ability {
      * @param mon Potential ability holder.
      * @param on Specific on-`X` condition.
      * @param hitBy Move+user that the holder was hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canMoveDamage(
         mon: Pokemon,
         on: AbilityOn,
         hitBy: MoveAndUser,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         if (!this.data.on) return null;
         if (
             this.data.on.moveDamage &&
@@ -1227,11 +1223,10 @@ export class Ability {
     /**
      * Checks whether the ability can activate on-`moveDrain`.
      *
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canMoveDrain(): Set<inference.SubReason> | null {
+    public canMoveDrain(): Set<inference.logic.Reason> | null {
         return this.data.on?.moveDrain ? new Set() : null;
     }
 
@@ -1297,14 +1292,13 @@ export class Ability {
      * @param mon Potential ability holder.
      * @param weatherType Current weather. If none, then this method cannot be
      * called and the ability cannot activate.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canWeather(
         mon: Pokemon,
         weatherType: WeatherType,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         const data = this.data.on?.weather?.[weatherType];
         if (!data) return null;
         // Damage or heal holder.
@@ -1364,14 +1358,13 @@ export class Ability {
      *
      * @param mon Potential ability holder.
      * @param opp Opponent.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canUpdate(
         mon: Pokemon,
         opp: Pokemon,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         if (!this.data.on?.update) return null;
         // Trace.
         if (this.data.on.update.copyFoeAbility) {
@@ -1581,16 +1574,15 @@ export class Ability {
      *
      * @param mon Potential ability holder.
      * @param foes Opponents.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canResidual(
         mon: ReadonlyPokemon,
         foes: readonly ReadonlyPokemon[],
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         if (!this.data.on?.residual) return null;
-        let res: Set<inference.SubReason> | null = null;
+        let res: Set<inference.logic.Reason> | null = null;
         // Baddreams.
         if (this.data.on.residual.damageFoes) {
             const {statusTypes, percentDamage: p} =
@@ -1832,7 +1824,7 @@ export class Ability {
         );
     }
 
-    /** Gets the ability's move type immunity, or null if none found. */
+    /** Gets the ability's move type immunity, or `null` if none found. */
     public getTypeImmunity(): Type | null {
         const type = this.data.on?.block?.move?.type;
         // TODO: Generalize for multiple immunities, e.g. wonderguard.

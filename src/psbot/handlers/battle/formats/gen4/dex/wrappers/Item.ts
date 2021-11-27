@@ -50,11 +50,10 @@ export class Item {
      * Checks whether the item can activate on-`preMove`.
      *
      * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canPreMove(mon: Pokemon): Set<inference.SubReason> | null {
+    public canPreMove(mon: Pokemon): Set<inference.logic.Reason> | null {
         if (!this.data.on?.preMove) return null;
         // Note(gen4): Custapberry check happens on pre-turn but is only ever
         // shown/acknowledged on pre-move.
@@ -112,11 +111,10 @@ export class Item {
      * Checks whether the item can activate on-`moveCharge`.
      *
      * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or `null` if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canMoveCharge(mon: Pokemon): Set<inference.SubReason> | null {
+    public canMoveCharge(mon: Pokemon): Set<inference.logic.Reason> | null {
         if (!this.data.on?.moveCharge) return null;
         if (this.data.on.moveCharge.shorten) {
             return new Set([reason.ability.cantIgnoreItem(mon)]);
@@ -155,14 +153,13 @@ export class Item {
      *
      * @param mon Potential item holder.
      * @param hitBy Move+user the holder was hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canPreHit(
         mon: Pokemon,
         hitBy: MoveAndUser,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         const data = this.data.on?.preHit;
         if (!data) return null;
 
@@ -282,11 +279,10 @@ export class Item {
      * Checks whether the item can activate on-`tryOHKO`.
      *
      * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canTryOhko(mon: Pokemon): Set<inference.SubReason> | null {
+    public canTryOhko(mon: Pokemon): Set<inference.logic.Reason> | null {
         const data = this.data.on?.tryOhko;
         if (!data) return null;
         if (data.block && data.consume) {
@@ -330,14 +326,13 @@ export class Item {
      *
      * @param mon Potential item holder.
      * @param hitBy Move+user the holder was hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canSuper(
         mon: Pokemon,
         hitBy: MoveAndUser,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         const data = this.data.on?.super;
         if (!data) return null;
         if (!hitBy.move.canBeEffective) return null;
@@ -395,14 +390,13 @@ export class Item {
      *
      * @param mon Potential item holder.
      * @param hitBy Move+user the holder was hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canPostHit(
         mon: Pokemon,
         hitBy: MoveAndUser,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         const data = this.data.on?.postHit;
         if (!data) return null;
         if (data.condition !== hitBy.move.data.category) {
@@ -459,11 +453,10 @@ export class Item {
      * Checks whether the item can activate on-`movePostDamage`.
      *
      * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canMovePostDamage(mon: Pokemon): Set<inference.SubReason> | null {
+    public canMovePostDamage(mon: Pokemon): Set<inference.logic.Reason> | null {
         if (!this.data.on?.movePostDamage) return null;
 
         // Check for abilities that would block the item.
@@ -518,7 +511,7 @@ export class Item {
             );
             if (damageResult !== true) return;
             // This counts as indirect damage (blocked by magicguard).
-            // TODO: Make this a SubReason in #canMovePostDamage().
+            // TODO: Make this a Reason in #canMovePostDamage().
             this.indirectDamage(ctx, side);
         }
     }
@@ -531,11 +524,10 @@ export class Item {
      * Checks whether the item can activate on-`update`.
      *
      * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canUpdate(mon: Pokemon): Set<inference.SubReason> | null {
+    public canUpdate(mon: Pokemon): Set<inference.logic.Reason> | null {
         if (mon.fainted) return null;
         const data = this.data.on?.update;
         if (!data) return null;
@@ -560,8 +552,8 @@ export class Item {
             }
             case "depleted":
                 for (const move of mon.moveset.moves.values()) {
-                    // TODO: Pp may be uncertain in certain corner cases
-                    // (e.g. pressure), handle these then add a SubReason to
+                    // TODO: PP may be uncertain in certain corner cases
+                    // (e.g. pressure), handle these then add a Reason to
                     // support this later.
                     if (move.pp > 0) continue;
                     return new Set([reason.ability.cantIgnoreItem(mon)]);
@@ -670,11 +662,10 @@ export class Item {
      * Checks whether the item can activate on-`residual`.
      *
      * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canResidual(mon: Pokemon): Set<inference.SubReason> | null {
+    public canResidual(mon: Pokemon): Set<inference.logic.Reason> | null {
         const data = this.data.on?.residual;
         if (!data) return null;
 
@@ -1060,14 +1051,13 @@ export class Item {
      *
      * @param mon Potential item holder.
      * @param threshold Item activation HP threshold.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
+     * @returns A Set of Reasons describing additional conditions of activation,
+     * or the empty set if there are none, or `null` if it cannot activate.
      */
     private checkHpThreshold(
         mon: Pokemon | PreTurnSnapshotPokemon,
         threshold: number,
-    ): Set<inference.SubReason> | null {
+    ): Set<inference.logic.Reason> | null {
         // TODO: Is percentHP reliable? how does PS/cart handle rounding?
         const percentHp = (100 * mon.hp.current) / mon.hp.max;
 

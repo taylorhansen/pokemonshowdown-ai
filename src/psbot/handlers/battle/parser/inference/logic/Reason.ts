@@ -1,16 +1,15 @@
 /**
- * Callback type for when the status of a {@link SubReason} is known.
+ * Callback type for when the status of a {@link Reason} is known.
  *
- * @param held Whether the SubReason held or if it was disproven.
+ * @param held Whether the Reason held or it was disproven.
  */
 export type DelayCallback = (held: boolean) => void;
 
-/** Callback type to cancel a {@link SubReason.delay} call. */
+/** Callback type to cancel a {@link Reason.delay} call. */
 export type CancelCallback = () => void;
 
-// TODO: Rename to assumption or premise?
-/** Reason for a SubInference to activate. */
-export abstract class SubReason {
+/** Logical unit for making inferences on the battle state. */
+export abstract class Reason {
     /**
      * Checks whether the reason currently holds.
      *
@@ -30,8 +29,8 @@ export abstract class SubReason {
      *
      * @param cb Callback for when the reason has been proven or disproven. Can
      * be called immediately if {@link canHold} is non-`null`.
-     * @returns A callback to cancel this call. Should be already canceled
-     * when this function calls `cb`. Should do nothing if called again.
+     * @returns A callback to cancel this call. Should be already canceled when
+     * this function calls `cb`. Should do nothing if called again.
      */
     public delay(cb: DelayCallback): CancelCallback {
         const holds = this.canHold();
@@ -62,6 +61,6 @@ export abstract class SubReason {
     public toString(indentInner = 1, indentOuter = 0): string {
         void indentInner;
         const s = " ".repeat(indentOuter * 4);
-        return `${s}SubReason()`;
+        return `${s}Reason()`;
     }
 }

@@ -1,50 +1,48 @@
-/** @file SubReason helpers related to abilities. */
+/** @file Reason helpers related to abilities. */
 import {inference} from "../../../../parser";
 import {Pokemon} from "../../state/Pokemon";
 import {PossibilityClass} from "../../state/PossibilityClass";
-import {subsetOrIndependent} from "./helpers";
+import {subsetOrIndependent} from "./subsets";
 
 /** Reduced interface type for ability inference helpers. */
 export interface PokemonAbilitySnapshot extends Pick<Pokemon, "traits"> {
     readonly volatile: {readonly suppressAbility: boolean};
 }
 
-/** Creates a SubReason that asserts that the pokemon has the given ability. */
+/** Creates a Reason that asserts that the pokemon has the given ability. */
 export function has(
     mon: PokemonAbilitySnapshot,
     abilities: Set<string>,
-): inference.SubReason {
+): inference.logic.Reason {
     return new HasAbility(mon, abilities, false /*negative*/);
 }
 
 /**
- * Creates a SubReason that asserts that the pokemon doesn't have the given
+ * Creates a Reason that asserts that the pokemon doesn't have the given
  * ability.
  */
 export function doesntHave(
     mon: PokemonAbilitySnapshot,
     abilities: Set<string>,
-): inference.SubReason {
+): inference.logic.Reason {
     return new HasAbility(mon, abilities, true /*negative*/);
 }
 
-/**
- * Creates a SubReason that asserts that the pokemon's ability ignores items.
- */
+/** Creates a Reason that asserts that the pokemon's ability ignores items. */
 export function canIgnoreItem(
     mon: PokemonAbilitySnapshot,
-): inference.SubReason {
+): inference.logic.Reason {
     const abilities = itemIgnoring(mon);
     return has(mon, abilities);
 }
 
 /**
- * Creates a SubReason that asserts that the pokemon's ability doesn't ignore
+ * Creates a Reason that asserts that the pokemon's ability doesn't ignore
  * items.
  */
 export function cantIgnoreItem(
     mon: PokemonAbilitySnapshot,
-): inference.SubReason {
+): inference.logic.Reason {
     const abilities = itemIgnoring(mon);
     return doesntHave(mon, abilities);
 }
@@ -65,12 +63,12 @@ export function itemIgnoring(mon: PokemonAbilitySnapshot): Set<string> {
 }
 
 /**
- * Creates a SubReason that asserts that the pokemon's ability doesn't ignore
- * other abilities.
+ * Creates a Reason that asserts that the pokemon's ability doesn't ignore other
+ * abilities.
  */
 export function cantIgnoreTargetAbility(
     mon: PokemonAbilitySnapshot,
-): inference.SubReason {
+): inference.logic.Reason {
     const abilities = targetIgnoring(mon);
     return doesntHave(mon, abilities);
 }
@@ -93,10 +91,12 @@ export function targetIgnoring(mon: PokemonAbilitySnapshot): Set<string> {
 }
 
 /**
- * Creates a SubReason that asserts that the pokemon's ability can be copied by
+ * Creates a Reason that asserts that the pokemon's ability can be copied by
  * Trace.
  */
-export function isCopyable(mon: PokemonAbilitySnapshot): inference.SubReason {
+export function isCopyable(
+    mon: PokemonAbilitySnapshot,
+): inference.logic.Reason {
     const abilities = uncopyable(mon);
     return doesntHave(mon, abilities);
 }
@@ -113,7 +113,7 @@ export function uncopyable(mon: PokemonAbilitySnapshot): Set<string> {
     return abilities;
 }
 
-class HasAbility extends inference.SubReason {
+class HasAbility extends inference.logic.Reason {
     /** Ability snapshot for making inferences in retrospect. */
     private readonly ability: PossibilityClass<string>;
 
@@ -155,8 +155,8 @@ class HasAbility extends inference.SubReason {
     }
 
     protected override delayImpl(
-        cb: inference.DelayCallback,
-    ): inference.CancelCallback {
+        cb: inference.logic.DelayCallback,
+    ): inference.logic.CancelCallback {
         return this.ability.onUpdate(
             this.abilities,
             this.negative ? kept => cb(!kept) : cb,

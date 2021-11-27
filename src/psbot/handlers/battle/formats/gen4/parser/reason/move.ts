@@ -2,13 +2,13 @@
 import {inference} from "../../../../parser";
 import * as dex from "../../dex";
 import {Pokemon, ReadonlyPokemon} from "../../state/Pokemon";
-import {subsetOrIndependent} from "./helpers";
+import {subsetOrIndependent} from "./subsets";
 
 // TODO: Account for other move-type-changing effects, e.g. normalize ability.
 // TODO(gen6): Also account for typechart-modifying moves, e.g. freezedry.
 
 /**
- * Creates a SubReason that asserts that the pokemon isn't the same type as the
+ * Creates a Reason that asserts that the pokemon isn't the same type as the
  * move being used against it. Inference applies to the move/user.
  *
  * @param mon Pokemon to track.
@@ -17,12 +17,12 @@ import {subsetOrIndependent} from "./helpers";
 export function diffType(
     mon: ReadonlyPokemon,
     hitBy: dex.MoveAndUser,
-): inference.SubReason {
+): inference.logic.Reason {
     return isntType(hitBy.move, hitBy.user, new Set(mon.types));
 }
 
 /**
- * Creates a SubReason that asserts that the move has a certain effectiveness.
+ * Creates a Reason that asserts that the move has a certain effectiveness.
  *
  * @param move Move to track.
  * @param user Move user to track.
@@ -34,7 +34,7 @@ export function isEffective(
     user: Pokemon,
     target: ReadonlyPokemon,
     effectiveness: dex.Effectiveness,
-): inference.SubReason {
+): inference.logic.Reason {
     return isType(
         move,
         user,
@@ -43,40 +43,40 @@ export function isEffective(
 }
 
 /**
- * Creates a SubReason that asserts that the move being used by the given
- * pokemon is of one of the specified type(s).
+ * Creates a Reason that asserts that the move being used by the given pokemon
+ * is of one of the specified type(s).
  *
  * @param move Move to track.
  * @param user Move user to track.
  * @param types Set of possible move types. Will be owned by the returned
- * SubReason.
+ * Reason.
  */
 export function isType(
     move: dex.Move,
     user: Pokemon,
     types: Set<dex.Type>,
-): inference.SubReason {
+): inference.logic.Reason {
     return new MoveIsType(move, user, types, false /*negative*/);
 }
 
 /**
- * Creates a SubReason that asserts that the move being used by the given
- * pokemon is not of one of the specified type(s).
+ * Creates a Reason that asserts that the move being used by the given pokemon
+ * is not of one of the specified type(s).
  *
  * @param move Move to track.
  * @param user Move user to track.
  * @param types Set of possible move types. Will be owned by the returned
- * SubReason.
+ * Reason.
  */
 export function isntType(
     move: dex.Move,
     user: Pokemon,
     types: Set<dex.Type>,
-): inference.SubReason {
+): inference.logic.Reason {
     return new MoveIsType(move, user, types, true /*negative*/);
 }
 
-class MoveIsType extends inference.SubReason {
+class MoveIsType extends inference.logic.Reason {
     /**
      * Hidden Power type and item snapshots for making inferences in retrospect.
      */
@@ -111,8 +111,8 @@ class MoveIsType extends inference.SubReason {
     }
 
     protected override delayImpl(
-        cb: inference.DelayCallback,
-    ): inference.CancelCallback {
+        cb: inference.logic.DelayCallback,
+    ): inference.logic.CancelCallback {
         return this.move.onUpdateTypes(
             this.types,
             this.partialUser,

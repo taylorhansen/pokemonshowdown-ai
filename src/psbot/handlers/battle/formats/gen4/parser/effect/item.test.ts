@@ -11,7 +11,7 @@ import {createInitialContext} from "../Context.test";
 import {ParserHelpers} from "../ParserHelpers.test";
 import {
     setupBattleParser,
-    setupUnorderedDeadline,
+    setupUnorderedParser,
     toEffectName,
     toHPStatus,
     toIdent,
@@ -249,7 +249,7 @@ export const test = () =>
         });
 
         describe("onPreMove()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onPreMove,
             );
@@ -378,7 +378,7 @@ export const test = () =>
         });
 
         describe("onMoveCharge()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onMoveCharge,
             );
@@ -453,7 +453,7 @@ export const test = () =>
         });
 
         describe("onPreHit()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onPreHit,
             );
@@ -535,7 +535,7 @@ export const test = () =>
         });
 
         describe("onTryOhko()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onTryOhko,
             );
@@ -763,7 +763,7 @@ export const test = () =>
         });
 
         describe("onSuper()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onSuper,
             );
@@ -869,7 +869,7 @@ export const test = () =>
         });
 
         describe("onPostHit()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onPostHit,
             );
@@ -965,7 +965,7 @@ export const test = () =>
         });
 
         describe("onMovePostDamage()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onMovePostDamage,
             );
@@ -1189,7 +1189,7 @@ export const test = () =>
         });
 
         describe("onUpdate()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onUpdate,
             );
@@ -1643,7 +1643,7 @@ export const test = () =>
         });
 
         describe("onResidual()", function () {
-            const init = setupUnorderedDeadline(
+            const init = setupUnorderedParser(
                 ictx.startArgs,
                 effectItem.onResidual,
             );

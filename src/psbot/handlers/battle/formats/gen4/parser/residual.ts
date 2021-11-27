@@ -109,7 +109,7 @@ async function residualFilter(
 
 function onSideResidual(
     ctx: BattleParserContext<"gen4">,
-): unordered.UnorderedDeadline<"gen4">[] {
+): unordered.Parser<"gen4">[] {
     const sides = Object.keys(ctx.state.teams) as SideID[];
     return sides.flatMap(side => [
         // Residual order/sub-order taken from smogon/pokemon-showdown/data.
@@ -124,16 +124,10 @@ function onSideResidual(
 
 //#region Side end.
 
-function sideEnd(
-    side: SideID,
-    name: string,
-): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function sideEnd(side: SideID, name: string): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} side ${name} end`,
-        sideEndImpl,
-        undefined /*reject*/,
-        side,
-        name,
+        async (ctx, accept) => await sideEndImpl(ctx, accept, side, name),
     );
 }
 
@@ -165,7 +159,7 @@ async function sideEndImpl(
 function onFieldResidual(
     ctx: BattleParserContext<"gen4">,
     shared: ResidualSharedData,
-): unordered.UnorderedDeadline<"gen4">[] {
+): unordered.Parser<"gen4">[] {
     return [
         // Residual order/sub-order taken from smogon/pokemon-showdown/data.
         ...weather(ctx, shared), // 8
@@ -179,16 +173,15 @@ function onFieldResidual(
 function weather(
     ctx: BattleParserContext<"gen4">,
     shared: ResidualSharedData,
-): unordered.UnorderedDeadline<"gen4">[] {
+): unordered.Parser<"gen4">[] {
     const weatherType = ctx.state.status.weather.type;
     if (weatherType === "none") return [];
     return [
-        unordered.UnorderedDeadline.create(
+        unordered.parser(
             `field weather ${ctx.state.status.weather.type} upkeep`,
-            weatherImpl,
+            async (_ctx, accept) =>
+                await weatherImpl(_ctx, accept, weatherType, shared),
             effectDidntHappen,
-            weatherType,
-            shared,
         ),
     ];
 }
@@ -260,7 +253,7 @@ async function weatherEffects(
 }
 
 /**
- * Creates an UnorderedDeadline parser that checks for weather damage.
+ * Creates an Parser parser that checks for weather damage.
  *
  * @param side Pokemon reference to check for weather damage.
  * @param weatherType Current weather.
@@ -271,9 +264,9 @@ function weatherDamage(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
     weatherType: dex.WeatherType,
-    weatherReasons: ReadonlySet<inference.SubReason>,
+    weatherReasons: ReadonlySet<inference.logic.Reason>,
     fainting: Set<SideID>,
-): [unordered.UnorderedDeadline<"gen4">] | [] {
+): [unordered.Parser<"gen4">] | [] {
     const mon = ctx.state.getTeam(side).active;
     if (mon.fainted) return [];
     // Either true (immune) or null (not applicable).
@@ -295,16 +288,20 @@ function weatherDamage(
         }
         reasons.add(reason.ability.doesntHave(mon, abilities));
     }
-    const damageInf = new inference.SubInference(reasons);
+    const damageReason = inference.logic.and(reasons);
     return [
-        new inference.EventInference(
+        inference.parser(
             `field weather ${weatherType} damage ${side}`,
-            new Set([damageInf]),
-            weatherDamageImpl,
-            side,
-            weatherType,
-            damageInf,
-            fainting,
+            new Set([damageReason]),
+            async (_ctx, accept) =>
+                await weatherDamageImpl(
+                    _ctx,
+                    accept,
+                    side,
+                    weatherType,
+                    damageReason,
+                    fainting,
+                ),
         ),
     ];
 }
@@ -314,7 +311,7 @@ async function weatherDamageImpl(
     accept: inference.AcceptCallback,
     side: SideID,
     weatherType: dex.WeatherType,
-    damageInf: inference.SubInference,
+    damageReason: inference.logic.Reason,
     fainting: Set<SideID>,
 ): Promise<void> {
     const event = await tryVerify(ctx, "|-damage|");
@@ -324,7 +321,7 @@ async function weatherDamageImpl(
     if (ident.player !== side) return;
     const health = Protocol.parseHealth(healthStr);
     if (event.kwArgs.from?.trim() !== weatherType) return;
-    accept(damageInf);
+    accept(damageReason);
     await base["|-damage|"](ctx);
 
     if (health?.fainted) fainting.add(side);
@@ -334,12 +331,10 @@ async function weatherDamageImpl(
 
 //#region Field end.
 
-function fieldEnd(name: string): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function fieldEnd(name: string): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `field ${name} end`,
-        fieldEndImpl,
-        undefined /*reject*/,
-        name,
+        async (ctx, accept) => await fieldEndImpl(ctx, accept, name),
     );
 }
 
@@ -366,7 +361,7 @@ async function fieldEndImpl(
 function onResidual(
     ctx: BattleParserContext<"gen4">,
     shared: ResidualSharedData,
-): unordered.UnorderedDeadline<"gen4">[] {
+): unordered.Parser<"gen4">[] {
     const sides = Object.keys(ctx.state.teams) as SideID[];
     const alive = sides.filter(side => !ctx.state.getTeam(side).active.fainted);
     return alive.flatMap(side => [
@@ -423,14 +418,11 @@ function statusDamage(
     side: SideID,
     name: dex.StatusType | "wish",
     percentDamage: number,
-): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual ${name} ${percentDamage < 0 ? "damage" : "heal"}`,
-        statusDamageImpl,
-        undefined /*reject*/,
-        side,
-        name,
-        percentDamage,
+        async (ctx, accept) =>
+            await statusDamageImpl(ctx, accept, side, name, percentDamage),
     );
 }
 
@@ -468,12 +460,10 @@ async function statusDamageImpl(
 
 //#region Leechseed.
 
-function leechseed(side: SideID): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function leechseed(side: SideID): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual leechseed drain`,
-        leechseedImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await leechseedImpl(ctx, accept, side),
     );
 }
 
@@ -505,12 +495,10 @@ async function leechseedImpl(
 
 //#region Partiallytrapped.
 
-function partiallytrapped(side: SideID): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function partiallytrapped(side: SideID): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual partiallytrapped damage`,
-        partiallytrappedImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await partiallytrappedImpl(ctx, accept, side),
     );
 }
 
@@ -544,12 +532,10 @@ async function partiallytrappedImpl(
 
 //#region Uproar.
 
-function uproar(side: SideID): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function uproar(side: SideID): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual uproar upkeep`,
-        uproarImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await uproarImpl(ctx, accept, side),
     );
 }
 
@@ -578,13 +564,10 @@ async function uproarImpl(
 function statusEnd(
     side: SideID,
     name: dex.StatusType | "disable",
-): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual ${name} end`,
-        statusEndImpl,
-        undefined /*reject*/,
-        side,
-        name,
+        async (ctx, accept) => await statusEndImpl(ctx, accept, side, name),
     );
 }
 
@@ -616,12 +599,10 @@ async function statusEndImpl(
 
 //#region Yawn.
 
-function yawn(side: SideID): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function yawn(side: SideID): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual yawn end`,
-        yawnImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await yawnImpl(ctx, accept, side),
     );
 }
 
@@ -647,7 +628,7 @@ async function yawnImpl(
     if (effectStatus.cantStatus(mon, "slp")) return;
 
     // Guard against slp immunity (e.g. insomnia).
-    const reasons = new Set<inference.SubReason>();
+    const reasons = new Set<inference.logic.Reason>();
     if (!mon.volatile.suppressAbility) {
         const abilities = new Set<string>();
         for (const n of mon.traits.ability.possibleValues) {
@@ -661,16 +642,15 @@ async function yawnImpl(
         }
         reasons.add(reason.ability.doesntHave(mon, abilities));
     }
-    const inf = new inference.SubInference(reasons);
+    const slpReason = inference.logic.and(reasons);
 
     await unordered.parse(
         ctx,
-        new inference.EventInference(
+        inference.parser(
             `${side} residual yawn slp`,
-            new Set([inf]),
-            yawnSlpImpl,
-            side,
-            inf,
+            new Set([slpReason]),
+            async (_ctx, _accept) =>
+                await yawnSlpImpl(_ctx, _accept, side, slpReason),
         ),
     );
 }
@@ -679,10 +659,10 @@ async function yawnSlpImpl(
     ctx: BattleParserContext<"gen4">,
     accept: inference.AcceptCallback,
     side: SideID,
-    inf: inference.SubInference,
+    slpReason: inference.logic.Reason,
 ): Promise<void> {
     await effectStatus.status(ctx, side, ["slp"], () => {
-        accept(inf);
+        accept(slpReason);
         return true;
     });
 }
@@ -691,12 +671,10 @@ async function yawnSlpImpl(
 
 //#region Futuremove.
 
-function futuremove(side: SideID): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function futuremove(side: SideID): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual futuremove`,
-        futuremoveImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await futuremoveImpl(ctx, accept, side),
     );
 }
 
@@ -748,13 +726,10 @@ async function futuremoveImpl(
 function perishsong(
     side: SideID,
     shared: ResidualSharedData,
-): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual perishsong`,
-        perishsongImpl,
-        undefined /*reject*/,
-        side,
-        shared,
+        async (ctx, accept) => await perishsongImpl(ctx, accept, side, shared),
     );
 }
 
@@ -793,12 +768,10 @@ async function perishsongImpl(
 
 //#region Lockedmove (fatigue).
 
-function fatigue(side: SideID): unordered.UnorderedDeadline<"gen4"> {
-    return unordered.UnorderedDeadline.create(
+function fatigue(side: SideID): unordered.Parser<"gen4"> {
+    return unordered.parser(
         `${side} residual lockedmove fatigue`,
-        fatigueImpl,
-        undefined /*reject*/,
-        side,
+        async (ctx, accept) => await fatigueImpl(ctx, accept, side),
     );
 }
 

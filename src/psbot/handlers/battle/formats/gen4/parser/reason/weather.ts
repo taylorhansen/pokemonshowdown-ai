@@ -2,16 +2,16 @@ import {inference} from "../../../../parser";
 import {doesntHave, PokemonAbilitySnapshot} from "./ability";
 
 /**
- * Creates a SubReason that asserts that the weather can activate.
+ * Creates a Reason that asserts that the weather can activate.
  *
  * @param actives List of currently-active pokemon. Searches for
  * weather-suppressant abilities (e.g. cloudnine).
- * @returns A Set of assertions if it's possible for the weather to activate, or
+ * @returns A Set of Reasons if it's possible for the weather to activate, or
  * `null` if it's not possible.
  */
 export function canActivate(
     actives: readonly PokemonAbilitySnapshot[],
-): Set<inference.SubReason> | null {
+): Set<inference.logic.Reason> | null {
     const args: {mon: PokemonAbilitySnapshot; abilities: Set<string>}[] = [];
     for (const mon of actives) {
         if (mon.volatile.suppressAbility) continue;

@@ -52,7 +52,7 @@ export async function init(ctx: BattleParserContext<"gen4">): Promise<void> {
  * take place in a PS battle room, e.g. when using the sim's battle stream lib.
  */
 const initBattle = () =>
-    unordered.UnorderedDeadline.create<"gen4">(
+    unordered.parser<"gen4">(
         "init battle",
         async function initBattleImpl(ctx, accept) {
             const event = await tryVerify(ctx, "|init|");
@@ -69,7 +69,7 @@ const initBattle = () =>
     );
 
 const gameType = () =>
-    unordered.UnorderedDeadline.create<"gen4">(
+    unordered.parser<"gen4">(
         "game type",
         async function gameTypeImpl(ctx, accept) {
             const event = await tryVerify(ctx, "|gametype|");
@@ -89,7 +89,7 @@ const gameType = () =>
     );
 
 const player = (num: 1 | 2) =>
-    unordered.UnorderedDeadline.create<"gen4">(
+    unordered.parser<"gen4">(
         `player ${num}`,
         async function playerImpl(ctx, accept) {
             const event = await tryVerify(ctx, "|player|");
@@ -107,7 +107,7 @@ const player = (num: 1 | 2) =>
     );
 
 const request = () =>
-    unordered.UnorderedDeadline.create<"gen4">(
+    unordered.parser<"gen4">(
         "initial request",
         async function requestImpl(ctx, accept) {
             const event = await tryVerify(ctx, "|request|");
@@ -125,7 +125,7 @@ const request = () =>
     );
 
 const teamSize = (num: 1 | 2) =>
-    unordered.UnorderedDeadline.create<"gen4">(
+    unordered.parser<"gen4">(
         `team size ${num}`,
         async function teamSizeImpl(ctx, accept) {
             const event = await tryVerify(ctx, "|teamsize|");
@@ -146,49 +146,40 @@ const teamSize = (num: 1 | 2) =>
     );
 
 const gen = (num: GenerationNum) =>
-    unordered.UnorderedDeadline.create<"gen4">(
-        `gen ${num}`,
-        async function genImpl(ctx, accept) {
-            const event = await tryVerify(ctx, "|gen|");
-            if (!event) return;
-            accept();
+    unordered.parser<"gen4">(`gen ${num}`, async function genImpl(ctx, accept) {
+        const event = await tryVerify(ctx, "|gen|");
+        if (!event) return;
+        accept();
 
-            const [, genNum] = event.args;
-            if (num !== genNum) {
-                throw new Error(`Expected gen ${num} but got ${genNum}`);
-            }
-            // TODO: Record gen?
-            await base["|gen|"](ctx);
-        },
-    );
+        const [, genNum] = event.args;
+        if (num !== genNum) {
+            throw new Error(`Expected gen ${num} but got ${genNum}`);
+        }
+        // TODO: Record gen?
+        await base["|gen|"](ctx);
+    });
 
 const tier = () =>
-    unordered.UnorderedDeadline.create<"gen4">(
-        "tier",
-        async function tierImpl(ctx, accept) {
-            const event = await tryVerify(ctx, "|tier|");
-            if (!event) return;
-            accept();
+    unordered.parser<"gen4">("tier", async function tierImpl(ctx, accept) {
+        const event = await tryVerify(ctx, "|tier|");
+        if (!event) return;
+        accept();
 
-            // TODO: Record tier?
-            await base["|tier|"](ctx);
-        },
-    );
+        // TODO: Record tier?
+        await base["|tier|"](ctx);
+    });
 
 const rules = () =>
-    unordered.UnorderedDeadline.create<"gen4">(
-        "rules",
-        async function rulesImpl(ctx, accept) {
-            let event = await tryVerify(ctx, "|rule|");
-            if (!event) return;
-            accept();
-            do {
-                // TODO: Record rules/mods?
-                await base["|rule|"](ctx);
-                event = await tryVerify(ctx, "|rule|");
-            } while (event);
-        },
-    );
+    unordered.parser<"gen4">("rules", async function rulesImpl(ctx, accept) {
+        let event = await tryVerify(ctx, "|rule|");
+        if (!event) return;
+        accept();
+        do {
+            // TODO: Record rules/mods?
+            await base["|rule|"](ctx);
+            event = await tryVerify(ctx, "|rule|");
+        } while (event);
+    });
 
 /**
  * Initializes the client's side of the battle using an initial `|request|`

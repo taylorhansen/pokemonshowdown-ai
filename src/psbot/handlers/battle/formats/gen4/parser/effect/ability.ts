@@ -6,20 +6,20 @@ import * as dex from "../../dex";
 import {Pokemon} from "../../state/Pokemon";
 import * as reason from "../reason";
 
-// TODO: getAbilities() should be called within the UnorderedParser, in case
+// TODO: getAbilities() should be called within the InnerParser, in case
 // conditions change later when awaiting via unordered.all(), e.g. during move
 // effect parsing in action/move.ts:postHit().
 // Same as above for item.ts.
 
-//#region on-x EventInference functions.
+//#region on-x Inference Parser functions.
 
 /**
- * Creates an EventInference parser that expects an on-`switchOut` ability to
+ * Creates an {@link inference.Parser} that expects an on-`switchOut` ability to
  * activate if possible.
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
- * @returns An EventInference for handling ability possibilities.
+ * @returns An inference Parser for handling ability possibilities.
  */
 export const onSwitchOut = onX(
     "onSwitchOut",
@@ -44,7 +44,7 @@ const onStartUnordered = onXUnorderedParser(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`start` ability to
+ * Creates an {@link inference.Parser} that expects an on-`start` ability to
  * activate if possible.
  *
  * This excludes on-`update` abilities which have overlapping activation
@@ -53,7 +53,7 @@ const onStartUnordered = onXUnorderedParser(
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
- * @returns An EventInference for handling ability possibilities.
+ * @returns An inference Parser for handling ability possibilities.
  */
 export const onStart = onX(
     "onStart",
@@ -68,13 +68,13 @@ export const onStart = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`block` ability to
+ * Creates an {@link inference.Parser} that expects an on-`block` ability to
  * activate if possible.
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param hitBy Move+user ref that the holder is being hit by.
- * @returns An EventInference that returns info about any blocked effects.
+ * @returns An inference Parser that returns info about any blocked effects.
  */
 export const onBlock = onX(
     "onBlock",
@@ -101,14 +101,14 @@ export const onBlock = onX(
 // TODO(#313): Refactor hitBy to include other unboost effect sources, e.g.
 // intimidate.
 /**
- * Creates an EventInference parser that expects an on-`tryUnboost` ability to
- * activate if possible.
+ * Creates an {@link inference.Parser} that expects an on-`tryUnboost` ability
+ * to activate if possible.
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param source Pokemon that is the source of the boost effect.
  * @param boosts Boosts that will be applied.
- * @returns An EventInference that returns the boosts that were blocked.
+ * @returns An inference Parser that returns the boosts that were blocked.
  */
 export const onTryUnboost = onX(
     "onTryUnboost",
@@ -132,14 +132,14 @@ export const onTryUnboost = onX(
 export type MoveDamageQualifier = "damage" | "contact" | "contactKo";
 
 /**
- * Creates an EventInference parser that expects an on-`moveDamage` ability or
- * its variants to activate if possible.
+ * Creates an {@link inference.Parser} parser that expects an on-`moveDamage`
+ * ability or its variants to activate if possible.
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param qualifier The qualifier of which effects the ability may activate.
  * @param hitBy Move+user ref the holder was hit by.
- * @returns An EventInference for handling ability possibilities.
+ * @returns An inference Parser for handling ability possibilities.
  */
 export const onMoveDamage = onX(
     "onMoveDamage",
@@ -178,13 +178,13 @@ const qualifierToOn: {readonly [T in MoveDamageQualifier]: dex.AbilityOn} = {
 
 // TODO: Refactor hitBy to support non-move drain effects, e.g. leechseed.
 /**
- * Creates an EventInference parser that expects an on-`moveDrain` ability to
- * activate if possible (e.g. Liquid Ooze).
+ * Creates an {@link inference.Parser} parser that expects an on-`moveDrain`
+ * ability to activate if possible (e.g. Liquid Ooze).
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param hitByUserRef Pokemon reference to the user of the draining move.
- * @returns An EventInference that returns whether drain damage was deducted
+ * @returns An inference Parser that returns whether drain damage was deducted
  * instead of healed.
  */
 export const onMoveDrain = onX(
@@ -206,15 +206,15 @@ export const onMoveDrain = onX(
 );
 
 /**
- * Creates an EventInference parser that expects an on-`weather` ability to
- * activate if possible (e.g. Ice Body).
+ * Creates an {@link inference.Parsaer} parser that expects an on-`weather`
+ * ability to activate if possible (e.g. Ice Body).
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param weatherType Current weather. Required to be active in order to be able
  * to call this function.
  * @param weatherReasons Reasons for weather effects to happen at all.
- * @returns An EventInference for handling ability possibilities.
+ * @returns An inference Parser for handling ability possibilities.
  */
 export const onWeather = onX(
     "onWeather",
@@ -222,7 +222,7 @@ export const onWeather = onX(
         ctx,
         side,
         weatherType: dex.WeatherType,
-        weatherReasons: ReadonlySet<inference.SubReason>,
+        weatherReasons: ReadonlySet<inference.logic.Reason>,
     ) => {
         const mon = ctx.state.getTeam(side).active;
         return getAbilities(mon, ability => {
@@ -247,17 +247,17 @@ type Awaited<T> = T extends Promise<infer U> ? U : T;
 type UpdateResult = Awaited<ReturnType<dex.Ability["onUpdate"]>> | undefined;
 
 /**
- * Creates an EventInference parser that expects an on-`update` ability to
- * activate if possible.
+ * Creates an {@link inference.Parser} parser that expects an on-`update`
+ * ability to activate if possible.
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
- * @returns An EventInference for handling ability possibilities.
+ * @returns An inference Parser for handling ability possibilities.
  */
 export function onUpdate(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
-): unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">, UpdateResult> {
+): unordered.Parser<"gen4", BattleAgent<"gen4">, UpdateResult> {
     const mon = ctx.state.getTeam(side).active;
     // TODO(doubles): Track actual copy targets.
     const opp = ctx.state.getTeam(side === "p1" ? "p2" : "p1").active;
@@ -266,22 +266,26 @@ export function onUpdate(
     const {copiers, copyable, copyableStart, copyableUpdate} =
         collectCopierInferences(mon, opp, abilities.keys());
 
-    return new inference.EventInference(
+    return inference.parser(
         `${side} ability on-update ` +
             `[${[...abilities.keys()].map(a => a.data.name).join(", ")}]`,
         new Set(abilities.values()),
-        onUpdateInference,
-        side,
-        abilities,
-        copiers,
-        copyable,
-        copyableStart,
-        copyableUpdate,
+        async (_ctx, accept) =>
+            await onUpdateInference(
+                _ctx,
+                accept,
+                side,
+                abilities,
+                copiers,
+                copyable,
+                copyableStart,
+                copyableUpdate,
+            ),
     );
 }
 
 /**
- * EventInference parser for {@link onUpdate}.
+ * Inference Parser for {@link onUpdate}.
  *
  * @param side Ability holder reference.
  * @param abilities Inferences for abilities that could activate.
@@ -297,11 +301,11 @@ async function onUpdateInference(
     ctx: BattleParserContext<"gen4">,
     accept: inference.AcceptCallback,
     side: SideID,
-    abilities: ReadonlyMap<dex.Ability, inference.SubInference>,
+    abilities: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     copiers: ReadonlySet<dex.Ability>,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableStart: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableUpdate: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableStart: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableUpdate: ReadonlyMap<dex.Ability, inference.logic.Reason>,
 ): Promise<UpdateResult> {
     // No copiers, parse on-update abilities normally.
     if (copiers.size <= 0) {
@@ -310,7 +314,7 @@ async function onUpdateInference(
     // Otherwise, we need a lot of special logic shown below to handle copier
     // abilities (i.e. trace).
 
-    const parsers: unordered.UnorderedDeadline<
+    const parsers: unordered.Parser<
         "gen4",
         BattleAgent<"gen4">,
         [ability: dex.Ability, res: UpdateResult]
@@ -326,12 +330,10 @@ async function onUpdateInference(
 
         // First use the normal on-update parser.
         parsers.push(
-            unordered.UnorderedDeadline.create(
+            unordered.parser(
                 onXInferenceName("update", side, ability.data.name),
-                onUpdateUnordered,
-                undefined /*reject*/,
-                ability,
-                side,
+                async (_ctx, _accept) =>
+                    await onUpdateUnordered(_ctx, _accept, ability, side),
             ),
         );
     }
@@ -375,8 +377,8 @@ async function onUpdateInference(
         // If neither of the above could activate, then we just need to parse
         // the copy indicator event as a last resort.
         // Note: It's important that this is the last parser in the list, since
-        // the above EventInferences may parse more events than just what this
-        // one requires.
+        // the above Parsers may parse more events than just what this one
+        // requires.
         parsers.push(
             onUpdateCopyUnordered(
                 "update",
@@ -427,21 +429,17 @@ type StartResult = Awaited<ReturnType<dex.Ability["onStart"]>> | undefined;
 type StartOrUpdateResult = StartResult | UpdateResult;
 
 /**
- * Creates an EventInference parser that expects an on-`start` or on-`update`
- * ability to activate if possible.
+ * Creates an {@link inference.Parser} parser that expects an on-`start` or
+ * on-`update` ability to activate if possible.
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
- * @returns An EventInference for handling ability possibilities.
+ * @returns An inference Parser for handling ability possibilities.
  */
 export function onStartOrUpdate(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
-): unordered.UnorderedDeadline<
-    "gen4",
-    BattleAgent<"gen4">,
-    StartOrUpdateResult
-> {
+): unordered.Parser<"gen4", BattleAgent<"gen4">, StartOrUpdateResult> {
     const mon = ctx.state.getTeam(side).active;
     // TODO(doubles): Track actual copy targets.
     const opp = ctx.state.getTeam(side === "p1" ? "p2" : "p1").active;
@@ -455,7 +453,7 @@ export function onStartOrUpdate(
     const {copiers, copyable, copyableStart, copyableUpdate} =
         collectCopierInferences(mon, opp, updateAbilities.keys());
 
-    return new inference.EventInference(
+    return inference.parser(
         `${side} ability on-startOrUpdate ` +
             `(start: [${[...startAbilities.keys()]
                 .map(a => a.data.name)
@@ -464,19 +462,23 @@ export function onStartOrUpdate(
                 .map(a => a.data.name)
                 .join(", ")}])`,
         new Set([...startAbilities.values(), ...updateAbilities.values()]),
-        onStartOrUpdateInference,
-        side,
-        startAbilities,
-        updateAbilities,
-        copiers,
-        copyable,
-        copyableStart,
-        copyableUpdate,
+        async (_ctx, accept) =>
+            await onStartOrUpdateInference(
+                _ctx,
+                accept,
+                side,
+                startAbilities,
+                updateAbilities,
+                copiers,
+                copyable,
+                copyableStart,
+                copyableUpdate,
+            ),
     );
 }
 
 /**
- * EventInference parser for {@link onUpdate}.
+ * Inference Parser for {@link onUpdate}.
  *
  * @param side Ability holder reference.
  * @param startAbilities Inferences for on-`start` abilities that could
@@ -496,12 +498,12 @@ async function onStartOrUpdateInference(
     ctx: BattleParserContext<"gen4">,
     accept: inference.AcceptCallback,
     side: SideID,
-    startAbilities: ReadonlyMap<dex.Ability, inference.SubInference>,
-    updateAbilities: ReadonlyMap<dex.Ability, inference.SubInference>,
+    startAbilities: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    updateAbilities: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     copiers: ReadonlySet<dex.Ability>,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableStart: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableUpdate: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableStart: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableUpdate: ReadonlyMap<dex.Ability, inference.logic.Reason>,
 ): Promise<StartOrUpdateResult> {
     // No copiers, parse on-start/update abilities normally.
     if (copiers.size <= 0) {
@@ -516,7 +518,7 @@ async function onStartOrUpdateInference(
     // Otherwise, we need a lot of special logic shown below to handle copier
     // abilities (i.e. trace).
 
-    const parsers: unordered.UnorderedDeadline<
+    const parsers: unordered.Parser<
         "gen4",
         BattleAgent<"gen4">,
         [ability: dex.Ability, res: StartOrUpdateResult]
@@ -538,13 +540,11 @@ async function onStartOrUpdateInference(
         if (!copyableStart.has(ability)) {
             // Use normal on-start parser.
             parsers.push(
-                unordered.UnorderedDeadline.create(
+                unordered.parser(
                     onXInferenceName("startOrUpdate", side, ability.data.name) +
                         " on-start",
-                    onStartUnordered,
-                    undefined /*reject*/,
-                    ability,
-                    side,
+                    async (_ctx, _accept) =>
+                        await onStartUnordered(_ctx, _accept, ability, side),
                 ),
             );
             continue;
@@ -572,13 +572,11 @@ async function onStartOrUpdateInference(
         // First use the normal on-update parser which isn't preceded by a
         // possible copy indicator event.
         parsers.push(
-            unordered.UnorderedDeadline.create(
+            unordered.parser(
                 onXInferenceName("startOrUpdate", side, ability.data.name) +
                     " on-update",
-                onUpdateUnordered,
-                undefined /*reject*/,
-                ability,
-                side,
+                async (_ctx, _accept) =>
+                    await onUpdateUnordered(_ctx, _accept, ability, side),
             ),
         );
     }
@@ -619,8 +617,8 @@ async function onStartOrUpdateInference(
         // If neither of the above could activate, then we just need to parse
         // the copy indicator event as a last resort.
         // Note: It's important that this is the last parser in the list, since
-        // the above EventInferences may parse more events than just what this
-        // one requires.
+        // the above Parsers may parse more events than just what this one
+        // requires.
         parsers.push(
             onUpdateCopyUnordered(
                 "startOrUpdate",
@@ -665,10 +663,10 @@ async function onStartOrUpdateInferenceNoCopy(
     ctx: BattleParserContext<"gen4">,
     accept: inference.AcceptCallback,
     side: SideID,
-    startAbilities: ReadonlyMap<dex.Ability, inference.SubInference>,
-    updateAbilities: ReadonlyMap<dex.Ability, inference.SubInference>,
+    startAbilities: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    updateAbilities: ReadonlyMap<dex.Ability, inference.logic.Reason>,
 ): Promise<StartOrUpdateResult> {
-    const parsers: unordered.UnorderedDeadline<
+    const parsers: unordered.Parser<
         "gen4",
         BattleAgent<"gen4">,
         [ability: dex.Ability, res: StartOrUpdateResult]
@@ -676,26 +674,22 @@ async function onStartOrUpdateInferenceNoCopy(
 
     for (const ability of startAbilities.keys()) {
         parsers.push(
-            unordered.UnorderedDeadline.create(
+            unordered.parser(
                 onXInferenceName("startOrUpdate", side, ability.data.name) +
                     " on-start",
-                onStartUnordered,
-                undefined /*reject*/,
-                ability,
-                side,
+                async (_ctx, _accept) =>
+                    await onStartUnordered(_ctx, _accept, ability, side),
             ),
         );
     }
 
     for (const ability of updateAbilities.keys()) {
         parsers.push(
-            unordered.UnorderedDeadline.create(
+            unordered.parser(
                 onXInferenceName("startOrUpdate", side, ability.data.name) +
                     " on-update",
-                onUpdateUnordered,
-                undefined /*reject*/,
-                ability,
-                side,
+                async (_ctx, _accept) =>
+                    await onUpdateUnordered(_ctx, _accept, ability, side),
             ),
         );
     }
@@ -726,12 +720,12 @@ async function onStartOrUpdateInferenceNoCopy(
 }
 
 /**
- * Creates an EventInference parser that expects an on-`residual` ability to
+ * Creates an {@link inference.Parser} that expects an on-`residual` ability to
  * activate if possible (e.g. Speed Boost).
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
- * @returns An EventInference for handling ability possibilities.
+ * @returns An inference Parser for handling ability possibilities.
  */
 export const onResidual = onX(
     "onResidual",
@@ -754,7 +748,7 @@ export const onResidual = onX(
 
 //#endregion
 
-//#region on-x EventInference helpers.
+//#region on-x Inference Parser helpers.
 
 function onX<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
@@ -762,13 +756,13 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(
         ctx: BattleParserContext<"gen4">,
         side: SideID,
         ...args: TArgs
-    ) => Map<dex.Ability, inference.SubInference>,
-    inferenceParser: inference.InferenceParser<
+    ) => Map<dex.Ability, inference.logic.Reason>,
+    inferenceParser: inference.InnerParser<
         "gen4",
         BattleAgent<"gen4">,
         [
             side: SideID,
-            abilities: Map<dex.Ability, inference.SubInference>,
+            abilities: Map<dex.Ability, inference.logic.Reason>,
             ...args: TArgs
         ],
         TResult
@@ -777,25 +771,33 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
     ...args: TArgs
-) => unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">, TResult> {
+) => unordered.Parser<"gen4", BattleAgent<"gen4">, TResult> {
     const onString = name.match(/^on(?<str>.+)$/)?.groups?.["str"];
     // istanbul ignore if: Should never happen.
     if (!onString) throw new Error(`Invalid parser name '${name}'`);
 
     // Note: Use computed property to force function name in stack trace.
     return {
-        [name](ctx: BattleParserContext<"gen4">, side: SideID, ...args: TArgs) {
+        [name](
+            ctx: BattleParserContext<"gen4">,
+            side: SideID,
+            ...args: TArgs
+        ): unordered.Parser<"gen4", BattleAgent<"gen4">, TResult> {
             const abilities = f(ctx, side, ...args);
-            return new inference.EventInference(
+            return inference.parser(
                 `${side} ability on-${onString} ` +
                     `[${[...abilities.keys()]
                         .map(a => a.data.name)
                         .join(", ")}]`,
                 new Set(abilities.values()),
-                inferenceParser,
-                side,
-                abilities,
-                ...args,
+                async (_ctx, accept) =>
+                    await inferenceParser(
+                        _ctx,
+                        accept,
+                        side,
+                        abilities,
+                        ...args,
+                    ),
             );
         },
     }[name];
@@ -804,18 +806,18 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(
 // eslint-disable-next-line @typescript-eslint/naming-convention
 function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
-    unorderedParser: unordered.UnorderedParser<
+    unorderedParser: unordered.InnerParser<
         "gen4",
         BattleAgent<"gen4">,
         [ability: dex.Ability, side: SideID, ...args: TArgs],
         [ability: dex.Ability, res: TResult]
     >,
-): inference.InferenceParser<
+): inference.InnerParser<
     "gen4",
     BattleAgent<"gen4">,
     [
         side: SideID,
-        abilities: ReadonlyMap<dex.Ability, inference.SubInference>,
+        abilities: ReadonlyMap<dex.Ability, inference.logic.Reason>,
         ...args: TArgs
     ],
     TResult | undefined
@@ -832,10 +834,10 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
             ctx: BattleParserContext<"gen4">,
             accept: inference.AcceptCallback,
             side: SideID,
-            abilities: ReadonlyMap<dex.Ability, inference.SubInference>,
+            abilities: ReadonlyMap<dex.Ability, inference.logic.Reason>,
             ...args: TArgs
         ): Promise<TResult | undefined> {
-            const parsers: unordered.UnorderedDeadline<
+            const parsers: unordered.Parser<
                 "gen4",
                 BattleAgent<"gen4">,
                 [ability: dex.Ability, res: TResult]
@@ -843,13 +845,16 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
 
             for (const ability of abilities.keys()) {
                 parsers.push(
-                    unordered.UnorderedDeadline.create(
+                    unordered.parser(
                         onXInferenceName(onString, side, ability.data.name),
-                        unorderedParser,
-                        undefined /*reject*/,
-                        ability,
-                        side,
-                        ...args,
+                        async (_ctx, _accept) =>
+                            await unorderedParser(
+                                _ctx,
+                                _accept,
+                                ability,
+                                side,
+                                ...args,
+                            ),
                     ),
                 );
             }
@@ -879,13 +884,13 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
 // eslint-disable-next-line @typescript-eslint/naming-convention
 function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
-    parser: unordered.UnorderedParser<
+    parser: unordered.InnerParser<
         "gen4",
         BattleAgent<"gen4">,
         [ability: dex.Ability, side: SideID, ...args: TArgs],
         TResult
     >,
-): unordered.UnorderedParser<
+): unordered.InnerParser<
     "gen4",
     BattleAgent<"gen4">,
     [ability: dex.Ability, side: SideID, ...args: TArgs],
@@ -911,16 +916,16 @@ function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
  *
  * @param mon Pokemon to search.
  * @param prove Callback for filtering eligible abilities. Should return a set
- * of {@link inference.SubReason reasons} that would prove that the ability
+ * of {@link inference.logic.Reason reasons} that would prove that the ability
  * could activate, or `null` if it can't.
- * @returns A Map of {@link dex.Ability} to a {@link inference.SubInference}
+ * @returns A Map of {@link dex.Ability} to a {@link inference.logic.Reason}
  * modeling its restrictions given by the predicate.
  */
 function getAbilities(
     mon: Pokemon,
-    prove: (ability: dex.Ability) => Set<inference.SubReason> | null,
-): Map<dex.Ability, inference.SubInference> {
-    const res = new Map<dex.Ability, inference.SubInference>();
+    prove: (ability: dex.Ability) => Set<inference.logic.Reason> | null,
+): Map<dex.Ability, inference.logic.Reason> {
+    const res = new Map<dex.Ability, inference.logic.Reason>();
     if (mon.volatile.suppressAbility) return res;
 
     for (const name of mon.traits.ability.possibleValues) {
@@ -928,7 +933,7 @@ function getAbilities(
         const reasons = prove(ability);
         if (!reasons) continue;
         reasons.add(reason.ability.has(mon, new Set([name])));
-        res.set(ability, new inference.SubInference(reasons));
+        res.set(ability, inference.logic.and(reasons));
     }
     return res;
 }
@@ -970,15 +975,15 @@ interface CopierInferences {
      * Inferences for the possible copyable abilities that the opponent may
      * have. Empty if {@link copiers} is empty.
      */
-    copyable: Map<dex.Ability, inference.SubInference>;
+    copyable: Map<dex.Ability, inference.logic.Reason>;
     /**
      * Subset containing on-`start` activation conditions for {@link copyable}.
      */
-    copyableStart: Map<dex.Ability, inference.SubInference>;
+    copyableStart: Map<dex.Ability, inference.logic.Reason>;
     /**
      * Subset containing on-`update` activation conditions for {@link copyable}.
      */
-    copyableUpdate: Map<dex.Ability, inference.SubInference>;
+    copyableUpdate: Map<dex.Ability, inference.logic.Reason>;
 }
 
 /**
@@ -1018,7 +1023,7 @@ function collectCopierInferences(
         // Main inference that the opponent has the copied ability.
         res.copyable.set(
             ability,
-            new inference.SubInference(
+            inference.logic.and(
                 new Set([reason.ability.has(opp, new Set([name]))]),
             ),
         );
@@ -1035,10 +1040,7 @@ function collectCopierInferences(
                 ),
             );
             startReasons.add(reason.ability.has(opp, new Set([name])));
-            res.copyableStart.set(
-                ability,
-                new inference.SubInference(startReasons),
-            );
+            res.copyableStart.set(ability, inference.logic.and(startReasons));
         }
         // Same as above, but for on-update.
         const updateReasons = ability.canUpdate(mon, opp);
@@ -1050,10 +1052,7 @@ function collectCopierInferences(
                 ),
             );
             updateReasons.add(reason.ability.has(opp, new Set([name])));
-            res.copyableUpdate.set(
-                ability,
-                new inference.SubInference(updateReasons),
-            );
+            res.copyableUpdate.set(ability, inference.logic.and(updateReasons));
         }
     }
     return res;
@@ -1066,26 +1065,30 @@ function onUpdateCopyStartInference(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     copied: dex.Ability,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableStart: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableStart: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
-): unordered.UnorderedDeadline<
+): unordered.Parser<
     "gen4",
     BattleAgent<"gen4">,
     [ability: dex.Ability, res: UpdateResult]
 > {
-    return new inference.EventInference(
+    return inference.parser(
         onXInferenceCopyName(onString, side, otherSide, copiers, copied) +
             " on-start",
         new Set([copyableStart.get(copied)!]),
-        onUpdateCopyStartInferenceImpl,
-        side,
-        otherSide,
-        copiers,
-        copied,
-        copyable,
-        copyableStart,
-        postCopy,
+        async (ctx, accept) =>
+            await onUpdateCopyStartInferenceImpl(
+                ctx,
+                accept,
+                side,
+                otherSide,
+                copiers,
+                copied,
+                copyable,
+                copyableStart,
+                postCopy,
+            ),
     );
 }
 
@@ -1096,8 +1099,8 @@ async function onUpdateCopyStartInferenceImpl(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     copied: dex.Ability,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableStart: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableStart: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
 ): Promise<[ability: dex.Ability, res: UpdateResult]> {
     // Note: Copied on-start abilities activate before the copy indicator event.
@@ -1109,7 +1112,7 @@ async function onUpdateCopyStartInferenceImpl(
             // Set copied as override ability at the end.
             postCopy.ability = copied;
             // Infer copied ability for opponent immediately.
-            copyable.get(copied)!.resolve(true /*accept*/);
+            copyable.get(copied)!.assert();
             accept(copyableStart.get(copied)!);
         },
         copied,
@@ -1154,26 +1157,30 @@ function onUpdateCopyUpdateInference(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     copied: dex.Ability,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableUpdate: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableUpdate: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
-): unordered.UnorderedDeadline<
+): unordered.Parser<
     "gen4",
     BattleAgent<"gen4">,
     [ability: dex.Ability, res: UpdateResult]
 > {
-    return new inference.EventInference(
+    return inference.parser(
         onXInferenceCopyName(onString, side, otherSide, copiers, copied) +
             " on-update",
         new Set([copyableUpdate.get(copied)!]),
-        onUpdateCopyUpdateInferenceImpl,
-        side,
-        otherSide,
-        copiers,
-        copied,
-        copyable,
-        copyableUpdate,
-        postCopy,
+        async (ctx, accept) =>
+            await onUpdateCopyUpdateInferenceImpl(
+                ctx,
+                accept,
+                side,
+                otherSide,
+                copiers,
+                copied,
+                copyable,
+                copyableUpdate,
+                postCopy,
+            ),
     );
 }
 
@@ -1184,8 +1191,8 @@ async function onUpdateCopyUpdateInferenceImpl(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     copied: dex.Ability,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
-    copyableUpdate: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
+    copyableUpdate: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
 ): Promise<[ability: dex.Ability, res: UpdateResult]> {
     // Note: Copied on-update abilities activate after the copy indicator event.
@@ -1199,7 +1206,7 @@ async function onUpdateCopyUpdateInferenceImpl(
                     // Set copied as override ability at the end.
                     postCopy.ability = copied;
                     // Infer copied ability for opponent immediately.
-                    copyable.get(copied)!.resolve(true /*accept*/);
+                    copyable.get(copied)!.assert();
                     accept(copyableUpdate.get(copied)!);
                 },
                 copied,
@@ -1238,23 +1245,26 @@ function onUpdateCopyUnordered(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     copied: dex.Ability,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
-): unordered.UnorderedDeadline<
+): unordered.Parser<
     "gen4",
     BattleAgent<"gen4">,
     [ability: dex.Ability, res: UpdateResult]
 > {
-    return unordered.UnorderedDeadline.create(
+    return unordered.parser(
         onXInferenceCopyName(onString, side, otherSide, copiers, copied),
-        onUpdateCopyUnorderedImpl,
-        undefined /*reject*/,
-        side,
-        otherSide,
-        copiers,
-        copied,
-        copyable,
-        postCopy,
+        async (ctx, accept) =>
+            await onUpdateCopyUnorderedImpl(
+                ctx,
+                accept,
+                side,
+                otherSide,
+                copiers,
+                copied,
+                copyable,
+                postCopy,
+            ),
     );
 }
 
@@ -1265,7 +1275,7 @@ async function onUpdateCopyUnorderedImpl(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     copied: dex.Ability,
-    copyable: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyable: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
 ): Promise<[ability: dex.Ability, res: UpdateResult]> {
     let copier: dex.Ability | undefined;
@@ -1278,7 +1288,7 @@ async function onUpdateCopyUnorderedImpl(
                     // Set copied as override ability at the end.
                     postCopy.ability = copied;
                     // Infer copied ability for opponent immediately.
-                    copyable.get(copied)!.resolve(true /*accept*/);
+                    copyable.get(copied)!.assert();
                     accept();
                 },
                 copied,
@@ -1309,14 +1319,14 @@ function onStartOrUpdateCopyStartUnorderedShared(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     ability: dex.Ability,
-    copyableStart: ReadonlyMap<dex.Ability, inference.SubInference>,
+    copyableStart: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
-): unordered.UnorderedDeadline<
+): unordered.Parser<
     "gen4",
     BattleAgent<"gen4">,
     [ability: dex.Ability, res: StartOrUpdateResult]
 > {
-    return unordered.UnorderedDeadline.create(
+    return unordered.parser(
         onXInferenceCopyName(
             "startOrUpdate",
             side,
@@ -1325,17 +1335,21 @@ function onStartOrUpdateCopyStartUnorderedShared(
             ability,
             true /*shared*/,
         ) + " on-start",
-        onStartOrUpdateCopyStartUnorderedSharedImpl,
+        async (ctx, accept) =>
+            await onStartOrUpdateCopyStartUnorderedSharedImpl(
+                ctx,
+                accept,
+                side,
+                otherSide,
+                copiers,
+                ability,
+                copyableStart,
+                postCopy,
+            ),
         // Ability couldn't activate from the copier ability nor from the
         // ability activating normally for the holder.
-        // The latter assertion is handled by the outer EventInference.
-        () => copyableStart.get(ability)!.resolve(false) /*reject*/,
-        side,
-        otherSide,
-        copiers,
-        ability,
-        postCopy,
-        copyableStart,
+        // The latter assertion is handled by the outer inference Parser.
+        () => copyableStart.get(ability)!.reject(),
     );
 }
 
@@ -1346,8 +1360,8 @@ async function onStartOrUpdateCopyStartUnorderedSharedImpl(
     otherSide: SideID,
     copiers: ReadonlySet<dex.Ability>,
     ability: dex.Ability,
+    copyableStart: ReadonlyMap<dex.Ability, inference.logic.Reason>,
     postCopy: {ability?: dex.Ability},
-    copyableStart: ReadonlyMap<dex.Ability, inference.SubInference>,
 ): Promise<[ability: dex.Ability, res: StartOrUpdateResult]> {
     // Note: Copied on-start abilities activate before the copy indicator event.
     let accepted = false;
@@ -1381,7 +1395,7 @@ async function onStartOrUpdateCopyStartUnorderedSharedImpl(
             // Set copied as override ability at the end.
             postCopy.ability = ability;
             // Infer copied ability for opponent immediately.
-            copyableStart.get(ability)!.resolve(true /*accept*/);
+            copyableStart.get(ability)!.assert();
             // Return copier result to infer it at the end.
             return await onUpdateUnordered(
                 ctx,
@@ -1394,7 +1408,7 @@ async function onStartOrUpdateCopyStartUnorderedSharedImpl(
     // Copier didn't activate, return the original result.
     // Infer that either the holder doesn't have a copier ability or the
     // opponent doesn't have this copyable ability.
-    copyableStart.get(ability)!.resolve(false /*i.e. reject*/);
+    copyableStart.get(ability)!.reject();
     // Returning startRes here will use the former assertion mentioned above.
     return startRes;
 }
