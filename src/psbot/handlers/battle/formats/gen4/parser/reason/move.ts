@@ -17,7 +17,7 @@ import {subsetOrIndependent} from "./subsets";
 export function diffType(
     mon: ReadonlyPokemon,
     hitBy: dex.MoveAndUser,
-): inference.logic.Reason {
+): inference.Reason {
     return isntType(hitBy.move, hitBy.user, new Set(mon.types));
 }
 
@@ -34,7 +34,7 @@ export function isEffective(
     user: Pokemon,
     target: ReadonlyPokemon,
     effectiveness: dex.Effectiveness,
-): inference.logic.Reason {
+): inference.Reason {
     return isType(
         move,
         user,
@@ -55,7 +55,7 @@ export function isType(
     move: dex.Move,
     user: Pokemon,
     types: Set<dex.Type>,
-): inference.logic.Reason {
+): inference.Reason {
     return new MoveIsType(move, user, types, false /*negative*/);
 }
 
@@ -72,11 +72,11 @@ export function isntType(
     move: dex.Move,
     user: Pokemon,
     types: Set<dex.Type>,
-): inference.logic.Reason {
+): inference.Reason {
     return new MoveIsType(move, user, types, true /*negative*/);
 }
 
-class MoveIsType extends inference.logic.Reason {
+class MoveIsType extends inference.Reason {
     /**
      * Hidden Power type and item snapshots for making inferences in retrospect.
      */
@@ -111,8 +111,8 @@ class MoveIsType extends inference.logic.Reason {
     }
 
     protected override delayImpl(
-        cb: inference.logic.DelayCallback,
-    ): inference.logic.CancelCallback {
+        cb: inference.DelayCallback,
+    ): inference.CancelCallback {
         return this.move.onUpdateTypes(
             this.types,
             this.partialUser,

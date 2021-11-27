@@ -248,15 +248,11 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(
         ctx: BattleParserContext<"gen4">,
         side: SideID,
         ...args: TArgs
-    ) => Map<dex.Item, inference.logic.Reason>,
+    ) => Map<dex.Item, inference.Reason>,
     inferenceParser: inference.InnerParser<
         "gen4",
         BattleAgent<"gen4">,
-        [
-            side: SideID,
-            items: Map<dex.Item, inference.logic.Reason>,
-            ...args: TArgs
-        ],
+        [side: SideID, items: Map<dex.Item, inference.Reason>, ...args: TArgs],
         TResult
     >,
 ): (
@@ -304,7 +300,7 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
             ctx: BattleParserContext<"gen4">,
             accept: inference.AcceptCallback,
             side: SideID,
-            items: Map<dex.Item, inference.logic.Reason>,
+            items: Map<dex.Item, inference.Reason>,
             ...args: TArgs
         ): Promise<TResult | undefined> {
             const parsers: unordered.Parser<
@@ -372,23 +368,23 @@ function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
  *
  * @param mon Pokemon to search.
  * @param prove Callback for filtering eligible items. Should return a set of
- * {@link inference.logic.Reason reasons} that would prove that the item could
- * activate, or null if it can't.
- * @returns A Map of {@link dex.Item}s to {@link inference.logic.Reason}s
- * modeling its restrictions given by the predicate.
+ * {@link inference.Reason reasons} that would prove that the item could
+ * activate, or `null` if it can't.
+ * @returns A Map of {@link dex.Item}s to {@link inference.Reason}s modeling its
+ * restrictions given by the predicate.
  */
 function getItems(
     mon: Pokemon,
-    prove: (item: dex.Item) => Set<inference.logic.Reason> | null,
-): Map<dex.Item, inference.logic.Reason> {
-    const res = new Map<dex.Item, inference.logic.Reason>();
+    prove: (item: dex.Item) => Set<inference.Reason> | null,
+): Map<dex.Item, inference.Reason> {
+    const res = new Map<dex.Item, inference.Reason>();
     if (mon.volatile.embargo.isActive) return res;
     for (const name of mon.item.possibleValues) {
         const item = dex.getItem(mon.item.map[name]);
         const reasons = prove(item);
         if (!reasons) continue;
         reasons.add(reason.item.has(mon, new Set([name])));
-        res.set(item, inference.logic.and(reasons));
+        res.set(item, inference.and(reasons));
     }
     return res;
 }

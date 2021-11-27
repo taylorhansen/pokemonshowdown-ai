@@ -1,20 +1,21 @@
 import {inference} from "../../../../parser";
+import {CallbackRegistry} from "../../../../parser/inference/CallbackRegistry";
 
 /**
  * Creates a Reason that makes no assertions other than that the parent effect
  * is dependent on random factors outside what can be predicted or deduced.
  */
-export const create = (): inference.logic.Reason => new ChanceReason();
+export const create = (): inference.Reason => new ChanceReason();
 
-class ChanceReason extends inference.logic.Reason {
+class ChanceReason extends inference.Reason {
     /**
      * Return value of {@link ChanceReason.canHold canHold} before or after
      * calling
      * {@link ChanceReason.assert assert}/{@link ChanceReason.reject reject}.
      */
     private held: boolean | null = null;
-    /** Callback from {@link ChanceReason.delayImpl delayImpl}. */
-    private delayCb: inference.logic.DelayCallback | null = null;
+
+    private readonly cbs = new CallbackRegistry<boolean>();
 
     public override canHold(): boolean | null {
         return this.held;
@@ -22,19 +23,18 @@ class ChanceReason extends inference.logic.Reason {
 
     public override assert(): void {
         this.held = true;
-        this.delayCb?.(true /*held*/);
+        this.cbs.resolve(true /*held*/);
     }
 
     public override reject(): void {
         this.held = false;
-        this.delayCb?.(false /*held*/);
+        this.cbs.resolve(false /*held*/);
     }
 
     protected override delayImpl(
-        cb: inference.logic.DelayCallback,
-    ): inference.logic.CancelCallback {
-        this.delayCb = cb;
-        return () => (this.delayCb = null);
+        cb: inference.DelayCallback,
+    ): inference.CancelCallback {
+        return this.cbs.delay(cb);
     }
 
     public override toString(indentInner = 1, indentOuter = 0): string {

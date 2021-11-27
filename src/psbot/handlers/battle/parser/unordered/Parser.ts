@@ -128,7 +128,7 @@ export class Parser<
         const inner = " ".repeat(indentInner * 4);
         const outer = " ".repeat(indentOuter * 4);
         return `\
-${outer}UnorderedDeadline(
+${outer}UnorderedParser(
 ${outer}${inner}${this.name.replace("\n", `\n${outer}${inner}`)},
 ${outer})`;
     }

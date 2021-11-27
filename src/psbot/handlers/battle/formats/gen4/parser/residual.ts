@@ -264,7 +264,7 @@ function weatherDamage(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
     weatherType: dex.WeatherType,
-    weatherReasons: ReadonlySet<inference.logic.Reason>,
+    weatherReasons: ReadonlySet<inference.Reason>,
     fainting: Set<SideID>,
 ): [unordered.Parser<"gen4">] | [] {
     const mon = ctx.state.getTeam(side).active;
@@ -288,7 +288,7 @@ function weatherDamage(
         }
         reasons.add(reason.ability.doesntHave(mon, abilities));
     }
-    const damageReason = inference.logic.and(reasons);
+    const damageReason = inference.and(reasons);
     return [
         inference.parser(
             `field weather ${weatherType} damage ${side}`,
@@ -311,7 +311,7 @@ async function weatherDamageImpl(
     accept: inference.AcceptCallback,
     side: SideID,
     weatherType: dex.WeatherType,
-    damageReason: inference.logic.Reason,
+    damageReason: inference.Reason,
     fainting: Set<SideID>,
 ): Promise<void> {
     const event = await tryVerify(ctx, "|-damage|");
@@ -628,7 +628,7 @@ async function yawnImpl(
     if (effectStatus.cantStatus(mon, "slp")) return;
 
     // Guard against slp immunity (e.g. insomnia).
-    const reasons = new Set<inference.logic.Reason>();
+    const reasons = new Set<inference.Reason>();
     if (!mon.volatile.suppressAbility) {
         const abilities = new Set<string>();
         for (const n of mon.traits.ability.possibleValues) {
@@ -642,7 +642,7 @@ async function yawnImpl(
         }
         reasons.add(reason.ability.doesntHave(mon, abilities));
     }
-    const slpReason = inference.logic.and(reasons);
+    const slpReason = inference.and(reasons);
 
     await unordered.parse(
         ctx,
@@ -659,7 +659,7 @@ async function yawnSlpImpl(
     ctx: BattleParserContext<"gen4">,
     accept: inference.AcceptCallback,
     side: SideID,
-    slpReason: inference.logic.Reason,
+    slpReason: inference.Reason,
 ): Promise<void> {
     await effectStatus.status(ctx, side, ["slp"], () => {
         accept(slpReason);

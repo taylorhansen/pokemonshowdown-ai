@@ -11,7 +11,7 @@ import {doesntHave, PokemonAbilitySnapshot} from "./ability";
  */
 export function canActivate(
     actives: readonly PokemonAbilitySnapshot[],
-): Set<inference.logic.Reason> | null {
+): Set<inference.Reason> | null {
     const args: {mon: PokemonAbilitySnapshot; abilities: Set<string>}[] = [];
     for (const mon of actives) {
         if (mon.volatile.suppressAbility) continue;

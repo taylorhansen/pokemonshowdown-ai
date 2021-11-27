@@ -13,7 +13,7 @@ export interface PokemonAbilitySnapshot extends Pick<Pokemon, "traits"> {
 export function has(
     mon: PokemonAbilitySnapshot,
     abilities: Set<string>,
-): inference.logic.Reason {
+): inference.Reason {
     return new HasAbility(mon, abilities, false /*negative*/);
 }
 
@@ -24,14 +24,12 @@ export function has(
 export function doesntHave(
     mon: PokemonAbilitySnapshot,
     abilities: Set<string>,
-): inference.logic.Reason {
+): inference.Reason {
     return new HasAbility(mon, abilities, true /*negative*/);
 }
 
 /** Creates a Reason that asserts that the pokemon's ability ignores items. */
-export function canIgnoreItem(
-    mon: PokemonAbilitySnapshot,
-): inference.logic.Reason {
+export function canIgnoreItem(mon: PokemonAbilitySnapshot): inference.Reason {
     const abilities = itemIgnoring(mon);
     return has(mon, abilities);
 }
@@ -40,9 +38,7 @@ export function canIgnoreItem(
  * Creates a Reason that asserts that the pokemon's ability doesn't ignore
  * items.
  */
-export function cantIgnoreItem(
-    mon: PokemonAbilitySnapshot,
-): inference.logic.Reason {
+export function cantIgnoreItem(mon: PokemonAbilitySnapshot): inference.Reason {
     const abilities = itemIgnoring(mon);
     return doesntHave(mon, abilities);
 }
@@ -68,7 +64,7 @@ export function itemIgnoring(mon: PokemonAbilitySnapshot): Set<string> {
  */
 export function cantIgnoreTargetAbility(
     mon: PokemonAbilitySnapshot,
-): inference.logic.Reason {
+): inference.Reason {
     const abilities = targetIgnoring(mon);
     return doesntHave(mon, abilities);
 }
@@ -94,9 +90,7 @@ export function targetIgnoring(mon: PokemonAbilitySnapshot): Set<string> {
  * Creates a Reason that asserts that the pokemon's ability can be copied by
  * Trace.
  */
-export function isCopyable(
-    mon: PokemonAbilitySnapshot,
-): inference.logic.Reason {
+export function isCopyable(mon: PokemonAbilitySnapshot): inference.Reason {
     const abilities = uncopyable(mon);
     return doesntHave(mon, abilities);
 }
@@ -113,7 +107,7 @@ export function uncopyable(mon: PokemonAbilitySnapshot): Set<string> {
     return abilities;
 }
 
-class HasAbility extends inference.logic.Reason {
+class HasAbility extends inference.Reason {
     /** Ability snapshot for making inferences in retrospect. */
     private readonly ability: PossibilityClass<string>;
 
@@ -155,8 +149,8 @@ class HasAbility extends inference.logic.Reason {
     }
 
     protected override delayImpl(
-        cb: inference.logic.DelayCallback,
-    ): inference.logic.CancelCallback {
+        cb: inference.DelayCallback,
+    ): inference.CancelCallback {
         return this.ability.onUpdate(
             this.abilities,
             this.negative ? kept => cb(!kept) : cb,

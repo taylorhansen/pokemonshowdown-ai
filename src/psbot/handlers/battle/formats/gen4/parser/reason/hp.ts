@@ -9,7 +9,7 @@ import * as chance from "./chance";
  * @returns A Set of Reasons if it's possible to be at 1hp, or `null` if it's
  * not possible.
  */
-export function isAt1(mon: Pokemon): Set<inference.logic.Reason> | null {
+export function isAt1(mon: Pokemon): Set<inference.Reason> | null {
     const hpDisplay = mon.hp.current;
 
     // 0 hp.
@@ -26,7 +26,7 @@ export function isAt1(mon: Pokemon): Set<inference.logic.Reason> | null {
     // Note: Pixel-accurate equation is pixels = floor(hp/maxhp * 48), with an
     // additional check to force pixels=1 if hp>1 but the pixels round down to
     // 0.
-    let result: Set<inference.logic.Reason> | null = null;
+    let result: Set<inference.Reason> | null = null;
     let guaranteed = true;
     const {max: maxhpHi, min: maxhpLo} = mon.traits.stats.hp;
     for (let i = maxhpLo; i <= maxhpHi; ++i) {

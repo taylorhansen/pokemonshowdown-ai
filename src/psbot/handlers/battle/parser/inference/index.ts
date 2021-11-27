@@ -1,2 +1,3 @@
-export * as logic from "./logic";
+export * from "./andor";
 export * from "./Parser";
+export * from "./Reason";

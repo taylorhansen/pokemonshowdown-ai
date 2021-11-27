@@ -53,7 +53,7 @@ export class Item {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canPreMove(mon: Pokemon): Set<inference.logic.Reason> | null {
+    public canPreMove(mon: Pokemon): Set<inference.Reason> | null {
         if (!this.data.on?.preMove) return null;
         // Note(gen4): Custapberry check happens on pre-turn but is only ever
         // shown/acknowledged on pre-move.
@@ -114,7 +114,7 @@ export class Item {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canMoveCharge(mon: Pokemon): Set<inference.logic.Reason> | null {
+    public canMoveCharge(mon: Pokemon): Set<inference.Reason> | null {
         if (!this.data.on?.moveCharge) return null;
         if (this.data.on.moveCharge.shorten) {
             return new Set([reason.ability.cantIgnoreItem(mon)]);
@@ -159,7 +159,7 @@ export class Item {
     public canPreHit(
         mon: Pokemon,
         hitBy: MoveAndUser,
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         const data = this.data.on?.preHit;
         if (!data) return null;
 
@@ -282,7 +282,7 @@ export class Item {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canTryOhko(mon: Pokemon): Set<inference.logic.Reason> | null {
+    public canTryOhko(mon: Pokemon): Set<inference.Reason> | null {
         const data = this.data.on?.tryOhko;
         if (!data) return null;
         if (data.block && data.consume) {
@@ -332,7 +332,7 @@ export class Item {
     public canSuper(
         mon: Pokemon,
         hitBy: MoveAndUser,
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         const data = this.data.on?.super;
         if (!data) return null;
         if (!hitBy.move.canBeEffective) return null;
@@ -396,7 +396,7 @@ export class Item {
     public canPostHit(
         mon: Pokemon,
         hitBy: MoveAndUser,
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         const data = this.data.on?.postHit;
         if (!data) return null;
         if (data.condition !== hitBy.move.data.category) {
@@ -456,7 +456,7 @@ export class Item {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canMovePostDamage(mon: Pokemon): Set<inference.logic.Reason> | null {
+    public canMovePostDamage(mon: Pokemon): Set<inference.Reason> | null {
         if (!this.data.on?.movePostDamage) return null;
 
         // Check for abilities that would block the item.
@@ -527,7 +527,7 @@ export class Item {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canUpdate(mon: Pokemon): Set<inference.logic.Reason> | null {
+    public canUpdate(mon: Pokemon): Set<inference.Reason> | null {
         if (mon.fainted) return null;
         const data = this.data.on?.update;
         if (!data) return null;
@@ -665,7 +665,7 @@ export class Item {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canResidual(mon: Pokemon): Set<inference.logic.Reason> | null {
+    public canResidual(mon: Pokemon): Set<inference.Reason> | null {
         const data = this.data.on?.residual;
         if (!data) return null;
 
@@ -1057,7 +1057,7 @@ export class Item {
     private checkHpThreshold(
         mon: Pokemon | PreTurnSnapshotPokemon,
         threshold: number,
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         // TODO: Is percentHP reliable? how does PS/cart handle rounding?
         const percentHp = (100 * mon.hp.current) / mon.hp.max;
 

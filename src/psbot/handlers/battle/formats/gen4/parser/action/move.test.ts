@@ -1552,7 +1552,7 @@ export const test = (): void =>
                                 );
                                 await ph.haltError(
                                     Error,
-                                    /^Supposed to reject one Reason but all of them held\./,
+                                    /^Supposed to reject one Reason but all of them asserted\./,
                                 );
                             });
                         });

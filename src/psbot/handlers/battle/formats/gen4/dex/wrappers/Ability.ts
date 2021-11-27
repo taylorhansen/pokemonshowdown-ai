@@ -68,9 +68,7 @@ export class Ability {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canSwitchOut(
-        mon: ReadonlyPokemon,
-    ): Set<inference.logic.Reason> | null {
+    public canSwitchOut(mon: ReadonlyPokemon): Set<inference.Reason> | null {
         return mon.majorStatus.current && this.data.on?.switchOut?.cure
             ? new Set()
             : null;
@@ -124,10 +122,7 @@ export class Ability {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canStart(
-        mon: Pokemon,
-        opp: Pokemon,
-    ): Set<inference.logic.Reason> | null {
+    public canStart(mon: Pokemon, opp: Pokemon): Set<inference.Reason> | null {
         if (!this.data.on?.start) return null;
         // Anticipation.
         if (this.data.on.start.anticipate) {
@@ -549,8 +544,8 @@ export class Ability {
     public canBlock(
         weatherType: WeatherType | "none",
         hitBy: MoveAndUser,
-    ): Set<inference.logic.Reason> | null {
-        let res: Set<inference.logic.Reason> | null = null;
+    ): Set<inference.Reason> | null {
+        let res: Set<inference.Reason> | null = null;
 
         // Block status due to ability immunity.
         // Note: Only the main status effects can be visibly blocked.
@@ -931,14 +926,14 @@ export class Ability {
     public canBlockUnboost(
         source: Pokemon,
         boosts: Partial<BoostTable>,
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         if (!this.data.on?.tryUnboost?.block) return null;
         const blockUnboost = this.data.on.tryUnboost.block;
 
         const res = (Object.keys(boosts) as BoostID[]).some(
             b => boosts[b]! < 0 && blockUnboost[b],
         )
-            ? new Set<inference.logic.Reason>()
+            ? new Set<inference.Reason>()
             : null;
 
         // Moldbreaker check.
@@ -1021,7 +1016,7 @@ export class Ability {
         mon: Pokemon,
         on: AbilityOn,
         hitBy: MoveAndUser,
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         if (!this.data.on) return null;
         if (
             this.data.on.moveDamage &&
@@ -1226,7 +1221,7 @@ export class Ability {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canMoveDrain(): Set<inference.logic.Reason> | null {
+    public canMoveDrain(): Set<inference.Reason> | null {
         return this.data.on?.moveDrain ? new Set() : null;
     }
 
@@ -1298,7 +1293,7 @@ export class Ability {
     public canWeather(
         mon: Pokemon,
         weatherType: WeatherType,
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         const data = this.data.on?.weather?.[weatherType];
         if (!data) return null;
         // Damage or heal holder.
@@ -1361,10 +1356,7 @@ export class Ability {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canUpdate(
-        mon: Pokemon,
-        opp: Pokemon,
-    ): Set<inference.logic.Reason> | null {
+    public canUpdate(mon: Pokemon, opp: Pokemon): Set<inference.Reason> | null {
         if (!this.data.on?.update) return null;
         // Trace.
         if (this.data.on.update.copyFoeAbility) {
@@ -1580,9 +1572,9 @@ export class Ability {
     public canResidual(
         mon: ReadonlyPokemon,
         foes: readonly ReadonlyPokemon[],
-    ): Set<inference.logic.Reason> | null {
+    ): Set<inference.Reason> | null {
         if (!this.data.on?.residual) return null;
-        let res: Set<inference.logic.Reason> | null = null;
+        let res: Set<inference.Reason> | null = null;
         // Baddreams.
         if (this.data.on.residual.damageFoes) {
             const {statusTypes, percentDamage: p} =

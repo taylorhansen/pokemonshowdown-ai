@@ -2,7 +2,7 @@ import {BattleAgent} from "../../agent";
 import {FormatType} from "../../formats";
 import {BattleParser, BattleParserContext} from "../BattleParser";
 import * as unordered from "../unordered";
-import * as logic from "./logic";
+import {Reason} from "./Reason";
 
 /**
  * Creates an inference Parser.
@@ -24,7 +24,7 @@ export function parser<
     TResult = unknown,
 >(
     name: string | (() => string),
-    cases: ReadonlySet<logic.Reason>,
+    cases: ReadonlySet<Reason>,
     innerParser: InnerParser<T, TAgent, [], TResult>,
 ): Parser<T, TAgent, TResult> {
     return new Parser(name, cases, innerParser);
@@ -55,7 +55,7 @@ export type InnerParser<
  * @param reason The Reason that ended up being chosen out of the ones given
  * when the Parser was initially constructed.
  */
-export type AcceptCallback = (reason: logic.Reason) => void;
+export type AcceptCallback = (reason: Reason) => void;
 
 /**
  * Describes the different but related cases in which a single group of events
@@ -86,7 +86,7 @@ export class Parser<
      */
     public constructor(
         name: string | (() => string),
-        private readonly cases: ReadonlySet<logic.Reason>,
+        private readonly cases: ReadonlySet<Reason>,
         private readonly innerParser: InnerParser<T, TAgent, [], TResult>,
     ) {
         super(
@@ -116,7 +116,7 @@ export class Parser<
      * Indicates that this Parser is about to parse an event, and that the
      * Reason provided is accepted as the sole reason for that.
      */
-    private accept(reason: logic.Reason): void {
+    private accept(reason: Reason): void {
         if (!this.cases.has(reason)) {
             throw new Error(
                 "Inference inner parser didn't provide accept callback with " +
@@ -131,7 +131,7 @@ export class Parser<
         const outer = " ".repeat(indentOuter * 4);
         const indentInferenceOuter = indentOuter + 2 * indentInner;
         return `\
-${outer}EventInference(
+${outer}InferenceParser(
 ${outer}${inner}${this.name.replace("\n", `\n${outer}${inner}`)},
 ${outer}${inner}cases = [${
             [...this.cases]

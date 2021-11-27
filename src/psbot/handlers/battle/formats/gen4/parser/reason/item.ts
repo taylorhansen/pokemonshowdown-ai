@@ -5,26 +5,23 @@ import {PossibilityClass} from "../../state/PossibilityClass";
 import {subsetOrIndependent} from "./subsets";
 
 /** Creates a Reason that asserts that the pokemon has the given item. */
-export function has(mon: Pokemon, items: Set<string>): inference.logic.Reason {
+export function has(mon: Pokemon, items: Set<string>): inference.Reason {
     return new HasItem(mon, items, false /*negative*/);
 }
 
 /**
  * Creates a Reason that asserts that the pokemon doesn't have the given item.
  */
-export function doesntHave(
-    mon: Pokemon,
-    items: Set<string>,
-): inference.logic.Reason {
+export function doesntHave(mon: Pokemon, items: Set<string>): inference.Reason {
     return new HasItem(mon, items, true /*negative*/);
 }
 
 /** Creates a Reason that asserts that the pokemon has an unknown item. */
-export function hasUnknown(mon: Pokemon): inference.logic.Reason {
+export function hasUnknown(mon: Pokemon): inference.Reason {
     return doesntHave(mon, new Set(["none"]));
 }
 
-class HasItem extends inference.logic.Reason {
+class HasItem extends inference.Reason {
     /** Item snapshot for making inferences in retrospect. */
     private readonly item: PossibilityClass<string>;
 
@@ -66,8 +63,8 @@ class HasItem extends inference.logic.Reason {
     }
 
     protected override delayImpl(
-        cb: inference.logic.DelayCallback,
-    ): inference.logic.CancelCallback {
+        cb: inference.DelayCallback,
+    ): inference.CancelCallback {
         return this.item.onUpdate(
             this.items,
             this.negative ? kept => cb(!kept) : cb,
