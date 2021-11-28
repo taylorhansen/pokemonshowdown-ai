@@ -242,8 +242,6 @@ export const onWeather = onX(
     ),
 );
 
-type Awaited<T> = T extends Promise<infer U> ? U : T;
-
 type UpdateResult = Awaited<ReturnType<dex.Ability["onUpdate"]>> | undefined;
 
 /**

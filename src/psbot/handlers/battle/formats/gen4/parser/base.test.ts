@@ -30,9 +30,6 @@ import {
     toWeather,
 } from "./helpers.test";
 
-/** Unwraps a Promise. */
-type Awaited<T> = T extends Promise<infer U> ? U : T;
-
 export const test = () =>
     describe("base", function () {
         const ictx = createInitialContext();
