@@ -2059,7 +2059,8 @@ async function teamEffectImpl(
     effect: dex.TeamEffectType | "cure",
 ): Promise<void> {
     // Silently consume effect if already present.
-    // Usually the move should fail, but some gen8 moves require this behavior.
+    // Usually the move should fail outright, but some gen8 moves require this
+    // behavior when this isn't the sole effect that's happening.
     const team = ctx.state.getTeam(side);
     const ts = team.status;
     switch (effect) {
@@ -2090,55 +2091,64 @@ async function teamEffectImpl(
             return;
     }
 
-    const event = await tryVerify(
-        ctx,
-        // Cure-team effect uses |-activate| event.
-        effect !== "cure" ? "|-sidestart|" : "|-activate|",
-    );
-    if (!event) return;
-    const [, sideStr, effectStr] = event.args;
-    // Note: Protocol.Side is in a similar format to Protocol.PokemonIdent, just
-    // without the position letter and with the nickname replaced with username.
-    const sideObj = Protocol.parsePokemonIdent(
-        sideStr as unknown as Protocol.PokemonIdent,
-    );
-    if (sideObj.player !== side) return;
-    const effectObj = Protocol.parseEffect(effectStr, toIdName);
-    if (effect === "cure") {
-        const move = dex.getMove(effectObj.name);
-        if (move?.data.effects?.team?.self !== "cure") return;
-    } else if (effectObj.name !== effect) return;
+    if (effect !== "cure") {
+        const event = await tryVerify(ctx, "|-sidestart|");
+        if (!event) return;
+        const [, sideStr, effectStr] = event.args;
+        // Note: Protocol.Side is in a similar format to Protocol.PokemonIdent,
+        // just without the position letter and with the nickname replaced with
+        // username.
+        const sideObj = Protocol.parsePokemonIdent(
+            sideStr as unknown as Protocol.PokemonIdent,
+        );
+        if (sideObj.player !== side) return;
+        const effectObj = Protocol.parseEffect(effectStr, toIdName);
+        if (effectObj.name !== effect) return;
 
+        accept();
+        if (effect === "lightscreen" || effect === "reflect") {
+            // Override default behavior to record source pokemon.
+            ts[effect].start(team.active);
+            await consume(ctx);
+        } else await base["|-sidestart|"](ctx);
+    }
+
+    // Cure-team effect can use activate or cureteam event.
+    const e = await tryVerify(ctx, "|-activate|", "|-cureteam|");
+    if (!e) return;
+    const [t, identStr, effectStr] = e.args;
+    const ident = Protocol.parsePokemonIdent(identStr as Protocol.PokemonIdent);
+    if (ident.player !== side) return;
+    const effect2 = Protocol.parseEffect(
+        t === "-activate" ? effectStr : e.kwArgs.from,
+        toIdName,
+    );
+    const move = dex.getMove(effect2.name);
+    if (move?.data.effects?.team?.self !== "cure") return;
     accept();
-    if (effect === "lightscreen" || effect === "reflect") {
-        // Override default behavior to record source pokemon.
-        ts[effect].start(team.active);
-        await consume(ctx);
-    } else await dispatch(ctx);
+    await dispatch(ctx);
 
     // Cure-team effect includes optional cure-status events.
-    if (effect === "cure") {
-        const toCure = new Map(
-            (team.pokemon.filter(p => p?.majorStatus.current) as Pokemon[]).map(
-                p => [p.species, p],
-            ),
+    const toCure = new Map(
+        (team.pokemon.filter(p => p?.majorStatus.current) as Pokemon[]).map(
+            p => [p.species, p],
+        ),
+    );
+    await eventLoop(ctx, async function cureStatusFilter(_ctx) {
+        const ev = await tryVerify(_ctx, "|-curestatus|");
+        if (!ev) return;
+        const [, _sideStr] = ev.args;
+        const _sideObj = Protocol.parsePokemonIdent(
+            _sideStr as unknown as Protocol.PokemonIdent,
         );
-        await eventLoop(ctx, async function cureStatusFilter(_ctx) {
-            const ev = await tryVerify(_ctx, "|-curestatus|");
-            if (!ev) return;
-            const [, _sideStr] = ev.args;
-            const _sideObj = Protocol.parsePokemonIdent(
-                _sideStr as unknown as Protocol.PokemonIdent,
-            );
-            if (_sideObj.player !== side) return;
-            const species = toIdName(_sideObj.name);
-            const mon = toCure.get(species);
-            if (!mon) return;
-            toCure.delete(species);
-            mon.majorStatus.cure();
-            await consume(_ctx);
-        });
-    }
+        if (_sideObj.player !== side) return;
+        const species = toIdName(_sideObj.name);
+        const mon = toCure.get(species);
+        if (!mon) return;
+        toCure.delete(species);
+        mon.majorStatus.cure();
+        await consume(_ctx);
+    });
 }
 
 //#endregion

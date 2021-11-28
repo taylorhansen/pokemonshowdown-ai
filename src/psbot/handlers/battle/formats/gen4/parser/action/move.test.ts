@@ -3838,6 +3838,31 @@ export const test = (): void =>
                                     });
                                     await ph.halt();
                                     await ph.return({});
+                                    expect(mon1.majorStatus.current).to.be.null;
+                                    expect(mon2.majorStatus.current).to.be.null;
+                                });
+
+                                it(`Should also handle cureteam event if using ${move}`, async function () {
+                                    sh.initActive("p1");
+                                    const [mon1, mon2] = sh.initTeam("p2", [
+                                        ditto,
+                                        smeargle,
+                                    ]);
+                                    mon1.majorStatus.afflict("slp");
+                                    mon2.majorStatus.afflict("brn");
+
+                                    pctx = init("p2");
+                                    await moveEvent("p2", move);
+                                    await ph.handle({
+                                        args: ["-cureteam", toIdent("p2")],
+                                        kwArgs: {
+                                            from: toEffectName(move, "move"),
+                                        },
+                                    });
+                                    await ph.halt();
+                                    await ph.return({});
+                                    expect(mon1.majorStatus.current).to.be.null;
+                                    expect(mon2.majorStatus.current).to.be.null;
                                 });
                             }
 
