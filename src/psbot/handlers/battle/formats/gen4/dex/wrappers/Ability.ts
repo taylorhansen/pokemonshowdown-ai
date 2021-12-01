@@ -279,6 +279,7 @@ export class Ability {
     ): Promise<void> {
         const event = await tryVerify(ctx, "|-ability|");
         if (!event) return;
+        if (event.kwArgs.from || event.kwArgs.of) return;
         const [, identStr, abilityName] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         if (ident.player !== side) return;
@@ -376,6 +377,7 @@ export class Ability {
     ): Promise<boolean> {
         const event = await tryVerify(ctx, "|-ability|");
         if (!event) return false;
+        if (event.kwArgs.from || event.kwArgs.of) return false;
         const [, identStr, abilityName, effectStr] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         if (ident.player !== side) return false;
@@ -431,6 +433,7 @@ export class Ability {
         // TODO(doubles): Same event format for each opponent.
         const event = await tryVerify(ctx, "|-ability|");
         if (!event) return;
+        if (event.kwArgs.from || event.kwArgs.of) return;
         const [, identStr, abilityName] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         if (ident.player !== side) return;
@@ -796,6 +799,7 @@ export class Ability {
         if (!event) return {};
 
         // Otherwise, parse this initial event and then the boost events.
+        if (event.kwArgs.from || event.kwArgs.of) return {};
         const [, identStr, abilityName, s] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         if (ident.player !== side) return {};
