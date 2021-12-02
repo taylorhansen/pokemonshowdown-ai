@@ -2,8 +2,11 @@ import {CallbackRegistry} from "./CallbackRegistry";
 import {CancelCallback, DelayCallback, Reason} from "./Reason";
 
 /**
- * Creates a Reason that asserts all of the given sub-Reasons, like a logical
- * `and` operation or {@link Array.every `Array.every()`}.
+ * Creates a {@link Reason} that asserts all of the given sub-Reasons, like a
+ * logical `and` operation or {@link Array.every `Array.every()`}.
+ *
+ * Note that this might not work well if two or more sub-Reasons depend on the
+ * same underlying data, since the Reason interface abstracts that out for now.
  *
  * @param reasons Sub-Reasons to prove. If empty, then this Reason is already
  * proven.
@@ -13,8 +16,11 @@ export function and(reasons: Set<Reason>): Reason {
 }
 
 /**
- * Creates a Reason that asserts at least one of the given sub-Reasons, like a
- * logical `or` operation or {@link Array.some `Array.some()`}.
+ * Creates a {@link Reason} that asserts at least one of the given sub-Reasons,
+ * like a logical `or` operation or {@link Array.some `Array.some()`}.
+ *
+ * Note that this might not work well if two or more sub-Reasons depend on the
+ * same underlying data, since the Reason interface abstracts that out for now.
  *
  * @param reasons Sub-Reasons, at least one of which to prove. If empty, then
  * this Reason is already disproven.
