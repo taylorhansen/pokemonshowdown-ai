@@ -280,6 +280,7 @@ export class Ability {
         const event = await tryVerify(ctx, "|-ability|");
         if (!event) return;
         if (event.kwArgs.from || event.kwArgs.of) return;
+        if (event.args.length > 3) return;
         const [, identStr, abilityName] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         if (ident.player !== side) return;
@@ -378,6 +379,7 @@ export class Ability {
         const event = await tryVerify(ctx, "|-ability|");
         if (!event) return false;
         if (event.kwArgs.from || event.kwArgs.of) return false;
+        if (event.args.length > 4) return false;
         const [, identStr, abilityName, effectStr] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         if (ident.player !== side) return false;
@@ -434,6 +436,7 @@ export class Ability {
         const event = await tryVerify(ctx, "|-ability|");
         if (!event) return;
         if (event.kwArgs.from || event.kwArgs.of) return;
+        if (event.args.length > 3) return;
         const [, identStr, abilityName] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         if (ident.player !== side) return;
@@ -794,20 +797,8 @@ export class Ability {
         side: SideID,
         boosts: Partial<BoostTable>,
     ): Promise<AbilityBlockResult> {
-        // Parse initial event indicating boost effect.
-        const event = await tryVerify(ctx, "|-ability|");
-        if (!event) return {};
-
-        // Otherwise, parse this initial event and then the boost events.
-        if (event.kwArgs.from || event.kwArgs.of) return {};
-        const [, identStr, abilityName, s] = event.args;
-        const ident = Protocol.parsePokemonIdent(identStr);
-        if (ident.player !== side) return {};
-        const abilityId = toIdName(abilityName);
-        if (this.data.name !== abilityId) return {};
-        if (s !== "boost") return {};
-        accept();
-        await base["|-ability|"](ctx);
+        // Parse this initial event and then the boost events.
+        if (!(await this.abilityBoost(ctx, accept, side))) return {};
 
         // Parse boost events.
         const remaining = await boost(ctx, {
@@ -1453,6 +1444,7 @@ export class Ability {
         // gen4/parser/ability.ts#onUpdate() where this method is called.
         const event = await tryVerify(ctx, "|-ability|");
         if (!event) return;
+        if (event.args.length > 3) return;
         const [, identStr, abilityName] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
         const abilityId = toIdName(abilityName);
