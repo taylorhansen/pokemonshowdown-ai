@@ -2046,53 +2046,6 @@ export const test = () =>
                     expect(them.ability).to.equal("multitype");
                 });
 
-                it("Should throw if ability does not activate after copy", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("vitalspirit", "insomnia");
-                    const them = sh.initActive("p2");
-                    them.setAbility("trace");
-                    them.majorStatus.afflict("slp");
-
-                    pctx = init("p2");
-                    await ph.handle(traceEvent("p2", "insomnia", "p1"));
-                    await ph.haltError(
-                        Error,
-                        "CopyFoeAbility ability 'trace' copied 'insomnia' " +
-                            "but copied ability did not activate",
-                    );
-                    // Inference didn't finish so opponent is inferred but not
-                    // the holder.
-                    expect(us.ability).to.equal("insomnia");
-                    expect(them.ability).to.equal("trace");
-                });
-
-                it("Should activate copied on-update ability afterwards", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("vitalspirit", "insomnia");
-                    const them = sh.initActive("p2");
-                    them.setAbility("trace");
-                    them.majorStatus.afflict("slp");
-
-                    pctx = init("p2");
-                    await ph.handle(traceEvent("p2", "insomnia", "p1"));
-                    await ph.handle({
-                        args: [
-                            "-activate",
-                            toIdent("p2"),
-                            toEffectName("insomnia", "ability"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle({
-                        args: ["-curestatus", toIdent("p2"), "slp"],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("insomnia");
-                    expect(them.ability).to.equal("insomnia");
-                });
-
                 it("Should activate copied on-start ability first", async function () {
                     const us = sh.initActive("p1");
                     us.setAbility("pressure", "moldbreaker");
@@ -2159,32 +2112,6 @@ export const test = () =>
                     expect(them.ability).to.equal("pressure");
                 });
 
-                it("Should distinguish from non-copied shared ability", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "vitalspirit");
-                    us.majorStatus.afflict("slp");
-                    const them = sh.initActive("p2");
-                    them.setAbility("vitalspirit", "insomnia");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-activate",
-                            toIdent("p1"),
-                            toEffectName("vitalspirit", "ability"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle({
-                        args: ["-curestatus", toIdent("p1"), "slp"],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("vitalspirit");
-                    expect(them.ability).to.be.empty;
-                });
-
                 it("Should throw if no copy indicator event", async function () {
                     const us = sh.initActive("p1");
                     us.setAbility("trace", "pressure");
@@ -2205,6 +2132,74 @@ export const test = () =>
                         "CopyFoeAbility ability [trace] activated for " +
                             "'moldbreaker' but no copy indicator event found",
                     );
+                });
+
+                describe("excludeCopiers = true", function () {
+                    it("Should reject activation of copier ability", async function () {
+                        const us = sh.initActive("p1");
+                        us.setAbility("trace", "pressure");
+                        const them = sh.initActive("p2");
+                        them.setAbility("pressure", "moldbreaker");
+
+                        pctx = init("p1", true /*excludeCopiers*/);
+                        await ph.reject({
+                            args: [
+                                "-ability",
+                                toIdent("p1"),
+                                toAbilityName("moldbreaker"),
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.return([]);
+                    });
+                });
+
+                describe("excludeSharedOnStart = true", function () {
+                    it("Should reject activation of shared copied ability", async function () {
+                        const us = sh.initActive("p1");
+                        us.setAbility("trace", "pressure");
+                        const them = sh.initActive("p2");
+                        them.setAbility("pressure", "moldbreaker");
+
+                        pctx = init(
+                            "p1",
+                            false /*excludeCopiers*/,
+                            true /*excludeSharedOnStart*/,
+                        );
+                        await ph.reject({
+                            args: [
+                                "-ability",
+                                toIdent("p1"),
+                                toAbilityName("pressure"),
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.return([]);
+                    });
+
+                    it("Should still handle activation of copier ability", async function () {
+                        const us = sh.initActive("p1");
+                        us.setAbility("trace", "pressure");
+                        const them = sh.initActive("p2");
+                        them.setAbility("pressure", "moldbreaker");
+
+                        pctx = init(
+                            "p1",
+                            false /*excludeCopiers*/,
+                            true /*excludeSharedOnStart*/,
+                        );
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p1"),
+                                toAbilityName("moldbreaker"),
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.handle(traceEvent("p1", "moldbreaker", "p2"));
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
                 });
             });
 
@@ -2306,10 +2301,10 @@ export const test = () =>
             });
         });
 
-        describe("onStartOrUpdate()", function () {
+        describe("onStartCopyable()", function () {
             const init = setupUnorderedParser(
                 ictx.startArgs,
-                effectAbility.onStartOrUpdate,
+                effectAbility.onStartCopyable,
             );
             let pctx: ReturnType<typeof init> | undefined;
             const ph = new ParserHelpers(() => pctx);
@@ -2318,7 +2313,7 @@ export const test = () =>
                 await ph.close().finally(() => (pctx = undefined));
             });
 
-            it("Should handle on-start", async function () {
+            it("Should handle on-start normally while returning delayed final inference", async function () {
                 sh.initActive("p1").setAbility("pressure");
                 sh.initActive("p2");
 
@@ -2332,269 +2327,100 @@ export const test = () =>
                     kwArgs: {},
                 });
                 await ph.halt();
-                await ph.return([undefined]);
+                await ph.return(async res => {
+                    await expect(res).to.eventually.have.lengthOf(1);
+                    const [r] = await res;
+                    expect(r!.ability).to.equal(dex.getAbility("pressure"));
+                    expect(r!.canStartDirectly).to.exist;
+                    expect(r!.canStartDirectly!.canHold()).to.true;
+                    r!.canStartDirectly!.assert();
+                });
+            });
+        });
+
+        describe("onUpdateCopiedStarted()", function () {
+            const init = setupUnorderedParser(
+                ictx.startArgs,
+                effectAbility.onUpdateCopiedStarted,
+            );
+            let pctx: ReturnType<typeof init> | undefined;
+            const ph = new ParserHelpers(() => pctx);
+
+            afterEach("Close ParserContext", async function () {
+                await ph.close().finally(() => (pctx = undefined));
             });
 
-            it("Should handle on-update", async function () {
-                const mon = sh.initActive("p1");
-                mon.majorStatus.afflict("slp");
-                mon.setAbility("insomnia");
-                sh.initActive("p2");
+            // Trace or download ability.
+            const porygon: SwitchOptions = {
+                species: "porygon",
+                level: 35,
+                gender: "N",
+                hp: 100,
+                hpMax: 100,
+            };
 
-                pctx = init("p1");
-                await ph.handle({
-                    args: [
-                        "-activate",
-                        toIdent("p1"),
-                        toEffectName("insomnia", "ability"),
-                    ],
-                    kwArgs: {},
-                });
-                await ph.handle({
-                    args: ["-curestatus", toIdent("p1"), "slp"],
-                    kwArgs: {},
-                });
+            it("Should handle on-update copy indicator event", async function () {
+                const mon = sh.initActive("p1", porygon);
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "trace",
+                    "download",
+                );
+                sh.initActive("p2").setAbility("download");
+
+                pctx = init(
+                    "p1",
+                    dex.getAbility("download")!,
+                    reason.ability.has(mon, new Set(["download"])),
+                );
+                await ph.handle(traceEvent("p1", "download", "p2"));
                 await ph.halt();
                 await ph.return([undefined]);
+                expect(mon.baseTraits.ability.possibleValues).to.have.keys(
+                    "trace",
+                );
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
             });
 
-            describe("CopyFoeAbility (Trace)", function () {
-                // TODO: Test subtle interactions with base traits.
-                it("Should reveal abilities", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace");
-                    const them = sh.initActive("p2");
-                    them.setAbility("hugepower", "illuminate");
+            it("Should infer previous on-start ability if no copy indicator event", async function () {
+                const mon = sh.initActive("p1", porygon);
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "trace",
+                    "download",
+                );
+                sh.initActive("p2").setAbility("download");
 
-                    pctx = init("p1");
-                    await ph.handle(traceEvent("p1", "illuminate", "p2"));
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("illuminate");
-                    expect(them.ability).to.equal("illuminate");
-                });
+                pctx = init(
+                    "p1",
+                    dex.getAbility("download")!,
+                    reason.ability.has(mon, new Set(["download"])),
+                );
+                await ph.halt();
+                await ph.return([]);
+                expect(mon.baseTraits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
+            });
 
-                it("Should not copy un-copyable ability", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace");
-                    const them = sh.initActive("p2");
-                    them.setAbility("multitype");
+            it("Should handle 3 ability possibilities", async function () {
+                const mon = sh.initActive("p1");
+                mon.setAbility("trace", "download", "moldbreaker");
+                sh.initActive("p2").setAbility("download", "moldbreaker");
 
-                    pctx = init("p1");
-                    await ph.halt();
-                    await ph.return([]);
-                    expect(us.ability).to.equal("trace");
-                    expect(them.ability).to.equal("multitype");
-                });
-
-                it("Should activate copied on-update ability afterwards", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("vitalspirit", "insomnia");
-                    const them = sh.initActive("p2");
-                    them.setAbility("trace");
-                    them.majorStatus.afflict("slp");
-
-                    pctx = init("p2");
-                    await ph.handle(traceEvent("p2", "insomnia", "p1"));
-                    await ph.handle({
-                        args: [
-                            "-activate",
-                            toIdent("p2"),
-                            toEffectName("insomnia", "ability"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle({
-                        args: ["-curestatus", toIdent("p2"), "slp"],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("insomnia");
-                    expect(them.ability).to.equal("insomnia");
-                });
-
-                it("Should activate copied on-start ability first", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("pressure", "moldbreaker");
-                    const them = sh.initActive("p2");
-                    them.setAbility("trace");
-
-                    pctx = init("p2");
-                    await ph.handle({
-                        args: [
-                            "-ability",
-                            toIdent("p2"),
-                            toAbilityName("pressure"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle(traceEvent("p2", "pressure", "p1"));
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("pressure");
-                    expect(them.ability).to.equal("pressure");
-                });
-
-                it("Should activate copied on-start ability first if the copied ability could've been one of the ability holder's possible abilities", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "pressure");
-                    const them = sh.initActive("p2");
-                    them.setAbility("pressure", "moldbreaker");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-ability",
-                            toIdent("p1"),
-                            toAbilityName("moldbreaker"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle(traceEvent("p1", "moldbreaker", "p2"));
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("moldbreaker");
-                    expect(them.ability).to.equal("moldbreaker");
-                });
-
-                it("Should activate copied on-start ability first if the copied ability is one of the ability holder's possible abilities", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "pressure");
-                    const them = sh.initActive("p2");
-                    them.setAbility("pressure", "moldbreaker");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-ability",
-                            toIdent("p1"),
-                            toAbilityName("pressure"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle(traceEvent("p1", "pressure", "p2"));
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("pressure");
-                    expect(them.ability).to.equal("pressure");
-                });
-
-                it("Should distinguish from non-copied shared on-start ability", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "pressure");
-                    const them = sh.initActive("p2");
-                    them.setAbility("pressure", "moldbreaker");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-ability",
-                            toIdent("p1"),
-                            toAbilityName("pressure"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("pressure");
-                    expect(them.ability).to.be.empty;
-                });
-
-                it("Should distinguish from non-copied non-shared on-start ability", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "pressure");
-                    const them = sh.initActive("p2");
-                    them.setAbility("illuminate", "moldbreaker");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-ability",
-                            toIdent("p1"),
-                            toAbilityName("pressure"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("pressure");
-                    expect(them.ability).to.be.empty;
-                });
-
-                it("Should distinguish from non-copied shared on-update ability", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "insomnia");
-                    us.majorStatus.afflict("slp");
-                    const them = sh.initActive("p2");
-                    them.setAbility("insomnia", "vitalspirit");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-activate",
-                            toIdent("p1"),
-                            toEffectName("insomnia", "ability"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle({
-                        args: ["-curestatus", toIdent("p1"), "slp"],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("insomnia");
-                    expect(them.ability).to.be.empty;
-                });
-
-                it("Should distinguish from non-copied non-shared on-update ability", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "insomnia");
-                    us.majorStatus.afflict("slp");
-                    const them = sh.initActive("p2");
-                    them.setAbility("illuminate", "vitalspirit");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-activate",
-                            toIdent("p1"),
-                            toEffectName("insomnia", "ability"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle({
-                        args: ["-curestatus", toIdent("p1"), "slp"],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(us.ability).to.equal("insomnia");
-                    expect(them.ability).to.be.empty;
-                });
-
-                it("Should throw if no copy indicator event", async function () {
-                    const us = sh.initActive("p1");
-                    us.setAbility("trace", "pressure");
-                    const them = sh.initActive("p2");
-                    them.setAbility("pressure", "moldbreaker");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-ability",
-                            toIdent("p1"),
-                            toAbilityName("moldbreaker"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.haltError(
-                        Error,
-                        "CopyFoeAbility ability [trace] activated for " +
-                            "'moldbreaker' but no copy indicator event found",
-                    );
-                });
+                pctx = init(
+                    "p1",
+                    dex.getAbility("download")!,
+                    reason.ability.has(mon, new Set(["download"])),
+                );
+                await ph.halt();
+                await ph.return([]);
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
             });
         });
 

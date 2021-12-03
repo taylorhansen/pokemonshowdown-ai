@@ -24,9 +24,11 @@ import {
     toIdent,
     toItemName,
     toMoveName,
+    toNum,
     toSide,
     toSideCondition,
     toSpeciesName,
+    toUsername,
     toWeather,
 } from "../helpers.test";
 import * as actionSwitch from "./switch";
@@ -55,6 +57,24 @@ export const test = () =>
             ],
             kwArgs: {},
         });
+
+        // Pressure ability.
+        const entei: SwitchOptions = {
+            species: "entei",
+            level: 25,
+            gender: "M",
+            hp: 100,
+            hpMax: 100,
+        };
+
+        // Trace ability.
+        const ralts: SwitchOptions = {
+            species: "ralts",
+            level: 40,
+            gender: "M",
+            hp: 100,
+            hpMax: 100,
+        };
 
         describe("switchAction()", function () {
             const init = setupBattleParser(
@@ -227,15 +247,6 @@ export const test = () =>
             });
 
             describe("switch effects", function () {
-                // Pressure ability.
-                const entei: SwitchOptions = {
-                    species: "entei",
-                    level: 25,
-                    gender: "M",
-                    hp: 100,
-                    hpMax: 100,
-                };
-
                 it("Should handle multiple effects", async function () {
                     const [mon] = sh.initTeam("p1", [entei, ditto]);
                     const team = state.getTeam("p1");
@@ -759,14 +770,6 @@ export const test = () =>
                 });
 
                 describe("on-update abilities", function () {
-                    const ralts: SwitchOptions = {
-                        species: "ralts",
-                        level: 40,
-                        gender: "M",
-                        hp: 100,
-                        hpMax: 100,
-                    };
-
                     it("Should handle trace", async function () {
                         const [mon] = sh.initTeam("p1", [ralts, ditto]);
                         expect(mon.traits.ability.possibleValues).to.have.keys(
@@ -889,6 +892,572 @@ export const test = () =>
                 await ph.handle(switchEvent("p1"));
                 await ph.handle(switchEvent("p2", ditto));
                 await ph.halt();
+                await ph.return([
+                    ["p1", state.getTeam("p1").active],
+                    ["p2", state.getTeam("p2").active],
+                ]);
+            });
+
+            it("Should handle multiple switch-in effects in any order", async function () {
+                state.getTeam("p1").size = 1;
+                state.getTeam("p2").size = 1;
+
+                pctx = init();
+                await ph.handle(switchEvent("p1", entei));
+                await ph.handle(switchEvent("p2", entei));
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p2", entei),
+                        toAbilityName("pressure"),
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p1", entei),
+                        toAbilityName("pressure"),
+                    ],
+                    kwArgs: {},
+                });
+                await ph.halt();
+                await ph.return([
+                    ["p1", state.getTeam("p1").active],
+                    ["p2", state.getTeam("p2").active],
+                ]);
+            });
+
+            it("Should parse all effects in the required order", async function () {
+                const p1 = state.getTeam("p1");
+                p1.size = 1;
+                p1.status.stealthrock = 1;
+                p1.status.spikes = 3;
+                const p2 = state.getTeam("p2");
+                p2.size = 1;
+                p2.status.stealthrock = 1;
+                p2.status.spikes = 3;
+
+                pctx = init();
+                await ph.handle(switchEvent("p1", ralts));
+                await ph.handle(switchEvent("p2", entei));
+                // P2 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", entei), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", entei), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p2", entei),
+                        toAbilityName("pressure"),
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p2", entei),
+                        toItemName("sitrusberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.handle({
+                    args: ["-heal", toIdent("p2", entei), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("sitrusberry", "item")},
+                });
+                // P1 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", ralts), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", ralts), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p1", ralts),
+                        toAbilityName("pressure"),
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p1", ralts),
+                        toAbilityName("pressure"),
+                    ],
+                    kwArgs: {
+                        from: toEffectName("trace", "ability"),
+                        of: toIdent("p2", entei),
+                    },
+                });
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p1", ralts),
+                        toItemName("sitrusberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.handle({
+                    args: ["-heal", toIdent("p1", ralts), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("sitrusberry", "item")},
+                });
+                await ph.halt();
+                await ph.return([
+                    ["p1", state.getTeam("p1").active],
+                    ["p2", state.getTeam("p2").active],
+                ]);
+            });
+
+            // Trace or download ability.
+            const porygon: SwitchOptions = {
+                species: "porygon",
+                level: 35,
+                gender: "N",
+                hp: 100,
+                hpMax: 100,
+            };
+
+            it("Should also handle shared copied ability", async function () {
+                const p1 = state.getTeam("p1");
+                p1.size = 1;
+                p1.status.stealthrock = 1;
+                p1.status.spikes = 3;
+                const p2 = state.getTeam("p2");
+                p2.size = 1;
+                p2.status.stealthrock = 1;
+                p2.status.spikes = 3;
+
+                pctx = init();
+                await ph.handle(switchEvent("p2", porygon));
+                await ph.handle(switchEvent("p1", porygon));
+                // P1 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", porygon), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p1", porygon),
+                        toAbilityName("download"),
+                        "boost",
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-boost", toIdent("p1", porygon), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p1", porygon),
+                        toItemName("sitrusberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.handle({
+                    args: ["-heal", toIdent("p1", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("sitrusberry", "item")},
+                });
+                // P2 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", porygon), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p2", porygon),
+                        toAbilityName("download"),
+                        "boost",
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-boost", toIdent("p2", porygon), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p2", porygon),
+                        toAbilityName("download"),
+                    ],
+                    kwArgs: {
+                        from: toEffectName("trace", "ability"),
+                        of: toIdent("p1", porygon),
+                    },
+                });
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p2", porygon),
+                        toItemName("sitrusberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.handle({
+                    args: ["-heal", toIdent("p2", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("sitrusberry", "item")},
+                });
+                await ph.halt();
+                await ph.return([
+                    ["p2", state.getTeam("p2").active],
+                    ["p1", state.getTeam("p1").active],
+                ]);
+                expect(p1.active.traits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
+                expect(
+                    p1.active.baseTraits.ability.possibleValues,
+                ).to.have.keys("download");
+                expect(p2.active.traits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
+                expect(
+                    p2.active.baseTraits.ability.possibleValues,
+                ).to.have.keys("trace");
+            });
+
+            it("Should also handle shared non-copied ability", async function () {
+                const p1 = state.getTeam("p1");
+                p1.size = 1;
+                p1.status.stealthrock = 1;
+                p1.status.spikes = 3;
+                const p2 = state.getTeam("p2");
+                p2.size = 1;
+                p2.status.stealthrock = 1;
+                p2.status.spikes = 3;
+
+                pctx = init();
+                await ph.handle(switchEvent("p2", porygon));
+                await ph.handle(switchEvent("p1", porygon));
+                // P1 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", porygon), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p1", porygon),
+                        toAbilityName("download"),
+                        "boost",
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-boost", toIdent("p1", porygon), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p1", porygon),
+                        toItemName("sitrusberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.handle({
+                    args: ["-heal", toIdent("p1", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("sitrusberry", "item")},
+                });
+                // P2 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", porygon), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-ability",
+                        toIdent("p2", porygon),
+                        toAbilityName("download"),
+                        "boost",
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-boost", toIdent("p2", porygon), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p2", porygon),
+                        toItemName("sitrusberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.handle({
+                    args: ["-heal", toIdent("p2", porygon), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("sitrusberry", "item")},
+                });
+                await ph.halt();
+                await ph.return([
+                    ["p2", state.getTeam("p2").active],
+                    ["p1", state.getTeam("p1").active],
+                ]);
+                expect(p1.active.traits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
+                expect(
+                    p1.active.baseTraits.ability.possibleValues,
+                ).to.have.keys("download");
+                expect(p2.active.traits.ability.possibleValues).to.have.keys(
+                    "download",
+                );
+                expect(
+                    p2.active.baseTraits.ability.possibleValues,
+                ).to.have.keys("download");
+            });
+
+            // Moldbreaker or hypercutter ability.
+            const pinsir: SwitchOptions = {
+                species: "pinsir",
+                level: 35,
+                gender: "M",
+                hp: 100,
+                hpMax: 100,
+            };
+
+            it("Should assert no on-start ability if it did not activate", async function () {
+                const p1 = state.getTeam("p1");
+                p1.size = 1;
+                p1.status.stealthrock = 1;
+                p1.status.spikes = 3;
+                const mon1 = p1.reveal(pinsir)!;
+                expect(mon1.traits.ability.possibleValues).to.have.keys(
+                    "hypercutter",
+                    "moldbreaker",
+                );
+                const p2 = state.getTeam("p2");
+                p2.size = 1;
+                p2.status.stealthrock = 1;
+                p2.status.spikes = 3;
+                const mon2 = p2.reveal(pinsir)!;
+                expect(mon2.traits.ability.possibleValues).to.have.keys(
+                    "hypercutter",
+                    "moldbreaker",
+                );
+
+                pctx = init();
+                await ph.handle(switchEvent("p1", pinsir));
+                await ph.handle(switchEvent("p2", pinsir));
+                // P2 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", pinsir), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", pinsir), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                // P1 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", pinsir), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", pinsir), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.halt();
+                await ph.return([
+                    ["p1", state.getTeam("p1").active],
+                    ["p2", state.getTeam("p2").active],
+                ]);
+                expect(mon1.traits.ability.possibleValues).to.have.keys(
+                    "hypercutter",
+                );
+                expect(mon2.traits.ability.possibleValues).to.have.keys(
+                    "hypercutter",
+                );
+            });
+
+            it("Should assert no on-update ability if it did not activate", async function () {
+                const p1 = state.getTeam("p1");
+                p1.size = 1;
+                p1.status.stealthrock = 1;
+                p1.status.spikes = 3;
+                const mon1 = p1.reveal(ralts)!;
+                expect(mon1.traits.ability.possibleValues).to.have.keys(
+                    "trace",
+                    "synchronize",
+                );
+                const p2 = state.getTeam("p2");
+                p2.size = 1;
+                p2.status.stealthrock = 1;
+                p2.status.spikes = 3;
+                const mon2 = p2.reveal(smeargle)!;
+                expect(mon2.traits.ability.possibleValues).to.have.keys(
+                    "owntempo",
+                    "technician",
+                );
+
+                pctx = init();
+                await ph.handle(switchEvent("p1", ralts));
+                await ph.handle(switchEvent("p2", smeargle));
+                // P2 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", smeargle), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", smeargle), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                // P1 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", smeargle), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", smeargle), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.halt();
+                await ph.return([
+                    ["p1", state.getTeam("p1").active],
+                    ["p2", state.getTeam("p2").active],
+                ]);
+                expect(mon1.traits.ability.possibleValues).to.have.keys(
+                    "synchronize",
+                );
+                expect(mon2.traits.ability.possibleValues).to.have.keys(
+                    "owntempo",
+                    "technician",
+                );
+            });
+
+            it("Should handle faint separately for both pathways", async function () {
+                // Note: Requires teamsize=2 to prevent game-over.
+                const p1 = state.getTeam("p1");
+                p1.size = 2;
+                p1.status.stealthrock = 1;
+                p1.status.spikes = 3;
+                const p2 = state.getTeam("p2");
+                p2.size = 2;
+                p2.status.stealthrock = 1;
+                p2.status.spikes = 3;
+
+                pctx = init();
+                await ph.handle(switchEvent("p1", ralts));
+                await ph.handle(switchEvent("p2", entei));
+                // P2 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", entei), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-damage",
+                        toIdent("p2", entei),
+                        toHPStatus("faint"),
+                    ],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: ["faint", toIdent("p2", entei)],
+                    kwArgs: {},
+                });
+                // P1 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p1", ralts), toHPStatus(50)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-damage",
+                        toIdent("p1", ralts),
+                        toHPStatus("faint"),
+                    ],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                await ph.handle({
+                    args: ["faint", toIdent("p1", ralts)],
+                    kwArgs: {},
+                });
+                // Note: Since multipleSwitchIns() calls faint.replacements() we
+                // can't use the default ph.halt() event here (which is really a
+                // |request| event with type 'move') since it requires a
+                // 'switch' type, so we just check the error here to make sure
+                // the function isn't throwing anywhere else.
+                await ph.haltError(
+                    Error,
+                    "Expected |request| type 'switch' but got 'move'",
+                );
+            });
+
+            it("Should end game prematurely if all fainted on one side", async function () {
+                const p1 = state.getTeam("p1");
+                p1.size = 1;
+                p1.status.stealthrock = 1;
+                p1.status.spikes = 3;
+                const mon1 = p1.reveal(ralts)!;
+                mon1.setItem("sitrusberry");
+                mon1.setAbility("trace");
+                const p2 = state.getTeam("p2");
+                p2.size = 1;
+                p2.status.stealthrock = 1;
+                p2.status.spikes = 3;
+                const mon2 = p2.reveal(entei)!;
+                mon2.setItem("sitrusberry");
+                mon2.setAbility("pressure");
+
+                pctx = init();
+                await ph.handle(switchEvent("p1", ralts));
+                await ph.handle(switchEvent("p2", entei));
+                // P2 effects.
+                await ph.handle({
+                    args: ["-damage", toIdent("p2", entei), toHPStatus(75)],
+                    kwArgs: {from: toEffectName("stealthrock", "move")},
+                });
+                await ph.handle({
+                    args: [
+                        "-damage",
+                        toIdent("p2", entei),
+                        toHPStatus("faint"),
+                    ],
+                    kwArgs: {from: toEffectName("spikes", "move")},
+                });
+                // Faint early.
+                await ph.handle({
+                    args: ["faint", toIdent("p2", entei)],
+                    kwArgs: {},
+                });
+                // End game before checking p2 on-start or any p1 effects.
+                // Note: Only the top-level turnLoop() parser can consume this
+                // event.
+                await ph.reject({
+                    args: ["win", toUsername(state.username)],
+                    kwArgs: {},
+                });
                 await ph.return([
                     ["p1", state.getTeam("p1").active],
                     ["p2", state.getTeam("p2").active],

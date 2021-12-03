@@ -4,6 +4,8 @@ import {BattleParserContext} from "../BattleParser";
 import {tryPeek} from "../helpers";
 import {Parser, AcceptCallback, InnerParser} from "./Parser";
 
+// TODO: Move to separate files and test each.
+
 /**
  * Invokes a group of unordered {@link Parser}s in any order.
  *
@@ -178,4 +180,82 @@ export async function parse<
     if (accepted) return [res];
     parser.reject();
     return [];
+}
+
+/** Args for {@link staged}. */
+export interface StageEntry<
+    T extends FormatType = FormatType,
+    TAgent extends BattleAgent<T> = BattleAgent<T>,
+> {
+    /** Parsers for this stage, or a function to generate them. */
+    parsers: Parser<T, TAgent>[] | (() => Parser<T, TAgent>[]);
+    /** Callback that returns whether to end the entire `staged()` call. */
+    readonly after?: () => boolean;
+}
+
+/**
+ * Parses multiple pathways sequentially in any order. Each pathway is a set of
+ * {@link all `all()`} calls parsed in-order.
+ *
+ * @template T Format type.
+ * @template TAgent Battle agent type.
+ * @template TKey Type used to differentiate between pathways.
+ * @param ctx Parser context.
+ * @param stages Sets of arguments to `all()` calls, separated by the pathway
+ * they belong to. Entries are removed while progressing through each pathway,
+ * and callbacks to generate stage parsers are resolved while progressing
+ * through each stage.
+ */
+export async function staged<
+    T extends FormatType = FormatType,
+    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TKey = unknown,
+>(
+    ctx: BattleParserContext<T, TAgent>,
+    stages: readonly Map<TKey, StageEntry<T, TAgent>>[],
+): Promise<void> {
+    if (stages.length <= 0) return;
+    const [firstStage] = stages;
+    for (const [key, entry] of firstStage) {
+        if (typeof entry.parsers === "function") {
+            entry.parsers = entry.parsers();
+        }
+        // See if this key will be the one to parse an effect.
+        let firstParser: Parser<T, TAgent> | undefined;
+        for (const parser of entry.parsers) {
+            await parser.parse(ctx, () => (firstParser = parser));
+            if (firstParser) break;
+        }
+        if (firstParser) {
+            // Pathway for this key has been locked in, so parse the rest of
+            // this stage then the rest of the stages for this pathway for this
+            // key only.
+            // Afterwards we'll search for the next pathway.
+            entry.parsers.splice(entry.parsers.indexOf(firstParser), 1);
+            await all(ctx, entry.parsers);
+            if (entry.after?.()) return;
+
+            for (const stage of stages.slice(1)) {
+                const entry2 = stage.get(key);
+                if (!entry2) continue;
+                if (typeof entry2.parsers === "function") {
+                    entry2.parsers = entry2.parsers();
+                }
+                await all(ctx, entry2.parsers);
+                stage.delete(key);
+                if (entry2.after?.()) return;
+            }
+            return await staged(ctx, stages);
+        }
+    }
+    // First stage couldn't parse in any of the pathways, so reject them all and
+    // continue with the next stage.
+    for (const entry of firstStage.values()) {
+        if (typeof entry.parsers === "function") {
+            entry.parsers = entry.parsers();
+        }
+        while (entry.parsers.length > 0) entry.parsers.shift()!.reject();
+    }
+    firstStage.clear();
+    return await staged(ctx, stages.slice(1));
 }

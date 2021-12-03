@@ -100,20 +100,34 @@ export class Parser<
      * @template TResult2 Transformed result type.
      * @param name Name of the transform operation for logging/debugging.
      * @param f Result transform function.
-     * @param reject Callback if the parser never accepts an event.
+     * @param reject Callback if the parser never accepts an event. Also
+     * includes the original callback.
+     * @param preAccept Callback before accepting an event.
      * @returns A Parser that applies `f` to `this` parser's result.
      */
     public transform<TResult2 = unknown>(
         name: string | (() => string),
         f: (result: TResult) => TResult2,
-        reject?: RejectCallback,
+        reject?: (name: string, prev?: RejectCallback) => void,
+        preAccept?: AcceptCallback,
     ): Parser<T, TAgent, TResult2> {
         return new Parser(
             () =>
                 `transform(${typeof name === "string" ? name : name()}),\n` +
                 this.toString(1, 0),
-            async (ctx, accept) => f(await this.parse(ctx, accept)),
-            reject ?? (() => this.reject()),
+            async (ctx, accept) =>
+                f(
+                    await this.parse(
+                        ctx,
+                        preAccept
+                            ? () => {
+                                  preAccept();
+                                  accept();
+                              }
+                            : accept,
+                    ),
+                ),
+            reject ? n => reject(n, this._reject) : this._reject,
         );
     }
 

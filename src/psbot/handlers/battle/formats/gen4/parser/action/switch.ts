@@ -7,6 +7,7 @@ import {BattleAgent} from "../../../../agent";
 import {
     BattleParserContext,
     consume,
+    inference,
     tryVerify,
     unordered,
     verify,
@@ -108,31 +109,6 @@ const unorderedSwitchEvent = (
         },
     );
 
-/** Parses switch effects for multiple switch-ins. */
-async function multipleSwitchEffects(
-    ctx: BattleParserContext<"gen4">,
-    sides: readonly SideID[],
-) {
-    return await unordered.all(ctx, sides.map(unorderedSwitchEffects));
-}
-
-const unorderedSwitchEffects = (side: SideID): unordered.Parser<"gen4"> =>
-    unordered.parser(
-        `${side} switch effects`,
-        async (ctx, accept) =>
-            await unorderedSwitchEffectsImpl(ctx, accept, side),
-        effectDidntHappen,
-    );
-
-async function unorderedSwitchEffectsImpl(
-    ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback,
-    side: SideID,
-): Promise<void> {
-    // Note: Faint/win happens independently for each call.
-    return await switchEffects(ctx, side, accept);
-}
-
 /**
  * Parses a switch-in action, either by player choice or by self-switch.
  *
@@ -157,15 +133,16 @@ async function switchActionImpl(
     };
 
     const interceptRes = await preSwitch(ctx, side, accept);
-    if (interceptRes)
+    if (interceptRes) {
         Object.assign((res.actioned ??= {}), interceptRes.actioned);
+    }
 
     // Expect the actual switch-in.
     const switchRes = await (accept
         ? switchIn(ctx, side, accept)
         : switchIn(ctx, side));
     if (switchRes) {
-        [, /*side*/ res.mon] = switchRes;
+        [, res.mon] = switchRes;
         (res.actioned ??= {})[side] = true;
     }
     return res;
@@ -190,6 +167,7 @@ async function preSwitch(
     };
 
     // Check for a possible switch-intercepting move, e.g. pursuit.
+    // TODO: No pursuit if drag.
     const intercepting: SideID | undefined = side === "p1" ? "p2" : "p1";
     const committed = !accept;
     const moveRes = await actionMove.interceptSwitch(
@@ -209,6 +187,7 @@ async function preSwitch(
     }
 
     await unordered.parse(ctx, effectAbility.onSwitchOut(ctx, side), accept);
+    // TOOD: Ability on-end (slowstart).
 
     return moveRes;
 }
@@ -313,167 +292,184 @@ async function switchEvent(
  * Parses any effects that should happen after a switch-in.
  *
  * @param side Pokemon reference that was switched in.
- * @param accept Optional accept cb.
  */
 async function switchEffects(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
-    accept?: unordered.AcceptCallback,
 ): Promise<void> {
-    const a = accept;
-    accept &&= function switchEffectsAccept() {
-        accept = undefined;
-        a!();
-    };
+    await multipleSwitchEffects(ctx, [side]);
+}
 
-    const team = ctx.state.getTeam(side);
+interface AbilityStartData {
+    readonly canStartDirectly: inference.Reason;
+    readonly ability: dex.Ability;
+}
 
-    const entryEffects: unordered.Parser<"gen4">[] = [];
-    // Entry hazards.
-    if (team.status.spikes > 0) entryEffects.push(spikes(team.side));
-    if (team.status.stealthrock > 0) entryEffects.push(stealthrock(team.side));
-    if (team.status.toxicspikes > 0) entryEffects.push(toxicspikes(team.side));
-    // Healingwish effects.
-    // Note: Wish is on-residual (handled elsewhere), healingwish/lunardance are
-    // on-switch here.
-    if (team.status.healingwish) {
-        entryEffects.push(healingwish(team.side, "healingwish"));
-    }
-    if (team.status.lunardance) {
-        entryEffects.push(healingwish(team.side, "lunardance"));
-    }
-    await unordered.all(ctx, entryEffects, undefined /*filter*/, accept);
+/** Parses switch effects for multiple switch-ins. */
+async function multipleSwitchEffects(
+    ctx: BattleParserContext<"gen4">,
+    sides: readonly SideID[],
+): Promise<void> {
+    // Each pokemon may activate a switch-in effect, but only after other faster
+    // pokemon do all of theirs first, in this order:
+    // - Entry hazards.
+    // - Healingwish/lunardance.
+    // - Ability on-start.
+    // - Item on-start (TODO).
+    // - Faint check (can end game prematurely).
+    // - On-update all.
 
-    // Afterwards check for an on-start/update ability (e.g. trace or pressure).
-    if (!team.active.fainted) {
-        await unordered.parse(
-            ctx,
-            effectAbility.onStartOrUpdate(ctx, team.side),
-            accept,
-        );
-    }
-
-    // Ability on-update (e.g. forecast).
-    // Note: We need to check again outside of onStartOrUpdate for all active
-    // pokemon in case an on-start ability triggered an activation condition,
-    // e.g. a weather ability causing forecast to activate and change forme.
-    await unordered.all(ctx, [
-        ...(Object.keys(ctx.state.teams) as SideID[]).map(s =>
-            effectAbility.onUpdate(ctx, s),
+    // We keep track of an inter-stage inference here in order to handle some
+    // corner cases with Trace copying an ability that either the holder or the
+    // opponent could have.
+    const canStart = new Map<SideID, AbilityStartData>();
+    await unordered.staged(ctx, [
+        // Check entry hazards.
+        new Map(
+            sides.map(side => [
+                side,
+                {
+                    parsers: () =>
+                        (
+                            ["spikes", "stealthrock", "toxicspikes"] as const
+                        ).flatMap(hazard => entryHazard(ctx, side, hazard)),
+                },
+            ]),
+        ),
+        // Check healingwish effects.
+        new Map(
+            sides.map(side => [
+                side,
+                {
+                    parsers: () =>
+                        (["healingwish", "lunardance"] as const).flatMap(type =>
+                            healingwish(ctx, side, type),
+                        ),
+                },
+            ]),
+        ),
+        // On-start side's ability.
+        new Map(
+            sides.map(side => [
+                side,
+                {parsers: () => abilityOnStart(ctx, side, canStart)},
+            ]),
+        ),
+        // TODO: Add a stage for item on-start, which should call+delete the
+        // corresponding canStartDirectly.assert() if it parses.
+        // Faint check.
+        new Map(
+            sides.map(side => [
+                side,
+                {
+                    parsers: () => faintCheck(ctx, side, canStart),
+                    after: () => faint.isGameOver(ctx),
+                },
+            ]),
+        ),
+        // On-update all (except trace if not from startedSide).
+        new Map(
+            sides.map(startedSide => [
+                startedSide,
+                {
+                    parsers: () => onUpdateAll(ctx, startedSide, canStart),
+                    after: () => {
+                        // No sign of trace ability since the canStart inference
+                        // is still outstanding, meaning the previous on-start
+                        // ability really wasn't copied.
+                        canStart.get(startedSide)?.canStartDirectly.assert();
+                        canStart.delete(startedSide);
+                        return false;
+                    },
+                },
+            ]),
         ),
     ]);
-
-    accept?.();
 }
 
 //#region Entry hazards.
 
-const spikes = (side: SideID): unordered.Parser<"gen4"> =>
-    unordered.parser(
-        `${side} spikes`,
-        async (ctx, accept) => await spikesImpl(ctx, accept, side),
-    );
+function entryHazard(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    hazard: "spikes" | "stealthrock" | "toxicspikes",
+): unordered.Parser<"gen4">[] {
+    const team = ctx.state.getTeam(side);
+    if (team.status[hazard] <= 0) return [];
+    const mon = team.active;
+    if (mon.fainted) return [];
+    return [
+        unordered.parser(
+            `${side} ${hazard}`,
+            async (_ctx, accept) =>
+                await entryHazardImpl(_ctx, accept, side, hazard),
+        ),
+    ];
+}
 
-async function spikesImpl(
+const spikesDenominator = [8, 6, 4]; // 1/8, 1/6, 1/4.
+
+async function entryHazardImpl(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
     side: SideID,
+    hazard: "spikes" | "stealthrock" | "toxicspikes",
 ): Promise<void> {
-    // TODO: Grounded/magicguard assertions.
     const team = ctx.state.getTeam(side);
-    if (team.status.spikes <= 0) return;
-    // Can't heal if already fainted.
     const mon = team.active;
     if (mon.fainted) {
         accept();
         return;
     }
 
-    const layers = team.status.spikes;
-    const denominator = [8, 6, 4]; // 1/8, 1/6, 1/4.
-    const percentage = layers <= 0 ? 0 : 100 / denominator[layers - 1];
-    const damageRes = await effectDamage.percentDamage(
-        ctx,
-        side,
-        -percentage,
-        event => {
-            const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
-            if (from.name !== "spikes") return false;
-            accept();
-            return true;
-        },
-    );
-    if (damageRes === true) {
-        // TODO: Should faint happen first?
-        // Update items/faint since a damaging effect happened.
-        await unordered.all(ctx, [effectItem.onUpdate(ctx, side)]);
-        // Check for faint.
-        if (mon.fainted) await faint.event(ctx, side);
+    // TODO: Assertions on magicguard.
+    switch (hazard) {
+        case "spikes": {
+            // TODO: Assertions on groundedness.
+            const layers = team.status[hazard];
+            const percentage =
+                layers <= 0 ? 0 : 100 / spikesDenominator[layers - 1];
+            await damagingHazard(ctx, accept, side, hazard, percentage);
+            break;
+        }
+        case "stealthrock": {
+            // TODO: Other type modifiers?
+            const percentage =
+                (100 * dex.getTypeMultiplier(mon.types, "rock")) / 8;
+            await damagingHazard(ctx, accept, side, hazard, percentage);
+            break;
+        }
+        case "toxicspikes":
+            // TODO: Assertions on groundedness and ability immunity.
+            await toxicspikes(ctx, accept, side);
+            break;
     }
 }
 
-const stealthrock = (side: SideID): unordered.Parser<"gen4"> =>
-    unordered.parser(
-        `${side} stealthrock`,
-        async (ctx, accept) => await stealthrockImpl(ctx, accept, side),
-    );
-
-async function stealthrockImpl(
+async function damagingHazard(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
     side: SideID,
+    hazard: "spikes" | "stealthrock",
+    percentage: number,
 ): Promise<void> {
-    // TODO: Magicguard assertions.
-    const team = ctx.state.getTeam(side);
-    if (team.status.stealthrock <= 0) return;
-    // Can't heal if already fainted.
-    const mon = team.active;
-    if (mon.fainted) {
+    await effectDamage.percentDamage(ctx, side, -percentage, event => {
+        const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
+        if (from.name !== hazard) return false;
         accept();
-        return;
-    }
-    const multiplier = dex.getTypeMultiplier(mon.types, "rock");
-    const percentage = (100 * multiplier) / 8;
-    const damageRes = await effectDamage.percentDamage(
-        ctx,
-        side,
-        -percentage,
-        event => {
-            const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
-            if (from.name !== "stealthrock") return false;
-            accept();
-            return true;
-        },
-    );
-    if (damageRes === true) {
-        // Update items/faint since a damaging effect happened.
-        await unordered.parse(ctx, effectItem.onUpdate(ctx, side));
-        // Check for faint.
-        if (mon.fainted) await faint.event(ctx, side);
-    }
+        return true;
+    });
 }
 
-const toxicspikes = (side: SideID): unordered.Parser<"gen4"> =>
-    unordered.parser(
-        `${side} toxicspikes`,
-        async (ctx, accept) => await toxicspikesImpl(ctx, accept, side),
-    );
-
-async function toxicspikesImpl(
+async function toxicspikes(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
     side: SideID,
 ): Promise<void> {
-    // TODO: Grounded/magicguard/ability immunity assertions.
     const team = ctx.state.getTeam(side);
     if (team.status.toxicspikes <= 0) return;
-
     const mon = team.active;
-    // Can't heal if already fainted.
-    if (mon.fainted) {
-        accept();
-        return;
-    }
+
     if (!mon.types.includes("poison")) {
         // Always blocked by substitute/steel type.
         if (mon.volatile.substitute || mon.types.includes("steel")) {
@@ -487,22 +483,22 @@ async function toxicspikesImpl(
             side,
             [status],
             event => {
-                if ((event.kwArgs as {from?: string}).from) return false;
+                if ((event as Event<"|-status|">).kwArgs.from) return false;
                 accept();
                 return true;
             },
         );
         if (statusRes === status) {
-            // Update items since a status effect happened.
+            // Check for on-update items immediately.
             await unordered.parse(ctx, effectItem.onUpdate(ctx, side));
         }
     } else {
-        // Grounded poison types automatically remove toxicspikes.
+        // Grounded poison types remove toxicspikes.
         const event = await tryVerify(ctx, "|-sideend|");
         if (!event) return;
         const [, sideStr, effectStr] = event.args;
         const ident = Protocol.parsePokemonIdent(
-            sideStr as unknown as Protocol.PokemonIdent,
+            sideStr as string as Protocol.PokemonIdent,
         );
         if (ident.player !== side) return;
         const effect = Protocol.parseEffect(effectStr, toIdName);
@@ -516,15 +512,24 @@ async function toxicspikesImpl(
 
 //#region Healingwish effects.
 
-const healingwish = (
+function healingwish(
+    ctx: BattleParserContext<"gen4">,
     side: SideID,
     type: "healingwish" | "lunardance",
-): unordered.Parser<"gen4"> =>
-    unordered.parser(
-        `${side} ${type}`,
-        async (ctx, accept) => await healingwishImpl(ctx, accept, side, type),
-        effectDidntHappen,
-    );
+): unordered.Parser<"gen4">[] {
+    const team = ctx.state.getTeam(side);
+    if (!team.status[type]) return [];
+    const mon = team.active;
+    if (mon.fainted) return [];
+    return [
+        unordered.parser(
+            `${side} ${type}`,
+            async (_ctx, accept) =>
+                await healingwishImpl(_ctx, accept, side, type),
+            effectDidntHappen,
+        ),
+    ];
+}
 
 async function healingwishImpl(
     ctx: BattleParserContext<"gen4">,
@@ -532,13 +537,6 @@ async function healingwishImpl(
     side: SideID,
     type: "healingwish" | "lunardance",
 ): Promise<void> {
-    // Can't heal if already fainted.
-    const mon = ctx.state.getTeam(side).active;
-    if (mon.fainted) {
-        accept();
-        return;
-    }
-
     await effectDamage.percentDamage(
         ctx,
         side,
@@ -552,6 +550,155 @@ async function healingwishImpl(
         // Note(gen4): Event is emitted even if recipient has full hp.
         true /*noSilent*/,
     );
+}
+
+//#endregion
+
+//#region Ability on-start.
+
+function abilityOnStart(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    canStart: Map<SideID, AbilityStartData>,
+): unordered.Parser<"gen4">[] {
+    if (ctx.state.getTeam(side).active.fainted) return [];
+    return [
+        effectAbility
+            .onStartCopyable(ctx, side)
+            .transform(
+                "store copyable result",
+                ({canStartDirectly, ability}) =>
+                    canStartDirectly &&
+                    ability &&
+                    canStart.set(side, {canStartDirectly, ability}),
+            ),
+    ];
+}
+
+//#endregion
+
+//#region Faint check.
+
+function faintCheck(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    canStart: Map<SideID, AbilityStartData>,
+): unordered.Parser<"gen4">[] {
+    if (!ctx.state.getTeam(side).active.fainted) return [];
+    return [
+        unordered.parser(
+            `${side} faint`,
+            async (_ctx, accept) =>
+                await faintImpl(_ctx, accept, side, canStart),
+            effectDidntHappen,
+        ),
+    ];
+}
+
+async function faintImpl(
+    ctx: BattleParserContext<"gen4">,
+    accept: unordered.AcceptCallback,
+    side: SideID,
+    canStart: Map<SideID, AbilityStartData>,
+): Promise<void> {
+    if (!ctx.state.getTeam(side).active.fainted) return;
+    await faint.event(ctx, side, () => {
+        // Didn't make it to on-update step before fainting, so on-update copier
+        // ability couldn't have activated.
+        canStart.get(side)?.canStartDirectly.assert();
+        canStart.delete(side);
+        accept();
+    });
+}
+
+//#endregion
+
+//#region On-update all.
+
+function onUpdateAll(
+    ctx: BattleParserContext<"gen4">,
+    startedSide: SideID,
+    canStart: Map<SideID, AbilityStartData>,
+): unordered.Parser<"gen4">[] {
+    const parsers: unordered.Parser<"gen4">[] = [];
+    let entry = canStart.get(startedSide);
+
+    if (entry && entry.canStartDirectly.canHold() !== true) {
+        // This pokemon activated an on-start ability, so here we need a parser
+        // to check whether this was actually caused during the on-update step.
+        parsers.push(
+            effectAbility
+                .onUpdateCopiedStarted(
+                    ctx,
+                    startedSide,
+                    entry.ability,
+                    entry.canStartDirectly,
+                )
+                .transform(
+                    "clear non-copied assertion",
+                    () => {} /*f*/,
+                    undefined /*reject*/,
+                    () => {
+                        entry = undefined;
+                        canStart.delete(startedSide);
+                    } /*accept*/,
+                ),
+        );
+    } else {
+        // Parse full ability on-update, except for shared copy which we already
+        // handled above.
+        parsers.push(
+            effectAbility
+                .onUpdate(
+                    ctx,
+                    startedSide,
+                    false /*excludeCopiers*/,
+                    true /*excludeSharedOnStart*/,
+                )
+                .transform(
+                    "assert non-copied",
+                    () => {},
+                    undefined,
+                    () => {
+                        entry?.canStartDirectly.assert();
+                        canStart.delete(startedSide);
+                    },
+                ),
+        );
+    }
+    parsers.push(
+        // Parse on-update ability normally for other sides.
+        // Note that copier abilities (e.g. trace) can only activate after
+        // handling its holder's on-start effects first.
+        ...(Object.keys(ctx.state.teams) as SideID[]).flatMap(side =>
+            startedSide === side
+                ? []
+                : effectAbility
+                      .onUpdate(ctx, side, true /*excludeCopiers*/)
+                      .transform(
+                          "assert non-copied",
+                          () => {},
+                          undefined,
+                          () => {
+                              entry?.canStartDirectly.assert();
+                              canStart.delete(startedSide);
+                          },
+                      ),
+        ),
+        // Parse on-update item.
+        ...(Object.keys(ctx.state.teams) as SideID[]).flatMap(s =>
+            effectItem.onUpdate(ctx, s).transform(
+                "assert non-copied",
+                () => {},
+                undefined,
+                () => {
+                    entry?.canStartDirectly.assert();
+                    canStart.delete(startedSide);
+                },
+            ),
+        ),
+    );
+    return parsers;
 }
 
 //#endregion

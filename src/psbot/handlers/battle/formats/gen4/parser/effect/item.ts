@@ -19,6 +19,8 @@ export async function updateItems(ctx: BattleParserContext<"gen4">) {
 
 //#region on-x Inference Parser functions.
 
+// TODO: Allow functions to return nothing if no item is possible.
+
 /**
  * Creates an {@link inference.Parser} that expects an on-`preMove` item to
  * activate if possible.

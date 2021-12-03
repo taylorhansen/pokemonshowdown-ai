@@ -1,6 +1,11 @@
 import {Protocol} from "@pkmn/protocol";
 import {SideID} from "@pkmn/types";
-import {BattleParserContext, tryVerify, verify} from "../../../parser";
+import {
+    BattleParserContext,
+    tryVerify,
+    unordered,
+    verify,
+} from "../../../parser";
 import {eventLoop} from "../../../parser/helpers";
 import * as actionSwitch from "./action/switch";
 import {handlers as base} from "./base";
@@ -10,11 +15,13 @@ import {request} from "./request";
 export async function event(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
+    accept?: unordered.AcceptCallback,
 ): Promise<void> {
     const e = await verify(ctx, "|faint|");
     const [, identStr] = e.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     if (ident.player !== side) return;
+    accept?.();
     await base["|faint|"](ctx);
 }
 
@@ -47,7 +54,7 @@ export async function events(
 /** Detects game-over state. */
 export function isGameOver(ctx: BattleParserContext<"gen4">): boolean {
     return (Object.keys(ctx.state.teams) as SideID[]).some(side =>
-        ctx.state.getTeam(side).pokemon.every(p => !p || p.fainted),
+        isLoser(ctx, side),
     );
 }
 
@@ -64,13 +71,7 @@ export async function replacements(
     if (sides.length <= 0) return;
 
     // Detect game-over state.
-    const losingSides = sides.filter(
-        side =>
-            !ctx.state.getTeam(side).pokemon.some(
-                // Still unrevealed/un-fainted pokemon left.
-                mon => mon === null || (mon && !mon.fainted),
-            ),
-    );
+    const losingSides = sides.filter(side => isLoser(ctx, side));
     if (losingSides.length > 0) {
         // Only the top-level parser is allowed to consume the ending event.
         await verify(ctx, "|win|");
@@ -83,4 +84,10 @@ export async function replacements(
     else await request(ctx, "switch");
 
     await actionSwitch.multipleSwitchIns(ctx, sides);
+}
+
+function isLoser(ctx: BattleParserContext<"gen4">, side: SideID): boolean {
+    return ctx.state
+        .getTeam(side)
+        .pokemon.every(p => p === undefined || p?.fainted);
 }
