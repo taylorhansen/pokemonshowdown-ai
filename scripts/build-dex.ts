@@ -1296,6 +1296,36 @@ void (async function buildDex(): Promise<void> {
 
     //#endregion
 
+    //#region Conditions.
+
+    const conditions: (readonly [string, dex.ConditionData])[] = [];
+
+    const relevantConditionNames = new Set(
+        [
+            ...dex.majorStatusKeys,
+            "confusion",
+            ...dex.weatherKeys,
+            "partiallytrapped",
+            // TODO: Other conditions.
+        ].sort(),
+    );
+
+    for (const id of relevantConditionNames) {
+        const condition = gen.conditions.get(id);
+        if (!condition) continue;
+        conditions.push([
+            id,
+            {
+                uid,
+                name: id,
+                display: condition.name,
+            },
+        ]);
+        ++uid;
+    }
+
+    //#endregion
+
     //#region Print data.
 
     /**
@@ -1606,6 +1636,12 @@ ${exportArray(items, "itemKeys", "string", i => quote(i[0]))}
  */
 ${exportEntriesToDict(berries, "berries", "dex.NaturalGiftData", b =>
     stringifyDict({...b}, v => (typeof v === "string" ? quote(v) : `${v}`)),
+)}
+
+
+/** Contains {@link dex.ConditionData info} about each condition. */
+${exportEntriesToDict(conditions, "conditions", "dex.ConditionData", a =>
+    deepStringifyDict({...a}, v => (typeof v === "string" ? quote(v) : `${v}`)),
 )}`);
 
     //#endregion

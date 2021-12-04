@@ -51972,3 +51972,23 @@ export const berries: {readonly [name: string]: dex.NaturalGiftData} = {
     wikiberry: {basePower: 60, type: "rock"},
     yacheberry: {basePower: 60, type: "ice"},
 };
+
+/** Contains {@link dex.ConditionData info} about each condition. */
+export const conditions: {readonly [name: string]: dex.ConditionData} = {
+    Hail: {uid: 215, name: "Hail", display: "Hail"},
+    RainDance: {uid: 216, name: "RainDance", display: "RainDance"},
+    Sandstorm: {uid: 217, name: "Sandstorm", display: "Sandstorm"},
+    SunnyDay: {uid: 218, name: "SunnyDay", display: "SunnyDay"},
+    brn: {uid: 219, name: "brn", display: "brn"},
+    confusion: {uid: 220, name: "confusion", display: "confusion"},
+    frz: {uid: 221, name: "frz", display: "frz"},
+    par: {uid: 222, name: "par", display: "par"},
+    partiallytrapped: {
+        uid: 223,
+        name: "partiallytrapped",
+        display: "partiallytrapped",
+    },
+    psn: {uid: 224, name: "psn", display: "psn"},
+    slp: {uid: 225, name: "slp", display: "slp"},
+    tox: {uid: 226, name: "tox", display: "tox"},
+};

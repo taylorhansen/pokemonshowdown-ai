@@ -967,3 +967,9 @@ export interface ItemData extends DexData {
 
 /** Item effect object types. */
 export type ItemOn = keyof NonNullable<ItemData["on"]>;
+
+/** Format for each condition entry in the dex. */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ConditionData extends DexData {
+    // TODO
+}
