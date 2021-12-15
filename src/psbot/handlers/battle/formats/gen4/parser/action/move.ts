@@ -1739,7 +1739,13 @@ function status(
                 `${args.side} move status ${targetSide} ` +
                     `[${statusTypes.join(", ")}]`,
                 async (_ctx, accept) =>
-                    await statusImpl(_ctx, accept, targetSide, statusTypes),
+                    await statusImpl(
+                        _ctx,
+                        accept,
+                        args,
+                        targetSide,
+                        statusTypes,
+                    ),
                 effect.chance && effect.chance !== 100
                     ? undefined
                     : () => statusReject(ctx, args, tgt, statusTypes),
@@ -1752,6 +1758,7 @@ function status(
 async function statusImpl(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
+    args: ExecuteArgs,
     targetRef: SideID,
     statusTypes: readonly dex.StatusType[],
 ): Promise<void> {
@@ -1767,7 +1774,11 @@ async function statusImpl(
         targetRef,
         statusTypes,
         event => {
-            if (event.kwArgs.from) return false;
+            if (event.kwArgs.from) {
+                const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
+                if (from.type && from.type !== "move") return false;
+                if (from.name !== args.move.data.name) return false;
+            }
             accept();
             return true;
         },
