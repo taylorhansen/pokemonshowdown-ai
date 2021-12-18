@@ -351,7 +351,7 @@ export interface AbilityData extends DexData {
             readonly changeToMoveType?: true;
         };
         /** Whenever a draining move or effect is about to heal the user. */
-        readonly moveDrain?: {
+        readonly drain?: {
             /** Invert the drain healing effect. */
             readonly invert?: true;
         };
@@ -912,7 +912,7 @@ export interface ItemData extends DexData {
             readonly poisonDamage?: number;
             /** Percent damage dealt to holder if not poison-type. */
             readonly noPoisonDamage?: number;
-            /** Inflict a status onto the holder.. */
+            /** Inflict a status onto the holder. */
             readonly status?: StatusType;
             /** Percent HP threshold for activating. */
             readonly threshold?: number;
@@ -969,7 +969,28 @@ export interface ItemData extends DexData {
 export type ItemOn = keyof NonNullable<ItemData["on"]>;
 
 /** Format for each condition entry in the dex. */
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ConditionData extends DexData {
-    // TODO
+    /** Describes activation conditions and effects. */
+    readonly on?: {
+        /** End of turn, after main moves/switches. */
+        readonly residual?: {
+            // TODO
+        };
+    };
+}
+
+/** Format for describing residual effects of each condition in the dex. */
+export interface ConditionResidualData {
+    /** Name of the effect. Maps to one of the dex objects. */
+    readonly name: string;
+    /**
+     * Type of effect.
+     * - `"field"`: Field effect.
+     * - `"side"`: Side effect.
+     * - `"slot"`: Affects a pokemon slot.
+     * - `"pokemon"`: Pokemon status effect.
+     * - `"ability"`: {@link AbilityData Ability} effect.
+     * - `"item"`: {@link ItemData Item} effect.
+     */
+    readonly type: "field" | "side" | "slot" | "pokemon" | "ability" | "item";
 }

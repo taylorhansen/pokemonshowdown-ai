@@ -22,10 +22,6 @@ import * as reason from "./reason";
 export async function residual(
     ctx: BattleParserContext<"gen4">,
 ): Promise<void> {
-    // Note: PS is very particular about the order of all the statuses being
-    // checked, so for now we use unordered.all() with some checks for
-    // fainting/game-over between each parser in order to be able to handle
-    // event ordering for any gen.
     const shared: ResidualSharedData = {
         fainted: new Set<SideID>(
             (Object.keys(ctx.state.teams) as SideID[]).filter(
@@ -35,21 +31,47 @@ export async function residual(
         fainting: new Set<SideID>(),
         gameOver: false,
     };
-    // TODO: Leverage PS effect order data?
-    await unordered.all(
-        ctx,
-        [
-            ...onSideResidual(ctx),
-            ...onFieldResidual(ctx, shared),
-            ...onResidual(ctx, shared),
-        ],
-        async (_ctx, accept) => await residualFilter(_ctx, accept, shared),
-    );
-    // Parse the rest of the faint events.
-    await faint.events(ctx, shared.fainting);
+    for (const orderGroup of dex.conditionResidualOrderGroups) {
+        // Note: Order group is sorted by speed first (0 if affecting
+        // field/side) then sub-order, shuffled randomly if all equal.
+        // Usually we try to derive extra information from the absence of events
+        // by evaluating activation conditions in a certain order, but due to
+        // the semi-random speed-ordering of the residual step, this can
+        // actually become very ambiguous.
+        // So, instead we just try to make inferences based on what's there
+        // rather than trying to dig deeper.
+        let alive: boolean;
+        do {
+            alive = false;
+            for (const subOrderGroup of orderGroup) {
+                for (const effect of subOrderGroup) {
+                    // Try to parse effect.
+                    const subStage = residualEffects(ctx, effect, shared);
+                    let innerAlive: boolean;
+                    do {
+                        innerAlive = false;
+                        const parsers = subStage();
+                        await unordered.some(
+                            ctx,
+                            parsers,
+                            undefined /*filter*/,
+                            () => {
+                                innerAlive = true;
+                                alive = true;
+                            },
+                        );
+                    } while (innerAlive);
+                }
+            }
+        } while (alive);
+    }
 
-    // Update items last, after |upkeep| event.
+    // Parse the rest of the faint events.
+    await residualFilter(ctx, shared);
+
+    // Update abilities/items last, after |upkeep| event.
     // TODO: Parse |upkeep| event?
+    if (shared.gameOver) return;
     await unordered.all(
         ctx,
         (Object.keys(ctx.state.teams) as SideID[]).flatMap(side =>
@@ -62,6 +84,8 @@ export async function residual(
         ),
         ignoredEvents,
     );
+    // Faint checks after on-update.
+    await residualFilter(ctx, shared);
 }
 
 /**
@@ -79,7 +103,6 @@ interface ResidualSharedData {
 /** Checks for faints and game-over state between residual effect parsers. */
 async function residualFilter(
     ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback,
     shared: ResidualSharedData,
 ): Promise<void> {
     if (shared.gameOver) return;
@@ -105,82 +128,87 @@ async function residualFilter(
     );
 }
 
-//#region Side residual.
+//#region Residual effects.
 
-function onSideResidual(
+function residualEffects(
     ctx: BattleParserContext<"gen4">,
-): unordered.Parser<"gen4">[] {
-    const sides = Object.keys(ctx.state.teams) as SideID[];
-    return sides.flatMap(side => [
-        // Residual order/sub-order taken from smogon/pokemon-showdown/data.
-        sideEnd(side, "reflect"), // 1
-        sideEnd(side, "lightscreen"), // 2
-        sideEnd(side, "mist"), // 3
-        sideEnd(side, "safeguard"), // 4
-        sideEnd(side, "tailwind"), // 5
-        sideEnd(side, "luckychant"), // 6
-    ]);
+    effect: dex.ConditionResidualData,
+    shared: ResidualSharedData,
+): () => unordered.Parser<"gen4">[] {
+    if (effect.type === "field") {
+        return () => fieldResidual(ctx, effect.name, shared);
+    }
+
+    const sides = Object.keys(ctx.state.teams) as readonly SideID[];
+    if (effect.type === "side" || effect.type === "slot") {
+        const fn = effect.type === "side" ? sideResidual : slotResidual;
+        return () => sides.flatMap(side => fn(side, effect.name, shared));
+    }
+
+    const alive = () =>
+        sides.filter(side => !ctx.state.getTeam(side).active.fainted);
+    switch (effect.type) {
+        case "pokemon":
+            return () =>
+                alive().flatMap(side =>
+                    pokemonResidual(side, effect.name, shared),
+                );
+        case "ability": {
+            return () =>
+                alive().flatMap(side =>
+                    abilityResidual(ctx, side, effect.name, shared),
+                );
+        }
+        case "item": {
+            return () =>
+                alive().flatMap(side =>
+                    itemResidual(ctx, side, effect.name, shared),
+                );
+        }
+        default:
+            throw new Error(`Unhandled residual effect type: ${effect.type}`);
+    }
 }
-
-//#region Side end.
-
-function sideEnd(side: SideID, name: string): unordered.Parser<"gen4"> {
-    return unordered.parser(
-        `${side} side ${name} end`,
-        async (ctx, accept) => await sideEndImpl(ctx, accept, side, name),
-    );
-}
-
-async function sideEndImpl(
-    ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback,
-    side: SideID,
-    name: string,
-): Promise<void> {
-    const event = await tryVerify(ctx, "|-sideend|");
-    if (!event) return;
-    const [, sideStr, effectStr] = event.args;
-    const sideObj = Protocol.parsePokemonIdent(
-        sideStr as unknown as Protocol.PokemonIdent,
-    );
-    if (sideObj.player !== side) return;
-    const effect = Protocol.parseEffect(effectStr, toIdName);
-    if (effect.name !== name) return;
-    accept();
-    await base["|-sideend|"](ctx);
-}
-
-//#endregion
-
-//#endregion
 
 //#region Field residual.
 
-function onFieldResidual(
+function fieldResidual(
     ctx: BattleParserContext<"gen4">,
+    name: string,
     shared: ResidualSharedData,
 ): unordered.Parser<"gen4">[] {
-    return [
-        // Residual order/sub-order taken from smogon/pokemon-showdown/data.
-        ...weather(ctx, shared), // 8
-        fieldEnd("gravity"), // 9
-        fieldEnd("trickroom"), // 13
-    ];
+    switch (name) {
+        // TODO: Add to condition dex data.
+        case "hail":
+            return weather(ctx, "Hail", shared);
+        case "raindance":
+            return weather(ctx, "RainDance", shared);
+        case "sandstorm":
+            return weather(ctx, "Sandstorm", shared);
+        case "sunnyday":
+            return weather(ctx, "SunnyDay", shared);
+        case "gravity":
+            return [fieldEnd("gravity")];
+        case "trickroom":
+            return [fieldEnd("trickroom")];
+        default:
+            throw new Error(`Unhandled field residual: ${name}`);
+    }
 }
 
 //#region Weather.
 
 function weather(
     ctx: BattleParserContext<"gen4">,
+    type: dex.WeatherType,
     shared: ResidualSharedData,
 ): unordered.Parser<"gen4">[] {
-    const weatherType = ctx.state.status.weather.type;
-    if (weatherType === "none") return [];
+    if (ctx.state.status.weather.type !== type) return [];
     return [
         unordered.parser(
             `field weather ${ctx.state.status.weather.type} upkeep`,
             async (_ctx, accept) =>
-                await weatherImpl(_ctx, accept, weatherType, shared),
+                await weatherImpl(_ctx, accept, type, shared),
             effectDidntHappen,
         ),
     ];
@@ -194,6 +222,7 @@ async function weatherImpl(
 ): Promise<void> {
     if (!(await weatherUpkeepEvent(ctx, accept, weatherType))) return;
     await weatherEffects(ctx, weatherType, shared);
+    await residualFilter(ctx, shared);
 }
 
 async function weatherUpkeepEvent(
@@ -356,59 +385,182 @@ async function fieldEndImpl(
 
 //#endregion
 
-//#region Residual ability/item/move status.
+//#region Side residual.
 
-function onResidual(
+function sideResidual(side: SideID, name: string): unordered.Parser<"gen4">[] {
+    switch (name) {
+        // TODO: Add to condition dex data.
+        case "reflect":
+        case "lightscreen":
+        case "mist":
+        case "safeguard":
+        case "tailwind":
+        case "luckychant":
+            return [sideEnd(side, name)];
+        default:
+            throw new Error(`Unhandled side residual: ${name}`);
+    }
+}
+
+//#region Side end.
+
+function sideEnd(side: SideID, name: string): unordered.Parser<"gen4"> {
+    return unordered.parser(
+        `${side} side ${name} end`,
+        async (ctx, accept) => await sideEndImpl(ctx, accept, side, name),
+    );
+}
+
+async function sideEndImpl(
     ctx: BattleParserContext<"gen4">,
+    accept: unordered.AcceptCallback,
+    side: SideID,
+    name: string,
+): Promise<void> {
+    const event = await tryVerify(ctx, "|-sideend|");
+    if (!event) return;
+    const [, sideStr, effectStr] = event.args;
+    const sideObj = Protocol.parsePokemonIdent(
+        sideStr as unknown as Protocol.PokemonIdent,
+    );
+    if (sideObj.player !== side) return;
+    const effect = Protocol.parseEffect(effectStr, toIdName);
+    if (effect.name !== name) return;
+    accept();
+    await base["|-sideend|"](ctx);
+}
+
+//#endregion
+
+//#endregion
+
+//#region Slot residual.
+
+function slotResidual(
+    side: SideID,
+    name: string,
     shared: ResidualSharedData,
 ): unordered.Parser<"gen4">[] {
-    const sides = Object.keys(ctx.state.teams) as SideID[];
-    const alive = sides.filter(side => !ctx.state.getTeam(side).active.fainted);
-    return alive.flatMap(side => [
-        ...[
-            effectAbility.onResidual(ctx, side),
-            // FIXME: Item activation conditions may change due to below effects
-            // (e.g. weather damage then leftovers).
-            effectItem.onResidual(ctx, side),
-        ].map(parser =>
-            parser.transform(
-                "cancelable",
-                x => x,
-                () =>
-                    !shared.fainted.has(side) &&
-                    !shared.fainting.has(side) &&
-                    !shared.gameOver &&
-                    // TODO: Cancel registered inference callbacks instead of
-                    // just doing nothing on faint/game-over?
-                    parser.reject(),
-            ),
-        ),
-        // Residual order/sub-order taken from smogon/pokemon-showdown/data.
-        // Note: Handling wish heal event will implicitly end the status.
-        statusDamage(side, "wish", 1 /*i.e., heal*/), // 7
-        statusDamage(side, "ingrain", 6.25), // 10.1
-        statusDamage(side, "aquaring", 6.25), // 10.2
-        leechseed(side), // 10.5
-        statusDamage(side, "brn", -12.5), // 10.6
-        // Note: Handling psn may instead implicitly stand for tox.
-        // TODO: Calculate tox damage.
-        statusDamage(side, "psn", -12.5), // 10.6
-        statusDamage(side, "nightmare", -25), // 10.7
-        statusDamage(side, "curse", -25), // 10.8
-        partiallytrapped(side), // 10.9
-        uproar(side), // 10.11
-        statusEnd(side, "disable"), // 10.13
-        statusEnd(side, "encore"), // 10.14
-        statusEnd(side, "taunt"), // 10.15
-        statusEnd(side, "magnetrise"), // 10.16
-        statusEnd(side, "healblock"), // 10.17
-        statusEnd(side, "embargo"), // 10.18
-        yawn(side), // 10.19
-        futuremove(side), // 11
-        perishsong(side, shared), // 12
-        statusEnd(side, "slowstart"), // 28.2?
-        fatigue(side), // (last)
+    switch (name) {
+        // TODO: Add to condition dex data.
+        case "wish":
+            return [statusDamage(side, "wish", 1 /*i.e., heal*/, shared)];
+        case "futuremove":
+            return [futuremove(side, shared)];
+        default:
+            throw new Error(`Unhandled slot residual: ${name}`);
+    }
+}
+
+//#region Futuremove.
+
+function futuremove(
+    side: SideID,
+    shared: ResidualSharedData,
+): unordered.Parser<"gen4"> {
+    return unordered.parser(
+        `${side} residual futuremove`,
+        async (ctx, accept) => await futuremoveImpl(ctx, accept, side, shared),
+    );
+}
+
+async function futuremoveImpl(
+    ctx: BattleParserContext<"gen4">,
+    accept: unordered.AcceptCallback,
+    side: SideID,
+    shared: ResidualSharedData,
+): Promise<void> {
+    const {futureMoves} = ctx.state.getTeam(side).status;
+
+    const event = await tryVerify(ctx, "|-end|");
+    if (!event) return;
+    const [, identStr, effectStr] = event.args;
+    const ident = Protocol.parsePokemonIdent(identStr);
+    if (ident.player === side) return;
+    const effect = Protocol.parseEffect(effectStr, toIdName);
+    if (!dex.isFutureMove(effect.name)) return;
+    accept();
+    if (!futureMoves[effect.name].isActive) {
+        ctx.logger.error(
+            `Parsed futuremove effect ${effect.name} but no matching ` +
+                "futuremove status",
+        );
+    }
+    await base["|-end|"](ctx);
+
+    // Minimal version of move action effects.
+    // TODO: Verify completeness?
+    await effectDamage.percentDamage(
+        ctx,
+        ident.player,
+        -1 /*i.e., damage*/,
+        e =>
+            e.args[0] === "-damage" &&
+            !e.kwArgs.from &&
+            !e.kwArgs.of &&
+            !(e as Event<"|-damage|">).kwArgs.partiallytrapped,
+    );
+    await unordered.all(ctx, [
+        effectAbility.onUpdate(ctx, ident.player),
+        effectItem.onUpdate(ctx, ident.player),
     ]);
+
+    await residualFilter(ctx, shared);
+}
+
+//#endregion
+
+//#endregion
+
+//#region Pokemon residual.
+
+function pokemonResidual(
+    side: SideID,
+    name: string,
+    shared: ResidualSharedData,
+): unordered.Parser<"gen4">[] {
+    switch (name) {
+        // TODO: Add to condition dex data.
+        case "ingrain":
+        case "aquaring":
+            return [statusDamage(side, name, 6.25, shared)];
+        case "leechseed":
+            return [leechseed(side, shared)];
+        case "brn":
+            return [statusDamage(side, "brn", -12.5, shared)];
+        case "psn":
+        case "tox":
+            // Note: Handling psn may instead implicitly stand for tox.
+            // TODO: Calculate tox damage.
+            return [statusDamage(side, "psn", -12.5, shared)];
+        case "nightmare":
+        case "curse":
+            return [statusDamage(side, name, -25, shared)];
+        case "partiallytrapped":
+            return [partiallytrapped(side, shared)];
+        case "uproar":
+            return [uproar(side)];
+        case "disable":
+        case "encore":
+        case "taunt":
+        case "magnetrise":
+        case "healblock":
+        case "embargo":
+        case "slowstart":
+            return [statusEnd(side, name)];
+        case "yawn":
+            return [yawn(side)];
+        case "perishsong":
+            return [perishsong(side, shared)];
+        case "roost":
+            // Silent.
+            // TODO: Remove?
+            return [];
+        case "lockedmove":
+            return [fatigue(side)];
+        default:
+            throw new Error(`Unhandled pokemon residual: ${name}`);
+    }
 }
 
 //#region Status damage.
@@ -418,11 +570,19 @@ function statusDamage(
     side: SideID,
     name: dex.StatusType | "wish",
     percentDamage: number,
+    shared: ResidualSharedData,
 ): unordered.Parser<"gen4"> {
     return unordered.parser(
         `${side} residual ${name} ${percentDamage < 0 ? "damage" : "heal"}`,
         async (ctx, accept) =>
-            await statusDamageImpl(ctx, accept, side, name, percentDamage),
+            await statusDamageImpl(
+                ctx,
+                accept,
+                side,
+                name,
+                percentDamage,
+                shared,
+            ),
     );
 }
 
@@ -432,6 +592,7 @@ async function statusDamageImpl(
     side: SideID,
     name: dex.StatusType | "wish",
     percentDamage: number,
+    shared: ResidualSharedData,
 ): Promise<void> {
     await effectDamage.percentDamage(ctx, side, percentDamage, event => {
         if (!event.kwArgs.from) return false;
@@ -454,16 +615,21 @@ async function statusDamageImpl(
         }
         return true;
     });
+
+    await residualFilter(ctx, shared);
 }
 
 //#endregion
 
 //#region Leechseed.
 
-function leechseed(side: SideID): unordered.Parser<"gen4"> {
+function leechseed(
+    side: SideID,
+    shared: ResidualSharedData,
+): unordered.Parser<"gen4"> {
     return unordered.parser(
         `${side} residual leechseed drain`,
-        async (ctx, accept) => await leechseedImpl(ctx, accept, side),
+        async (ctx, accept) => await leechseedImpl(ctx, accept, side, shared),
     );
 }
 
@@ -471,6 +637,7 @@ async function leechseedImpl(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
     side: SideID,
+    shared: ResidualSharedData,
 ): Promise<void> {
     let source: SideID | undefined;
     await effectDamage.percentDamage(ctx, side, -1, event => {
@@ -485,20 +652,50 @@ async function leechseedImpl(
         return true;
     });
     if (!source) return;
-    await effectDamage.percentDamage(ctx, source, 1, () => {
-        accept();
-        return true;
-    });
+
+    // Drain effect could be handled either normally or by ability on-drain.
+    const parsers: unordered.Parser<"gen4">[] = [
+        effectAbility.onDrain(ctx, side, source),
+    ];
+    const sourceMon = ctx.state.getTeam(source).active;
+    const name = `${side} leechseed drain heal ${source}`;
+    if (sourceMon.hp.current < sourceMon.hp.max) {
+        parsers.push(
+            unordered.parser(
+                name,
+                async (_ctx, _accept) =>
+                    void (await effectDamage.percentDamage(
+                        _ctx,
+                        source!,
+                        1 /*i.e., heal*/,
+                        () => {
+                            _accept();
+                            return true;
+                        },
+                    )),
+            ),
+        );
+    }
+    const oneOfRes = await unordered.oneOf(ctx, parsers);
+    if (parsers.length >= 2 && oneOfRes.length <= 0) {
+        return effectDidntHappen(name);
+    }
+
+    await residualFilter(ctx, shared);
 }
 
 //#endregion
 
 //#region Partiallytrapped.
 
-function partiallytrapped(side: SideID): unordered.Parser<"gen4"> {
+function partiallytrapped(
+    side: SideID,
+    shared: ResidualSharedData,
+): unordered.Parser<"gen4"> {
     return unordered.parser(
         `${side} residual partiallytrapped damage`,
-        async (ctx, accept) => await partiallytrappedImpl(ctx, accept, side),
+        async (ctx, accept) =>
+            await partiallytrappedImpl(ctx, accept, side, shared),
     );
 }
 
@@ -506,6 +703,7 @@ async function partiallytrappedImpl(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
     side: SideID,
+    shared: ResidualSharedData,
 ): Promise<void> {
     const event = await tryVerify(ctx, "|-end|", "|-damage|");
     if (!event) return;
@@ -520,12 +718,15 @@ async function partiallytrappedImpl(
         await base["|-end|"](ctx);
         return;
     }
-    await effectDamage.percentDamage(ctx, side, -1, e => {
+    const damageResult = await effectDamage.percentDamage(ctx, side, -1, e => {
         if (e.args[0] !== "-damage") return false;
         if (!(e as Event<"|-damage|">).kwArgs.partiallytrapped) return false;
         accept();
         return true;
     });
+    if (!damageResult) return;
+
+    await residualFilter(ctx, shared);
 }
 
 //#endregion
@@ -627,22 +828,57 @@ async function yawnImpl(
     if (mon.fainted) return;
     if (effectStatus.cantStatus(mon, "slp")) return;
 
-    // Guard against slp immunity (e.g. insomnia).
-    const reasons = new Set<inference.Reason>();
+    // Guard against slp immunity (e.g. insomnia or leafguard).
+    // FIXME: If multiple blocking abilities with different conditions are
+    // eligible, then they won't be narrowed due to the lazy logic in
+    // inference.and().
+    // For now, though, there isn't a real game scenario that can cause this bug
+    // to occur.
+    const orReasons = new Set<inference.Reason>();
     if (!mon.volatile.suppressAbility) {
-        const abilities = new Set<string>();
-        for (const n of mon.traits.ability.possibleValues) {
-            const a = dex.getAbility(mon.traits.ability.map[n]);
-            // TODO: Factor out into reason.ability module.
-            // TODO: Guard against cloudnine, requires a more sophisticated
-            // logic system for nested SubInference conditions.
-            if (a.canBlockStatus("slp", ctx.state.status.weather.type)) {
-                abilities.add(n);
+        const foes = (Object.keys(ctx.state.teams) as SideID[]).flatMap(s =>
+            s === side ? [] : ctx.state.getTeam(s).active,
+        );
+        const cantBlockReasons = [...mon.traits.ability.possibleValues].map(
+            n => {
+                const ability = dex.getAbility(mon.traits.ability.map[n]);
+                const res = ability.cantBlockStatus(
+                    ["slp"],
+                    ctx.state.status.weather.type,
+                    foes,
+                );
+                return [ability, res] as const;
+            },
+        );
+        const vanillaBlocking = new Set<string>();
+        for (const [ability, reasons] of cantBlockReasons) {
+            if (!reasons) {
+                // Can definitely block status.
+                vanillaBlocking.add(ability.data.name);
+                continue;
             }
+            if (reasons.size <= 0) {
+                // Can definitely not block status.
+                continue;
+            }
+            // Could allow the status if one of the ability's activation
+            // conditions are violated (i.e., asserted in this case).
+            reasons.add(
+                reason.ability.doesntHave(mon, new Set([ability.data.name])),
+            );
+            orReasons.add(inference.or(reasons));
         }
-        reasons.add(reason.ability.doesntHave(mon, abilities));
+        if (vanillaBlocking.size > 0) {
+            orReasons.add(reason.ability.doesntHave(mon, vanillaBlocking));
+        }
     }
-    const slpReason = inference.and(reasons);
+    const slpReason = inference.and(orReasons);
+
+    // In order for slpReason to hold, none of the blockAbility reasons can hold
+    // (i.e., the ability can't block the status).
+    // slpReason = and(not(reasons)) or not(or(reasons))
+    // reasons = set of reasons, one of which allows the blocking ability to
+    // activate.
 
     await unordered.parse(
         ctx,
@@ -665,58 +901,6 @@ async function yawnSlpImpl(
         accept(slpReason);
         return true;
     });
-}
-
-//#endregion
-
-//#region Futuremove.
-
-function futuremove(side: SideID): unordered.Parser<"gen4"> {
-    return unordered.parser(
-        `${side} residual futuremove`,
-        async (ctx, accept) => await futuremoveImpl(ctx, accept, side),
-    );
-}
-
-async function futuremoveImpl(
-    ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback,
-    side: SideID,
-): Promise<void> {
-    const {futureMoves} = ctx.state.getTeam(side).status;
-
-    const event = await tryVerify(ctx, "|-end|");
-    if (!event) return;
-    const [, identStr, effectStr] = event.args;
-    const ident = Protocol.parsePokemonIdent(identStr);
-    if (ident.player === side) return;
-    const effect = Protocol.parseEffect(effectStr, toIdName);
-    if (!dex.isFutureMove(effect.name)) return;
-    accept();
-    if (!futureMoves[effect.name].isActive) {
-        ctx.logger.error(
-            `Parsed futuremove effect ${effect.name} but no matching ` +
-                "futuremove status",
-        );
-    }
-    await base["|-end|"](ctx);
-
-    // Minimal version of move action effects.
-    // TODO: Verify completeness?
-    await effectDamage.percentDamage(
-        ctx,
-        ident.player,
-        -1 /*i.e., damage*/,
-        e =>
-            e.args[0] === "-damage" &&
-            !e.kwArgs.from &&
-            !e.kwArgs.of &&
-            !(e as Event<"|-damage|">).kwArgs.partiallytrapped,
-    );
-    await unordered.all(ctx, [
-        effectAbility.onUpdate(ctx, ident.player),
-        effectItem.onUpdate(ctx, ident.player),
-    ]);
 }
 
 //#endregion
@@ -748,19 +932,12 @@ async function perishsongImpl(
     if (!effect.name.startsWith("perish")) return;
     const num = parseInt(effect.name.slice("perish".length), 10);
     accept();
-    const mon = ctx.state.getTeam(side).active;
-    if (num !== mon.volatile.perish + 1) {
-        ctx.logger.error(
-            `Updated perishsong status to ${num} but expected ` +
-                `${mon.volatile.perish + 1} since it used to be ` +
-                `${mon.volatile.perish}`,
-        );
-    }
     await base["|-start|"](ctx);
 
     if (num === 0) {
-        await faint.event(ctx, side);
-        shared.fainted.add(side);
+        ctx.state.getTeam(side).active.faint();
+        shared.fainting.add(side);
+        await residualFilter(ctx, shared);
     }
 }
 
@@ -795,6 +972,152 @@ async function fatigueImpl(
         );
     }
     await base["|-start|"](ctx);
+}
+
+//#endregion
+
+//#endregion
+
+//#region Ability residual.
+
+function abilityResidual(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    name: string,
+    shared: ResidualSharedData,
+): unordered.Parser<"gen4">[] {
+    const mon = ctx.state.getTeam(side).active;
+    if (mon.volatile.suppressAbility) return [];
+
+    const hasAbility = reason.ability.has(mon, new Set([name]));
+    if (hasAbility.canHold() === false) return [];
+
+    const ability = dex.getAbility(name);
+    if (!ability) return [];
+
+    const foes = (Object.keys(ctx.state.teams) as SideID[]).flatMap(s =>
+        s === side ? [] : ctx.state.getTeam(s).active,
+    );
+    const reasons = ability.canResidual(mon, foes);
+    if (!reasons) return [];
+    reasons.add(hasAbility);
+
+    const conclusion = inference.and(reasons);
+    return [
+        unordered.parser(
+            `${side} ability on-residual [${name}]`,
+            async (_ctx, accept) =>
+                await abilityResidualImpl(
+                    _ctx,
+                    () => {
+                        conclusion.assert();
+                        accept();
+                    },
+                    side,
+                    ability,
+                    shared,
+                ),
+            () =>
+                !shared.fainted.has(side) &&
+                !shared.fainting.has(side) &&
+                !shared.gameOver &&
+                // TODO: Cancel registered inference callbacks instead of just
+                // doing nothing on faint/game-over?
+                conclusion.reject(),
+        ),
+    ];
+}
+
+async function abilityResidualImpl(
+    ctx: BattleParserContext<"gen4">,
+    accept: unordered.AcceptCallback,
+    side: SideID,
+    ability: dex.Ability,
+    shared: ResidualSharedData,
+): Promise<void> {
+    let accepted = false;
+    await ability.onResidual(
+        ctx,
+        () => {
+            accepted = true;
+            accept();
+        },
+        side,
+    );
+    if (!accepted) return;
+    await residualFilter(ctx, shared);
+}
+
+//#endregion
+
+//#region Item residual.
+
+function itemResidual(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    name: string,
+    shared: ResidualSharedData,
+): unordered.Parser<"gen4">[] {
+    const mon = ctx.state.getTeam(side).active;
+    if (mon.volatile.embargo.isActive) return [];
+
+    const hasItem = reason.item.has(mon, new Set([name]));
+    if (hasItem.canHold() === false) return [];
+
+    const item = dex.getItem(name);
+    if (!item) return [];
+
+    const foes = (Object.keys(ctx.state.teams) as SideID[]).flatMap(s =>
+        s === side ? [] : ctx.state.getTeam(s).active,
+    );
+    const reasons = item.canResidual(mon, foes);
+    if (!reasons) return [];
+    reasons.add(hasItem);
+
+    const conclusion = inference.and(reasons);
+    return [
+        unordered.parser(
+            `${side} item on-residual [${name}]`,
+            async (_ctx, accept) =>
+                await itemResidualImpl(
+                    _ctx,
+                    () => {
+                        conclusion.assert();
+                        accept();
+                    },
+                    side,
+                    item,
+                    shared,
+                ),
+            () =>
+                !shared.fainted.has(side) &&
+                !shared.fainting.has(side) &&
+                !shared.gameOver &&
+                // TODO: Cancel registered inference callbacks instead of just
+                // doing nothing on faint/game-over?
+                conclusion.reject(),
+        ),
+    ];
+}
+
+async function itemResidualImpl(
+    ctx: BattleParserContext<"gen4">,
+    accept: unordered.AcceptCallback,
+    side: SideID,
+    item: dex.Item,
+    shared: ResidualSharedData,
+): Promise<void> {
+    let accepted = false;
+    await item.onResidual(
+        ctx,
+        () => {
+            accepted = true;
+            accept();
+        },
+        side,
+    );
+    if (!accepted) return;
+    await residualFilter(ctx, shared);
 }
 
 //#endregion

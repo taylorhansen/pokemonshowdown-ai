@@ -665,7 +665,10 @@ export class Item {
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canResidual(mon: Pokemon): Set<inference.Reason> | null {
+    public canResidual(
+        mon: Pokemon,
+        foes: readonly Pokemon[],
+    ): Set<inference.Reason> | null {
         const data = this.data.on?.residual;
         if (!data) return null;
 
@@ -696,43 +699,74 @@ export class Item {
         // effects.
         // Start from the list of all possible abilities then prune the ones
         // that are irrelevant for this item.
-        const abilities = new Set(mon.traits.ability.possibleValues);
-        for (const abilityName of abilities) {
+        const blocking = new Set<string>();
+        const weatherBasedBlocking = new Set<string>();
+        for (const abilityName of mon.traits.ability.possibleValues) {
             const ability = mon.traits.ability.map[abilityName];
             // Ability can ignore item.
-            if (ability.flags?.ignoreItem) continue;
-            // Indirect damage doesn't apply when healing.
-            if (
+            if (ability.flags?.ignoreItem) blocking.add(abilityName);
+            // Indirect damage immunity.
+            else if (
                 percent &&
                 percent < 0 &&
                 ability.flags?.noIndirectDamage === true
             ) {
-                continue;
+                blocking.add(abilityName);
             }
+            // Status immunity, may be weather-based.
             // If there's a status immunity (even a silent one), then the item
             // can't activate.
-            if (data.status && ability.statusImmunity?.[data.status]) {
+            else if (data.status && ability.statusImmunity?.[data.status]) {
                 const blockCondition = ability.on?.block?.status;
-                if (blockCondition === true) continue;
-                if (
+                if (blockCondition === true) blocking.add(abilityName);
+                else if (
                     blockCondition &&
                     mon.team?.state?.status.weather.type === blockCondition
                 ) {
-                    continue;
+                    weatherBasedBlocking.add(abilityName);
                 }
             }
-
-            // Ability can't block the item.
-            abilities.delete(abilityName);
         }
-
         // None of the possible abilities can block this item.
-        if (abilities.size <= 0) return new Set();
+        if (blocking.size <= 0 && weatherBasedBlocking.size <= 0) {
+            return new Set();
+        }
         // All of the possible abilities can block this item.
-        if (abilities.size >= mon.traits.ability.size) return null;
+        if (blocking.size >= mon.traits.ability.size) return null;
         // Some can block, so setup an inference that will make this decision
         // later.
-        return new Set([reason.ability.doesntHave(mon, abilities)]);
+        // Note that for weather-based immunity, we need to guard for
+        // weather-suppressant effects.
+        const suppressed = reason.weather.isSuppressed(foes);
+        if (!suppressed) {
+            // Weather is definitely not suppressed, include
+            // weatherBasedBlocking as a regular blocking ability.
+            for (const abilityName of weatherBasedBlocking) {
+                blocking.add(abilityName);
+            }
+            weatherBasedBlocking.clear();
+            return new Set([reason.ability.doesntHave(mon, blocking)]);
+        }
+        if (suppressed.size <= 0) {
+            // Weather is definitely suppressed, ignore weatherBasedBlocking.
+            return new Set([reason.ability.doesntHave(mon, blocking)]);
+        }
+        // Weather could be suppressed, so both of these reasons must hold.
+        return new Set([
+            // Could activate if holder doesn't have blocking ability.
+            reason.ability.doesntHave(mon, blocking),
+            // Could activate if holder doesn't have weather-based blocking
+            // ability, or if it does but the weather is suppressed.
+            inference.or(
+                new Set([
+                    reason.ability.doesntHave(mon, weatherBasedBlocking),
+                    // Slight optimization to reduce level of wrapping.
+                    ...(suppressed.size > 1
+                        ? suppressed
+                        : [inference.and(suppressed)]),
+                ]),
+            ),
+        ]);
     }
 
     /**

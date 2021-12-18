@@ -7,14 +7,17 @@ import {Parser, AcceptCallback, InnerParser} from "./Parser";
 // TODO: Move to separate files and test each.
 
 /**
- * Invokes a group of unordered {@link Parser}s in any order.
+ * Invokes a group of unordered {@link Parser}s in any order, then rejects the
+ * ones that never parsed.
  *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult BattleParser's result type.
  * @param ctx Parser context.
- * @param parsers BattleParsers to consider, wrapped to include a deadline
- * callback, in order of descending priority.
+ * @param parsers Parsers to consider, wrapped to include a deadline callback,
+ * in order of descending priority. Entries are removed from the list as they
+ * get parsed or rejected, so this list will be empty after this function
+ * returns.
  * @param filter Optional parser that runs before each expected parser, usually
  * to consume events that should be ignored. If it calls its
  * {@link AcceptCallback `accept()`} callback, then all of the pending parsers
@@ -25,6 +28,44 @@ import {Parser, AcceptCallback, InnerParser} from "./Parser";
  * successfully parse, in the order that they were parsed.
  */
 export async function all<
+    T extends FormatType = FormatType,
+    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TResult = unknown,
+>(
+    ctx: BattleParserContext<T, TAgent>,
+    parsers: Parser<T, TAgent, TResult>[],
+    filter?: InnerParser<T, TAgent, []>,
+    accept?: AcceptCallback,
+): Promise<TResult[]> {
+    // Parse all in any order.
+    const results = await some(ctx, parsers, filter, accept);
+
+    // Reject parsers that never got to accept an event.
+    while (parsers.length > 0) parsers.shift()!.reject();
+
+    return results;
+}
+
+/**
+ * Invokes a group of unordered {@link Parser}s in any order.
+ *
+ * @template T Format type.
+ * @template TAgent Battle agent type.
+ * @template TResult BattleParser's result type.
+ * @param ctx Parser context.
+ * @param parsers Parsers to consider, wrapped to include a deadline callback,
+ * in order of descending priority. Entries are removed from the list as they
+ * get parsed.
+ * @param filter Optional parser that runs before each expected parser, usually
+ * to consume events that should be ignored. If it calls its
+ * {@link AcceptCallback `accept()`} callback, then all of the pending parsers
+ * are immediately rejected and this function returns.
+ * @param accept Optional accept callback that gets called when the first parser
+ * accepts.
+ * @returns An array containing the results of the Parsers that were able to
+ * successfully parse, in the order that they were parsed.
+ */
+export async function some<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
     TResult = unknown,
@@ -94,12 +135,6 @@ export async function all<
         }
 
         if (filterDone) break;
-    }
-
-    // Reject parsers that never got to accept an event.
-    for (let i = 0; i < parsers.length; ++i) {
-        parsers[i].reject();
-        parsers.splice(i--, 1);
     }
 
     return results;
@@ -191,6 +226,14 @@ export interface StageEntry<
     parsers: Parser<T, TAgent>[] | (() => Parser<T, TAgent>[]);
     /** Callback that returns whether to end the entire `staged()` call. */
     readonly after?: () => boolean;
+
+    /** Last generated {@link parsers}. For internal use only. */
+    _lastParsers?: Parser<T, TAgent>[];
+    /**
+     * Initial {@link parsers} before parsing the next pathway. For internal use
+     * only.
+     */
+    _initial?: Parser<T, TAgent>[];
 }
 
 /**
@@ -205,6 +248,7 @@ export interface StageEntry<
  * they belong to. Entries are removed while progressing through each pathway,
  * and callbacks to generate stage parsers are resolved while progressing
  * through each stage.
+ * @see {@link multiStaged}, a version that supports concurrrent pathways.
  */
 export async function staged<
     T extends FormatType = FormatType,
@@ -212,50 +256,115 @@ export async function staged<
     TKey = unknown,
 >(
     ctx: BattleParserContext<T, TAgent>,
-    stages: readonly Map<TKey, StageEntry<T, TAgent>>[],
+    stages: Map<TKey, StageEntry<T, TAgent>>[],
 ): Promise<void> {
-    if (stages.length <= 0) return;
-    const [firstStage] = stages;
-    for (const [key, entry] of firstStage) {
-        if (typeof entry.parsers === "function") {
-            entry.parsers = entry.parsers();
+    // Generate initial parsers for rejecting later.
+    for (const stage of stages) {
+        for (const entry of stage.values()) {
+            entry._initial =
+                typeof entry.parsers === "function"
+                    ? entry.parsers()
+                    : entry.parsers;
         }
-        // See if this key will be the one to parse an effect.
-        let firstParser: Parser<T, TAgent> | undefined;
-        for (const parser of entry.parsers) {
-            await parser.parse(ctx, () => (firstParser = parser));
-            if (firstParser) break;
-        }
-        if (firstParser) {
-            // Pathway for this key has been locked in, so parse the rest of
-            // this stage then the rest of the stages for this pathway for this
-            // key only.
-            // Afterwards we'll search for the next pathway.
-            entry.parsers.splice(entry.parsers.indexOf(firstParser), 1);
-            await all(ctx, entry.parsers);
-            if (entry.after?.()) return;
+    }
 
-            for (const stage of stages.slice(1)) {
-                const entry2 = stage.get(key);
-                if (!entry2) continue;
-                if (typeof entry2.parsers === "function") {
-                    entry2.parsers = entry2.parsers();
-                }
-                await all(ctx, entry2.parsers);
-                stage.delete(key);
-                if (entry2.after?.()) return;
+    // Keep looping until no more pathways to parse.
+    let alive: boolean;
+    do {
+        alive = false;
+        // Try to identify the next pathway to parse within these stages.
+        for (let i = 0; i < stages.length; ++i) {
+            const stage = stages[i];
+            let pathway: [TKey] | undefined;
+
+            for (const [key, entry] of stage) {
+                // Try to parse some effects from this stage.
+                const parsers = (entry._lastParsers ??=
+                    typeof entry.parsers === "function"
+                        ? entry.parsers()
+                        : entry.parsers);
+                // Note: Using some() instead of all() so we don't reject the
+                // parsers if they don't accept an event yet, since if this
+                // pathway shouldn't be parsed yet then we want to be able to
+                // check again later.
+                await some(
+                    ctx,
+                    parsers,
+                    undefined /*filter*/,
+                    () => {
+                        pathway = [key];
+                        entry.parsers = parsers;
+                    } /*accept*/,
+                );
+                if (pathway) break;
             }
-            return await staged(ctx, stages);
+
+            if (pathway) {
+                // Pathway for this key has been locked in, so parse the rest of
+                // this stage then the rest of the stages for this pathway for
+                // this key only.
+                // Afterwards we'll search for the next pathway.
+
+                // Note that if we didn't start at the first stage then we have
+                // to reject the parsers for the previous stage(s) in this
+                // pathway since they failed to parse by the time we got to this
+                // stage.
+                for (let j = 0; j <= i; ++j) {
+                    const stage2 = stages[j];
+
+                    // Discard the _lastParsers entries from other pathways
+                    // that failed to parse since a different pathway (i.e., the
+                    // current one) had to parse first, meaning these were
+                    // generated too early.
+                    for (const [key, entry] of stage2) {
+                        if (key === pathway[0]) continue;
+                        entry._lastParsers = undefined;
+                    }
+                    // Note: Only go up to but not including i, since we're
+                    // about to parse i which is the current stage.
+                    // The '<=' in the loop condition was only so that we can
+                    // fully clear the generated _lastParsers entries in the
+                    // other pathways that failed to parse.
+                    if (j >= i) break;
+
+                    const entry = stage2.get(pathway[0]);
+                    if (!entry) continue;
+                    const parsers = (entry._lastParsers ??=
+                        typeof entry.parsers === "function"
+                            ? (entry.parsers = entry.parsers())
+                            : entry.parsers);
+                    while (parsers.length > 0) parsers.shift()!.reject();
+                    entry._lastParsers = undefined;
+                    stage2.delete(pathway[0]);
+                }
+
+                for (let j = i; j < stages.length; ++j) {
+                    const stage2 = stages[j];
+                    const entry = stage2.get(pathway[0]);
+                    if (!entry) continue;
+                    const parsers = (entry._lastParsers ??=
+                        typeof entry.parsers === "function"
+                            ? (entry.parsers = entry.parsers())
+                            : entry.parsers);
+                    await all(ctx, parsers);
+                    stage2.delete(pathway[0]);
+                    if (entry.after?.()) return;
+                }
+                // Go back to the outer loop to look for the next pathway.
+                alive = true;
+                break;
+            }
+        }
+    } while (alive);
+
+    // TODO: Support ambiguous cases where it's impossible to tell the order of
+    // pathways that failed to parse.
+    // For now we just assume that the failed pathways were first since it's the
+    // more common case with switch/residual effects.
+    for (const stage of stages) {
+        for (const entry of stage.values()) {
+            const parsers = entry._initial!;
+            while (parsers.length > 0) parsers.shift()!.reject();
         }
     }
-    // First stage couldn't parse in any of the pathways, so reject them all and
-    // continue with the next stage.
-    for (const entry of firstStage.values()) {
-        if (typeof entry.parsers === "function") {
-            entry.parsers = entry.parsers();
-        }
-        while (entry.parsers.length > 0) entry.parsers.shift()!.reject();
-    }
-    firstStage.clear();
-    return await staged(ctx, stages.slice(1));
 }

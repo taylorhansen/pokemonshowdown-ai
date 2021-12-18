@@ -544,29 +544,27 @@ export class Ability {
      *
      * @param weatherType Current weather.
      * @param hitBy Move+user that the holder is being hit by.
+     * @param foes Opposing pokemon, to check for weather-suppressant effects.
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
     public canBlock(
         weatherType: WeatherType | "none",
         hitBy: MoveAndUser,
+        foes: readonly Pokemon[],
     ): Set<inference.Reason> | null {
-        let res: Set<inference.Reason> | null = null;
-
         // Block status due to ability immunity.
         // Note: Only the main status effects can be visibly blocked.
         const statuses = hitBy.move.getMainStatusEffects(
             "hit",
             hitBy.user.types,
         );
-        if (
-            statuses.some(s =>
-                // TODO: Guard against cloudnine.
-                this.canBlockStatus(s, weatherType, false /*allowSilent*/),
-            )
-        ) {
-            res ??= new Set();
-        }
+        let res = this.canBlockStatus(
+            statuses,
+            weatherType,
+            foes,
+            false /*allowSilent*/,
+        );
 
         // Block move due to ability type immunity.
         if (this.data.on?.block?.move?.type === "nonSuper") {
@@ -609,26 +607,74 @@ export class Ability {
     }
 
     /**
-     * Checks whether the ability can block the given status.
+     * Checks whether the ability can block at least one of the given statuses.
      *
      * @param statusType Status to check.
      * @param weather Current weather.
+     * @param foes Opposing pokemon, to check for weather-suppressant effects.
      * @param allowSilent Whether to allow silent activation. Default `true`.
+     * @returns Reasons to block, or `null` if it cannot block.
      */
     public canBlockStatus(
-        statusType: StatusType,
+        statusTypes: readonly StatusType[],
         weatherType: WeatherType | "none",
+        foes: readonly Pokemon[],
         allowSilent = true,
-    ): boolean {
-        // TODO: For weather condition, include cloudnine guard.
-        const condition = this.data.on?.block?.status;
-        return (
-            (condition === true || condition === weatherType) &&
-            !!this.data.statusImmunity &&
-            (allowSilent
-                ? !!this.data.statusImmunity[statusType]
-                : this.data.statusImmunity[statusType] === true)
+    ): Set<inference.Reason> | null {
+        return this.canBlockStatusImpl(
+            statusTypes,
+            weatherType,
+            foes,
+            allowSilent,
         );
+    }
+
+    /**
+     * Checks whether the ability can't block any of the given statuses.
+     *
+     * @param statusType Status to check.
+     * @param weather Current weather.
+     * @param foes Opposing pokemon, to check for weather-suppressant effects.
+     * @param allowSilent Whether to allow silent activation. Default `true`.
+     * @returns Reasons to not block, or `null` if it can definitely block.
+     */
+    public cantBlockStatus(
+        statusTypes: readonly StatusType[],
+        weatherType: WeatherType | "none",
+        foes: readonly Pokemon[],
+        allowSilent = true,
+    ): Set<inference.Reason> | null {
+        return this.canBlockStatusImpl(
+            statusTypes,
+            weatherType,
+            foes,
+            allowSilent,
+            true /*invert*/,
+        );
+    }
+
+    private canBlockStatusImpl(
+        statusTypes: readonly StatusType[],
+        weatherType: WeatherType | "none",
+        foes: readonly Pokemon[],
+        allowSilent = true,
+        invert?: boolean,
+    ): Set<inference.Reason> | null {
+        const condition = this.data.on?.block?.status;
+        if (!this.data.statusImmunity) return invert ? new Set() : null;
+        if (
+            !statusTypes.some(s =>
+                allowSilent
+                    ? !!this.data.statusImmunity![s]
+                    : this.data.statusImmunity![s] === true,
+            )
+        ) {
+            return invert ? new Set() : null;
+        }
+        if (condition === true) return invert ? null : new Set();
+        if (condition !== weatherType) return invert ? new Set() : null;
+        // Guard against weather-suppressant effects, e.g. cloudnine.
+        return reason.weather[invert ? "isSuppressed" : "canActivate"](foes);
     }
 
     /**
@@ -1207,38 +1253,38 @@ export class Ability {
 
     //#endregion
 
-    //#region On-moveDrain.
+    //#region On-drain.
 
-    // TODO: Generalize to on-drain for leechseed status as well as moves.
     /**
-     * Checks whether the ability can activate on-`moveDrain`.
+     * Checks whether the ability can activate on-`drain`.
      *
      * @returns A Set of Reasons describing additional conditions of activation,
      * or the empty set if there are none, or `null` if it cannot activate.
      */
-    public canMoveDrain(): Set<inference.Reason> | null {
-        return this.data.on?.moveDrain ? new Set() : null;
+    public canDrain(): Set<inference.Reason> | null {
+        // TODO(gen4): Doesn't work on dreameater move.
+        return this.data.on?.drain ? new Set() : null;
     }
 
     /**
-     * Activates an ability on-`moveDrain`.
+     * Activates an ability on-`drain`.
      *
      * @param accept Callback to accept this pathway.
      * @param side Ability holder reference.
-     * @param hitByUserRef Pokemon reference to the user of the draining move.
+     * @param source Pokemon reference receiving the drained HP.
      * @returns `"invert"` if the drain effect was overridden to deduct HP
      * instead of heal, otherwise `undefined`.
      */
-    public async onMoveDrain(
+    public async onDrain(
         ctx: BattleParserContext<"gen4">,
         accept: unordered.AcceptCallback,
         side: SideID,
-        hitByUserRef: SideID,
+        source: SideID,
     ): Promise<"invert" | undefined> {
-        if (!this.data.on?.moveDrain) return;
+        if (!this.data.on?.drain) return;
         // Invert drain effect to damage instead of heal.
-        if (this.data.on.moveDrain.invert) {
-            return await this.invertDrain(ctx, accept, side, hitByUserRef);
+        if (this.data.on.drain.invert) {
+            return await this.invertDrain(ctx, accept, side, source);
         }
     }
 
@@ -1248,7 +1294,7 @@ export class Ability {
      *
      * @param accept Callback to accept this pathway.
      * @param side Ability holder reference.
-     * @param hitByUserRef Pokemon reference to the user of the draining move.
+     * @param source Pokemon reference receiving the drained HP.
      * @returns `"invert"` if the drain effect was overridden to deduct HP
      * instead of heal, otherwise `undefined`.
      */
@@ -1256,13 +1302,13 @@ export class Ability {
         ctx: BattleParserContext<"gen4">,
         accept: unordered.AcceptCallback,
         side: SideID,
-        hitByUserRef: SideID,
+        source: SideID,
     ): Promise<"invert" | undefined> {
         // TODO: Expect actual drain damage amount?
         const damageRes = await this.percentDamage(
             ctx,
             accept,
-            hitByUserRef,
+            source,
             -1 /*percent*/,
             side,
         );

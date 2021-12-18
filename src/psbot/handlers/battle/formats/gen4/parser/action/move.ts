@@ -8,6 +8,7 @@ import {
     BattleParserContext,
     consume,
     eventLoop,
+    inference,
     peek,
     tryVerify,
     unordered,
@@ -24,10 +25,12 @@ import * as effectItem from "../effect/item";
 import * as effectStatus from "../effect/status";
 import * as effectWeather from "../effect/weather";
 import * as faint from "../faint";
+import * as reason from "../reason";
 import {ActionResult} from "./action";
 import * as actionSwitch from "./switch";
 
 // TODO: Split into multiple modules?
+// TODO: Overhaul effect parsing to respect order/inferences.
 
 //#region Main action parser.
 
@@ -194,14 +197,14 @@ async function cantEventImpl(
 ): Promise<"slp" | true | undefined> {
     const event = await tryVerify(ctx, "|cant|");
     if (!event) return;
-    const [, identStr, reason] = event.args;
+    const [, identStr, reasonStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     if (ident.player !== side) return;
-    if (!reasons.includes(reason)) return;
+    if (!reasons.includes(reasonStr)) return;
     accept();
     await base["|cant|"](ctx);
     // Specify slp inactive reason in case of sleeptalk/snore.
-    return reason === "slp" ? "slp" : true;
+    return reasonStr === "slp" ? "slp" : true;
 }
 
 const attract = (
@@ -231,10 +234,10 @@ async function attractImpl(
     // 50% chance to cause inactivity.
     const event2 = await tryVerify(ctx, "|cant|");
     if (!event2) return;
-    const [, ident2Str, reason] = event2.args;
+    const [, ident2Str, reasonStr] = event2.args;
     const ident2 = Protocol.parsePokemonIdent(ident2Str);
     if (ident2.player !== side) return;
-    if (reason !== "Attract") return;
+    if (reasonStr !== "Attract") return;
     accept();
     await base["|cant|"](ctx);
 }
@@ -1357,6 +1360,8 @@ async function postHit(
     ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs,
 ): Promise<void> {
+    // TODO: Parse move effects in the correct order instead of handwaving it
+    // via unordered.all().
     const parsers: unordered.Parser<"gen4">[] = [];
     // TODO(doubles): Actually track targets.
     const otherSide = args.side === "p1" ? "p2" : "p1";
@@ -1786,6 +1791,7 @@ async function statusImpl(
     // Allow silent status.
     if (res === true) accept();
     // Handle imprison assertions.
+    // TODO: Rework to use inference Reason interface.
     else if (res === "imprison") imprison(ctx, false /*failed*/);
 }
 
@@ -1832,17 +1838,40 @@ function statusReject(
     const targetAbility = target.traits.ability;
     // Note: Can consider immunities to either status if there are multiple
     // possible statuses to afflict.
-    // TODO: Rework api to allow for custom overnarrowing errors/recovery.
-    const filteredAbilities = [...targetAbility.possibleValues].filter(n =>
-        statusTypes.some(s =>
-            // TODO: Some abilities distinguish between self/hit statuses.
-            // TODO: Guard against cloudnine.
-            dex
-                .getAbility(targetAbility.map[n])
-                .canBlockStatus(s, ctx.state.status.weather.type),
-        ),
+    const targetFoes = (Object.keys(ctx.state.teams) as SideID[]).flatMap(s =>
+        s === targetRef ? [] : ctx.state.getTeam(s).active,
     );
-    if (filteredAbilities.length <= 0) {
+    const blockingAbilities = [...targetAbility.possibleValues].map(n => {
+        const ability = dex.getAbility(targetAbility.map[n]);
+        return [
+            ability,
+            ability.canBlockStatus(
+                statusTypes,
+                ctx.state.status.weather.type,
+                targetFoes,
+            ),
+        ] as const;
+    });
+    // FIXME: If multiple blocking abilities with different conditions are
+    // eligible, then they won't be narrowed due to the lazy logic in
+    // inference.or().
+    // For now, though, there isn't a real game scenario that can cause this bug
+    // to occur.
+    const orReasons = new Set<inference.Reason>();
+    const vanillaBlocking = new Set<string>();
+    for (const [ability, reasons] of blockingAbilities) {
+        if (!reasons) continue;
+        if (reasons.size <= 0) {
+            vanillaBlocking.add(ability.data.name);
+            continue;
+        }
+        reasons.add(reason.ability.has(target, new Set([ability.data.name])));
+        orReasons.add(inference.and(reasons));
+    }
+    if (vanillaBlocking.size > 0) {
+        orReasons.add(reason.ability.has(target, vanillaBlocking));
+    }
+    if (orReasons.size <= 0) {
         // Overnarrowed error.
         throw new Error(
             `Move '${args.move.data.name}' status ` +
@@ -1852,7 +1881,7 @@ function statusReject(
                 "block it",
         );
     }
-    targetAbility.narrow(filteredAbilities);
+    inference.or(orReasons).assert();
 }
 
 //#endregion
@@ -1864,23 +1893,23 @@ function drain(
     args: ExecuteArgs,
     targetRef: SideID,
 ): unordered.Parser<"gen4">[] {
-    // Drain effect could either be handled normally or by ability on-moveDrain.
+    // Drain effect could either be handled normally or by ability on-drain.
     let handled = false;
     return [
         effectAbility
-            .onMoveDrain(ctx, targetRef, args.side)
-            .transform("cancelable", function transformMoveDrain(drainRes) {
+            .onDrain(ctx, targetRef, args.side)
+            .transform("cancelable", function transformDrain(drainRes) {
                 if (drainRes !== "invert") return;
                 if (handled) {
                     throw new Error(
-                        "Drain effect handled but ability on-moveDrain also " +
+                        "Drain effect handled but ability on-drain also " +
                             "activated afterwards",
                     );
                 }
                 handled = true;
             }),
         unordered.parser(
-            `${args.side} move drain`,
+            `${args.side} move drain heal`,
             async function drainImpl(_ctx, accept) {
                 if (handled) {
                     accept();

@@ -4,7 +4,12 @@
  */
 import {Generations} from "@pkmn/data";
 import {Dex} from "@pkmn/dex";
-import {SpeciesAbility} from "@pkmn/dex-types";
+import {BasicEffect, SpeciesAbility} from "@pkmn/dex-types";
+import {
+    FieldConditionData,
+    PokemonConditionData,
+    SideConditionData,
+} from "@pkmn/sim/build/sim/dex-conditions";
 import * as dex from "../src/psbot/handlers/battle/formats/gen4/dex/dex-util";
 import {toIdName} from "../src/psbot/helpers";
 
@@ -989,7 +994,7 @@ void (async function buildDex(): Promise<void> {
 
         colorchange: {on: {moveDamage: {changeToMoveType: true}}},
 
-        liquidooze: {on: {moveDrain: {invert: true}}},
+        liquidooze: {on: {drain: {invert: true}}},
 
         hydration: {
             on: {weather: {RainDance: {cure: true}}},
@@ -1057,15 +1062,14 @@ void (async function buildDex(): Promise<void> {
     for (const ability of [...gen.abilities].sort((a, b) =>
         a.id < b.id ? -1 : +(a.id > b.id),
     )) {
-        abilities.push([
-            ability.id,
-            {
-                uid,
-                name: ability.id,
-                display: ability.name,
-                ...abilityData[ability.id],
-            },
-        ]);
+        const data: dex.AbilityData = {
+            uid,
+            name: ability.id,
+            display: ability.name,
+            ...abilityData[ability.id],
+        };
+
+        abilities.push([ability.id, data]);
         ++uid;
     }
 
@@ -1275,22 +1279,21 @@ void (async function buildDex(): Promise<void> {
             ]);
         }
 
-        items.push([
-            item.id,
-            {
-                uid,
-                name: item.id,
-                display: item.name,
-                ...(item.isChoice && {isChoice: true}),
-                ...(item.isBerry && {isBerry: true}),
-                ...(item.onPlate && {
-                    plateType: item.onPlate.toLowerCase() as dex.Type,
-                }),
-                ...(Object.hasOwnProperty.call(itemOnMap, item.id) && {
-                    on: itemOnMap[item.id],
-                }),
-            },
-        ]);
+        const data: dex.ItemData = {
+            uid,
+            name: item.id,
+            display: item.name,
+            ...(item.isChoice && {isChoice: true}),
+            ...(item.isBerry && {isBerry: true}),
+            ...(item.onPlate && {
+                plateType: item.onPlate.toLowerCase() as dex.Type,
+            }),
+            ...(Object.hasOwnProperty.call(itemOnMap, item.id) && {
+                on: itemOnMap[item.id],
+            }),
+        };
+
+        items.push([item.id, data]);
         ++uid;
     }
 
@@ -1298,31 +1301,110 @@ void (async function buildDex(): Promise<void> {
 
     //#region Conditions.
 
-    const conditions: (readonly [string, dex.ConditionData])[] = [];
-
     const relevantConditionNames = new Set(
         [
             ...dex.majorStatusKeys,
-            "confusion",
-            ...dex.weatherKeys,
             "partiallytrapped",
-            // TODO: Other conditions.
+            "futuremove",
+            "lockedmove",
+            ...moves.map(([name]) => name),
+            ...abilities.map(([name]) => name),
+            ...items.map(([name]) => name),
         ].sort(),
     );
 
-    for (const id of relevantConditionNames) {
-        const condition = gen.conditions.get(id);
+    let conditionResidualOrderGroups = new Map<
+        number | undefined,
+        Map<number | undefined, dex.ConditionResidualData[]>
+    >();
+
+    uid = 0;
+    for (const name of relevantConditionNames) {
+        let order: number | undefined;
+        let subOrder: number | undefined;
+        let type: dex.ConditionResidualData["type"] | undefined;
+
+        let condition: Readonly<BasicEffect> | undefined;
+
+        if (
+            Object.hasOwnProperty.call(abilityData, name) &&
+            abilityData[name].on?.residual
+        ) {
+            condition = gen.abilities.get(name);
+            type = "ability";
+        } else if (
+            Object.hasOwnProperty.call(itemOnMap, name) &&
+            itemOnMap[name].residual
+        ) {
+            condition = gen.items.get(name);
+            type = "item";
+        } else condition = gen.conditions.get(name);
         if (!condition) continue;
-        conditions.push([
-            id,
-            {
-                uid,
-                name: id,
-                display: condition.name,
-            },
-        ]);
+
+        const fieldCondition = condition as FieldConditionData;
+        if (
+            fieldCondition.onFieldResidualOrder ||
+            fieldCondition.onFieldResidualSubOrder
+        ) {
+            ({onFieldResidualOrder: order, onFieldResidualSubOrder: subOrder} =
+                fieldCondition);
+            type = "field";
+        }
+        const sideCondition = condition as SideConditionData;
+        if (
+            sideCondition.onSideResidualOrder ||
+            sideCondition.onSideResidualSubOrder
+        ) {
+            ({onSideResidualOrder: order, onSideResidualSubOrder: subOrder} =
+                sideCondition);
+            if (!type) type = "side";
+        }
+        const pokemonCondition = condition as PokemonConditionData;
+        if (
+            pokemonCondition.onResidualOrder ||
+            pokemonCondition.onResidualSubOrder ||
+            name === "lockedmove"
+        ) {
+            ({onResidualOrder: order, onResidualSubOrder: subOrder} =
+                pokemonCondition);
+            if (!type) {
+                type = ["wish", "futuremove"].includes(name)
+                    ? "slot"
+                    : "pokemon";
+            }
+        }
+        if (type) {
+            let orderGroup = conditionResidualOrderGroups.get(order);
+            if (!orderGroup) {
+                orderGroup = new Map();
+                conditionResidualOrderGroups.set(order, orderGroup);
+            }
+            let subOrderGroup = orderGroup.get(subOrder);
+            if (!subOrderGroup) {
+                subOrderGroup = [];
+                orderGroup.set(subOrder, subOrderGroup);
+            }
+            subOrderGroup.push({name, type});
+        }
+
         ++uid;
     }
+
+    conditionResidualOrderGroups = new Map(
+        [...conditionResidualOrderGroups]
+            .sort(
+                (group1, group2) =>
+                    (group1[0] ?? Infinity) - (group2[0] ?? Infinity),
+            )
+            .map(([order, subOrderGroup]) => [
+                order,
+                new Map(
+                    [...subOrderGroup].sort(
+                        (group1, group2) => (group1[0] ?? 0) - (group2[0] ?? 0),
+                    ),
+                ),
+            ]),
+    );
 
     //#endregion
 
@@ -1432,6 +1514,17 @@ void (async function buildDex(): Promise<void> {
         }
         return "{" + entries.join(", ") + "}";
     }
+
+    /**
+     * Stringifies an array.
+     *
+     * @param arr Array to stringify.
+     * @param converter Stringifier for data values.
+     */
+    const stringifyArray = <T>(
+        arr: readonly T[],
+        converter: (value: T) => string,
+    ): string => `[${arr.map(converter).join(", ")}]`;
 
     /**
      * Recursively stringifies an array.
@@ -1639,9 +1732,24 @@ ${exportEntriesToDict(berries, "berries", "dex.NaturalGiftData", b =>
 )}
 
 
-/** Contains {@link dex.ConditionData info} about each condition. */
-${exportEntriesToDict(conditions, "conditions", "dex.ConditionData", a =>
-    deepStringifyDict({...a}, v => (typeof v === "string" ? quote(v) : `${v}`)),
+/**
+ * Contains {@link dex.ConditionResidualData info} about each condition's
+ * residual effects, grouped by order and sub-order.
+ */
+${exportArray(
+    [...conditionResidualOrderGroups],
+    "conditionResidualOrderGroups",
+    "dex.ConditionResidualData[][]",
+    ([order, orderGroup]) =>
+        stringifyArray(
+            [...orderGroup],
+            ([subOrder, subOrderGroup]) =>
+                stringifyArray([...subOrderGroup], data =>
+                    stringifyDict({...data}, v =>
+                        typeof v === "string" ? quote(v) : `${v}`,
+                    ),
+                ) + (subOrder === undefined ? "" : `/* ${subOrder} */`),
+        ) + (order === undefined ? "" : `/* ${order} */`),
 )}`);
 
     //#endregion

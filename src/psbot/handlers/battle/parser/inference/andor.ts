@@ -147,8 +147,12 @@ class AndOrReason extends Reason {
         for (const reason of this.reasons) {
             reason[this.mode === "and" ? "assert" : "reject"]();
         }
-        this.reasons.clear();
-        if (!this.held) {
+        // Note: If this.held is null, then there are some more complicated
+        // Reasons further down the chain (e.g. another AndOrReason) that aren't
+        // fully able to assert/reject just yet but should eventually resolve to
+        // the correct truth value now that the appropriate method was just
+        // called.
+        if (this.held === (this.mode !== "and")) {
             throw new Error(
                 `Supposed to ${this.mode === "and" ? "assert" : "reject"} ` +
                     "all Reasons but some " +
@@ -211,7 +215,8 @@ class AndOrReason extends Reason {
         const indentReasonOuter = indentOuter + 2 * indentInner;
         return `\
 ${outer}${this.mode === "and" ? "And" : "Or"}Reason(
-${outer}${inner}held = ${this.held},
+${outer}${inner}held = ${this.held}\
+${this.searching ? ` (${this.mode === "and" ? "reject" : "assert"}ing)` : ""},
 ${outer}${inner}pending = [${
             [...this.reasons]
                 .map(r => `\n${r.toString(indentInner, indentReasonOuter)},`)

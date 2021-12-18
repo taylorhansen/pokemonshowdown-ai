@@ -35,7 +35,7 @@ class NotReason extends Reason {
 ${outer}NotReason(
 ${outer}${inner}reason = ${this.reason
             .toString(indentInner, 0)
-            .replace(/\n/g, "\n" + outer + inner)}
-${outer}),`;
+            .replace(/\n/g, "\n" + outer + inner)},
+${outer})`;
     }
 }

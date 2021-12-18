@@ -217,28 +217,7 @@ export const onUpdate = onX(
     ),
 );
 
-/**
- * Creates an {@link inference.Parser} that expects an on-`residual` item to
- * activate if possible.
- *
- * @param side Pokemon reference who could have such an item.
- * @returns An inference Parser for handling item possibilities.
- */
-export const onResidual = onX(
-    "onResidual",
-    (ctx, side) => {
-        const mon = ctx.state.getTeam(side).active;
-        return getItems(mon, item => item.canResidual(mon));
-    },
-    onXInferenceParser(
-        "onResidualInference",
-        onXUnorderedParser(
-            "onResidualUnordered",
-            async (ctx, accept, item, side) =>
-                await item.onResidual(ctx, accept, side),
-        ),
-    ),
-);
+// Note: Item on-residual is handled specially in residual.ts.
 
 //#endregion
 

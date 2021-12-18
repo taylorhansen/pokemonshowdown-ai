@@ -44053,7 +44053,7 @@ export const abilities: {readonly [name: string]: dex.AbilityData} = {
         uid: 50,
         name: "liquidooze",
         display: "Liquid Ooze",
-        on: {moveDrain: {invert: true}},
+        on: {drain: {invert: true}},
     },
     magicguard: {
         uid: 51,
@@ -51973,22 +51973,72 @@ export const berries: {readonly [name: string]: dex.NaturalGiftData} = {
     yacheberry: {basePower: 60, type: "ice"},
 };
 
-/** Contains {@link dex.ConditionData info} about each condition. */
-export const conditions: {readonly [name: string]: dex.ConditionData} = {
-    Hail: {uid: 215, name: "Hail", display: "Hail"},
-    RainDance: {uid: 216, name: "RainDance", display: "RainDance"},
-    Sandstorm: {uid: 217, name: "Sandstorm", display: "Sandstorm"},
-    SunnyDay: {uid: 218, name: "SunnyDay", display: "SunnyDay"},
-    brn: {uid: 219, name: "brn", display: "brn"},
-    confusion: {uid: 220, name: "confusion", display: "confusion"},
-    frz: {uid: 221, name: "frz", display: "frz"},
-    par: {uid: 222, name: "par", display: "par"},
-    partiallytrapped: {
-        uid: 223,
-        name: "partiallytrapped",
-        display: "partiallytrapped",
-    },
-    psn: {uid: 224, name: "psn", display: "psn"},
-    slp: {uid: 225, name: "slp", display: "slp"},
-    tox: {uid: 226, name: "tox", display: "tox"},
-};
+/**
+ * Contains {@link dex.ConditionResidualData info} about each condition's
+ * residual effects, grouped by order and sub-order.
+ */
+export const conditionResidualOrderGroups: readonly dex.ConditionResidualData[][][] =
+    [
+        [[{name: "reflect", type: "side"}]] /* 1 */,
+        [[{name: "lightscreen", type: "side"}]] /* 2 */,
+        [[{name: "mist", type: "side"}]] /* 3 */,
+        [[{name: "safeguard", type: "side"}]] /* 4 */,
+        [[{name: "tailwind", type: "side"}]] /* 5 */,
+        [[{name: "luckychant", type: "side"}]] /* 6 */,
+        [[{name: "wish", type: "slot"}]] /* 7 */,
+        [
+            [
+                {name: "hail", type: "field"},
+                {name: "raindance", type: "field"},
+                {name: "sandstorm", type: "field"},
+                {name: "sunnyday", type: "field"},
+            ],
+        ] /* 8 */,
+        [[{name: "gravity", type: "field"}]] /* 9 */,
+        [
+            [{name: "ingrain", type: "pokemon"}] /* 1 */,
+            [{name: "aquaring", type: "pokemon"}] /* 2 */,
+            [
+                {name: "shedskin", type: "ability"},
+                {name: "speedboost", type: "ability"},
+            ] /* 3 */,
+            [
+                {name: "blacksludge", type: "item"},
+                {name: "leftovers", type: "item"},
+            ] /* 4 */,
+            [{name: "leechseed", type: "pokemon"}] /* 5 */,
+            [
+                {name: "brn", type: "pokemon"},
+                {name: "psn", type: "pokemon"},
+                {name: "tox", type: "pokemon"},
+            ] /* 6 */,
+            [{name: "nightmare", type: "pokemon"}] /* 7 */,
+            [{name: "curse", type: "pokemon"}] /* 8 */,
+            [{name: "partiallytrapped", type: "pokemon"}] /* 9 */,
+            [{name: "baddreams", type: "ability"}] /* 10 */,
+            [{name: "uproar", type: "pokemon"}] /* 11 */,
+            [{name: "disable", type: "pokemon"}] /* 13 */,
+            [{name: "encore", type: "pokemon"}] /* 14 */,
+            [{name: "taunt", type: "pokemon"}] /* 15 */,
+            [{name: "magnetrise", type: "pokemon"}] /* 16 */,
+            [{name: "healblock", type: "pokemon"}] /* 17 */,
+            [{name: "embargo", type: "pokemon"}] /* 18 */,
+            [{name: "yawn", type: "pokemon"}] /* 19 */,
+            [
+                {name: "flameorb", type: "item"},
+                {name: "stickybarb", type: "item"},
+                {name: "toxicorb", type: "item"},
+            ] /* 20 */,
+        ] /* 10 */,
+        [[{name: "futuremove", type: "slot"}]] /* 11 */,
+        [[{name: "perishsong", type: "pokemon"}]] /* 12 */,
+        [[{name: "trickroom", type: "field"}]] /* 13 */,
+        [[{name: "roost", type: "pokemon"}]] /* 25 */,
+        [[{name: "slowstart", type: "pokemon"}] /* 2 */] /* 28 */,
+        [
+            [
+                {name: "lockedmove", type: "pokemon"},
+                {name: "micleberry", type: "item"},
+            ],
+        ],
+    ];

@@ -68,7 +68,7 @@ export const test = () =>
             setup: () => Pokemon,
             absent: () => Promise<void>,
         ): void {
-            it("Shouldn't infer no item if above Hp threshold and didn't activate", async function () {
+            it("Shouldn't infer no item if above hp threshold and didn't activate", async function () {
                 const mon = setup();
                 expect(mon.item.possibleValues).to.include.keys(itemId);
                 mon.hp.set(mon.hp.max); // Should be outside hp threshold.
@@ -76,7 +76,7 @@ export const test = () =>
                 expect(mon.item.possibleValues).to.include.keys(itemId);
             });
 
-            it("Should infer no item if below Hp threshold and didn't activate", async function () {
+            it("Should infer no item if below hp threshold and didn't activate", async function () {
                 const mon = setup();
                 expect(mon.item.possibleValues).to.include.keys(itemId);
                 mon.hp.set(1); // Should be below hp threshold.
@@ -1642,202 +1642,7 @@ export const test = () =>
             });
         });
 
-        describe("onResidual()", function () {
-            const init = setupUnorderedParser(
-                ictx.startArgs,
-                effectItem.onResidual,
-            );
-            let pctx: ReturnType<typeof init> | undefined;
-            const ph = new ParserHelpers(() => pctx);
-
-            afterEach("Close ParserContext", async function () {
-                // Reset variable so it doesn't leak into other tests.
-                await ph.close().finally(() => (pctx = undefined));
-            });
-
-            function residualSetup(lowHp?: boolean) {
-                const mon = sh.initActive("p2");
-                if (lowHp) mon.hp.set(1);
-                return mon;
-            }
-
-            async function residualTaken(...events: Event[]) {
-                pctx = init("p2");
-                for (const event of events) await ph.handle(event);
-                await ph.halt();
-                await ph.return([undefined]);
-            }
-
-            async function residualAbsent() {
-                pctx = init("p2");
-                await ph.halt();
-                await ph.return([]);
-            }
-
-            const micleEvent: Event = {
-                args: ["-enditem", toIdent("p2"), toItemName("micleberry")],
-                kwArgs: {eat: true},
-            };
-
-            testHasItem(
-                "micleberry",
-                () => residualSetup(true /*lowHp*/),
-                "handle item",
-                async () => await residualTaken(micleEvent),
-                "on-residual",
-                residualAbsent,
-            );
-            // TODO: Additional tests for noStatus=false.
-
-            describe("Item-ignoring ability (klutz)", function () {
-                testBlockingAbilities(
-                    "micleberry",
-                    ["klutz"],
-                    () => residualSetup(true /*lowHp*/),
-                    async () => await residualTaken(micleEvent),
-                    residualAbsent,
-                );
-            });
-
-            describe("poison/noPoison", function () {
-                // Poison type.
-                const nidoqueen: SwitchOptions = {
-                    species: "nidoqueen",
-                    level: 83,
-                    gender: "F",
-                    hp: 100,
-                    hpMax: 100,
-                };
-
-                it("Should have poison effect if poison type", async function () {
-                    sh.initActive("p2", nidoqueen).hp.set(90);
-
-                    pctx = init("p2");
-                    await ph.handle({
-                        args: [
-                            "-heal",
-                            toIdent("p2", nidoqueen),
-                            toHPStatus(100, 100),
-                        ],
-                        kwArgs: {from: toEffectName("blacksludge", "item")},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                });
-
-                it("Should have noPoison effect if not poison type", async function () {
-                    sh.initActive("p2");
-
-                    pctx = init("p2");
-                    await ph.handle({
-                        args: ["-damage", toIdent("p2"), toHPStatus(88, 100)],
-                        kwArgs: {from: toEffectName("blacksludge", "item")},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                });
-            });
-
-            describe("effects", function () {
-                it("Should handle percentDamage effect", async function () {
-                    sh.initActive("p1").hp.set(50);
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: ["-heal", toIdent("p1"), toHPStatus(56, 100)],
-                        kwArgs: {from: toEffectName("leftovers", "item")},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                });
-
-                it("Should infer no magicguard if damaged", async function () {
-                    sh.initActive("p1");
-                    const mon = sh.initActive("p2", clefable);
-                    expect(mon.traits.ability.possibleValues).to.have.keys(
-                        "cutecharm",
-                        "magicguard",
-                    );
-
-                    pctx = init("p2");
-                    await ph.handle({
-                        args: [
-                            "-damage",
-                            toIdent("p2", clefable),
-                            toHPStatus(94, 100),
-                        ],
-                        kwArgs: {from: toEffectName("stickybarb", "item")},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(mon.traits.ability.possibleValues).to.have.keys(
-                        "cutecharm",
-                    );
-                });
-
-                it("Should handle status effect", async function () {
-                    sh.initActive("p2");
-
-                    pctx = init("p2");
-                    await ph.handle({
-                        args: ["-status", toIdent("p2"), "tox"],
-                        kwArgs: {from: toEffectName("toxicorb", "item")},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                });
-
-                it("Should handle implicit effect", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.hp.set(1);
-                    expect(mon.volatile.micleberry).to.be.false;
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-enditem",
-                            toIdent("p1"),
-                            toItemName("micleberry"),
-                        ],
-                        kwArgs: {eat: true},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                    expect(mon.volatile.micleberry).to.be.true;
-                });
-
-                it("Should not handle status effect if immunity", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("immunity");
-                    mon.setItem("toxicorb");
-
-                    pctx = init("p1");
-                    await ph.halt();
-                    await ph.return([]);
-                });
-
-                it("Should not handle status effect if already statused", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setItem("toxicorb");
-                    mon.majorStatus.afflict("brn");
-
-                    pctx = init("p1");
-                    await ph.halt();
-                    await ph.return([]);
-                });
-
-                it("Should not handle status effect if weather-based immunity", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("leafguard");
-                    mon.setItem("toxicorb");
-                    state.status.weather.start(null /*source*/, "SunnyDay");
-
-                    pctx = init("p1");
-                    await ph.halt();
-                    await ph.return([]);
-                });
-            });
-        });
+        // Note: Item on-residual is handled specially in residual.test.ts.
 
         // TODO: stealeat tests.
     });

@@ -82,8 +82,11 @@ export const onBlock = onX(
             move: hitBy.move,
             user: ctx.state.getTeam(hitBy.userRef).active,
         };
+        const foes = (Object.keys(ctx.state.teams) as SideID[]).flatMap(s =>
+            s === side ? [] : ctx.state.getTeam(s).active,
+        );
         return getAbilities(mon, ability =>
-            ability.canBlock(ctx.state.status.weather.type, hitBy2),
+            ability.canBlock(ctx.state.status.weather.type, hitBy2, foes),
         );
     },
     onXInferenceParser(
@@ -174,31 +177,30 @@ const qualifierToOn: {readonly [T in MoveDamageQualifier]: dex.AbilityOn} = {
     contactKo: "moveContactKo",
 };
 
-// TODO: Refactor hitBy to support non-move drain effects, e.g. leechseed.
 /**
- * Creates an {@link inference.Parser} parser that expects an on-`moveDrain`
+ * Creates an {@link inference.Parser} parser that expects an on-`drain`
  * ability to activate if possible (e.g. Liquid Ooze).
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
- * @param hitByUserRef Pokemon reference to the user of the draining move.
+ * @param source Pokemon reference receiving the drained HP.
  * @returns An inference Parser that returns whether drain damage was deducted
  * instead of healed.
  */
-export const onMoveDrain = onX(
-    "onMoveDrain",
-    (ctx, side, hitByUserRef: SideID) => {
-        // Unused arg only here to enforce typing of Ability#onMoveDrain call.
-        void hitByUserRef;
+export const onDrain = onX(
+    "onDrain",
+    (ctx, side, source: SideID) => {
+        // Unused arg only here to enforce typing of Ability#onDrain call.
+        void source;
         const mon = ctx.state.getTeam(side).active;
-        return getAbilities(mon, ability => ability.canMoveDrain());
+        return getAbilities(mon, ability => ability.canDrain());
     },
     onXInferenceParser(
-        "onMoveDrainInference",
+        "onDrainInference",
         onXUnorderedParser(
-            "onMoveDrainUnordered",
-            async (ctx, accept, ability, side, hitByUserRef) =>
-                await ability.onMoveDrain(ctx, accept, side, hitByUserRef),
+            "onDrainUnordered",
+            async (ctx, accept, ability, side, source) =>
+                await ability.onDrain(ctx, accept, side, source),
         ),
     ),
 );
@@ -602,32 +604,7 @@ async function onUpdateCopiedInferenceImpl(
     }
 }
 
-/**
- * Creates an {@link inference.Parser} that expects an on-`residual` ability to
- * activate if possible (e.g. Speed Boost).
- *
- * @param ctx Context in order to figure out which abilities to watch.
- * @param side Pokemon reference who could have such an ability.
- * @returns An inference Parser for handling ability possibilities.
- */
-export const onResidual = onX(
-    "onResidual",
-    (ctx, side) => {
-        const mon = ctx.state.getTeam(side).active;
-        const foes = (Object.keys(ctx.state.teams) as SideID[])
-            .filter(s => s !== side)
-            .map(s => ctx.state.getTeam(s).active);
-        return getAbilities(mon, ability => ability.canResidual(mon, foes));
-    },
-    onXInferenceParser(
-        "onResidualInference",
-        onXUnorderedParser(
-            "onResidualUnordered",
-            async (ctx, accept, ability, side) =>
-                await ability.onResidual(ctx, accept, side),
-        ),
-    ),
-);
+// Note: Ability on-residual is handled specially in residual.ts.
 
 //#endregion
 

@@ -36,6 +36,7 @@ async function turn(
     await ignoredEvents(ctx);
     await playerActions(ctx);
 
+    // TODO: Game-over checks.
     await ignoredEvents(ctx);
     await residual(ctx);
 

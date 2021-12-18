@@ -1663,10 +1663,10 @@ export const test = () =>
             });
         });
 
-        describe("onMoveDrain()", function () {
+        describe("onDrain()", function () {
             const init = setupUnorderedParser(
                 ictx.startArgs,
-                effectAbility.onMoveDrain,
+                effectAbility.onDrain,
             );
             let pctx: ReturnType<typeof init> | undefined;
             const ph = new ParserHelpers(() => pctx);
@@ -1675,7 +1675,7 @@ export const test = () =>
                 await ph.close().finally(() => (pctx = undefined));
             });
 
-            it("Should infer no on-moveDrain ability if it did not activate", async function () {
+            it("Should infer no on-drain ability if it did not activate", async function () {
                 sh.initActive("p1");
                 const mon = sh.initActive("p2", tentacruel);
                 expect(mon.traits.ability.possibleValues).to.have.keys(
@@ -1691,7 +1691,7 @@ export const test = () =>
                 );
             });
 
-            it("Shouldn't infer no on-moveDrain ability if it did not activate and and ability is suppressed", async function () {
+            it("Shouldn't infer no on-drain ability if it did not activate and ability is suppressed", async function () {
                 sh.initActive("p1");
                 const mon = sh.initActive("p2", tentacruel);
                 mon.volatile.suppressAbility = true;
@@ -1709,7 +1709,7 @@ export const test = () =>
                 );
             });
 
-            describe("Invert", function () {
+            describe("Invert (liquidooze)", function () {
                 it("Should handle", async function () {
                     sh.initActive("p1");
                     sh.initActive("p2", tentacruel);
@@ -1804,7 +1804,7 @@ export const test = () =>
                 );
             });
 
-            describe("PercentDamage", function () {
+            describe("PercentDamage (icebody)", function () {
                 it("Should handle", async function () {
                     sh.initActive("p1");
                     const mon = sh.initActive("p2");
@@ -1844,7 +1844,7 @@ export const test = () =>
                 });
             });
 
-            describe("Cure", function () {
+            describe("Cure (hydration)", function () {
                 it("Should handle", async function () {
                     sh.initActive("p1");
                     const mon = sh.initActive("p2");
@@ -2003,7 +2003,7 @@ export const test = () =>
                 );
             });
 
-            describe("CopyFoeAbility (Trace)", function () {
+            describe("CopyFoeAbility (trace)", function () {
                 // TODO: Test subtle interactions with base traits.
                 it("Should reveal abilities", async function () {
                     const us = sh.initActive("p1");
@@ -2203,7 +2203,7 @@ export const test = () =>
                 });
             });
 
-            describe("Cure (immunity)", function () {
+            describe("Cure (insomnia)", function () {
                 it("Should cure status", async function () {
                     const mon = sh.initActive("p1");
                     mon.majorStatus.afflict("slp");
@@ -2424,145 +2424,5 @@ export const test = () =>
             });
         });
 
-        describe("onResidual()", function () {
-            const init = setupUnorderedParser(
-                ictx.startArgs,
-                effectAbility.onResidual,
-            );
-            let pctx: ReturnType<typeof init> | undefined;
-            const ph = new ParserHelpers(() => pctx);
-
-            afterEach("Close ParserContext", async function () {
-                await ph.close().finally(() => (pctx = undefined));
-            });
-
-            it("Should infer no on-residual ability if it did not activate", async function () {
-                sh.initActive("p1");
-                const mon = sh.initActive("p2");
-                mon.setAbility("speedboost", "illuminate");
-
-                pctx = init("p2");
-                await ph.halt();
-                await ph.return([]);
-                expect(mon.traits.ability.possibleValues).to.have.keys(
-                    "illuminate",
-                );
-            });
-
-            it("Shouldn't infer no on-residual ability if it did not activate and ability is suppressed", async function () {
-                sh.initActive("p1");
-                const mon = sh.initActive("p2");
-                mon.setAbility("speedboost", "illuminate");
-                mon.volatile.suppressAbility = true;
-
-                pctx = init("p2");
-                await ph.halt();
-                await ph.return([]);
-                expect(mon.traits.ability.possibleValues).to.have.keys(
-                    "speedboost",
-                    "illuminate",
-                );
-            });
-
-            describe("DamageIfStatus (Bad Dreams)", function () {
-                it("Should handle", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("baddreams");
-                    sh.initActive("p2").majorStatus.afflict("slp");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: ["-damage", toIdent("p2"), toHPStatus(88)],
-                        kwArgs: {
-                            from: toEffectName("baddreams", "ability"),
-                            of: toIdent("p1"),
-                        },
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                });
-
-                it("Should not handle if no status", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("baddreams");
-                    sh.initActive("p2");
-
-                    pctx = init("p1");
-                    await ph.halt();
-                    await ph.return([]);
-                });
-            });
-
-            describe("Cure (Shed Skin)", function () {
-                it("Should handle", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("shedskin");
-                    mon.majorStatus.afflict("par");
-                    sh.initActive("p2");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-activate",
-                            toIdent("p1"),
-                            toEffectName("shedskin", "ability"),
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle({
-                        args: ["-curestatus", toIdent("p1"), "par"],
-                        kwArgs: {msg: true},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                });
-
-                it("Should allow no activation due to chance", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("shedskin");
-                    mon.majorStatus.afflict("par");
-                    sh.initActive("p2");
-
-                    pctx = init("p1");
-                    await ph.halt();
-                    await ph.return([]);
-                });
-            });
-
-            describe("Boost (Speed Boost)", function () {
-                it("Should handle", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("speedboost");
-                    sh.initActive("p2");
-
-                    pctx = init("p1");
-                    await ph.handle({
-                        args: [
-                            "-ability",
-                            toIdent("p1"),
-                            toAbilityName("speedboost"),
-                            "boost",
-                        ],
-                        kwArgs: {},
-                    });
-                    await ph.handle({
-                        args: ["-boost", toIdent("p1"), "spe", toNum(1)],
-                        kwArgs: {},
-                    });
-                    await ph.halt();
-                    await ph.return([undefined]);
-                });
-
-                it("Should not handle if boost already maxed out", async function () {
-                    const mon = sh.initActive("p1");
-                    mon.setAbility("speedboost");
-                    mon.volatile.boosts.spe = 6;
-                    sh.initActive("p2");
-
-                    pctx = init("p1");
-                    await ph.halt();
-                    await ph.return([]);
-                });
-            });
-        });
+        // Note: Ability on-residual is handled specially in residual.test.ts.
     });
