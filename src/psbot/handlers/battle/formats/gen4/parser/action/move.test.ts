@@ -4151,6 +4151,146 @@ export const test = (): void =>
                         await ph.return({});
                     });
                 });
+
+                describe("swapItems", function () {
+                    const trickActivateEvent = (
+                        side1: SideID,
+                        side2: SideID,
+                        opt1 = smeargle,
+                        opt2 = smeargle,
+                        pos1: Protocol.PositionLetter = "a",
+                        pos2: Protocol.PositionLetter = "a",
+                    ): Event<"|-activate|"> => ({
+                        args: [
+                            "-activate",
+                            toIdent(side1, opt1, pos1),
+                            toEffectName("trick", "move"),
+                        ],
+                        kwArgs: {of: toIdent(side2, opt2, pos2)},
+                    });
+
+                    const trickItemEvent = (
+                        side: SideID,
+                        item: string,
+                        opt = smeargle,
+                        pos: Protocol.PositionLetter = "a",
+                    ): Event<"|-item|"> => ({
+                        args: [
+                            "-item",
+                            toIdent(side, opt, pos),
+                            toItemName(item),
+                        ],
+                        kwArgs: {from: toEffectName("trick", "move")},
+                    });
+
+                    const trickEndItemEvent = (
+                        side: SideID,
+                        item: string,
+                        opt = smeargle,
+                        pos: Protocol.PositionLetter = "a",
+                    ): Event<"|-enditem|"> => ({
+                        args: [
+                            "-enditem",
+                            toIdent(side, opt, pos),
+                            toItemName(item),
+                        ],
+                        kwArgs: {
+                            silent: true,
+                            from: toEffectName("trick", "move"),
+                        },
+                    });
+
+                    it("Should pass if expected", async function () {
+                        const mon1 = sh.initActive("p1");
+                        const item1 = mon1.item;
+                        expect(item1.possibleValues).to.include.keys("lifeorb");
+                        const mon2 = sh.initActive("p2");
+                        const item2 = mon2.item;
+                        expect(item2.possibleValues).to.include.keys(
+                            "leftovers",
+                        );
+
+                        pctx = init("p2");
+                        await moveEvent("p2", "switcheroo");
+                        await ph.handle(trickActivateEvent("p2", "p1"));
+                        await ph.handle(trickItemEvent("p2", "lifeorb"));
+                        await ph.handle(trickItemEvent("p1", "leftovers"));
+                        await ph.halt();
+                        await ph.return({});
+                        expect(item1.possibleValues).to.have.keys("lifeorb");
+                        expect(item2.possibleValues).to.have.keys("leftovers");
+                        expect(mon1.item).to.equal(item2);
+                        expect(mon2.item).to.equal(item1);
+                    });
+
+                    it("Should reject if not expected", async function () {
+                        sh.initActive("p1");
+                        sh.initActive("p2");
+
+                        pctx = init("p2");
+                        await moveEvent("p2", "tackle");
+                        await ph.reject(trickActivateEvent("p2", "p1"));
+                        await ph.return({});
+                    });
+
+                    it("Should handle empty source item", async function () {
+                        const mon1 = sh.initActive("p1");
+                        const item1 = mon1.item;
+                        expect(item1.possibleValues).to.include.keys("none");
+                        const mon2 = sh.initActive("p2");
+                        const item2 = mon2.item;
+                        expect(item2.possibleValues).to.include.keys(
+                            "leftovers",
+                        );
+
+                        pctx = init("p2");
+                        await moveEvent("p2", "trick");
+                        await ph.handle(trickActivateEvent("p2", "p1"));
+                        await ph.handle(trickEndItemEvent("p2", "leftovers"));
+                        await ph.handle(trickItemEvent("p1", "leftovers"));
+                        await ph.halt();
+                        await ph.return({});
+                        expect(item1.possibleValues).to.have.keys("none");
+                        expect(item2.possibleValues).to.have.keys("leftovers");
+                        expect(mon1.item).to.equal(item2);
+                        expect(mon2.item).to.equal(item1);
+                    });
+
+                    it("Should handle empty target item", async function () {
+                        const mon1 = sh.initActive("p1");
+                        const item1 = mon1.item;
+                        expect(item1.possibleValues).to.include.keys("lifeorb");
+                        const mon2 = sh.initActive("p2");
+                        const item2 = mon2.item;
+                        expect(item2.possibleValues).to.include.keys("none");
+
+                        pctx = init("p2");
+                        await moveEvent("p2", "trick");
+                        await ph.handle(trickActivateEvent("p2", "p1"));
+                        await ph.handle(trickItemEvent("p2", "lifeorb"));
+                        await ph.handle(trickEndItemEvent("p1", "lifeorb"));
+                        await ph.halt();
+                        await ph.return({});
+                        expect(item1.possibleValues).to.have.keys("lifeorb");
+                        expect(item2.possibleValues).to.have.keys("none");
+                        expect(mon1.item).to.equal(item2);
+                        expect(mon2.item).to.equal(item1);
+                    });
+
+                    it("Should allow stickyhold ability immunity", async function () {
+                        const mon = sh.initActive("p1");
+                        mon.setAbility("stickyhold");
+                        sh.initActive("p2");
+
+                        pctx = init("p2");
+                        await moveEvent("p2", "trick");
+                        await ph.handle({
+                            args: ["-immune", toIdent("p1")],
+                            kwArgs: {},
+                        });
+                        await ph.return({});
+                    });
+                });
             });
 
             describe("implicit effects", function () {

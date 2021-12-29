@@ -49094,6 +49094,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         target: "normal",
         pp: [10, 16],
         flags: {noCopycat: true},
+        effects: {swapItems: true},
     },
     swordsdance: {
         uid: 409,
@@ -49381,6 +49382,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         target: "normal",
         pp: [10, 16],
         flags: {noCopycat: true},
+        effects: {swapItems: true},
     },
     trickroom: {
         uid: 434,

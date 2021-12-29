@@ -318,6 +318,19 @@ export const test = () =>
             });
         });
 
+        describe("#swapItems()", function () {
+            it("Should swap items", function () {
+                const mon1 = new Pokemon("magikarp");
+                const item1 = mon1.item;
+                const mon2 = new Pokemon("magikarp");
+                const item2 = mon2.item;
+
+                mon1.swapItems(mon2);
+                expect(mon1.item).to.equal(item2);
+                expect(mon2.item).to.equal(item1);
+            });
+        });
+
         describe("#moveset methods", function () {
             describe("constructor", function () {
                 it("Should override movepool", function () {

@@ -223,6 +223,14 @@ export class Pokemon implements ReadonlyPokemon {
         // This should reset the _item reference so there aren't any duplicates.
         this.setItem("none", true /*gained*/);
     }
+    /**
+     * Swaps items with another Pokemon.
+     *
+     * @param target The Pokemon to swap items with.
+     */
+    public swapItems(target: Pokemon): void {
+        [this._item, target._item] = [target._item, this._item];
+    }
     private _item = new PossibilityClass(dex.items);
     private _lastItem = new PossibilityClass(dex.items, "none");
 

@@ -608,6 +608,9 @@ export interface MoveData extends DexData {
         /** Disable the target's last used move. */
         readonly disableMove?: true;
 
+        /** Swap items with the target. */
+        readonly swapItems?: true;
+
         /** Fraction of move damage being healed by the user. */
         readonly drain?: readonly [number, number];
 
@@ -622,7 +625,7 @@ export interface MoveData extends DexData {
             readonly struggle?: true;
         };
 
-        // TODO: Item removal (trick, knockoff, covet, etc).
+        // TODO: Item removal (knockoff, covet, etc).
 
         /** Whether the user will faint after using the move. */
         readonly selfFaint?: MoveSelfFaint;

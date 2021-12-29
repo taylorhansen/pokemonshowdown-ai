@@ -1994,6 +1994,7 @@ async function otherEffects(
             parsers.push(changeType(args.side, effects.changeType));
         }
         if (effects.disableMove) parsers.push(disableMove(otherSide));
+        if (effects.swapItems) parsers.push(swapItems(args.side, otherSide));
     }
 
     // Parse untracked effects even if current move doesn't have any
@@ -2341,6 +2342,77 @@ async function disableMoveImpl(
 
     accept();
     await base["|-start|"](ctx);
+}
+
+//#endregion
+
+//#region Swap-items effect.
+
+const swapItems = (
+    sourceSide: SideID,
+    targetSide: SideID,
+): unordered.Parser<"gen4"> =>
+    unordered.parser(
+        `${sourceSide} move swap-items ${targetSide}`,
+        async (ctx, accept) =>
+            await swapItemsImpl(ctx, accept, sourceSide, targetSide),
+        effectDidntHappen,
+    );
+
+async function swapItemsImpl(
+    ctx: BattleParserContext<"gen4">,
+    accept: unordered.AcceptCallback,
+    sourceSide: SideID,
+    targetSide: SideID,
+): Promise<void> {
+    const event = await tryVerify(ctx, "|-activate|");
+    if (!event) return;
+    if (event.kwArgs.from) return;
+    const [, identStr, effectStr] = event.args;
+    if (!identStr) return;
+    const ident = Protocol.parsePokemonIdent(identStr);
+    if (ident.player !== sourceSide) return;
+    const effect = Protocol.parseEffect(effectStr, toIdName);
+    if (effect.type !== "move" || effect.name !== "trick") return;
+    accept();
+    await consume(ctx);
+
+    const item1Event = await verify(ctx, "|-item|", "|-enditem|");
+    const [t1, ident1Str, item1Str] = item1Event.args;
+    const ident1 = Protocol.parsePokemonIdent(ident1Str);
+    if (ident1.player !== sourceSide) {
+        throw new Error(`Expected ${sourceSide} item1`);
+    }
+    const item1Id = toIdName(item1Str);
+    await consume(ctx);
+
+    const item2Event = await verify(ctx, "|-item|", "|-enditem|");
+    const [t2, ident2Str, item2Str] = item2Event.args;
+    const ident2 = Protocol.parsePokemonIdent(ident2Str);
+    if (ident2.player !== targetSide) {
+        throw new Error(`Expected ${targetSide} item2`);
+    }
+    const item2Id = toIdName(item2Str);
+    await consume(ctx);
+
+    const source = ctx.state.getTeam(sourceSide).active;
+    const target = ctx.state.getTeam(targetSide).active;
+
+    if (t1 === "-item") {
+        target.item.narrow(item1Id);
+    } else {
+        source.item.narrow(item1Id);
+        target.item.narrow("none");
+    }
+
+    if (t2 === "-item") {
+        source.item.narrow(item2Id);
+    } else {
+        target.item.narrow(item2Id);
+        source.item.narrow("none");
+    }
+
+    source.swapItems(target);
 }
 
 //#endregion

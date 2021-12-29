@@ -329,6 +329,12 @@ void (async function buildDex(): Promise<void> {
     /** Maps move name to whether it disables moves. */
     const disableMoveMap: {readonly [move: string]: boolean} = {disable: true};
 
+    /** Maps move name to whether it swaps items. */
+    const swapItemsMap: {readonly [move: string]: boolean} = {
+        switcheroo: true,
+        trick: true,
+    };
+
     // Note(gen4): healingwish-like moves send in a replacement immediately
     // after self-faint.
     /** Secondary map for move name to self-switch effect. */
@@ -641,6 +647,10 @@ void (async function buildDex(): Promise<void> {
 
             ...(Object.hasOwnProperty.call(disableMoveMap, move.id) && {
                 disableMove: true,
+            }),
+
+            ...(Object.hasOwnProperty.call(swapItemsMap, move.id) && {
+                swapItems: true,
             }),
 
             ...(move.drain && {drain: move.drain}),
