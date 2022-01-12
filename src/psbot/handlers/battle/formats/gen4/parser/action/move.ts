@@ -334,6 +334,7 @@ export async function useMove(
     move?: dex.Move | "slp",
     accept?: unordered.AcceptCallback,
 ): Promise<MoveActionResult> {
+    // TODO: Research actual order for these effects.
     let event: Event<"|move|">;
     if (accept) {
         const e = await tryVerify(ctx, "|move|");
@@ -2574,8 +2575,15 @@ async function finalEffects(
     await recoil(ctx, args);
     await postDamage(ctx, args);
     await transform(ctx, args);
-    const res = await selfSwitch(ctx, args);
+    const res: ActionResult = await selfSwitch(ctx, args);
     await moveCall(ctx, args);
+    const res2 = await drag(ctx, args);
+    if (res2.actioned) {
+        for (const side in res2.actioned) {
+            if (!Object.hasOwnProperty.call(res2.actioned, side)) continue;
+            (res.actioned ??= {})[side as SideID] = true;
+        }
+    }
     return res;
 }
 
@@ -2715,7 +2723,7 @@ async function selfSwitch(
     team.status.selfSwitch = effect;
 
     // View last |request| event.
-    // Note: See BattleHandler#halt() for request re-ordering logic.
+    // See BattleHandler#halt() for request re-ordering logic.
     const event = await tryVerify(ctx, "|request|", "|win|", "|tie|");
     if (!event) return effectDidntHappen(`move self-switch ${effect}`);
     // If a self-switch move wins the game before switching, the game ends
@@ -2742,8 +2750,6 @@ async function selfSwitch(
     // Make the decision.
     await base["|request|"](ctx);
 
-    // TODO: Communicate self-switch/healingwish effects to the function we're
-    // calling.
     let sres: actionSwitch.SwitchActionResult;
     if (!(sres = await actionSwitch.selfSwitch(ctx, args.side))) {
         return effectDidntHappen(`move self-switch ${effect}`);
@@ -2841,6 +2847,48 @@ async function moveCall(
     }
 
     await base["|move|"](ctx);
+}
+
+//#endregion
+
+//#region Drag effect.
+
+async function drag(
+    ctx: BattleParserContext<"gen4">,
+    args: ExecuteArgs,
+): Promise<ActionResult> {
+    if (!args.move.data.effects?.drag) return {};
+    if (args.user.fainted) return {};
+
+    const parsers: unordered.Parser<
+        "gen4",
+        BattleAgent<"gen4">,
+        actionSwitch.SwitchActionResult
+    >[] = [];
+    for (const [targetSide] of args.targets.mentioned) {
+        const target = ctx.state.getTeam(targetSide).active;
+        if (target.fainted) continue;
+        parsers.push(
+            unordered.parser(
+                `${args.side} move drag ${targetSide}`,
+                async (_ctx, accept) =>
+                    await actionSwitch.drag(ctx, targetSide, accept),
+            ),
+        );
+    }
+
+    const results = await unordered.all(ctx, parsers);
+    // Aggregate results to cancel opponent actions due to drag.
+    const res: ActionResult = {};
+    for (const sres of results) {
+        if (sres.actioned) {
+            for (const side in sres.actioned) {
+                if (!Object.hasOwnProperty.call(sres.actioned, side)) continue;
+                (res.actioned ??= {})[side as SideID] = true;
+            }
+        }
+    }
+    return res;
 }
 
 //#endregion

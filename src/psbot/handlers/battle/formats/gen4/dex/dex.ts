@@ -48085,6 +48085,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         target: "normal",
         pp: [20, 32],
         flags: {ignoreSub: true},
+        effects: {drag: true},
     },
     roaroftime: {
         uid: 320,
@@ -49613,6 +49614,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         target: "normal",
         pp: [20, 32],
         flags: {ignoreSub: true},
+        effects: {drag: true},
     },
     willowisp: {
         uid: 455,

@@ -4,7 +4,6 @@ import {expect} from "chai";
 import "mocha";
 import {Event} from "../../../../../../parser";
 import {BattleState} from "../../state";
-import {Pokemon} from "../../state/Pokemon";
 import {SwitchOptions} from "../../state/Team";
 import {
     castform,
@@ -13,7 +12,7 @@ import {
     ditto,
     smeargle,
 } from "../../state/switchOptions.test";
-import {ParserContext, createInitialContext} from "../Context.test";
+import {createInitialContext} from "../Context.test";
 import {ParserHelpers} from "../ParserHelpers.test";
 import {
     setupBattleParser,
@@ -58,6 +57,20 @@ export const test = () =>
             kwArgs: {},
         });
 
+        const dragEvent = (
+            side: SideID,
+            opt = smeargle,
+            pos: Protocol.PositionLetter = "a",
+        ): Event<"|drag|"> => ({
+            args: [
+                "drag",
+                toIdent(side, opt, pos),
+                toDetails(opt),
+                toHPStatus(100, 100),
+            ],
+            kwArgs: {},
+        });
+
         // Pressure ability.
         const entei: SwitchOptions = {
             species: "entei",
@@ -81,9 +94,7 @@ export const test = () =>
                 ictx.startArgs,
                 actionSwitch.switchAction,
             );
-            let pctx:
-                | ParserContext<actionSwitch.SwitchActionResult>
-                | undefined;
+            let pctx: ReturnType<typeof init> | undefined;
             const ph = new ParserHelpers(() => pctx);
 
             afterEach("Close ParserContext", async function () {
@@ -102,6 +113,19 @@ export const test = () =>
                     mon: state.getTeam("p1").active,
                     actioned: {p1: true},
                 });
+            });
+
+            it("Should reject drag event", async function () {
+                sh.initTeam("p1", [undefined, ditto]);
+                sh.initActive("p2");
+
+                pctx = init("p1");
+                await ph.rejectError(
+                    dragEvent("p1"),
+                    Error,
+                    "Invalid event: Expected type ['|switch|'] but got " +
+                        "'|drag|'",
+                );
             });
 
             it("Should throw if invalid ident", async function () {
@@ -164,8 +188,8 @@ export const test = () =>
                             kwArgs: {},
                         },
                         Error,
-                        "Invalid event: Expected type ['|switch|', '|drag|'] " +
-                            "but got '|-activate|'",
+                        "Invalid event: Expected type ['|switch|'] but got " +
+                            "'|-activate|'",
                     );
                 });
 
@@ -184,8 +208,8 @@ export const test = () =>
                             kwArgs: {},
                         },
                         Error,
-                        "Invalid event: Expected type ['|switch|', '|drag|'] " +
-                            "but got '|-activate|'",
+                        "Invalid event: Expected type ['|switch|'] but got " +
+                            "'|-activate|'",
                     );
                 });
 
@@ -872,12 +896,61 @@ export const test = () =>
             });
         });
 
+        describe("drag()", function () {
+            const init = setupBattleParser(ictx.startArgs, actionSwitch.drag);
+            let pctx: ReturnType<typeof init> | undefined;
+            const ph = new ParserHelpers(() => pctx);
+
+            afterEach("Close ParserContext", async function () {
+                // Reset variable so it doesn't leak into other tests.
+                await ph.close().finally(() => (pctx = undefined));
+            });
+
+            it("Should handle switch-in", async function () {
+                sh.initTeam("p1", [undefined, ditto]);
+                sh.initActive("p2");
+
+                pctx = init("p1");
+                await ph.handle(dragEvent("p1"));
+                await ph.halt();
+                await ph.return({
+                    mon: state.getTeam("p1").active,
+                    actioned: {p1: true},
+                });
+            });
+
+            it("Should reject switch event", async function () {
+                sh.initTeam("p1", [undefined, ditto]);
+                sh.initActive("p2");
+
+                pctx = init("p1");
+                await ph.rejectError(
+                    switchEvent("p1"),
+                    Error,
+                    "Invalid event: Expected type ['|drag|'] but got " +
+                        "'|switch|'",
+                );
+            });
+
+            it("Should throw if invalid ident", async function () {
+                sh.initTeam("p1", [undefined, ditto]);
+                sh.initActive("p2");
+
+                pctx = init("p1");
+                await ph.rejectError(
+                    dragEvent("p2"),
+                    Error,
+                    "Expected switch-in for 'p1' but got 'p2'",
+                );
+            });
+        });
+
         describe("multipleSwitchIns()", function () {
             const init = setupBattleParser(
                 ictx.startArgs,
                 actionSwitch.multipleSwitchIns,
             );
-            let pctx: ParserContext<[side: SideID, mon: Pokemon][]> | undefined;
+            let pctx: ReturnType<typeof init> | undefined;
             const ph = new ParserHelpers(() => pctx);
 
             afterEach("Close ParserContext", async function () {

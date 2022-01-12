@@ -50,7 +50,12 @@ handlersImpl["|switch|"] = async function (ctx: BattleParserContext<"gen4">) {
     await switchIn(ctx);
 };
 handlersImpl["|drag|"] = async function (ctx: BattleParserContext<"gen4">) {
-    await switchIn(ctx);
+    await switchIn(
+        ctx,
+        undefined /*side*/,
+        undefined /*accept*/,
+        true /*isDrag*/,
+    );
 };
 handlersImpl["|detailschange|"] = async function (
     ctx: BattleParserContext<"gen4">,

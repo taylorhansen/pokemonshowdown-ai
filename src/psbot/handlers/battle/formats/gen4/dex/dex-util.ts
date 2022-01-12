@@ -632,6 +632,9 @@ export interface MoveData extends DexData {
 
         /** Self-switch effect. */
         readonly selfSwitch?: SelfSwitchType;
+
+        /** Force the target to switch out immediately to a random member. */
+        readonly drag?: true;
     };
 
     /** Implicit effects on the user. */

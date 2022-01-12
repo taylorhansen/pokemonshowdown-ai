@@ -676,6 +676,8 @@ void (async function buildDex(): Promise<void> {
             ...(Object.hasOwnProperty.call(selfSwitchMap, move.id) && {
                 selfSwitch: selfSwitchMap[move.id],
             }),
+
+            ...(move.forceSwitch && {drag: true}),
         };
 
         if (moveEffects.call) moveCallers.push([move.id, moveEffects.call]);

@@ -26,7 +26,7 @@ import * as actionMove from "./move";
 
 /** Result of {@link switchAction} and {@link selfSwitch}. */
 export interface SwitchActionResult extends ActionResult {
-    /** Pokemon that was switched in, or undefined if not accepted. */
+    /** Pokemon that was switched in, or `undefined` if not accepted. */
     mon?: Pokemon;
 }
 
@@ -58,6 +58,19 @@ export async function selfSwitch(
     side: SideID,
 ): Promise<SwitchActionResult> {
     return await switchActionImpl(ctx, side);
+}
+
+/**
+ * Parses a switch-in action by forced drag effect.
+ *
+ * @param side Player that should be making the switch action.
+ */
+export async function drag(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    accept?: unordered.AcceptCallback,
+): Promise<SwitchActionResult> {
+    return await switchActionImpl(ctx, side, accept, true /*isDrag*/);
 }
 
 /**
@@ -116,11 +129,13 @@ const unorderedSwitchEvent = (
  *
  * @param side Player that should be making the switch action.
  * @param accept Callback to accept this pathway.
+ * @param isDrag Whether this is a forced switch via phazing move.
  */
 async function switchActionImpl(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
     accept?: unordered.AcceptCallback,
+    isDrag?: boolean,
 ): Promise<SwitchActionResult> {
     const res: SwitchActionResult = {};
     // Accept cb gets consumed if one of the optional pre-switch effects accept.
@@ -132,15 +147,13 @@ async function switchActionImpl(
         a!();
     };
 
-    const interceptRes = await preSwitch(ctx, side, accept);
+    const interceptRes = await preSwitch(ctx, side, accept, isDrag);
     if (interceptRes) {
         Object.assign((res.actioned ??= {}), interceptRes.actioned);
     }
 
     // Expect the actual switch-in.
-    const switchRes = await (accept
-        ? switchIn(ctx, side, accept)
-        : switchIn(ctx, side));
+    const switchRes = await switchIn(ctx, side, accept, isDrag);
     if (switchRes) {
         [, res.mon] = switchRes;
         (res.actioned ??= {})[side] = true;
@@ -153,12 +166,14 @@ async function switchActionImpl(
  *
  * @param side Pokemon reference who is switching out.
  * @param accept Callback to accept this pathway.
+ * @param isDrag Whether this is a forced switch via phazing move.
  * @returns The result of a switch-interception move action, if found.
  */
 async function preSwitch(
     ctx: BattleParserContext<"gen4">,
     side: SideID,
     accept?: unordered.AcceptCallback,
+    isDrag?: boolean,
 ): Promise<actionMove.MoveActionResult> {
     const a = accept;
     accept &&= function preSwitchAccept() {
@@ -167,27 +182,32 @@ async function preSwitch(
     };
 
     // Check for a possible switch-intercepting move, e.g. pursuit.
-    // TODO: No pursuit if drag.
     const intercepting: SideID | undefined = side === "p1" ? "p2" : "p1";
     const committed = !accept;
-    const moveRes = await actionMove.interceptSwitch(
-        ctx,
-        intercepting,
-        side,
-        // Passed accept param should always be truthy to indicate that this
-        // entire effect is always optional.
-        () => {
-            accept?.();
-        },
-    );
-    // Opponent used up their action interrupting our switch.
-    if (!committed && !accept) {
-        // Note: Switch continues even if target faints.
-        // TODO: What if user faints, or more pre-switch effects are pending?
+    let moveRes: actionMove.MoveActionResult | undefined;
+    if (!isDrag) {
+        moveRes = await actionMove.interceptSwitch(
+            ctx,
+            intercepting,
+            side,
+            // Passed accept param should always be truthy to indicate that this
+            // entire effect is always optional.
+            () => {
+                accept?.();
+            },
+        );
+        // Opponent used up their action interrupting our switch.
+        if (!committed && !accept) {
+            // Note: Switch continues even if target faints.
+            // TODO: What if user faints, or more pre-switch effects are
+            // pending?
+        }
+    } else {
+        moveRes = {};
     }
 
     await unordered.parse(ctx, effectAbility.onSwitchOut(ctx, side), accept);
-    // TOOD: Ability on-end (slowstart).
+    // TODO: Ability on-end (slowstart).
 
     return moveRes;
 }
@@ -195,32 +215,19 @@ async function preSwitch(
 /**
  * Parses a single `|switch|`/`|drag|` event and its implications.
  *
- * @param side Player that should be making the switch action.
- * @param accept Callback to accept this pathway.
- * @returns The Pokemon that was switched in, or null if not accepted.
- */
-export async function switchIn(
-    ctx: BattleParserContext<"gen4">,
-    side: SideID,
-    accept: unordered.AcceptCallback,
-): Promise<[side: SideID, mon: Pokemon] | null>;
-/**
- * Parses a single `|switch|`/`|drag|` event and its implications.
- *
  * @param side Player that should be making the switch action. Omit to skip this
  * verification step.
- * @returns The Pokemon that was switched in.
+ * @param accept Callback to accept this pathway.
+ * @param isDrag Whether this is a forced switch via phazing move.
+ * @returns The Pokemon that was switched in, or `null` if not accepted.
  */
-export async function switchIn(
-    ctx: BattleParserContext<"gen4">,
-    side?: SideID,
-): Promise<[side: SideID, mon: Pokemon]>;
 export async function switchIn(
     ctx: BattleParserContext<"gen4">,
     side?: SideID,
     accept?: unordered.AcceptCallback,
+    isDrag?: boolean,
 ): Promise<[side: SideID, mon: Pokemon] | null> {
-    const res = await switchEvent(ctx, side, accept);
+    const res = await switchEvent(ctx, side, accept, isDrag);
     if (res) await switchEffects(ctx, res[0]);
     return res;
 }
@@ -232,6 +239,7 @@ export async function switchIn(
  * @param sideId Player that should be making the switch action.
  * @param accept Optional accept cb. If not provided, this function will throw
  * on an invalid initial switch event.
+ * @param isDrag Whether this is a forced switch via phazing move.
  * @returns The Pokemon that was switched in, or null if invalid event and
  * `accept` was specified.
  */
@@ -239,13 +247,14 @@ async function switchEvent(
     ctx: BattleParserContext<"gen4">,
     side?: SideID,
     accept?: unordered.AcceptCallback,
+    isDrag?: boolean,
 ): Promise<[side: SideID, mon: Pokemon] | null> {
     let event: Event<"|switch|" | "|drag|">;
     if (accept) {
-        const ev = await tryVerify(ctx, "|switch|", "|drag|");
+        const ev = await tryVerify(ctx, isDrag ? "|drag|" : "|switch|");
         if (!ev) return null;
         event = ev;
-    } else event = await verify(ctx, "|switch|", "|drag|");
+    } else event = await verify(ctx, isDrag ? "|drag|" : "|switch|");
     const [, identStr, detailsStr, healthStr] = event.args;
 
     const ident = Protocol.parsePokemonIdent(identStr);
