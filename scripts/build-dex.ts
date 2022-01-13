@@ -163,6 +163,8 @@ void (async function buildDex(): Promise<void> {
         morningsun: {type: "percent", target: "self", percent: 50},
         synthesis: {type: "percent", target: "self", percent: 50},
 
+        rest: {type: "percent", target: "self", percent: 100},
+
         painsplit: {type: "split"},
     };
 
@@ -272,6 +274,7 @@ void (async function buildDex(): Promise<void> {
         readonly [move: string]: NonNullable<dex.MoveData["effects"]>["status"];
     } = {
         curse: {ghost: true, hit: ["curse"]},
+        rest: {self: ["slp"]},
         triattack: {chance: 20, hit: ["brn", "frz", "par"]},
     };
 

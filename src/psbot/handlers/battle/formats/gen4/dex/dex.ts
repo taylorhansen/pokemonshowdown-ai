@@ -48041,6 +48041,10 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [10, 16],
+        effects: {
+            damage: {type: "percent", target: "self", percent: 100},
+            status: {self: ["slp"]},
+        },
     },
     return: {
         uid: 316,

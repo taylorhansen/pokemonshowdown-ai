@@ -3454,6 +3454,30 @@ export const test = (): void =>
                         await ph.return({});
                     });
                 });
+
+                describe("compound self effects (rest)", function () {
+                    it("Should handle", async function () {
+                        sh.initActive("p1");
+                        sh.initActive("p2").hp.set(50);
+
+                        pctx = init("p2");
+                        await moveEvent("p2", "rest");
+                        await ph.handle({
+                            args: ["-status", toIdent("p2"), "slp"],
+                            kwArgs: {from: toEffectName("rest", "move")},
+                        });
+                        await ph.handle({
+                            args: [
+                                "-heal",
+                                toIdent("p2"),
+                                toHPStatus(100, 100, "slp"),
+                            ],
+                            kwArgs: {silent: true},
+                        });
+                        await ph.halt();
+                        await ph.return({});
+                    });
+                });
             });
 
             describe("multi-hit effect", function () {
