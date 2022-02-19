@@ -792,23 +792,6 @@ export const test = () =>
             });
         });
 
-        describe("|win|", function () {
-            it("Should handle", async function () {
-                await ph.handle({
-                    args: ["win", toUsername("player1")],
-                    kwArgs: {},
-                });
-                await ph.return();
-            });
-        });
-
-        describe("|tie|", function () {
-            it("Should handle", async function () {
-                await ph.handle({args: ["tie"], kwArgs: {}});
-                await ph.return();
-            });
-        });
-
         describe("|move|", function () {
             const moveEvent = (
                 side: SideID,
