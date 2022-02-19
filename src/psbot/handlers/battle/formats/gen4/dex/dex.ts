@@ -49200,29 +49200,29 @@ export function isFutureMove(value: unknown): value is FutureMove {
 }
 
 /**
- * Set of all {@link LockedMove locked} moves.
+ * Set of all {@link RampageMove rampage} moves.
  *
  * Maps move name to its id within this object.
  */
-export const lockedMoves = {
+export const rampageMoves = {
     outrage: 0,
     petaldance: 1,
     thrash: 2,
 } as const;
 
-/** Types of locked moves. */
-export type LockedMove = keyof typeof lockedMoves;
+/** Types of rampage moves. */
+export type RampageMove = keyof typeof rampageMoves;
 
-/** Sorted array of all {@link LockedMove locked} moves. */
-export const lockedMoveKeys: readonly LockedMove[] = [
+/** Sorted array of all {@link RampageMove rampage} moves. */
+export const rampageMoveKeys: readonly RampageMove[] = [
     "outrage",
     "petaldance",
     "thrash",
 ];
 
-/** Checks if a value is a {@link LockedMove}. */
-export function isLockedMove(value: unknown): value is LockedMove {
-    return Object.hasOwnProperty.call(lockedMoves, value as PropertyKey);
+/** Checks if a value is a {@link RampageMove}. */
+export function isRampageMove(value: unknown): value is RampageMove {
+    return Object.hasOwnProperty.call(rampageMoves, value as PropertyKey);
 }
 
 /**

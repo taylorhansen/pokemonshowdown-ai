@@ -873,25 +873,23 @@ export const test = () =>
                 describe("rampage move", function () {
                     it("Should start rampage move status", async function () {
                         const mon = sh.initActive("p1");
-                        expect(mon.volatile.lockedMove.isActive).to.be.false;
+                        expect(mon.volatile.rampage.isActive).to.be.false;
                         sh.initActive("p2");
 
                         await ph.handle(moveEvent("p1", "outrage"));
                         await ph.return();
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
-                        expect(mon.volatile.lockedMove.type).to.equal(
-                            "outrage",
-                        );
+                        expect(mon.volatile.rampage.isActive).to.be.true;
+                        expect(mon.volatile.rampage.type).to.equal("outrage");
                     });
 
                     it("Should continue rampage move status", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.lockedMove.start("petaldance");
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
-                        expect(mon.volatile.lockedMove.type).to.equal(
+                        mon.volatile.rampage.start("petaldance");
+                        expect(mon.volatile.rampage.isActive).to.be.true;
+                        expect(mon.volatile.rampage.type).to.equal(
                             "petaldance",
                         );
-                        expect(mon.volatile.lockedMove.turns).to.equal(0);
+                        expect(mon.volatile.rampage.turns).to.equal(0);
 
                         await ph.handle(
                             moveEvent("p1", "petaldance", {
@@ -899,44 +897,42 @@ export const test = () =>
                             }),
                         );
                         await ph.return();
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
-                        expect(mon.volatile.lockedMove.type).to.equal(
+                        expect(mon.volatile.rampage.isActive).to.be.true;
+                        expect(mon.volatile.rampage.type).to.equal(
                             "petaldance",
                         );
-                        expect(mon.volatile.lockedMove.turns).to.equal(1);
+                        expect(mon.volatile.rampage.turns).to.equal(1);
                     });
 
                     it("Should restart rampage if different move", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.lockedMove.start("outrage");
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
-                        expect(mon.volatile.lockedMove.type).to.equal(
-                            "outrage",
-                        );
-                        expect(mon.volatile.lockedMove.turns).to.equal(0);
+                        mon.volatile.rampage.start("outrage");
+                        expect(mon.volatile.rampage.isActive).to.be.true;
+                        expect(mon.volatile.rampage.type).to.equal("outrage");
+                        expect(mon.volatile.rampage.turns).to.equal(0);
                         sh.initActive("p2");
 
                         await ph.handle(moveEvent("p1", "thrash"));
                         await ph.return();
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
-                        expect(mon.volatile.lockedMove.type).to.equal("thrash");
-                        expect(mon.volatile.lockedMove.turns).to.equal(0);
+                        expect(mon.volatile.rampage.isActive).to.be.true;
+                        expect(mon.volatile.rampage.type).to.equal("thrash");
+                        expect(mon.volatile.rampage.turns).to.equal(0);
                     });
 
                     it("Should reset rampage if unrelated move", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.lockedMove.start("thrash");
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
+                        mon.volatile.rampage.start("thrash");
+                        expect(mon.volatile.rampage.isActive).to.be.true;
 
                         await ph.handle(moveEvent("p1", "splash"));
                         await ph.return();
-                        expect(mon.volatile.lockedMove.isActive).to.be.false;
+                        expect(mon.volatile.rampage.isActive).to.be.false;
                     });
 
                     it("Should reset rampage if notarget", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.lockedMove.start("outrage");
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
+                        mon.volatile.rampage.start("outrage");
+                        expect(mon.volatile.rampage.isActive).to.be.true;
 
                         await ph.handle(
                             moveEvent("p1", "outrage", {
@@ -945,13 +941,13 @@ export const test = () =>
                             }),
                         );
                         await ph.return();
-                        expect(mon.volatile.lockedMove.isActive).to.be.false;
+                        expect(mon.volatile.rampage.isActive).to.be.false;
                     });
 
                     it("Should not reset rampage if miss", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.lockedMove.start("petaldance");
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
+                        mon.volatile.rampage.start("petaldance");
+                        expect(mon.volatile.rampage.isActive).to.be.true;
 
                         await ph.handle(
                             moveEvent("p1", "petaldance", {
@@ -960,7 +956,7 @@ export const test = () =>
                             }),
                         );
                         await ph.return();
-                        expect(mon.volatile.lockedMove.isActive).to.be.true;
+                        expect(mon.volatile.rampage.isActive).to.be.true;
                     });
                 });
 
@@ -2687,9 +2683,9 @@ export const test = () =>
                     });
 
                     if (start && effect === "confusion") {
-                        it("Should reset lockedMove status if starting confusion due to fatigue", async function () {
+                        it("Should reset rampage status if starting confusion due to fatigue", async function () {
                             const mon = sh.initActive("p2");
-                            mon.volatile.lockedMove.start("outrage");
+                            mon.volatile.rampage.start("outrage");
 
                             await ph.handle({
                                 args: [
@@ -2700,8 +2696,7 @@ export const test = () =>
                                 kwArgs: {fatigue: true},
                             });
                             await ph.return();
-                            expect(mon.volatile.lockedMove.isActive).to.be
-                                .false;
+                            expect(mon.volatile.rampage.isActive).to.be.false;
                         });
                     }
 
@@ -3438,10 +3433,10 @@ export const test = () =>
                 });
 
                 if (["detect", "protect"].includes(effect)) {
-                    it(`Should reset lockedMove if blocked by ${effect}`, async function () {
+                    it(`Should reset rampage if blocked by ${effect}`, async function () {
                         const mon1 = sh.initActive("p1");
-                        mon1.volatile.lockedMove.start("thrash");
-                        expect(mon1.volatile.lockedMove.isActive).to.be.true;
+                        mon1.volatile.rampage.start("thrash");
+                        expect(mon1.volatile.rampage.isActive).to.be.true;
                         const mon2 = sh.initActive("p2");
                         mon2.volatile.stall(true);
 
@@ -3454,7 +3449,7 @@ export const test = () =>
                             kwArgs: {},
                         });
                         await ph.return();
-                        expect(mon1.volatile.lockedMove.isActive).to.be.false;
+                        expect(mon1.volatile.rampage.isActive).to.be.false;
                     });
                 }
             }

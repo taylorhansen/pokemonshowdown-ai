@@ -430,11 +430,11 @@ export const test = () =>
             it("Should clear volatile when switching out and back in", function () {
                 const mon = new Pokemon("magikarp");
                 mon.switchInto();
-                mon.volatile.lockedMove.start("thrash");
+                mon.volatile.rampage.start("thrash");
 
                 switchOut(mon);
                 mon.switchInto();
-                expect(mon.volatile.lockedMove.isActive).to.be.false;
+                expect(mon.volatile.rampage.isActive).to.be.false;
             });
 
             describe("selfSwitch = true", function () {

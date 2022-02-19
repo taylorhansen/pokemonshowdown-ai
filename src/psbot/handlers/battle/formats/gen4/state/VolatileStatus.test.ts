@@ -65,13 +65,13 @@ export const test = () =>
                 expect(volatile.healblock.isActive).to.be.false;
                 expect(volatile.identified).to.be.null;
                 expect(volatile.imprison).to.be.false;
-                expect(volatile.lockedMove.isActive).to.be.false;
                 expect(volatile.magiccoat).to.be.false;
                 expect(volatile.micleberry).to.be.false;
                 expect(volatile.minimize).to.be.false;
                 expect(volatile.mudsport).to.be.false;
                 expect(volatile.mustRecharge).to.be.false;
                 expect(volatile.rage).to.be.false;
+                expect(volatile.rampage.isActive).to.be.false;
                 expect(volatile.rollout.isActive).to.be.false;
                 expect(volatile.roost).to.be.false;
                 expect(volatile.slowstart.isActive).to.be.false;
@@ -150,13 +150,13 @@ export const test = () =>
                 expect(volatile.healblock.isActive).to.be.false;
                 expect(volatile.identified).to.be.null;
                 expect(volatile.imprison).to.be.false;
-                expect(volatile.lockedMove.isActive).to.be.false;
                 expect(volatile.magiccoat).to.be.false;
                 expect(volatile.micleberry).to.be.false;
                 expect(volatile.minimize).to.be.false;
                 expect(volatile.mudsport).to.be.false;
                 expect(volatile.mustRecharge).to.be.false;
                 expect(volatile.rage).to.be.false;
+                expect(volatile.rampage.isActive).to.be.false;
                 expect(volatile.rollout.isActive).to.be.false;
                 expect(volatile.roost).to.be.false;
                 expect(volatile.slowstart.isActive).to.be.false;
@@ -464,7 +464,7 @@ export const test = () =>
                 volatile.destinybond = true;
                 volatile.grudge = true;
                 volatile.bide.start();
-                volatile.lockedMove.start("thrash");
+                volatile.rampage.start("thrash");
                 volatile.rollout.start("rollout");
                 volatile.twoTurn.start("razorwind");
                 volatile.stall(true);
@@ -474,7 +474,7 @@ export const test = () =>
                 expect(volatile.destinybond).to.be.false;
                 expect(volatile.grudge).to.be.false;
                 expect(volatile.bide.isActive).to.be.false;
-                expect(volatile.lockedMove.isActive).to.be.false;
+                expect(volatile.rampage.isActive).to.be.false;
                 expect(volatile.rollout.isActive).to.be.false;
                 expect(volatile.twoTurn.isActive).to.be.false;
                 expect(volatile.stalling).to.be.false;
@@ -551,7 +551,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void {
     volatile.healblock.start();
     volatile.identified = "foresight";
     volatile.imprison = true;
-    volatile.lockedMove.start("outrage");
+    volatile.rampage.start("outrage");
     volatile.magiccoat = true;
     volatile.micleberry = true;
     volatile.minimize = true;

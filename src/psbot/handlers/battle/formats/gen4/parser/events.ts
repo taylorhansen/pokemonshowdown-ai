@@ -139,7 +139,7 @@ handlersImpl["|request|"] = async function (ctx) {
                 if (id === "struggle") {
                     continue;
                 }
-                // Note: Can have missing pp/maxpp values, e.g. due to a locked
+                // Note: Can have missing pp/maxpp values, e.g. due to a rampage
                 // move.
                 let move: Move;
                 if (!Object.hasOwnProperty.call(moveData, "maxpp")) {
@@ -462,15 +462,15 @@ handlersImpl["|move|"] = async function (ctx) {
     mon.volatile.micleberry = false;
 
     // Start, continue, or end rampage/momentum move.
-    if (!dex.isLockedMove(moveId)) {
+    if (!dex.isRampageMove(moveId)) {
         // Unrelated move breaks the sequence.
-        mon.volatile.lockedMove.reset();
-    } else if (mon.volatile.lockedMove.type !== moveId) {
+        mon.volatile.rampage.reset();
+    } else if (mon.volatile.rampage.type !== moveId) {
         // Different move restarts the sequence.
-        mon.volatile.lockedMove.start(moveId);
+        mon.volatile.rampage.start(moveId);
     } else {
         // Same move continues the sequence.
-        mon.volatile.lockedMove.tick();
+        mon.volatile.rampage.tick();
     }
     if (!dex.isRolloutMove(moveId)) {
         mon.volatile.rollout.reset();
@@ -481,7 +481,7 @@ handlersImpl["|move|"] = async function (ctx) {
     }
     // Failed move clears continuous moves.
     if (event.kwArgs.notarget) {
-        mon.volatile.lockedMove.reset();
+        mon.volatile.rampage.reset();
         mon.volatile.rollout.reset();
     }
     // Note(gen4): Rampage move doesn't reset on miss.
@@ -1273,7 +1273,7 @@ function handleStartEndTrivial(
             if (start) {
                 if (effectId === "confusion") {
                     if ((event as Event<"|-start|">).kwArgs.fatigue) {
-                        v.lockedMove.reset();
+                        v.rampage.reset();
                     }
                 } else if (effectId === "slowstart") {
                     mon.revealAbility("slowstart");
@@ -1533,7 +1533,7 @@ handlersImpl["|-activate|"] = async function (ctx) {
             // Protect resets rampage counter for the move user.
             ctx.state
                 .getTeam(ident.player === "p1" ? "p2" : "p1")
-                .active.volatile.lockedMove.reset();
+                .active.volatile.rampage.reset();
             break;
         // Effect was used to block another effect, no further action needed.
         case "endure":

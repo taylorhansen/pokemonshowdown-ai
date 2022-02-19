@@ -48,7 +48,7 @@ void (async function buildDex(): Promise<void> {
     };
 
     const futureMoves: string[] = [];
-    const lockedMoves: string[] = []; // TODO: Rename to rampage moves.
+    const rampageMoves: string[] = [];
     const twoTurnMoves: string[] = [];
 
     const sketchableMoves: string[] = [];
@@ -80,9 +80,9 @@ void (async function buildDex(): Promise<void> {
         }
         if (
             move.self?.volatileStatus === "lockedmove" &&
-            !lockedMoves.includes(move.id)
+            !rampageMoves.includes(move.id)
         ) {
-            lockedMoves.push(move.id);
+            rampageMoves.push(move.id);
         }
         if (move.flags.charge && !twoTurnMoves.includes(move.id)) {
             twoTurnMoves.push(move.id);
@@ -115,7 +115,7 @@ void (async function buildDex(): Promise<void> {
 
     // Guarantee order.
     futureMoves.sort();
-    lockedMoves.sort();
+    rampageMoves.sort();
     twoTurnMoves.sort();
 
     //#endregion
@@ -482,7 +482,7 @@ ${exportArray(moves, "moveKeys", "string", ([name]) => quote(name))}
 
 ${exportSpecificMoves(futureMoves, "future")}
 
-${exportSpecificMoves(lockedMoves, "locked")}
+${exportSpecificMoves(rampageMoves, "rampage")}
 
 ${exportSpecificMoves(twoTurnMoves, "twoTurn", "two-turn")}
 

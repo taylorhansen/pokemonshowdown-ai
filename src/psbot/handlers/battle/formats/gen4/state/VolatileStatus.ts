@@ -133,16 +133,6 @@ export interface ReadonlyVolatileStatus {
     readonly identified: "foresight" | "miracleeye" | null;
     /** Imprison move status. */
     readonly imprison: boolean;
-    /**
-     * Tracks locked moves, e.g. petaldance variants. Should be ticked after
-     * every successful move attempt.
-     *
-     * After the 2nd or 3rd move, the user will become confused, explicitly
-     * ending the status. However, if the user was already confused, the status
-     * can be implicitly ended, so this MultiTempStatus field is
-     * silent-endable.
-     */
-    readonly lockedMove: ReadonlyMultiTempStatus<dex.LockedMove>;
     /** Magic Coat move status. */
     readonly magiccoat: boolean;
     /** Micle Berry status. */
@@ -155,6 +145,16 @@ export interface ReadonlyVolatileStatus {
     readonly mustRecharge: boolean;
     /** Rage move status. */
     readonly rage: boolean;
+    /**
+     * Tracks rampage moves, i.e. petaldance variants. Should be ticked after
+     * every successful move attempt.
+     *
+     * After the 2nd or 3rd move, the user will become confused, explicitly
+     * ending the status. However, if the user was already confused, the status
+     * can be implicitly ended, so this MultiTempStatus field is
+     * silent-endable.
+     */
+    readonly rampage: ReadonlyMultiTempStatus<dex.RampageMove>;
     /** Rollout-like move status. */
     readonly rollout: ReadonlyMultiTempStatus<keyof typeof dex.rolloutMoves>;
     /** Roost move status. */
@@ -406,15 +406,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     /** @override */
     public imprison!: boolean;
 
-    // 2-3 move attempts (including first), end on last (can be silent) or if
-    // inactive.
-    /** @override */
-    public readonly lockedMove = new MultiTempStatus(
-        dex.lockedMoves,
-        2,
-        true /*silent*/,
-    );
-
     /** @override */
     public magiccoat!: boolean;
 
@@ -432,6 +423,15 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
 
     /** @override */
     public rage!: boolean;
+
+    // 2-3 move attempts (including first), end on last (can be silent) or if
+    // inactive.
+    /** @override */
+    public readonly rampage = new MultiTempStatus(
+        dex.rampageMoves,
+        2,
+        true /*silent*/,
+    );
 
     // 5 move attempts (including start), end on last or if inactive.
     /** @override */
@@ -622,13 +622,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.healblock.end();
         this.identified = null;
         this.imprison = false;
-        this.lockedMove.reset();
         this.magiccoat = false;
         this.micleberry = false;
         this.minimize = false;
         this.mudsport = false;
         this.mustRecharge = false;
         this.rage = false;
+        this.rampage.reset();
         this.rollout.reset();
         this.roost = false;
         this.slowstart.end();
@@ -680,7 +680,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.resetSingleMove();
 
         this.bide.end();
-        this.lockedMove.reset();
+        this.rampage.reset();
         this.rollout.reset();
         this.twoTurn.reset();
         // Note(gen4): Uproar doesn't end here.
@@ -789,13 +789,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
                 this.healblock.isActive ? [this.healblock.toString()] : [],
                 this.identified ? [this.identified] : [],
                 this.imprison ? ["imprison"] : [],
-                this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
                 this.magiccoat ? ["magic coat"] : [],
                 this.micleberry ? ["micle berry"] : [],
                 this.minimize ? ["minimize"] : [],
                 this.mudsport ? ["mud sport"] : [],
                 this.mustRecharge ? ["must recharge"] : [],
                 this.rage ? ["rage"] : [],
+                this.rampage.isActive ? [this.rampage.toString()] : [],
                 this.rollout.isActive ? [this.rollout.toString()] : [],
                 this.roost ? ["roosting"] : [],
                 this.slowstart.isActive ? [this.slowstart.toString()] : [],
