@@ -408,7 +408,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
 
     // 2-3 move attempts (including first), end on last (can be silent) or if
     // inactive.
-    // FIXME: Ambiguity if there's no fatigue message to mark the end.
     /** @override */
     public readonly lockedMove = new MultiTempStatus(
         dex.lockedMoves,
