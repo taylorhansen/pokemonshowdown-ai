@@ -1,4 +1,4 @@
-import {SideID} from "@pkmn/sim";
+import {GenderName} from "@pkmn/types";
 import * as dex from "../dex";
 import {Hp, ReadonlyHp} from "./Hp";
 import {
@@ -7,8 +7,7 @@ import {
 } from "./MajorStatusCounter";
 import {Move} from "./Move";
 import {Moveset, ReadonlyMoveset} from "./Moveset";
-import {PokemonTraits, ReadonlyPokemonTraits} from "./PokemonTraits";
-import {PossibilityClass, ReadonlyPossibilityClass} from "./PossibilityClass";
+import {ReadonlyStatTable, StatTable} from "./StatTable";
 import {ReadonlyTeam, Team} from "./Team";
 import {ReadonlyVolatileStatus, VolatileStatus} from "./VolatileStatus";
 
@@ -19,53 +18,74 @@ export interface ReadonlyPokemon {
     /** Whether this is the current active pokemon. */
     readonly active: boolean;
 
-    /** Current pokemon traits. May be overridden by {@link volatile}. */
-    readonly traits: ReadonlyPokemonTraits;
-    /** Base pokemon traits. */
-    readonly baseTraits: ReadonlyPokemonTraits;
-
-    /** Current ability for this Pokemon, or the empty string if unknown. */
-    readonly ability: string;
-
-    /** Current species for this Pokemon. or the empty string if unknown. */
+    /**
+     * Current species.
+     *
+     * May be overridden by {@link volatile}.
+     */
     readonly species: string;
+    /** Current base species. */
+    readonly baseSpecies: string;
 
-    /** Current types for this Pokemon. */
-    readonly types: readonly dex.Type[];
+    /**
+     * Current types.
+     *
+     * May be overridden by {@link volatile}.
+     */
+    readonly types: readonly [dex.Type, dex.Type];
+    /** Current base types. */
+    readonly baseTypes: readonly [dex.Type, dex.Type];
 
-    // TODO: Use dex.Item wrappers instead of data.
-    /** Current reference to held item possibilities. */
-    readonly item: ReadonlyPossibilityClass<string, dex.ItemData>;
-    /** Current reference to last consumed item possibilities. */
-    readonly lastItem: ReadonlyPossibilityClass<string, dex.ItemData>;
+    /**
+     * Current stats.
+     *
+     * May be overridden by {@link volatile}.
+     */
+    readonly stats: ReadonlyStatTable;
+    /** Current base stats. */
+    readonly baseStats: ReadonlyStatTable;
 
-    /** Pokemon's current moveset. */
+    /**
+     * Current ability, or the empty string if unknown.
+     *
+     * May be overridden by {@link volatile}.
+     */
+    readonly ability: string;
+    /** Current base ability, or the empty string if unknown. */
+    readonly baseAbility: string;
+
+    /**
+     * Current held item (including `"none"`), or the empty string if unknown.
+     */
+    readonly item: string;
+    /**
+     * Last consumed item (including `"none"`), or the empty string if unknown.
+     */
+    readonly lastItem: string;
+
+    /**
+     * Current moveset.
+     *
+     * May be overridden by {@link volatile}.
+     */
     readonly moveset: ReadonlyMoveset;
-    /** Pokemon's base moveset. */
+    /** Current base moveset. */
     readonly baseMoveset: ReadonlyMoveset;
 
-    /** Pokemon's gender. M=male, F=female, null=genderless. */
-    readonly gender?: string | null;
+    /** Pokemon's gender. */
+    readonly gender: GenderName;
 
-    /** Current Hidden Power type possibility. */
-    readonly hpType: ReadonlyPossibilityClass<dex.HpType>;
+    /** Current Hidden Power type, or `null` if unknown. */
+    readonly hpType: dex.HpType | null;
 
-    /** Happiness value between 0 and 255, or null if unknown. */
+    /** Happiness value between 0 and 255, or `null` if unknown. */
     readonly happiness: number | null;
 
     /** Info about the pokemon's hit points. */
     readonly hp: ReadonlyHp;
-    /** Whether this pokemon is fainted. */
-    readonly fainted: boolean;
 
     /** Major status turn counter manager. */
     readonly majorStatus: ReadonlyMajorStatusCounter;
-
-    /**
-     * Whether the pokemon is definitely grounded or ungrounded, or null if
-     * there isn't enough information.
-     */
-    readonly grounded: boolean | null;
 
     /** Minor status conditions. Cleared on switch. */
     readonly volatile: ReadonlyVolatileStatus;
@@ -81,47 +101,120 @@ export class Pokemon implements ReadonlyPokemon {
     }
 
     /** @override */
-    public get traits(): PokemonTraits {
-        return this._volatile?.overrideTraits ?? this.baseTraits;
+    public get species(): string {
+        return this._volatile?.species ?? this.baseSpecies;
     }
     /** @override */
-    public get baseTraits(): PokemonTraits {
-        return this._baseTraits;
+    public get baseSpecies(): string {
+        return this._baseSpecies;
     }
-    private _baseTraits: PokemonTraits;
+    private _baseSpecies: string;
+
+    /** @override */
+    public get stats(): StatTable {
+        return this._volatile?.stats ?? this.baseStats;
+    }
+    /** @override */
+    public get baseStats(): StatTable {
+        return this._baseStats;
+    }
+    private _baseStats: StatTable;
+
+    /** @override */
+    public get types(): readonly [dex.Type, dex.Type] {
+        let result = this._volatile?.types ?? this.baseTypes;
+        // Roost move status removes flying type.
+        if (this._volatile?.roost) {
+            result = result.map(t => (t === "flying" ? "???" : t)) as [
+                dex.Type,
+                dex.Type,
+            ];
+        }
+        return result;
+    }
+    /** @override */
+    public get baseTypes(): readonly [dex.Type, dex.Type] {
+        return this._baseTypes;
+    }
+    private _baseTypes: readonly [dex.Type, dex.Type];
 
     /** @override */
     public get ability(): string {
-        return this.traits.ability.definiteValue ?? "";
+        return this._volatile?.ability ?? this.baseAbility;
     }
-    /** Checks whether the Pokemon can currently have the given ability. */
-    public canHaveAbility(ability: string): boolean {
-        return this.traits.ability.isSet(ability);
+    /** @override */
+    public get baseAbility(): string {
+        return this._baseAbility;
     }
     /**
-     * Narrows the current ability possibility or overrides it in the
-     * VolatileStatus if narrowing isn't possible.
+     * Sets the {@link VolatileStatus.ability override} ability if active,
+     * otherwise the {@link baseAbility base} ability.
      */
-    public setAbility(...ability: string[]): void {
-        if (ability.every(a => this.canHaveAbility(a))) {
-            this.traits.ability.narrow(ability);
+    public setAbility(ability: string, skillswap?: boolean): void {
+        if (this._volatile) {
+            if (skillswap) {
+                if (this.skillswap) {
+                    this.skillswap = null;
+                } else {
+                    // Defer override ability until next revealAbility() with
+                    // skillswap=true in order to complete the inference.
+                    this.skillswap = ability;
+                    return;
+                }
+            }
+            this._volatile.ability = ability;
         } else {
-            this.volatile.overrideTraits =
-                this.volatile.overrideTraits!.divergeAbility(...ability);
+            this._baseAbility = ability;
         }
     }
-
-    /** @override */
-    public get species(): string {
-        return this.traits.species.name;
+    /**
+     * Indicates that the pokemon's ability has been revealed or activated.
+     *
+     * Sets the {@link VolatileStatus.ability override} ability, along with
+     * {@link baseAbility base} if the pokemon's ability wasn't already
+     * overridden.
+     */
+    public revealAbility(ability: string, skillswap?: boolean): void {
+        if (this._volatile) {
+            const oldOverrideAbility = this._volatile.ability;
+            if (skillswap) {
+                if (this.skillswap) {
+                    this._volatile.ability = this.skillswap;
+                    this.skillswap = null;
+                } else {
+                    // Defer override ability until next setAbility() with
+                    // skillswap=true in order to complete the inference.
+                    this.skillswap = ability;
+                }
+            } else {
+                this._volatile.ability = ability;
+            }
+            // If the current ability was already overridden by some effect
+            // (transform, form change, worryseed, etc), then we shouldn't set
+            // the base ability since it's really the override ability that's
+            // being activated/revealed.
+            if (
+                this._volatile.transformed ||
+                this._volatile.species !== this.baseSpecies ||
+                oldOverrideAbility !== this._baseAbility
+            ) {
+                return;
+            }
+        }
+        this._baseAbility = ability;
     }
+    /** Intermediate value for tracking Skill Swap move effect. */
+    private skillswap: string | null = null;
+    private _baseAbility: string;
+
     /**
      * Does a form change for this Pokemon.
      *
      * @param species The species to change into.
      * @param level New form's level for stat calcs.
      * @param perm Whether this is a permanent form change. Default false. Can
-     * be overridden to false if `#volatile.transformed` is true.
+     * also be overridden to false if {@link VolatileStatus.transformed} is
+     * true.
      */
     public formChange(species: string, level: number, perm = false): void {
         if (!Object.hasOwnProperty.call(dex.pokemon, species)) {
@@ -129,78 +222,35 @@ export class Pokemon implements ReadonlyPokemon {
         }
         const data = dex.pokemon[species];
 
-        if (perm && !this.volatile.transformed) {
-            // Completely diverge from original base traits.
-            // TODO: What changes stay the same?
-            // TODO: How to recover stat ranges? Need evs/ivs/etc.
-            this._baseTraits = PokemonTraits.base(data, level);
-            this.volatile.overrideTraits = this._baseTraits.volatile();
-        }
         // Completely diverge from current override traits.
-        else this.volatile.overrideTraits = PokemonTraits.base(data, level);
+        this.volatile.species = data.name;
+        this.volatile.types = data.types;
+        // Note: HP stat can't change during battle.
+        // TODO: Preserve evs/ivs/nature.
+        this.volatile.stats = StatTable.base(data, level, this.stats.hp);
+        this.volatile.ability =
+            data.abilities.length === 1 ? data.abilities[0] : "";
+
+        if (perm && !this.volatile.transformed) {
+            // Also completely diverge from original base traits.
+            this._baseSpecies = this.volatile.species;
+            this._baseTypes = this.volatile.types;
+            this._baseStats = this.volatile.stats;
+            this._baseAbility = this.volatile.ability;
+        }
     }
 
     /** @override */
-    public get types(): readonly dex.Type[] {
-        let result = [...this.traits.types];
-        if (this._volatile) result.push(this._volatile.addedType);
-        result = result.filter(
-            type =>
-                type !== "???" &&
-                // Roost removes flying type.
-                (!this._volatile?.roost || type !== "flying"),
-        );
-        if (result.length <= 0) return ["???"];
-        return result;
-    }
-
-    /** @override */
-    public get item(): PossibilityClass<string, dex.ItemData> {
+    public get item(): string {
         return this._item;
     }
     /** @override */
-    public get lastItem(): PossibilityClass<string, dex.ItemData> {
+    public get lastItem(): string {
         return this._lastItem;
     }
-    /**
-     * Indicates that an item has been revealed or gained.
-     *
-     * @param item Item id name.
-     * @param gained Whether the item was gained just now or being revealed. If
-     * `"recycle"`, the item was recovered via the Recycle move. Default false.
-     */
-    public setItem(item: string, gained: boolean | "recycle" = false): void {
-        // Override any possibilities of other items.
-        if (gained) {
-            // Item was gained via the recycle move.
-            if (gained === "recycle") {
-                // Recycled item must match tracked lastItem.
-                if (!this._lastItem.isSet(item)) {
-                    throw new Error(
-                        `Pokemon gained '${item}' via Recycle ` +
-                            "but last item was '" +
-                            (this._lastItem.definiteValue ?? "<unknown>") +
-                            "'",
-                    );
-                }
-                this._item = this._lastItem;
-                this._item.narrow(item);
-                // Recycle also resets lastItem.
-                this._lastItem = new PossibilityClass(dex.items, "none");
-            }
-            // If it was just gained through normal needs we don't need to do
-            // anything else.
-            else this._item = new PossibilityClass(dex.items, item);
-        }
-        // Item is not gained but is just now being revealed.
-        else this._item.narrow(item);
-
-        if (this._volatile) {
-            // (De)activate unburden ability if the pokemon has it.
-            this._volatile.unburden = item === "none" && !!gained;
-            // Remove choice lock if we didn't gain a choice item.
-            if (!dex.items[item].isChoice) this._volatile.choiceLock = null;
-        }
+    /** Sets the current item. */
+    public setItem(item: string): void {
+        this._item = item;
     }
     /**
      * Indicates that an item was just removed from this Pokemon.
@@ -209,19 +259,27 @@ export class Pokemon implements ReadonlyPokemon {
      * was consumed (i.e., it can be brought back using the Recycle move), this
      * is set either to the item's name or just true if the item is unknown.
      */
-    public removeItem(consumed: string | boolean): void {
-        if (consumed) {
-            // Move current item possibility object to the lastItem slot.
+    public removeItem(consumed?: string | boolean): void {
+        if (consumed === true) {
             this._lastItem = this._item;
-            // If the current item didn't match the consumed param, this should
-            // throw an overnarrowing error.
-            // TODO: Guard this or replace the overnarrowing exception message
-            // in a parameter to be more useful.
-            if (typeof consumed === "string") this._lastItem.narrow(consumed);
+        } else if (consumed) {
+            // TODO: Emit a log if mismatch with this._item.
+            this._lastItem = consumed;
         }
-
-        // This should reset the _item reference so there aren't any duplicates.
-        this.setItem("none", true /*gained*/);
+        this._item = "none";
+    }
+    /** Indicates that the item was recovered via the Recycle move. */
+    public recycle(item: string): void {
+        if (this._lastItem !== item) {
+            // TODO: This shouldn't be an error, just log the inconsistency
+            // (including if lastItem was unknown).
+            throw new Error(
+                `Pokemon gained '${item}' via Recycle but last consumed item ` +
+                    `was '${this._lastItem}'`,
+            );
+        }
+        this._lastItem = "none";
+        this._item = item;
     }
     /**
      * Swaps items with another Pokemon.
@@ -231,38 +289,33 @@ export class Pokemon implements ReadonlyPokemon {
     public swapItems(target: Pokemon): void {
         [this._item, target._item] = [target._item, this._item];
     }
-    private _item = new PossibilityClass(dex.items);
-    private _lastItem = new PossibilityClass(dex.items, "none");
+    private _item = "";
+    private _lastItem = "none";
 
     /** @override */
     public get moveset(): Moveset {
-        if (this._volatile) return this._volatile.overrideMoveset;
-        return this.baseMoveset;
+        return this._volatile?.moveset ?? this.baseMoveset;
     }
+    /** @override */
+    public readonly baseMoveset: Moveset;
     /** Overrides a move slot via Mimic until switched out. */
     public mimic(name: string): void {
         // Mimicked moves have 5 pp and maxed maxpp.
         this.moveset.replace("mimic", new Move(name, "max", 5));
-        // Can't be choice locked if the move we're locked into is replaced.
-        if (this._volatile) this._volatile.choiceLock = null;
     }
     /** Permanently replaces a move slot via Sketch. */
     public sketch(name: string): void {
         // Sketched moves have no pp ups applied.
         this.moveset.replace("sketch", new Move(name, "min"), true /*base*/);
-        // Can't be choice locked if the move we're locked into is replaced.
-        if (this._volatile) this._volatile.choiceLock = null;
     }
-    /** @override */
-    public readonly baseMoveset: Moveset;
 
     /** @override */
-    public gender?: string | null;
+    public gender: GenderName;
 
     /** @override */
-    public get hpType(): PossibilityClass<dex.HpType> {
-        // TODO(gen>=5): Always use baseTraits.
-        return this.traits.stats.hpType;
+    public get hpType(): dex.HpType | null {
+        // Note(gen4): Uses current form's stat table even if transformed.
+        return this.stats.hpType;
     }
 
     /** @override */
@@ -270,106 +323,27 @@ export class Pokemon implements ReadonlyPokemon {
         return this._happiness;
     }
     public set happiness(value: number | null) {
-        if (value === null) this._happiness = null;
-        else this._happiness = Math.max(0, Math.min(value, 255));
+        if (value === null) {
+            this._happiness = null;
+        } else {
+            this._happiness = Math.max(0, Math.min(value, 255));
+        }
     }
     private _happiness: number | null = null;
 
     /** @override */
     public readonly hp = new Hp();
-    /** @override */
-    public get fainted(): boolean {
-        return this.hp.current === 0;
-    }
 
     /** @override */
-    public readonly majorStatus = new MajorStatusCounter().onCure(() => {
-        // TODO: Early Bird inference?
-        // If the pokemon was asleep before, nightmare should be cured now.
-        if (this._volatile) this._volatile.nightmare = false;
-    });
-
-    /** @override */
-    public get grounded(): boolean | null {
-        // Gravity/ingrain override all ground checks.
-        if (this.team?.state?.status.gravity.isActive) {
-            return true;
-        }
-        const v = this._volatile;
-        if (v?.ingrain) return true;
-
-        // Look for an ability-suppressing effect.
-        const ignoreAbility = v?.suppressAbility;
-        const ability = ignoreAbility ? undefined : this.traits.ability;
-
-        // Look for an item-suppressing ability/effect.
-        let ignoreItem: boolean | null = !!v?.embargo.isActive;
-        if (!ignoreItem && ability) {
-            // If all possible abilities ignore item, ignoreItem=true.
-            // If some don't, ignoreItem=maybe (null).
-            // If all don't, ignoreItem=false.
-            let allIgnoreItem = true;
-            let oneIgnoreItem = false;
-            for (const n of ability.possibleValues) {
-                if (!ability.map[n].flags?.ignoreItem) allIgnoreItem = false;
-                else oneIgnoreItem = true;
-            }
-            if (allIgnoreItem && oneIgnoreItem) ignoreItem = true;
-            else if (!allIgnoreItem && !oneIgnoreItem) ignoreItem = false;
-            else ignoreItem = null;
-        }
-
-        // Whether the return value cannot be false, i.e. a prior grounded check
-        // could've overridden later ungroundedness checks but we don't have
-        // enough information to know the result of that check.
-        let maybeGrounded = false;
-
-        // Ironball causes grounding.
-        if (this._item.definiteValue === "ironball") {
-            // Item is definitely working so definitely grounded.
-            if (ignoreItem === false) return true;
-            // Item may be working so could be grounded.
-            if (ignoreItem === null) maybeGrounded = true;
-        }
-        // Can't rule out ironball.
-        else if (this._item.isSet("ironball") && ignoreItem !== true) {
-            maybeGrounded = true;
-        }
-
-        // Magnetrise lifts non-Levitate/non-flying-types but is overridden by
-        // ironball and other prior checks.
-        if (v?.magnetrise.isActive) return maybeGrounded ? null : false;
-
-        // Whether the return value cannot be true (similar to maybeGrounded).
-        let maybeUngrounded = false;
-
-        // Levitate ability lifts non-flying types.
-        if (
-            ability &&
-            [...ability.possibleValues].some(
-                n => ability.map[n].on?.block?.move?.type === "ground",
-            )
-        ) {
-            // Levitate is definitely there so definitely ungrounded unless
-            // ironball negates it.
-            if (ability.definiteValue) return maybeGrounded ? null : false;
-            // Levitate may be there so could be ungrounded.
-            maybeUngrounded = true;
-        }
-
-        // Flying type lifts.
-        if (!this.types.includes("flying")) {
-            return maybeUngrounded ? null : true;
-        }
-        return maybeGrounded ? null : false;
-    }
+    public readonly majorStatus = new MajorStatusCounter();
 
     /** @override */
     public get volatile(): VolatileStatus {
-        if (this._volatile) return this._volatile;
-        throw new Error("Pokemon is currently inactive");
+        if (!this._volatile) {
+            throw new Error("Pokemon is currently inactive");
+        }
+        return this._volatile;
     }
-    /** Minor status conditions. Cleared on switch. */
     private _volatile: VolatileStatus | null = null;
 
     /**
@@ -377,6 +351,7 @@ export class Pokemon implements ReadonlyPokemon {
      *
      * @param species Species name.
      * @param level Level for stat calcs.
+     * @param gender Pokemon's gender.
      * @param moves Optional moveset to fill in.
      * @param team Optional reference to the parent Team.
      */
@@ -384,6 +359,7 @@ export class Pokemon implements ReadonlyPokemon {
         species: string,
         level = 100,
         moves?: readonly string[],
+        gender: GenderName = "N",
         team?: Team,
     ) {
         if (!Object.hasOwnProperty.call(dex.pokemon, species)) {
@@ -391,12 +367,23 @@ export class Pokemon implements ReadonlyPokemon {
         }
         const data = dex.pokemon[species];
 
-        this._baseTraits = PokemonTraits.base(data, level);
+        this._baseSpecies = data.name;
+        this._baseTypes = data.types;
+        this._baseStats = StatTable.base(data, level);
+        this._baseAbility =
+            data.abilities.length === 1 ? data.abilities[0] : "";
 
-        if (moves) this.baseMoveset = new Moveset(moves, moves.length);
-        else this.baseMoveset = new Moveset(data.movepool);
+        if (moves) {
+            this.baseMoveset = new Moveset(moves, moves.length);
+        } else {
+            this.baseMoveset = new Moveset(data.movepool);
+        }
 
-        if (team) this.team = team;
+        this.gender = gender;
+
+        if (team) {
+            this.team = team;
+        }
     }
 
     /** Indicates that the pokemon spent its turn being inactive. */
@@ -406,20 +393,25 @@ export class Pokemon implements ReadonlyPokemon {
 
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void {
-        if (this.active) this.volatile.preTurn();
+        if (this.active) {
+            this.volatile.preTurn();
+        }
     }
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void {
-        this.majorStatus.postTurn();
-        if (this.active) this.volatile.postTurn();
+        this.skillswap = null;
+        if (this.active) {
+            this.majorStatus.postTurn();
+            this.volatile.postTurn();
+        }
     }
 
     /**
-     * Switches this Pokemon in as if it replaces the given Pokemon.
+     * Switches this Pokemon in to replace the given Pokemon in its slot.
      *
-     * @param mon Pokemon to replace with. If falsy, the Pokemon is switching
-     * into an empty slot.
+     * @param mon Pokemon to replace with. If left unspecified, then the Pokemon
+     * is switching into an empty slot.
      * @param selfSwitch Self-switch status if any.
      */
     public switchInto(
@@ -427,8 +419,9 @@ export class Pokemon implements ReadonlyPokemon {
         selfSwitch?: dex.SelfSwitchType | null,
     ): void {
         // Create our own volatile status object.
-        if (!mon?._volatile) this._volatile = new VolatileStatus();
-        else {
+        if (!mon?._volatile) {
+            this._volatile = new VolatileStatus();
+        } else {
             // Transfer volatile status object.
             this._volatile = mon._volatile;
             mon._volatile = null;
@@ -437,18 +430,8 @@ export class Pokemon implements ReadonlyPokemon {
         // Switch out provided mon.
 
         // Toxic counter resets on switch.
-        if (mon?.majorStatus.current === "tox") mon.majorStatus.resetCounter();
-
-        // Clear all Mirror Move entries for the mon being switched out.
-        const teams = mon?.team?.state?.teams ?? {};
-        for (const sideId in teams) {
-            if (!Object.hasOwnProperty.call(teams, sideId)) continue;
-            const team = teams[sideId as SideID];
-            if (!team) continue;
-            if (team === this.team) continue;
-            // Uninitialized team.
-            if (team.size <= 0) continue;
-            team.active.volatile.mirrormove = null;
+        if (mon?.majorStatus.current === "tox") {
+            mon.majorStatus.resetCounter();
         }
 
         // Switch in new mon.
@@ -462,60 +445,41 @@ export class Pokemon implements ReadonlyPokemon {
             this._volatile.clearPassable();
             // Leave self-switch passable statuses.
             this._volatile.clearUnpassable();
-        } else this._volatile.clear();
+        } else {
+            this._volatile.clear();
+        }
 
-        // Make sure volatile has updated info about this pokemon
-        this._volatile.overrideMoveset.link(this.baseMoveset, "base");
-        this._volatile.overrideTraits = this.baseTraits.volatile();
-        if (selfSwitch) this._volatile.selfSwitch();
-    }
-
-    /** Indicates that the pokemon has fainted. */
-    public faint(): void {
-        this.hp.set(0, 0);
-    }
-
-    /**
-     * Called when this pokemon is being trapped by an unknown ability.
-     *
-     * @param by Opponent pokemon with the trapping ability.
-     */
-    public trapped(by: Pokemon): void {
-        // Opposing pokemon can have only one of these abilities here.
-        const abilities = new Set<string>();
-
-        // TODO: Add features of these abilities to dex data.
-        // Arenatrap traps grounded pokemon.
-        if (this.grounded !== false) abilities.add("arenatrap");
-
-        // Magnetpull traps steel types.
-        if (this.types.includes("steel")) abilities.add("magnetpull");
-
-        // Shadowtag traps all pokemon who don't also have it.
-        if (this.ability !== "shadowtag") abilities.add("shadowtag");
-
-        // Infer possible trapping abilities.
-        if (abilities.size > 0) by.traits.ability.narrow(abilities);
-        else throw new Error("Can't figure out why we're trapped");
+        // Make sure volatile has updated info about this pokemon.
+        this._volatile.species = this._baseSpecies;
+        this._volatile.types = this._baseTypes;
+        this._volatile.stats = this._baseStats;
+        this._volatile.ability = this._baseAbility;
+        this._volatile.moveset.link(this.baseMoveset, "base");
+        if (selfSwitch) {
+            this._volatile.selfSwitch();
+        }
     }
 
     /** Indicates that the pokemon has transformed into its target. */
     public transform(target: Pokemon): void {
-        this.volatile.transformed = true;
-        // Choice lock resets on transform.
-        this.volatile.choiceLock = null;
+        const v = this.volatile;
+        v.transformed = true;
 
         // Copy boosts.
+        const tv = target.volatile;
         for (const stat of dex.boostKeys) {
-            this.volatile.boosts[stat] = target.volatile.boosts[stat];
+            v.boosts[stat] = tv.boosts[stat];
         }
 
-        // Link moveset inference.
-        this.volatile.overrideMoveset.link(target.moveset, "transform");
-
         // Copy traits but preserve some according to transform rules.
-        this.volatile.overrideTraits = target.traits.transform(this.traits);
-        this.volatile.addedType = target.volatile.addedType;
+        v.species = target.species;
+        v.types = target.types;
+        // Note: Transform preserves source's hp stat.
+        v.stats = target.stats.transform(this.stats.hp);
+        v.ability = target.ability;
+
+        // Link moveset inference.
+        this.volatile.moveset.link(target.moveset, "transform");
     }
 
     // istanbul ignore next: Only used for logging.
@@ -538,84 +502,88 @@ ${this.active ? `\n${s}volatile: ${this.volatile.toString()}` : ""}
 ${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.stringifyItem()}
-${s}grounded: ${this.stringifyGrounded()}
 ${this.stringifyMoveset(indent)}`;
     }
 
     // istanbul ignore next: Only used for logging.
     /** Displays the species as well as whether it's overridden. */
     private stringifySpecies(): string {
-        const base = this.baseTraits.species;
-        const override = this._volatile?.overrideTraits?.species;
+        const base = this.baseSpecies;
+        const override = this._volatile?.species;
 
-        if (!override || override === base) return base.name;
-        return `${override.name} (base: ${base.name})`;
+        if (!override || override === base) {
+            return base;
+        }
+        return `${override} (base: ${base})`;
     }
 
     // istanbul ignore next: Only used for logging.
     /** Displays stat data as well as whether it's overridden. */
     private stringifyStats(): string {
-        const base = this.baseTraits.stats;
-        const override = this._volatile?.overrideTraits?.stats;
+        const base = this.baseStats;
+        const override = this._volatile?.stats;
 
-        if (!override || base === override) return base.toString();
+        if (!override || base === override) {
+            return base.toString();
+        }
         return `${override} (base: ${base})`;
     }
 
     // istanbul ignore next: Only used for logging.
     /** Displays type values. */
     private stringifyTypes(): string {
-        const base = this.baseTraits.types;
-        const override = this._volatile?.overrideTraits?.types;
-        if (!override || base === override) return `[${base.join(", ")}]`;
+        const base = this.baseTypes;
+        const override = this._volatile?.types;
+        if (!override || base === override) {
+            return `[${base.join(", ")}]`;
+        }
         return `[${override.join(", ")}] (base: [${base.join(", ")}])`;
     }
 
     // istanbul ignore next: Only used for logging.
     /** Displays the possible/overridden/suppressed values of the ability. */
     private stringifyAbility(): string {
-        const base = this.baseTraits.ability;
-        const baseStr = `${base.definiteValue ? "" : "possibly "}${base}`;
-        const override = this._volatile?.overrideTraits?.ability;
+        const base = this.baseAbility;
+        const baseStr = base
+            ? base
+            : `possibly [${dex.pokemon[this.baseSpecies].abilities.join(
+                  ", ",
+              )}]`;
+        const override = this._volatile?.ability;
 
-        if (!override || base === override) return baseStr;
+        if (!override || base === override) {
+            return baseStr;
+        }
 
-        const overrideStr =
-            (override.definiteValue ? "" : "possibly ") + override.toString();
+        const overrideStr = override
+            ? override
+            : `possibly [${dex.pokemon[this.species].abilities.join(", ")}]`;
         return `${overrideStr} (base: ${baseStr})`;
     }
 
     // istanbul ignore next: Only used for logging.
     /** Displays the last and current values of the held item field. */
     private stringifyItem(): string {
-        const baseVal = this._item.definiteValue;
-        const base = baseVal ? baseVal : "<unrevealed>";
+        const base = this._item || "<unknown>";
 
-        const lastVal = this._lastItem.definiteValue;
-        const last = lastVal ? lastVal : "<unknown>";
+        const last = this._lastItem || "<unknown>";
 
-        if (last === "none") return base;
+        if (last === "none") {
+            return base;
+        }
         return `${base} (consumed: ${last})`;
     }
 
     // istanbul ignore next: Only used for logging.
-    /** Displays result of grounded check. */
-    private stringifyGrounded(): string {
-        const {grounded} = this;
-        if (grounded === true) return "true";
-        if (grounded === false) return "false";
-        return "maybe";
-    }
-
-    // istanbul ignore next: Only used for logging.
-    /** Displays moveset data with happiness and possibly overridden HPType. */
+    /**
+     * Displays moveset data with happiness and possibly-overridden Hidden Power
+     * type data if applicable.
+     */
     private stringifyMoveset(indent = 0): string {
         const s = " ".repeat(indent);
 
-        // Stringify hp type
-        const {hpType} = this.baseTraits.stats;
-        const hpTypeStr =
-            (hpType.definiteValue ? "" : "possibly ") + hpType.toString();
+        // Stringify hp type.
+        const hpTypeStr = this.stats.hpType ?? "<unknown>";
 
         // Stringify moveset.
         let result =
@@ -627,10 +595,7 @@ ${this.stringifyMoveset(indent)}`;
             // Need to also include base moveset.
 
             // Stringify base Hidden Power type.
-            const baseHpType = this.baseTraits.stats.hpType;
-            const baseHpTypeStr =
-                (baseHpType.definiteValue ? "" : "possibly ") +
-                baseHpType.toString();
+            const baseHpTypeStr = this.baseStats.hpType ?? "<unknown>";
 
             // Stringify base moveset.
             result +=

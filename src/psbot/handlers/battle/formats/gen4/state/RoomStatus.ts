@@ -1,17 +1,15 @@
 import {weatherItems, WeatherType} from "../dex";
-import {ItemTempStatus, ReadonlyItemTempStatus} from "./ItemTempStatus";
+import {ReadonlyMultiTempStatus, MultiTempStatus} from "./MultiTempStatus";
 import {ReadonlyTempStatus, TempStatus} from "./TempStatus";
 
 /** Readonly {@link RoomStatus} representation. */
 export interface ReadonlyRoomStatus {
     /** Gravity field effect. */
     readonly gravity: ReadonlyTempStatus;
-    /** Last executed move in the game. */
-    readonly lastMove?: string;
     /** Trick Room status. */
     readonly trickroom: ReadonlyTempStatus;
     /** Weather effect (usually temporary). */
-    readonly weather: ReadonlyItemTempStatus<WeatherType>;
+    readonly weather: ReadonlyMultiTempStatus<WeatherType>;
 }
 
 /** Temporary status conditions for the entire field. */
@@ -19,11 +17,9 @@ export class RoomStatus implements ReadonlyRoomStatus {
     /** @override */
     public readonly gravity = new TempStatus("gravity", 5);
     /** @override */
-    public lastMove?: string;
-    /** @override */
     public readonly trickroom = new TempStatus("trickroom", 5);
     /** @override */
-    public readonly weather = new ItemTempStatus([5, 8], weatherItems);
+    public readonly weather = new MultiTempStatus(weatherItems, 8);
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void {
@@ -43,7 +39,6 @@ export class RoomStatus implements ReadonlyRoomStatus {
         return `[${([] as string[])
             .concat(
                 this.gravity.isActive ? [this.gravity.toString()] : [],
-                this.lastMove ? ["last used " + this.lastMove] : [],
                 this.trickroom.isActive ? [this.trickroom.toString()] : [],
                 [`weather: ${this.weather.toString()}`],
             )

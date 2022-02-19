@@ -1,4 +1,3 @@
-import {Protocol} from "@pkmn/protocol";
 import {expect} from "chai";
 import {Event} from "../../../../../parser";
 import {BattleIterator} from "../../../parser";
@@ -43,8 +42,9 @@ export class ParserHelpers<TResult = unknown> {
             // The only way for the finish Promise to reject would be if the
             // underlying BattleIterators also threw, and so they should've
             // been handled via expect() by the time we get to this point.
-            if (!this.handledError) await this.pctx()?.finish;
-            else {
+            if (!this.handledError) {
+                await this.pctx()?.finish;
+            } else {
                 await expect(this.guaranteePctx().finish).to.eventually.be
                     .rejected;
             }
@@ -100,35 +100,6 @@ export class ParserHelpers<TResult = unknown> {
         );
     }
 
-    /**
-     * Passes a halt event and expects the BattleParser to reject it.
-     *
-     * @param event Event to handle.
-     */
-    public async halt(): Promise<void> {
-        await this.reject({
-            args: ["request", "{}" as Protocol.RequestJSON],
-            kwArgs: {},
-        });
-    }
-
-    /**
-     * Passes a halt event and expects the BattleParser to throw.
-     *
-     * @param errorCtor Error type.
-     * @param message Optional error message.
-     */
-    public async haltError(
-        errorCtor: ErrorConstructor,
-        message?: string | RegExp,
-    ): Promise<void> {
-        await this.rejectError(
-            {args: ["request", "{}" as Protocol.RequestJSON], kwArgs: {}},
-            errorCtor,
-            message,
-        );
-    }
-
     // TODO: Why not just return TResult and let the caller make its own
     // assertions?
     /**
@@ -167,7 +138,9 @@ export class ParserHelpers<TResult = unknown> {
     /** Wraps an assertion around the ParserContext getter function. */
     private guaranteePctx(): ParserContext<TResult> {
         const pctx = this.pctx();
-        if (!pctx) throw new Error("ParserContext not initialized");
+        if (!pctx) {
+            throw new Error("ParserContext not initialized");
+        }
         return pctx;
     }
 }

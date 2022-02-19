@@ -1,11 +1,8 @@
 import * as dex from "../dex";
 import {Moveset, ReadonlyMoveset} from "./Moveset";
-import {PokemonTraits, ReadonlyPokemonTraits} from "./PokemonTraits";
+import {ReadonlyMultiTempStatus, MultiTempStatus} from "./MultiTempStatus";
+import {ReadonlyStatTable, StatTable} from "./StatTable";
 import {ReadonlyTempStatus, TempStatus} from "./TempStatus";
-import {
-    ReadonlyVariableTempStatus,
-    VariableTempStatus,
-} from "./VariableTempStatus";
 import {pluralTurns, plus} from "./utility";
 
 /** Writable helper type. */
@@ -34,7 +31,7 @@ export interface ReadonlyVolatileStatus {
 
     /* Aqua Ring move status. */
     readonly aquaring: boolean;
-    /** Stat boost stages. */
+    /** Stat boost stages. Should be integers between -6 and 6 (inclusive). */
     readonly boosts: dex.BoostTable;
     /** Confusion status. */
     readonly confusion: ReadonlyTempStatus;
@@ -88,25 +85,40 @@ export interface ReadonlyVolatileStatus {
 
     //#region Not passed when copying.
 
+    //#region Overridden traits from parent Pokemon.
+
+    /** Override species. */
+    readonly species: string;
+    /** Override types. */
+    readonly types: readonly [dex.Type, dex.Type];
+    /** Override stats, or `null` if unbound. */
+    readonly stats: ReadonlyStatTable | null;
+    /** Override ability. */
+    readonly ability: string;
+    /**
+     * Override moveset.
+     *
+     * Typically linked to the parent Pokemon's `#baseMoveset`.
+     */
+    readonly moveset: ReadonlyMoveset;
+
+    //#endregion
+
     /** Attract move status. */
     readonly attract: boolean;
     /** Bide move status. */
     readonly bide: ReadonlyTempStatus;
     /** Charge move status. */
     readonly charge: ReadonlyTempStatus;
-    /** Choice item lock. */
-    readonly choiceLock: string | null;
-    /** Whether the pokemon was directly damaged by a move this turn. */
-    readonly damaged: boolean;
-    /** Defense curl move status. */
+    /** Defense Curl move status. */
     readonly defensecurl: boolean;
     /** Destiny Bond move status. */
     readonly destinybond: boolean;
     /** Currently disabled move. */
     readonly disabled: ReadonlyMoveStatus;
     /**
-     * Encore move status. Encored move corresponds to `#lastUsed` at the time
-     * it starts.
+     * Encore move status. Encored move corresponds to {@link lastMove} at the
+     * time it starts.
      */
     readonly encore: ReadonlyMoveStatus;
     /** Flash Fire ability effect. */
@@ -127,39 +139,27 @@ export interface ReadonlyVolatileStatus {
      *
      * After the 2nd or 3rd move, the user will become confused, explicitly
      * ending the status. However, if the user was already confused, the status
-     * can be implicitly ended, so this VariableTempStatus field is
+     * can be implicitly ended, so this MultiTempStatus field is
      * silent-endable.
      */
-    readonly lockedMove: ReadonlyVariableTempStatus<dex.LockedMove>;
-    /** Whether the pokemon has used Magic Coat during this turn. */
+    readonly lockedMove: ReadonlyMultiTempStatus<dex.LockedMove>;
+    /** Magic Coat move status. */
     readonly magiccoat: boolean;
     /** Micle Berry status. */
     readonly micleberry: boolean;
-    /** Whether the pokemon has used Minimize while out. */
+    /** Minimize move status. */
     readonly minimize: boolean;
-    // TODO(non-single battles): Use a list of [move, user] tuples.
-    /** Last move that targeted this slot for mirrormove purposes. */
-    readonly mirrormove: string | null;
     /** Mud Sport move status. */
     readonly mudsport: boolean;
     /** Whether this pokemon must recharge on the next turn. */
     readonly mustRecharge: boolean;
-    /**
-     * Override moveset, typically linked to the parent Pokemon's
-     * `#baseMoveset`. Applies until switched out.
-     */
-    readonly overrideMoveset: ReadonlyMoveset;
-    /** Override pokemon traits. Applies until switched out. */
-    readonly overrideTraits: ReadonlyPokemonTraits | null;
-    /** Temporary third type. */
-    readonly addedType: dex.Type;
     /** Rage move status. */
     readonly rage: boolean;
     /** Rollout-like move status. */
-    readonly rollout: ReadonlyVariableTempStatus<keyof typeof dex.rolloutMoves>;
-    /** Roost move effect (single turn). */
+    readonly rollout: ReadonlyMultiTempStatus<keyof typeof dex.rolloutMoves>;
+    /** Roost move status. */
     readonly roost: boolean;
-    /** First 5 turns of Slow Start ability. */
+    /** Slow Start ability status. */
     readonly slowstart: ReadonlyTempStatus;
     /** Snatch move status. */
     readonly snatch: boolean;
@@ -169,8 +169,6 @@ export interface ReadonlyVolatileStatus {
     readonly stallTurns: number;
     /** Number of Stockpile uses. */
     readonly stockpile: number;
-    /** Name of the move that just broke the Substitute during this turn. */
-    readonly substituteBroken: string | null;
     /** Taunt move status. */
     readonly taunt: ReadonlyTempStatus;
     /** Torment move status. */
@@ -178,9 +176,7 @@ export interface ReadonlyVolatileStatus {
     /** Transform move status. */
     readonly transformed: boolean;
     /** Two-turn move currently being prepared. */
-    readonly twoTurn: ReadonlyVariableTempStatus<dex.TwoTurnMove>;
-    /** Whether the Unburden ability would be active here. */
-    readonly unburden: boolean;
+    readonly twoTurn: ReadonlyMultiTempStatus<dex.TwoTurnMove>;
     /** Uproar move status. */
     readonly uproar: ReadonlyTempStatus;
     /** Water Sport move status. */
@@ -198,7 +194,7 @@ export interface ReadonlyVolatileStatus {
  * removed upon switch.
  */
 export class VolatileStatus implements ReadonlyVolatileStatus {
-    // All fields are initialized on #clear() which is called in the
+    // Note: All fields are initialized on #clear() which is called in the
     // constructor.
 
     //#region Passed when copying.
@@ -315,6 +311,21 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
 
     //#region Not passed when copying
 
+    //#region Overridden from parent Pokemon.
+
+    /** @override */
+    public species!: string;
+    /** @override */
+    public types!: readonly [dex.Type, dex.Type];
+    /** @override */
+    public stats!: StatTable | null;
+    /** @override */
+    public ability!: string;
+    /** @override */
+    public readonly moveset = new Moveset();
+
+    //#endregion
+
     /** @override */
     public attract!: boolean;
 
@@ -322,15 +333,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     /** @override */
     public readonly bide = new TempStatus("bide", 2);
 
-    /** @override */
-    public choiceLock!: string | null;
-
-    /** @override */
-    public damaged!: boolean;
-
     // Ends next turn.
     /** @override */
-    public readonly charge = new TempStatus("charging", 2, true /*silent*/);
+    public readonly charge = new TempStatus("charge", 2, true /*silent*/);
 
     /** @override */
     public defensecurl!: boolean;
@@ -365,7 +370,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     /** Starts the Encore status for the given move. */
     public encoreMove(move: string): void {
         // Can't encore unless the pokemon has the affected move.
-        this.overrideMoveset.reveal(move);
+        this.moveset.reveal(move);
 
         this._encore.move = move;
         this._encore.ts.start();
@@ -379,7 +384,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     // 4-8 turns, cure on last.
     private readonly _encore: MoveStatus = {
         move: null,
-        ts: new TempStatus("encored", 8),
+        // 4-9 turns.
+        ts: new TempStatus("encored", 9),
     };
 
     /** @override */
@@ -404,7 +410,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     // inactive.
     // FIXME: Ambiguity if there's no fatigue message to mark the end.
     /** @override */
-    public readonly lockedMove = new VariableTempStatus(
+    public readonly lockedMove = new MultiTempStatus(
         dex.lockedMoves,
         2,
         true /*silent*/,
@@ -420,39 +426,17 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     public minimize!: boolean;
 
     /** @override */
-    public mirrormove!: string | null;
-
-    /** @override */
     public mudsport!: boolean;
 
     /** @override */
     public mustRecharge!: boolean;
 
     /** @override */
-    public readonly overrideMoveset = new Moveset();
-
-    /** @override */
-    public overrideTraits!: PokemonTraits | null;
-
-    /** @override */
-    public addedType!: dex.Type;
-
-    /** Changes current type while active. Also resets {@link addedType}. */
-    public changeTypes(types: readonly [dex.Type, dex.Type]): void {
-        // istanbul ignore next: should never happen
-        if (!this.overrideTraits) {
-            throw new Error("Override traits not set");
-        }
-        this.overrideTraits = this.overrideTraits.divergeTypes(types);
-        this.addedType = "???";
-    }
-
-    /** @override */
     public rage!: boolean;
 
     // 5 move attempts (including start), end on last or if inactive.
     /** @override */
-    public readonly rollout = new VariableTempStatus(
+    public readonly rollout = new MultiTempStatus(
         dex.rolloutMoves,
         4,
         true /*silent*/,
@@ -462,7 +446,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     public roost!: boolean;
 
     /** @override */
-    public readonly slowstart = new TempStatus("slow start", 5);
+    public readonly slowstart = new TempStatus("slowstart", 5);
 
     /** @override */
     public snatch!: boolean;
@@ -480,6 +464,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this._stalling = flag;
         this._stallTurns = flag ? this._stallTurns + 1 : 0;
     }
+    /**
+     * Breaks currently active stalling move effects mid-turn without updating
+     * the fail rate for the next use.
+     */
+    public feint(): void {
+        this._stalling = false;
+    }
     private _stalling!: boolean;
     private _stallTurns!: number;
 
@@ -491,9 +482,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this._stockpile = Math.max(0, Math.min(uses, 3));
     }
     private _stockpile!: number;
-
-    /** @override */
-    public substituteBroken: string | null = null;
 
     // 3-5 turns, cure on last.
     /** @override */
@@ -507,14 +495,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
 
     // Ends next turn.
     /** @override */
-    public readonly twoTurn = new VariableTempStatus(
+    public readonly twoTurn = new MultiTempStatus(
         dex.twoTurnMoves,
         2,
         true /*silent*/,
     );
-
-    /** @override */
-    public unburden!: boolean;
 
     // 2-5 turns, end on last.
     /** @override */
@@ -529,11 +514,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     }
     /** Indicates that the Truant ability has activated. */
     public activateTruant(): void {
-        if (this.overrideTraits?.ability.definiteValue !== "truant") {
+        if (this.ability !== "truant") {
             throw new Error(
                 "Expected ability to be truant but found " +
-                    (this.overrideTraits?.ability.definiteValue ??
-                        "unknown ability"),
+                    (this.ability || "unknown ability"),
             );
         }
 
@@ -545,6 +529,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     // Ends next turn.
     /** @override */
     public readonly yawn = new TempStatus("yawn", 2, true /*silent*/);
+
+    //#endregion
 
     /** Creates a VolatileStatus object. */
     public constructor() {
@@ -613,11 +599,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
 
     /** Clears statuses that can't be Baton Passed. */
     public clearUnpassable(): void {
+        this.species = "";
+        this.types = ["???", "???"];
+        this.stats = null;
+        this.ability = "";
+        this.moveset.isolate();
         this.attract = false;
         this.bide.end();
         this.charge.end();
-        this.choiceLock = null;
-        this.damaged = false;
         this.defensecurl = false;
         this.destinybond = false;
         this.enableMoves();
@@ -632,12 +621,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.magiccoat = false;
         this.micleberry = false;
         this.minimize = false;
-        this.mirrormove = null;
         this.mudsport = false;
         this.mustRecharge = false;
-        this.overrideMoveset.isolate();
-        this.overrideTraits = null;
-        this.addedType = "???";
         this.rage = false;
         this.rollout.reset();
         this.roost = false;
@@ -646,12 +631,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this._stalling = false;
         this._stallTurns = 0;
         this._stockpile = 0;
-        this.substituteBroken = null;
         this.taunt.end();
         this.torment = false;
         this.transformed = false;
         this.twoTurn.reset();
-        this.unburden = false;
         this.uproar.end();
         this.watersport = false;
         this._willTruant = false;
@@ -673,8 +656,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     /** Updates some statuses after handling a self-switch. */
     public selfSwitch() {
         // Make sure lastMove is still valid.
+        // Corner case (gen4): Preserve lastMove for Encore after self-switch.
+        // TODO: Verify behavior.
         if (this.lastMove) {
-            if (!this.overrideMoveset.constraint.has(this.lastMove)) {
+            if (!this.moveset.constraint.has(this.lastMove)) {
                 this.lastMove = null;
             }
             // TODO: Callback for when moveset updates constraint.
@@ -685,13 +670,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     public inactive(): void {
         this.resetSingleMove();
 
-        // Move-locking statuses cancel when the intended move was prevented
-        // from being attempted.
         this.bide.end();
         this.lockedMove.reset();
         this.rollout.reset();
         this.twoTurn.reset();
-        // Uproar doesn't end if prevented from using subsequent moves.
+        // Note(gen4): Uproar doesn't end here.
 
         this._stalling = false;
         this._stallTurns = 0;
@@ -704,17 +687,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.rage = false;
     }
 
-    /**
-     * Breaks currently active stalling move effects mid-turn without updating
-     * the fail rate for the next use.
-     */
-    public feint(): void {
-        this._stalling = false;
-    }
-
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void {
-        // TODO
+        // TODO: Placeholder.
     }
 
     /** Called at the end of every turn to update temp statuses. */
@@ -733,8 +708,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.twoTurn.tick();
         this.yawn.tick();
 
-        this.substituteBroken = null;
-
         // Handle lockon ending.
         if (!this._lockOnTurns.isActive) {
             if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
@@ -742,7 +715,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         }
 
         // Reset single-turn statuses.
-        this.damaged = false;
         this.focus = false;
         this.magiccoat = false;
         this.roost = false;
@@ -750,7 +722,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this._stalling = false;
 
         // Toggle truant activation.
-        if (this.overrideTraits?.ability.definiteValue === "truant") {
+        if (this.ability === "truant") {
             this._willTruant = !this._willTruant;
         } else this._willTruant = false;
     }
@@ -786,11 +758,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
                 this._trapped ? ["trapped"] : [],
                 this._trapping ? ["trapping"] : [],
                 this.lastMove ? [`last used ${this.lastMove}`] : [],
+                // Note: Override traits are handled by Pokemon#toString().
                 this.attract ? ["attracted"] : [],
                 this.bide.isActive ? [this.bide.toString()] : [],
                 this.charge.isActive ? [this.charge.toString()] : [],
-                this.choiceLock ? ["choice lock " + this.choiceLock] : [],
-                this.damaged ? ["damaged this turn"] : [],
                 this.defensecurl ? ["defense curl"] : [],
                 this.destinybond ? ["destiny bond"] : [],
                 this._disabled.ts.isActive
@@ -809,10 +780,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
                 this.magiccoat ? ["magic coat"] : [],
                 this.micleberry ? ["micle berry"] : [],
                 this.minimize ? ["minimize"] : [],
-                this.mirrormove ? ["last targeted by " + this.mirrormove] : [],
                 this.mudsport ? ["mud sport"] : [],
                 this.mustRecharge ? ["must recharge"] : [],
-                // Note: Override traits are handled by Pokemon#toString().
                 this.rage ? ["rage"] : [],
                 this.rollout.isActive ? [this.rollout.toString()] : [],
                 this.roost ? ["roosting"] : [],
@@ -822,9 +791,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
                     ? [pluralTurns("stalled", this._stallTurns - 1)]
                     : [],
                 this._stockpile > 0 ? [`stockpile ${this._stockpile}`] : [],
-                this.substituteBroken
-                    ? [`substitute broken by ${this.substituteBroken}`]
-                    : [],
                 this.taunt.isActive ? [this.taunt.toString()] : [],
                 this.torment ? ["torment"] : [],
                 this.transformed ? ["transformed"] : [],

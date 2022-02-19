@@ -1,7 +1,7 @@
 import {Protocol} from "@pkmn/protocol";
 import fetch, {RequestInit} from "node-fetch";
 import {client as WSClient} from "websocket";
-import {Logger} from "../logging/Logger";
+import {Logger} from "../util/logging/Logger";
 import * as handlers from "./handlers";
 import {HaltEvent, MessageParser, RoomEvent} from "./parser";
 
@@ -77,8 +77,11 @@ export class PsBot {
             (res, rej) =>
                 (this.connectedRes = err => {
                     this.connectedRes = () => {};
-                    if (!err) res();
-                    else rej(err);
+                    if (!err) {
+                        res();
+                    } else {
+                        rej(err);
+                    }
                 }),
         );
 
@@ -89,7 +92,7 @@ export class PsBot {
             this.respondToChallenge(user, format);
 
         // Setup async message parser.
-        // TODO: tie this to a method that can be awaited after setting up the
+        // TODO: Tie this to a method that can be awaited after setting up the
         // PsBot.
         void this.parserReadLoop();
     }
@@ -121,7 +124,7 @@ export class PsBot {
         this.rooms.set(roomid, handler);
     }
 
-    // TODO: support reconnects/disconnects
+    // TODO: Support reconnect/disconnect.
     /** Connects to the server and starts handling messages. */
     public async connect(url: string): Promise<void> {
         this.client.connect(url);
@@ -137,7 +140,8 @@ export class PsBot {
     public async login(options: LoginOptions): Promise<void> {
         if (this.loggedIn) {
             // TODO: Add logout functionality?
-            return this.logger.error("Already logged in");
+            this.logger.error("Already logged in");
+            return;
         }
 
         this.logger.debug(
@@ -167,7 +171,7 @@ export class PsBot {
                 // Login attempt was rejected.
                 if (assertion.startsWith(";;")) {
                     // Error message was provided.
-                    throw new Error(assertion.substr(2));
+                    throw new Error(assertion.substring(2));
                 }
                 throw new Error(
                     "A password is required for user " +
@@ -182,7 +186,7 @@ export class PsBot {
             const result = await fetch(options.loginServer, init);
             const text = await result.text();
             // Response text returns "]" followed by json.
-            const json = JSON.parse(text.substr(1)) as {
+            const json = JSON.parse(text.substring(1)) as {
                 assertion: string;
                 actionsuccess: string;
             };
@@ -192,7 +196,7 @@ export class PsBot {
                 // Login attempt was rejected.
                 if (assertion.startsWith(";;")) {
                     // Error message was provided.
-                    throw new Error(assertion.substr(2));
+                    throw new Error(assertion.substring(2));
                 }
                 throw new Error("Invalid password");
             }
@@ -249,8 +253,9 @@ export class PsBot {
 
     private respondToChallenge(user: string, format: string): void {
         this.logger.debug(`Received challenge from ${user}: ${format}`);
-        if (this.formats.has(format)) this.addResponses("", `|/accept ${user}`);
-        else {
+        if (this.formats.has(format)) {
+            this.addResponses("", `|/accept ${user}`);
+        } else {
             this.logger.debug("Unknown format");
             this.logger.debug(
                 "Supported formats: " + [...this.formats.keys()].join(", "),
@@ -313,9 +318,12 @@ export class PsBot {
             }
         }
 
-        // Dispatch special 'halt' event or regular event from MessageParser.
-        if (args[0] === "halt") await handler.halt();
-        else await handler.handle({args, kwArgs});
+        // Dispatch special "halt" event or regular event from MessageParser.
+        if (args[0] === "halt") {
+            await handler.halt();
+        } else {
+            await handler.handle({args, kwArgs});
+        }
 
         if (args[0] === "deinit") {
             // The roomid defaults to lobby if the |deinit event didn't come
@@ -323,7 +331,7 @@ export class PsBot {
             this.rooms.delete(roomid || ("lobby" as Protocol.RoomID));
         }
         // Leave respectfully once the battle ends.
-        // TODO: Move this to BattleHandler.
+        // TODO: Move this to BattleHandler?
         else if (args[0] === "tie" || args[0] === "win") {
             this.addResponses(roomid, "|gg", "|/leave");
         }

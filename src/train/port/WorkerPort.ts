@@ -1,5 +1,5 @@
 import {TransferListItem, Worker} from "worker_threads";
-import {WrappedError} from "../../errors/WrappedError";
+import {WrappedError} from "../../util/errors/WrappedError";
 import {
     AsyncPort,
     ProtocolMessage,

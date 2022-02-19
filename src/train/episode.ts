@@ -1,8 +1,8 @@
 import {join} from "path";
 import ProgressBar from "progress";
 import * as tmp from "tmp-promise";
-import {Logger} from "../logging/Logger";
 import {formats} from "../psbot/handlers/battle";
+import {Logger} from "../util/logging/Logger";
 import {AlgorithmArgs} from "./learn";
 import {ModelWorker} from "./model/worker";
 import {Opponent, playGames} from "./play";

@@ -48,14 +48,21 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler {
     public "|pm|"(args: Args["|pm|"]) {
         const [, sender, recipient, msg] = args;
         if (msg.startsWith("/challenge")) {
-            if (!this.respondToChallenge) return;
-            if (!this.username) return;
+            if (!this.respondToChallenge || !this.username) {
+                return;
+            }
             const r = recipient.trim() as Protocol.Username;
-            if (r !== this.username) return;
+            if (r !== this.username) {
+                return;
+            }
             const s = sender.trim() as Protocol.Username;
-            if (s === this.username) return;
+            if (s === this.username) {
+                return;
+            }
             const i = msg.indexOf("|");
-            if (i < 0) return;
+            if (i < 0) {
+                return;
+            }
             const format = msg.substring("/challenge".length, i).trim();
             this.respondToChallenge(s, format);
         }
@@ -67,7 +74,9 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler {
         void args;
     }
     public "|challstr|"(args: Args["|challstr|"]) {
-        if (!this.challstrRes) throw new Error("Received a second challstr");
+        if (!this.challstrRes) {
+            throw new Error("Received a second challstr");
+        }
         this.challstrRes(args[1]);
     }
     public "|updateuser|"(args: Args["|updateuser|"]) {
@@ -81,7 +90,9 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler {
         void args;
     }
     public "|updatechallenges|"(args: Args["|updatechallenges|"]) {
-        if (!this.respondToChallenge) return;
+        if (!this.respondToChallenge) {
+            return;
+        }
 
         const json = Protocol.parseChallenges(args[1]);
         for (const [user, format] of Object.entries(json.challengesFrom)) {

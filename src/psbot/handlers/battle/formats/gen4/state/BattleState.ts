@@ -4,6 +4,8 @@ import {ReadonlyTeam, Team} from "./Team";
 
 /** Readonly {@link BattleState} representation. */
 export interface ReadonlyBattleState {
+    /** Whether the battle has started. */
+    readonly started?: boolean;
     /** Team data. */
     readonly teams: {readonly [S in SideID]?: ReadonlyTeam};
     /** Global status conditions for the entire room. */
@@ -30,6 +32,8 @@ export interface ReadonlyBattleState {
 
 /** Holds all the data about a particular battle. */
 export class BattleState implements ReadonlyBattleState {
+    /** @override */
+    public started?: boolean;
     /** @override */
     public get teams(): {readonly [S in SideID]?: Team} {
         return this._teams;
@@ -62,7 +66,9 @@ export class BattleState implements ReadonlyBattleState {
     /** @override */
     public getTeam(side: SideID): Team {
         const team = this.tryGetTeam(side);
-        if (!team) throw new Error(`Unknown SideID '${side}'`);
+        if (!team) {
+            throw new Error(`Unknown SideID '${side}'`);
+        }
         return team;
     }
 
@@ -74,7 +80,9 @@ export class BattleState implements ReadonlyBattleState {
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void {
         for (const sideId in this._teams) {
-            if (!Object.hasOwnProperty.call(this._teams, sideId)) continue;
+            if (!Object.hasOwnProperty.call(this._teams, sideId)) {
+                continue;
+            }
             this._teams[sideId as SideID]?.preTurn();
         }
     }
@@ -83,7 +91,9 @@ export class BattleState implements ReadonlyBattleState {
     public postTurn(): void {
         this.status.postTurn();
         for (const sideId in this._teams) {
-            if (!Object.hasOwnProperty.call(this._teams, sideId)) continue;
+            if (!Object.hasOwnProperty.call(this._teams, sideId)) {
+                continue;
+            }
             this._teams[sideId as SideID]?.postTurn();
         }
     }
@@ -94,13 +104,20 @@ export class BattleState implements ReadonlyBattleState {
         const s = " ".repeat(indent);
         let res = `${s}status: ${this.status.toString()}`;
         for (const sideId in this._teams) {
-            if (!Object.hasOwnProperty.call(this._teams, sideId)) continue;
+            if (!Object.hasOwnProperty.call(this._teams, sideId)) {
+                continue;
+            }
             const team = this._teams[sideId as SideID];
             res += `\n${s}${sideId}`;
-            if (sideId === this.ourSide) res += "(us)";
+            if (sideId === this.ourSide) {
+                res += "(us)";
+            }
             res += ":";
-            if (!team) res += ` <empty>`;
-            else res += `\n${team.toString(indent + 4)}`;
+            if (!team) {
+                res += ` <empty>`;
+            } else {
+                res += `\n${team.toString(indent + 4)}`;
+            }
         }
         return res;
     }

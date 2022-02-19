@@ -5,8 +5,8 @@ import {setGracefulCleanup} from "tmp-promise";
 // For some reason eslint doesn't like gitignored source files.
 // eslint-disable-next-line node/no-unpublished-import
 import {latestModelFolder, logPath, modelsFolder} from "../config";
-import {Logger} from "../logging/Logger";
-import {ensureDir} from "../paths/ensureDir";
+import {Logger} from "../util/logging/Logger";
+import {ensureDir} from "../util/paths/ensureDir";
 import {episode} from "./episode";
 import {BatchPredictOptions, ModelWorker} from "./model/worker";
 import {Opponent} from "./play";

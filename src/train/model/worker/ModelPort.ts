@@ -1,6 +1,5 @@
 import {MessagePort} from "worker_threads";
 import {alloc} from "../../../buf";
-import {WrappedError} from "../../../errors/WrappedError";
 import {formats} from "../../../psbot/handlers/battle";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {Encoder} from "../../../psbot/handlers/battle/ai/encoder/Encoder";
@@ -8,6 +7,7 @@ import {
     policyAgent,
     PolicyType,
 } from "../../../psbot/handlers/battle/ai/policyAgent";
+import {WrappedError} from "../../../util/errors/WrappedError";
 import {
     ExperienceAgent,
     ExperienceAgentData,

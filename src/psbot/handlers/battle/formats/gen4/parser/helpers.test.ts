@@ -8,14 +8,13 @@ import {
     TypeName,
     Weather,
 } from "@pkmn/types";
-import {toIdName} from "../../../../../helpers";
 import {BattleAgent} from "../../../agent";
-import {BattleParser, BattleParserContext} from "../../../parser";
+import {toIdName} from "../../../helpers";
+import {BattleParser} from "../../../parser";
 import {
     startBattleParser,
     StartBattleParserArgs,
 } from "../../../parser/helpers";
-import * as unordered from "../../../parser/unordered";
 import {FormatType} from "../../formats";
 import * as dex from "../dex";
 import {smeargle} from "../state/switchOptions.test";
@@ -70,39 +69,6 @@ export function setupBattleParser<
         initParser(startArgs, parser, ...args);
 }
 
-/**
- * Creates a {@link ParserContext} initialization function for an
- * {@link unordered.Parser}.
- *
- * @template T Format type.
- * @template TArgs Parser ctor args, minus the {@link BattleParserContext} which
- * is filled in for the first parameter.
- * @template TResult Parser result. Wrapped into an array by
- * {@link unordered.parse}.
- * @param startArgs Arguments for starting the BattleParser.
- * @param parserCtor Function to create the unordered Parser.
- * @returns A function that initializes a {@link BattleParser} to evaluate the
- * unordered Parser, returning the parser's ParserContext.
- */
-export function setupUnorderedParser<
-    T extends FormatType = FormatType,
-    TArgs extends unknown[] = unknown[],
-    TResult = unknown,
->(
-    startArgs: StartBattleParserArgs<T>,
-    parserCtor: (
-        ctx: BattleParserContext<T>,
-        ...args: TArgs
-    ) => unordered.Parser<T, BattleAgent<T>, TResult>,
-): (...args: TArgs) => ParserContext<[] | [TResult]> {
-    return setupBattleParser(
-        startArgs,
-        // Create a BattleParser that evaluates the unordereed Parser.
-        async (ctx, ...args) =>
-            await unordered.parse(ctx, parserCtor(ctx, ...args)),
-    );
-}
-
 //#region Protocol helpers.
 
 // Match with protocol type names.
@@ -121,8 +87,12 @@ export function toIdent(
 
 export function toDetails(opt = smeargle): Protocol.PokemonDetails {
     const words = [dex.pokemon[opt.species]?.display ?? opt.species];
-    if (opt.level !== 100) words.push(`L${opt.level}`);
-    if (opt.gender !== "N") words.push(opt.gender);
+    if (opt.level !== 100) {
+        words.push(`L${opt.level}`);
+    }
+    if (opt.gender !== "N") {
+        words.push(opt.gender);
+    }
     return words.join(", ") as Protocol.PokemonDetails;
 }
 
@@ -137,9 +107,13 @@ export function toHPStatus(
     maxhp = 100,
     status?: string,
 ): Protocol.PokemonHPStatus {
-    if (hp === "faint") return "0 fnt" as Protocol.PokemonHPStatus;
+    if (hp === "faint") {
+        return "0 fnt" as Protocol.PokemonHPStatus;
+    }
     let s = `${hp}/${maxhp}`;
-    if (status) s += " " + status;
+    if (status) {
+        s += " " + status;
+    }
     return s as Protocol.PokemonHPStatus;
 }
 
@@ -147,6 +121,10 @@ export function toEffectName(name: string): Protocol.EffectName;
 export function toEffectName(
     id: string,
     type: "ability" | "item" | "move",
+): Protocol.EffectName;
+export function toEffectName(
+    nameOrId: string,
+    type?: "ability" | "item" | "move",
 ): Protocol.EffectName;
 export function toEffectName(
     id: string,
@@ -194,7 +172,7 @@ export function toTypes(...types: dex.Type[]): Protocol.Types {
 }
 
 export function toTypeName(type: dex.Type): TypeName {
-    return (type[0].toUpperCase() + type.substr(1)) as Capitalize<dex.Type>;
+    return (type[0].toUpperCase() + type.substring(1)) as Capitalize<dex.Type>;
 }
 
 export function toMessage(msg: string): Protocol.Message {
@@ -205,16 +183,12 @@ export function toWeather(weather: dex.WeatherType): Weather {
     return weather as Weather;
 }
 
-export function toFieldCondition(
-    effect: Exclude<dex.FieldEffectType, dex.WeatherType>,
-): FieldCondition {
-    return toMoveName(effect) as unknown as FieldCondition;
+export function toFieldCondition(id: string): FieldCondition {
+    return toMoveName(id) as unknown as FieldCondition;
 }
 
-export function toSideCondition(
-    effect: dex.TeamEffectType | dex.ImplicitTeamEffectType,
-): SideCondition {
-    return toMoveName(effect) as unknown as SideCondition;
+export function toSideCondition(id: string): SideCondition {
+    return toMoveName(id) as unknown as SideCondition;
 }
 
 export function toBoostIDs(...boosts: dex.BoostName[]): Protocol.BoostIDs {
@@ -227,6 +201,10 @@ export function toSide(side: SideID, username: string): Protocol.Side {
 
 export function toRequestJSON(obj: Protocol.Request): Protocol.RequestJSON {
     return JSON.stringify(obj) as Protocol.RequestJSON;
+}
+
+export function toSeed(seed: string): Protocol.Seed {
+    return seed as Protocol.Seed;
 }
 
 export function toUsername(username: string): Protocol.Username {

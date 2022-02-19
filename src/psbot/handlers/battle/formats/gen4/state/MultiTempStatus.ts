@@ -1,36 +1,40 @@
 import {pluralTurns} from "./utility";
 
-/** Readonly {@link VariableTempStatus} representation. */
-export interface ReadonlyVariableTempStatus<TStatusType extends string> {
+/** Readonly {@link MultiTempStatus} representation. */
+export interface ReadonlyMultiTempStatus<TStatusType extends string> {
     /** Whether this status is currently active and not `"none"`. */
     readonly isActive: boolean;
     /** Current status type. */
     readonly type: TStatusType | "none";
-    /** Whether this was status started by a called move. */
-    readonly called: boolean;
-    /** Current number of {@link VariableTempStatus.tick tick} calls. */
+    /** Current number of {@link MultiTempStatus.tick tick} calls. */
     readonly turns: number;
+    /** Whether the current status has infinite duration. */
+    readonly infinite: boolean;
+    /** Stores all the {@link TStatusType} keys for iterating. */
+    readonly map: {readonly [T in TStatusType]: unknown};
     /**
-     * Max amount of {@link VariableTempStatus.tick tick} calls the status will
-     * last. {@link VariableTempStatus.reset reset} should be called in place of
-     * the last {@link VariableTempStatus.tick tick} call.
+     * Max amount of {@link MultiTempStatus.tick tick} calls the status will
+     * last. {@link MultiTempStatus.reset reset} should be called in place of
+     * the last {@link MultiTempStatus.tick tick} call.
      */
     readonly duration: number;
-    /** Stores all the `TStatusType` keys for iterating. */
-    readonly map: {readonly [T in TStatusType]: unknown};
+    /**
+     * Whether {@link tick} will call {@link reset} if it hits the
+     * {@link duration} limit.
+     */
+    readonly silent: boolean;
 }
 
 /**
- * TempStatus whose duration depends on the type of status that's currently
- * active.
+ * TempStatus with different status types.
  *
  * Similar to a set of mutually exclusive TempStatuses.
  *
  * @template TStatusType String union of status types that this object can
  * represent. This excludes the `"none"` type, which is automatically added.
  */
-export class VariableTempStatus<TStatusType extends string>
-    implements ReadonlyVariableTempStatus<TStatusType>
+export class MultiTempStatus<TStatusType extends string>
+    implements ReadonlyMultiTempStatus<TStatusType>
 {
     /** @override */
     public get isActive(): boolean {
@@ -44,25 +48,25 @@ export class VariableTempStatus<TStatusType extends string>
     private _type: TStatusType | "none" = "none";
 
     /** @override */
-    public get called(): boolean {
-        return this._called;
-    }
-    private _called = false;
-
-    /** @override */
     public get turns(): number {
         return this._turns;
     }
     private _turns = 0;
 
+    /** @override */
+    public get infinite(): boolean {
+        return this._infinite;
+    }
+    private _infinite = false;
+
     /**
-     * Creates a VariableTempStatus.
+     * Creates a MultiTempStatus.
      *
      * @param map Used to provide type info.
      * @param duration Max amount of {@link tick} calls the status will last.
      * {@link reset} should be called in place of the last {@link tick} call.
      * @param silent Whether {@link tick} will call {@link reset} if it hits the
-     * duration limit.
+     * {@link duration} limit.
      */
     public constructor(
         public readonly map: {readonly [T in TStatusType]: unknown},
@@ -73,23 +77,26 @@ export class VariableTempStatus<TStatusType extends string>
     /** Resets status to `"none"`. */
     public reset(): void {
         this._type = "none";
-        this._called = false;
         this._turns = 0;
+        this._infinite = false;
     }
 
     /** Starts (or restarts) a status. */
-    public start(type: TStatusType, called = false): void {
+    public start(type: TStatusType, infinite = false): void {
         this._type = type;
-        this._called = called;
         this._turns = 0;
+        this._infinite = infinite;
     }
 
     /** Indicates that the status lasted another turn. */
     public tick(): void {
         // No need to increment turns if it's none.
         if (this._type === "none") return;
+        ++this._turns;
+
         // Went over duration.
-        if (++this._turns < this.duration) return;
+        if (this._infinite) return;
+        if (this._turns < this.duration) return;
         // Should've reset() on last tick() unless silent.
         if (this.silent) return this.reset();
         throw new Error(
@@ -102,9 +109,10 @@ export class VariableTempStatus<TStatusType extends string>
     /** Encodes status data into a log string. */
     public toString(): string {
         if (this._type === "none") return "inactive";
-        return (
-            pluralTurns(this._type, this._turns, this.duration) +
-            (this._called ? " (called)" : "")
+        return pluralTurns(
+            this._type,
+            this._turns,
+            this._infinite ? null : this.duration,
         );
     }
 }

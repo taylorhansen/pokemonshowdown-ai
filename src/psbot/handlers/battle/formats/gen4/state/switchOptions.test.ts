@@ -12,6 +12,8 @@ import {
 } from "../parser/helpers.test";
 import {SwitchOptions} from "./Team";
 
+// TODO: May need to move this to a separate folder or remove some members.
+
 /**
  * Options for switching in a Ditto for testing. Low level allows for
  * 100 hp so it can also be used as a percentage when using this for an

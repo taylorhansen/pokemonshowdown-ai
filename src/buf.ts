@@ -8,7 +8,9 @@
  * @param shared Whether to use a SharedArrayBuffer for the array.
  */
 export function alloc(size: number, shared = false): Float32Array {
-    if (!shared) return new Float32Array(size);
+    if (!shared) {
+        return new Float32Array(size);
+    }
     return new Float32Array(
         new SharedArrayBuffer(size * Float32Array.BYTES_PER_ELEMENT),
     );

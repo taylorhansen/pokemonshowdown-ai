@@ -1,6 +1,5 @@
 /** @file Defines the core BattleParser function type. */
-import {Logger} from "../../../../logging/Logger";
-import {Event} from "../../../parser";
+import {Logger} from "../../../../util/logging/Logger";
 import {BattleAgent, Choice} from "../agent";
 import {FormatType, State} from "../formats";
 import {EventIterator} from "./iterators";
@@ -45,8 +44,6 @@ export interface BattleParserContext<
     readonly sender: ChoiceSender;
     /** Battle state tracker. */
     readonly state: State<T>;
-    /** Optional filter over events. */
-    readonly filter?: (event: Event) => boolean;
 }
 
 /** Function type for sending a Choice to the game. */

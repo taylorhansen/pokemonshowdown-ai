@@ -54,8 +54,11 @@ export class MockPsServer {
                 this._lastQuery = new url.URLSearchParams(body);
                 switch (this._lastQuery.get("act")) {
                     case "getassertion":
-                        if (this.password) res.end(";");
-                        else res.end(this.assertion);
+                        if (this.password) {
+                            res.end(";");
+                        } else {
+                            res.end(this.assertion);
+                        }
                         break;
                     case "login":
                         if (

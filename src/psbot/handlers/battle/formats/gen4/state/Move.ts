@@ -4,7 +4,6 @@ import * as dex from "../dex";
 export interface ReadonlyMove {
     /** Move name. */
     readonly name: string;
-    // TODO: Use dex.Move wrapper instead of data.
     /** Move data. */
     readonly data: dex.MoveData;
     /** Amount of power points left on this move. */
@@ -53,9 +52,13 @@ export class Move implements ReadonlyMove {
         this.name = name;
         this.data = dex.moves[name];
 
-        if (maxpp === "min") [maxpp] = this.data.pp;
-        else if (maxpp === "max") [, maxpp] = this.data.pp;
-        else maxpp = Math.max(1, Math.min(maxpp, this.data.pp[1]));
+        if (maxpp === "min") {
+            [maxpp] = this.data.pp;
+        } else if (maxpp === "max") {
+            [, maxpp] = this.data.pp;
+        } else {
+            maxpp = Math.max(1, Math.min(maxpp, this.data.pp[1]));
+        }
         this.maxpp = maxpp;
         this.pp = pp === undefined ? maxpp : pp;
     }
@@ -67,7 +70,7 @@ export class Move implements ReadonlyMove {
      * @param info Optional. Extra info about this move that should be
      * displayed.
      */
-    public toString(info = ""): string {
+    public toString(info?: string): string {
         return (
             `${this.name}${info ? ` <${info}>` : ""} ` +
             `(${this._pp}/${this.maxpp})`

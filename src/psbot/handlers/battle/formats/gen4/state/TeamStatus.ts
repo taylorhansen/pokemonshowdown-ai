@@ -1,5 +1,4 @@
 import {FutureMove, futureMoveKeys, SelfSwitchType} from "../dex";
-import {ItemTempStatus, ReadonlyItemTempStatus} from "./ItemTempStatus";
 import {ReadonlyTempStatus, TempStatus} from "./TempStatus";
 
 /** Readonly {@link TeamStatus} representation. */
@@ -9,7 +8,7 @@ export interface ReadonlyTeamStatus {
     /** Healing Wish status. */
     readonly healingwish: boolean;
     /** Light Screen status. */
-    readonly lightscreen: ReadonlyItemTempStatus<"lightscreen">;
+    readonly lightscreen: ReadonlyTempStatus;
     /** Lucky Chant status. */
     readonly luckychant: ReadonlyTempStatus;
     /** Lunar Dance status. */
@@ -17,7 +16,7 @@ export interface ReadonlyTeamStatus {
     /** Mist status. */
     readonly mist: ReadonlyTempStatus;
     /** Reflect status. */
-    readonly reflect: ReadonlyItemTempStatus<"reflect">;
+    readonly reflect: ReadonlyTempStatus;
     /** Safeguard status. */
     readonly safeguard: ReadonlyTempStatus;
     /**
@@ -53,24 +52,16 @@ export class TeamStatus implements ReadonlyTeamStatus {
     public healingwish = false;
     // 5-8 turns, end on last.
     /** @override */
-    public readonly lightscreen = new ItemTempStatus(
-        [5, 8],
-        {lightscreen: "lightclay"},
-        "lightscreen",
-    );
+    public readonly lightscreen = new TempStatus("lightscreen", 8);
     /** @override */
-    public readonly luckychant = new TempStatus("lucky chant", 5);
+    public readonly luckychant = new TempStatus("luckychant", 5);
     /** @override */
     public lunardance = false;
     /** @override */
     public readonly mist = new TempStatus("mist", 5);
     // 5-8 turns, end on last.
     /** @override */
-    public readonly reflect = new ItemTempStatus(
-        [5, 8],
-        {reflect: "lightclay"},
-        "reflect",
-    );
+    public readonly reflect = new TempStatus("reflect", 8);
     // 5 turns, end on last.
     /** @override */
     public readonly safeguard = new TempStatus("safeguard", 5);

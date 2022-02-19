@@ -2,8 +2,8 @@
 import {Event} from "../../../parser";
 
 /**
- * Holds two corresponding iterators, one for sending BattleEvents and the
- * other for receiving them.
+ * Holds two corresponding iterators, one for sending BattleEvents and the other
+ * for receiving them.
  */
 export class IteratorPair {
     /** Event iterator for receiving events in a BattleParserContext. */
@@ -48,14 +48,19 @@ export class IteratorPair {
     /** Implementation for {@link EventIterator.next}. */
     private async eventNext(): Promise<IteratorResult<Event, void>> {
         // Indicate that we're receiving the next event
-        if (this.battleRes) this.battleRes(false /*done*/);
-        else this.battlePromise = Promise.resolve(false);
+        if (this.battleRes) {
+            this.battleRes(false /*done*/);
+        } else {
+            this.battlePromise = Promise.resolve(false);
+        }
 
         // Wait for a response or consume the cached response
         this.nextEventPromise ??= new Promise(
             (res, rej) => ([this.nextEventRes, this.nextEventRej] = [res, rej]),
         );
-        if (this.hasError) this.nextEventRej!(this.error);
+        if (this.hasError) {
+            this.nextEventRej!(this.error);
+        }
         const event = await this.nextEventPromise.finally(
             () =>
                 (this.nextEventPromise =
@@ -64,7 +69,9 @@ export class IteratorPair {
                         null),
         );
 
-        if (!event) return {value: undefined, done: true};
+        if (!event) {
+            return {value: undefined, done: true};
+        }
         return {value: event};
     }
 
@@ -74,12 +81,16 @@ export class IteratorPair {
         this.nextEventPromise ??= new Promise(
             (res, rej) => ([this.nextEventRes, this.nextEventRej] = [res, rej]),
         );
-        if (this.hasError) this.nextEventRej!(this.error);
+        if (this.hasError) {
+            this.nextEventRej!(this.error);
+        }
         const event = await this.nextEventPromise.finally(
             () => (this.nextEventRes = this.nextEventRej = null),
         );
 
-        if (!event) return {value: undefined, done: true};
+        if (!event) {
+            return {value: undefined, done: true};
+        }
         return {value: event};
     }
 
@@ -123,14 +134,19 @@ export class IteratorPair {
         event?: Event,
     ): Promise<IteratorResult<void, void>> {
         // Send the next event.
-        if (this.nextEventRes) this.nextEventRes(event);
-        else this.nextEventPromise = Promise.resolve(event);
+        if (this.nextEventRes) {
+            this.nextEventRes(event);
+        } else {
+            this.nextEventPromise = Promise.resolve(event);
+        }
 
         // Wait for a response or consume the cached response.
         this.battlePromise ??= new Promise(
             (res, rej) => ([this.battleRes, this.battleRej] = [res, rej]),
         );
-        if (this.error) this.battleRej!(this.error);
+        if (this.error) {
+            this.battleRej!(this.error);
+        }
         const done = await this.battlePromise.finally(
             () => (this.battlePromise = this.battleRes = this.battleRej = null),
         );

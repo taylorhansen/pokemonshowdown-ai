@@ -2,7 +2,9 @@ import * as fs from "fs";
 
 /** Ensures that a folder exists, creating intermediate folders if needed. */
 export async function ensureDir(path: fs.PathLike): Promise<void> {
-    if (!(await isDir(path))) return await mkdirRecursive(path);
+    if (!(await isDir(path))) {
+        return await mkdirRecursive(path);
+    }
 }
 
 /** Checks if given path is an existing directory. */

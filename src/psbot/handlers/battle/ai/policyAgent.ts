@@ -1,4 +1,4 @@
-import {Logger} from "../../../../logging/Logger";
+import {Logger} from "../../../../util/logging/Logger";
 import {BattleAgent} from "../agent/BattleAgent";
 import {Choice, choiceIds, intToChoice} from "../agent/Choice";
 import {FormatType, ReadonlyState} from "../formats/formats";
@@ -35,7 +35,9 @@ const sorters: {readonly [T in PolicyType]: Sorter} = {
         const choiceSet = new Set(choices);
         let j = 0;
         for (const choice of allChoices) {
-            if (choiceSet.has(choice)) choices[j++] = choice;
+            if (choiceSet.has(choice)) {
+                choices[j++] = choice;
+            }
         }
     },
 };

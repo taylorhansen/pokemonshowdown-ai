@@ -1,5 +1,5 @@
 import {Protocol} from "@pkmn/protocol";
-import {Logger} from "../../../logging/Logger";
+import {Logger} from "../../../util/logging/Logger";
 import {Sender} from "../../PsBot";
 import {Event} from "../../parser";
 import {RoomHandler} from "../RoomHandler";
@@ -97,7 +97,7 @@ export class BattleHandler<
     /**
      * Whether {@link handle} has parsed any relevant game events since the last
      * {@link halt} call. When this and {@link battling} are true, then we
-     * should expect a `|request|` event on the next {@link halt} call.
+     * should expect a `|request|` event before the next {@link halt} call.
      */
     private progress = false;
 
@@ -146,22 +146,32 @@ export class BattleHandler<
     public async handle(event: Event): Promise<void> {
         // Filter out irrelevant/non-battle events.
         // TODO: Should be gen-specific.
-        if (!BattleHandler.filter(event)) return;
+        if (!BattleHandler.filter(event)) {
+            return;
+        }
 
         // Game start.
-        if (event.args[0] === "start") this.battling = true;
+        if (event.args[0] === "start") {
+            this.battling = true;
+        }
         // Game over.
-        else if (["win", "tie"].includes(event.args[0])) this.battling = false;
+        else if (["win", "tie"].includes(event.args[0])) {
+            this.battling = false;
+        }
 
         // The next event we receive is treated as a response to the last call
         // to the choice sender function.
         if (event.args[0] === "request") {
             // Empty |request| event should be ignored.
-            if (!event.args[1]) return;
+            if (!event.args[1]) {
+                return;
+            }
             this.handleRequest(event as Event<"|request|">);
             // Use the first valid |request| event to also initialize during the
             // init phase of parsing.
-            if (this.battling) return;
+            if (this.battling) {
+                return;
+            }
         }
         if (event.args[0] === "error") {
             this.handleError(event as Event<"|error|">);
@@ -179,18 +189,24 @@ export class BattleHandler<
 
         // Process the game event normally.
         this.progress = true;
-        if ((await this.iter.next(event)).done) await this.finish();
+        if ((await this.iter.next(event)).done) {
+            await this.finish();
+        }
     }
 
     /** @override */
     public halt(): void {
         // After parsing a non-terminating block of game-progressing events, we
         // should've expected a |request| event to have come before that block.
-        if (!this.battling || !this.progress) return;
+        if (!this.battling || !this.progress) {
+            return;
+        }
         if (!this.pendingRequest) {
             throw new Error("No |request| event to process");
         }
-        if (this.decisionPromise) throw new Error("Already halted");
+        if (this.decisionPromise) {
+            throw new Error("Already halted");
+        }
 
         // Send the last saved |request| event to the BattleParser here.
         // This reordering allows us to treat |request| as an actual request for
@@ -211,7 +227,9 @@ export class BattleHandler<
      * game-over.
      */
     public async finish(): Promise<void> {
-        if (this.decisionPromise) await this.decisionPromise;
+        if (this.decisionPromise) {
+            await this.decisionPromise;
+        }
         await this.finishPromise;
     }
 
@@ -222,7 +240,20 @@ export class BattleHandler<
     }
 
     private handleRequest(event: Event<"|request|">): void {
-        if (this.pendingRequest) throw new Error("Unhandled |request| event");
+        if (this.pendingRequest) {
+            if (!this.unavailableChoice) {
+                // Same case as below if statement, except this also handles the
+                // case where an extra |request| is emitted to provide context
+                // to a rejected decision.
+                this.choiceSenderRes?.(false);
+                return;
+            }
+            throw new Error(
+                `Unhandled |request| event: pending rqid=${
+                    Protocol.parseRequest(this.pendingRequest.args[1]).rqid
+                }, new rqid=${Protocol.parseRequest(event.args[1]).rqid}`,
+            );
+        }
         this.pendingRequest = event;
 
         const {lastRequestEvent} = this;
@@ -258,7 +289,9 @@ export class BattleHandler<
             request.active[0]
         ) {
             this.choiceSenderRes?.("disabled");
-        } else this.choiceSenderRes?.(true);
+        } else {
+            this.choiceSenderRes?.(true);
+        }
 
         this.unavailableChoice = null;
     }
@@ -268,10 +301,13 @@ export class BattleHandler<
         if (reason.startsWith("[Unavailable choice] Can't ")) {
             // Rejected last choice based on unknown info.
             // Wait for another (guaranteed) request message before proceeding.
-            const s = reason.substr("[Unavailable choice] Can't ".length);
+            const s = reason.substring("[Unavailable choice] Can't ".length);
             // TODO: Does this distinction matter?
-            if (s.startsWith("move")) this.unavailableChoice = "move";
-            else if (s.startsWith("switch")) this.unavailableChoice = "switch";
+            if (s.startsWith("move")) {
+                this.unavailableChoice = "move";
+            } else if (s.startsWith("switch")) {
+                this.unavailableChoice = "switch";
+            }
             // Note: now that this info has been revealed, we should get an
             // updated |request| message.
         } else if (reason.startsWith("[Invalid choice]")) {
@@ -285,7 +321,9 @@ export class BattleHandler<
         event: Event<T>,
     ): boolean {
         const key = Protocol.key(event.args);
-        if (key === "|error|") return true;
+        if (key === "|error|") {
+            return true;
+        }
         if (!key || !Object.hasOwnProperty.call(allowedBattleArgs, key)) {
             return false;
         }
@@ -387,8 +425,7 @@ const allowedBattleArgs: {
     "|-fieldactivate|": true,
     "|-hint|": false,
     "|-center|": true,
-    // Only accept messages that are actually parsed.
-    "|-message|": event => allowedMinorMessages.includes(event.args[1]),
+    "|-message|": false,
     "|-combine|": true,
     "|-waiting|": true,
     "|-prepare|": true,
@@ -400,8 +437,3 @@ const allowedBattleArgs: {
     "|-ohko|": true,
     "|-candynamax|": true,
 };
-
-const allowedMinorMessages: readonly string[] = [
-    "Custap Berry activated.",
-    "Sleep Clause Mod activated.",
-];

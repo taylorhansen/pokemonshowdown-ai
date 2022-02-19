@@ -31,16 +31,6 @@ export const test = () =>
         });
 
         describe("#postTurn()", function () {
-            it("Should tick wish turns", function () {
-                status.wish.start();
-                expect(status.wish.turns).to.equal(0);
-                status.postTurn();
-                expect(status.wish.turns).to.equal(1);
-                status.postTurn();
-                expect(status.wish.isActive).to.be.false;
-                expect(status.wish.turns).to.equal(0);
-            });
-
             it("Should tick future move turns", function () {
                 status.futureMoves.futuresight.start();
                 expect(status.futureMoves.futuresight.turns).to.equal(0);
@@ -52,17 +42,14 @@ export const test = () =>
                 expect(status.futureMoves.futuresight.turns).to.equal(0);
             });
 
-            for (const type of ["lightscreen", "reflect"] as const) {
-                it(`Should tick ${type} turns`, function () {
-                    status[type].start(null /*source*/);
-                    expect(status[type].turns).to.equal(0);
-
-                    status.postTurn();
-                    expect(status[type].turns).to.equal(1);
-                });
-            }
-
-            for (const type of ["luckychant", "mist", "tailwind"] as const) {
+            for (const type of [
+                "lightscreen",
+                "luckychant",
+                "mist",
+                "reflect",
+                "safeguard",
+                "tailwind",
+            ] as const) {
                 it(`Should tick ${type} turns`, function () {
                     status[type].start();
                     expect(status[type].turns).to.equal(0);
@@ -71,5 +58,15 @@ export const test = () =>
                     expect(status[type].turns).to.equal(1);
                 });
             }
+
+            it("Should tick wish turns", function () {
+                status.wish.start();
+                expect(status.wish.turns).to.equal(0);
+                status.postTurn();
+                expect(status.wish.turns).to.equal(1);
+                status.postTurn();
+                expect(status.wish.isActive).to.be.false;
+                expect(status.wish.turns).to.equal(0);
+            });
         });
     });

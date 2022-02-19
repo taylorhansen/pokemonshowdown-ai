@@ -27,11 +27,12 @@ export class Hp implements ReadonlyHp {
      * @param max Optional max HP.
      */
     public set(current: number, max?: number): void {
-        if (max) this._max = max;
+        if (max) {
+            this._max = max;
+        }
         this._current = Math.min(Math.max(0, current), this._max);
     }
 
-    // istanbul ignore next: Only used for logging.
     /**
      * Encodes all HP data into a string.
      *

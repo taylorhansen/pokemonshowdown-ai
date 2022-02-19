@@ -1,7 +1,8 @@
 import {expect} from "chai";
 import "mocha";
 import * as dex from "../dex";
-import {PokemonTraits} from "./PokemonTraits";
+import {Moveset} from "./Moveset";
+import {StatTable} from "./StatTable";
 import {VolatileStatus} from "./VolatileStatus";
 
 export const test = () =>
@@ -12,13 +13,17 @@ export const test = () =>
             volatile = new VolatileStatus();
         });
 
+        const boost0 = Object.fromEntries(
+            dex.boostKeys.map(boost => [boost, 0]),
+        ) as dex.BoostTable<0>;
+
         describe("#clear()", function () {
             it("Should clear all statuses", function () {
                 setAllVolatiles(volatile);
                 volatile.clear();
 
                 expect(volatile.aquaring).to.be.false;
-                expect(volatile.boosts.atk).to.equal(0);
+                expect(volatile.boosts).to.deep.equal(boost0);
                 expect(volatile.confusion.isActive).to.be.false;
                 expect(volatile.curse).to.be.false;
                 expect(volatile.embargo.isActive).to.be.false;
@@ -39,11 +44,15 @@ export const test = () =>
 
                 expect(volatile.lastMove).to.be.null;
 
+                expect(volatile.species).to.be.empty;
+                expect(volatile.types).to.deep.equal(["???", "???"]);
+                expect(volatile.stats).to.be.null;
+                expect(volatile.ability).to.be.empty;
+                expect(volatile.moveset.isIsolated()).to.be.true;
+
                 expect(volatile.attract).to.be.false;
                 expect(volatile.bide.isActive).to.be.false;
                 expect(volatile.charge.isActive).to.be.false;
-                expect(volatile.choiceLock).to.be.null;
-                expect(volatile.damaged).to.be.false;
                 expect(volatile.defensecurl).to.be.false;
                 expect(volatile.destinybond).to.be.false;
                 expect(volatile.disabled.move).to.be.null;
@@ -60,12 +69,8 @@ export const test = () =>
                 expect(volatile.magiccoat).to.be.false;
                 expect(volatile.micleberry).to.be.false;
                 expect(volatile.minimize).to.be.false;
-                expect(volatile.mirrormove).to.be.null;
                 expect(volatile.mudsport).to.be.false;
                 expect(volatile.mustRecharge).to.be.false;
-                // TODO: Test private moveset link.
-                expect(volatile.overrideTraits).to.be.null;
-                expect(volatile.addedType).to.equal("???");
                 expect(volatile.rage).to.be.false;
                 expect(volatile.rollout.isActive).to.be.false;
                 expect(volatile.roost).to.be.false;
@@ -74,15 +79,22 @@ export const test = () =>
                 expect(volatile.stalling).to.be.false;
                 expect(volatile.stallTurns).to.equal(0);
                 expect(volatile.stockpile).to.equal(0);
-                expect(volatile.substituteBroken).to.be.null;
                 expect(volatile.taunt.isActive).to.be.false;
                 expect(volatile.torment).to.be.false;
                 expect(volatile.twoTurn.isActive).to.be.false;
-                expect(volatile.unburden).to.be.false;
                 expect(volatile.uproar.isActive).to.be.false;
                 expect(volatile.watersport).to.be.false;
                 expect(volatile.willTruant).to.be.false;
                 expect(volatile.yawn.isActive).to.be.false;
+            });
+        });
+
+        describe("#clearSelfSwitchPassable()", function () {
+            it("Should reset lastMove", function () {
+                setAllVolatiles(volatile);
+                volatile.clearSelfSwitchPassable();
+
+                expect(volatile.lastMove).to.be.null;
             });
         });
 
@@ -91,7 +103,7 @@ export const test = () =>
                 setAllVolatiles(volatile);
                 volatile.clearUnpassable();
 
-                // Passed.
+                // Passed, so preserved.
                 expect(volatile.aquaring).to.be.true;
                 expect(volatile.boosts.atk).to.equal(1);
                 expect(volatile.confusion.isActive).to.be.true;
@@ -115,12 +127,17 @@ export const test = () =>
                 expect(volatile.trapped).to.not.be.null;
                 expect(volatile.trapping).to.not.be.null;
 
-                // Not passed.
+                // Not passed, so reset.
+
+                expect(volatile.species).to.be.empty;
+                expect(volatile.types).to.deep.equal(["???", "???"]);
+                expect(volatile.stats).to.be.null;
+                expect(volatile.ability).to.be.empty;
+                expect(volatile.moveset.isIsolated()).to.be.true;
+
                 expect(volatile.attract).to.be.false;
                 expect(volatile.bide.isActive).to.be.false;
                 expect(volatile.charge.isActive).to.be.false;
-                expect(volatile.choiceLock).to.be.null;
-                expect(volatile.damaged).to.be.false;
                 expect(volatile.defensecurl).to.be.false;
                 expect(volatile.destinybond).to.be.false;
                 expect(volatile.disabled.move).to.be.null;
@@ -137,12 +154,8 @@ export const test = () =>
                 expect(volatile.magiccoat).to.be.false;
                 expect(volatile.micleberry).to.be.false;
                 expect(volatile.minimize).to.be.false;
-                expect(volatile.mirrormove).to.be.null;
                 expect(volatile.mudsport).to.be.false;
                 expect(volatile.mustRecharge).to.be.false;
-                // TODO: Test private moveset link.
-                expect(volatile.overrideTraits).to.be.null;
-                expect(volatile.addedType).to.equal("???");
                 expect(volatile.rage).to.be.false;
                 expect(volatile.rollout.isActive).to.be.false;
                 expect(volatile.roost).to.be.false;
@@ -151,11 +164,9 @@ export const test = () =>
                 expect(volatile.stalling).to.be.false;
                 expect(volatile.stallTurns).to.equal(0);
                 expect(volatile.stockpile).to.equal(0);
-                expect(volatile.substituteBroken).to.be.null;
                 expect(volatile.taunt.isActive).to.be.false;
                 expect(volatile.torment).to.be.false;
                 expect(volatile.twoTurn.isActive).to.be.false;
-                expect(volatile.unburden).to.be.false;
                 expect(volatile.uproar.isActive).to.be.false;
                 expect(volatile.watersport).to.be.false;
                 expect(volatile.willTruant).to.be.false;
@@ -354,11 +365,9 @@ export const test = () =>
 
                 if (field === "encore") {
                     it("Should reveal move", function () {
-                        expect(volatile.overrideMoveset.get("splash")).to.be
-                            .null;
+                        expect(volatile.moveset.get("splash")).to.be.null;
                         volatile[set]("splash");
-                        expect(volatile.overrideMoveset.get("splash")).to.not.be
-                            .null;
+                        expect(volatile.moveset.get("splash")).to.not.be.null;
                     });
                 }
             });
@@ -373,13 +382,7 @@ export const test = () =>
             });
         }
 
-        for (const type of [
-            "damaged",
-            "focus",
-            "magiccoat",
-            "roost",
-            "snatch",
-        ] as const) {
+        for (const type of ["focus", "magiccoat", "roost", "snatch"] as const) {
             describe(`#${type}`, function () {
                 it("Should reset on #postTurn()", function () {
                     volatile[type] = true;
@@ -429,10 +432,7 @@ export const test = () =>
 
         describe("#willTruant/#activateTruant()", function () {
             it("Should set #willTruant if ability is truant", function () {
-                volatile.overrideTraits = PokemonTraits.base(
-                    dex.pokemon["slaking"],
-                    100,
-                );
+                volatile.ability = "truant";
                 volatile.activateTruant();
                 expect(volatile.willTruant).to.be.true;
             });
@@ -445,10 +445,7 @@ export const test = () =>
             });
 
             it("Should toggle on #postTurn() if ability is truant", function () {
-                volatile.overrideTraits = PokemonTraits.base(
-                    dex.pokemon["slaking"],
-                    100,
-                );
+                volatile.ability = "truant";
                 volatile.activateTruant();
                 volatile.postTurn();
                 expect(volatile.willTruant).to.be.false;
@@ -509,7 +506,7 @@ export const test = () =>
         });
     });
 
-/** Sets every status in a VolatileStatus. */
+/** Sets every status for testing. */
 export function setAllVolatiles(volatile: VolatileStatus): void {
     volatile.aquaring = true;
     volatile.boosts.atk = 1;
@@ -530,11 +527,20 @@ export function setAllVolatiles(volatile: VolatileStatus): void {
     volatile.trap(new VolatileStatus());
     new VolatileStatus().trap(volatile);
 
+    volatile.lastMove = "spore";
+
+    volatile.species = "slaking";
+    volatile.types = ["normal", "???"];
+    volatile.stats = StatTable.base(dex.pokemon["slaking"], 100);
+    volatile.ability = "truant";
+    volatile.moveset.link(
+        new Moveset(dex.pokemon["slaking"].movepool),
+        "transform",
+    );
+
     volatile.attract = true;
     volatile.bide.start();
     volatile.charge.start();
-    volatile.choiceLock = "pound";
-    volatile.damaged = true;
     volatile.defensecurl = true;
     volatile.destinybond = true;
     volatile.disableMove("tackle");
@@ -545,18 +551,12 @@ export function setAllVolatiles(volatile: VolatileStatus): void {
     volatile.healblock.start();
     volatile.identified = "foresight";
     volatile.imprison = true;
-    volatile.lastMove = "spore";
     volatile.lockedMove.start("outrage");
     volatile.magiccoat = true;
     volatile.micleberry = true;
     volatile.minimize = true;
-    volatile.mirrormove = "watergun";
     volatile.mudsport = true;
     volatile.mustRecharge = true;
-    // TODO: Test private moveset link.
-    // Has truant ability.
-    volatile.overrideTraits = PokemonTraits.base(dex.pokemon["slaking"], 100);
-    volatile.addedType = "ice";
     volatile.rage = true;
     volatile.rollout.start("iceball");
     volatile.roost = true;
@@ -564,11 +564,9 @@ export function setAllVolatiles(volatile: VolatileStatus): void {
     volatile.snatch = true;
     volatile.stall(true);
     volatile.stockpile = 2;
-    volatile.substituteBroken = "tackle";
     volatile.taunt.start();
     volatile.torment = true;
     volatile.twoTurn.start("solarbeam");
-    volatile.unburden = true;
     volatile.uproar.start();
     volatile.watersport = true;
     volatile.activateTruant();

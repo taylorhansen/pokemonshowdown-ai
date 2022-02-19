@@ -1,9 +1,7 @@
-import {BattleParserContext} from "../../../parser";
-import {init} from "./init";
-import {turnLoop} from "./turnLoop";
+import {BattleParserContext, eventLoop} from "../../../parser";
+import {dispatch} from "./events";
 
 /** Main entry point for the gen4 parser. */
 export async function main(ctx: BattleParserContext<"gen4">): Promise<void> {
-    await init(ctx);
-    await turnLoop(ctx);
+    await eventLoop(ctx, dispatch);
 }

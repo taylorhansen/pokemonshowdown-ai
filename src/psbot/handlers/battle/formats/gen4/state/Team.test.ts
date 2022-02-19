@@ -2,21 +2,6 @@ import {expect} from "chai";
 import "mocha";
 import {SwitchOptions, Team} from "./Team";
 
-const options1: SwitchOptions = {
-    species: "magikarp",
-    level: 100,
-    gender: "M",
-    hp: 200,
-    hpMax: 200,
-};
-const options2: SwitchOptions = {
-    species: "porygon",
-    level: 100,
-    gender: "N",
-    hp: 300,
-    hpMax: 300,
-};
-
 export const test = () =>
     describe("Team", function () {
         let team: Team;
@@ -24,6 +9,21 @@ export const test = () =>
         beforeEach("Initialize Team", function () {
             team = new Team("p1");
         });
+
+        const options1: SwitchOptions = {
+            species: "magikarp",
+            level: 100,
+            gender: "M",
+            hp: 200,
+            hpMax: 200,
+        };
+        const options2: SwitchOptions = {
+            species: "porygon",
+            level: 100,
+            gender: "N",
+            hp: 300,
+            hpMax: 300,
+        };
 
         describe("#size", function () {
             // TODO: Test size clearing behavior.
@@ -45,7 +45,7 @@ export const test = () =>
         });
 
         describe("#switchIn()", function () {
-            it("Should not overflow team size", function () {
+            it("Should return null if full", function () {
                 team.size = 1;
 
                 expect(team.switchIn(options1)).to.not.equal(null);

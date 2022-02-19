@@ -2,28 +2,20 @@ import {expect} from "chai";
 import "mocha";
 import {allocUnsafe} from "../../../../../../buf";
 import {Encoder} from "../../../ai/encoder/Encoder";
-import {
-    limitedStatusTurns,
-    oneHotEncoder,
-    OneHotEncoderArgs,
-} from "../../../ai/encoder/helpers";
 import * as dex from "../dex";
 import {BattleState} from "../state/BattleState";
 import {Hp} from "../state/Hp";
-import {ItemTempStatus} from "../state/ItemTempStatus";
 import {MajorStatusCounter} from "../state/MajorStatusCounter";
 import {Move} from "../state/Move";
 import {Moveset} from "../state/Moveset";
+import {MultiTempStatus} from "../state/MultiTempStatus";
 import {Pokemon} from "../state/Pokemon";
-import {PokemonTraits} from "../state/PokemonTraits";
-import {PossibilityClass} from "../state/PossibilityClass";
 import {RoomStatus} from "../state/RoomStatus";
 import {StatRange} from "../state/StatRange";
 import {StatTable} from "../state/StatTable";
 import {SwitchOptions, Team} from "../state/Team";
 import {TeamStatus} from "../state/TeamStatus";
 import {TempStatus} from "../state/TempStatus";
-import {VariableTempStatus} from "../state/VariableTempStatus";
 import {VolatileStatus} from "../state/VolatileStatus";
 import {setAllVolatiles} from "../state/VolatileStatus.test";
 import * as encoders from "./encoders";
@@ -48,53 +40,6 @@ function allocNaN(size: number): Float32Array {
 
 export const test = () =>
     describe("encoders", function () {
-        describe("oneHot()", function () {
-            function testOneHot(
-                length: number,
-                args: OneHotEncoderArgs,
-            ): Float32Array {
-                const encoder = oneHotEncoder(length);
-                const arr = allocNaN(encoder.size);
-                encoder.encode(arr, args);
-                return arr;
-            }
-
-            it("Should encode class of values", function () {
-                expect(testOneHot(3, {id: 1})).to.deep.include([0, 1, 0]);
-            });
-
-            it("Should encode class of values with custom 1 and 0 values", function () {
-                expect(
-                    testOneHot(3, {id: 1, one: 10, zero: 3}),
-                ).to.deep.include([3, 10, 3]);
-            });
-
-            it("Should fill with 0s if index is null", function () {
-                expect(testOneHot(3, {id: null})).to.deep.include([0, 0, 0]);
-            });
-        });
-
-        describe("limitedStatusTurns()", function () {
-            it("Should return 1 if just started", function () {
-                expect(limitedStatusTurns(1, 5)).to.equal(1);
-            });
-
-            it("Should interpolate status turns", function () {
-                expect(limitedStatusTurns(2, 5)).to.equal(4 / 5);
-                expect(limitedStatusTurns(3, 5)).to.equal(3 / 5);
-                expect(limitedStatusTurns(4, 5)).to.equal(2 / 5);
-                expect(limitedStatusTurns(5, 5)).to.equal(1 / 5);
-            });
-
-            it("Should return 0 if no more turns left", function () {
-                expect(limitedStatusTurns(6, 5)).to.equal(0);
-            });
-
-            it("Should return 0 if over duration", function () {
-                expect(limitedStatusTurns(7, 5)).to.equal(0);
-            });
-        });
-
         interface CaseArgs<TState> {
             /** Optional name of the test case. */
             readonly name?: string;
@@ -102,7 +47,11 @@ export const test = () =>
             readonly encoder: Encoder<TState>;
             /** State initializer. */
             readonly init: () => TState;
-            /** Values to compare to the encoded values. */
+            /**
+             * Values to compare to the encoded values. If omitted, then the
+             * encoded values are just checked for `NaN`s and values outside the
+             * range `[-1, 1]`.
+             */
             values?: Float32Array;
         }
 
@@ -155,99 +104,161 @@ export const test = () =>
             });
         }
 
-        const map = {a: 0, b: 1, c: 2};
-        const pcEncoder = encoders.possibilityClassEncoder(["a", "b", "c"]);
+        const domain = ["a", "b", "c"];
+        const unknownKeyEncoder = encoders.unknownKeyEncoder(domain);
         testEncoder(
-            "PossibilityClass",
+            "unknownKeyEncoder",
             {
                 name: "Unnarrowed",
-                encoder: pcEncoder,
-                init: () => new PossibilityClass(map),
+                encoder: unknownKeyEncoder,
+                init: () => domain,
                 values: new Float32Array([1 / 3, 1 / 3, 1 / 3]),
             },
             {
+                name: "Partially narrowed",
+                encoder: unknownKeyEncoder,
+                init: () => ["b", "c"],
+                values: new Float32Array([0, 1 / 2, 1 / 2]),
+            },
+            {
                 name: "Fully narrowed",
-                encoder: pcEncoder,
-                init() {
-                    const pc = new PossibilityClass(map);
-                    pc.narrow("b");
-                    return pc;
-                },
+                encoder: unknownKeyEncoder,
+                init: () => ["b"],
                 values: new Float32Array([0, 1, 0]),
             },
             {
                 name: "Overnarrowed",
-                encoder: pcEncoder,
-                init() {
-                    const pc = new PossibilityClass(map);
-                    expect(() => pc.narrow()).to.throw(
-                        "All possibilities have been ruled out (should never happen)",
-                    );
-                    expect(pc.size).to.equal(0);
-                    return pc;
-                },
+                encoder: unknownKeyEncoder,
+                init: () => [],
                 values: new Float32Array([0, 0, 0]),
             },
         );
 
-        testEncoder("TempStatus", {
-            name: "Unset",
-            encoder: encoders.tempStatusEncoder,
-            init: () => new TempStatus("taunt", 5),
-        });
-
         testEncoder(
-            "ItemTempStatus",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.itemTempStatusEncoder(["reflect"]),
-                init() {
-                    const its = new ItemTempStatus([5, 8], {
-                        reflect: "lightclay",
-                    });
-                    const mon = new Pokemon("magikarp");
-                    its.start(mon, "reflect");
-                    return its;
-                },
-            },
-            {
-                name: "Fully Initialized + Extended",
-                encoder: encoders.itemTempStatusEncoder(["reflect"]),
-                init() {
-                    const its = new ItemTempStatus([5, 8], {
-                        reflect: "lightclay",
-                    });
-                    const mon = new Pokemon("magikarp");
-                    mon.setItem("lightclay");
-                    its.start(mon, "reflect");
-                    return its;
-                },
-            },
-            {
-                name: "Fully Initialized + Infinite",
-                encoder: encoders.itemTempStatusEncoder(["reflect"]),
-                init() {
-                    const its = new ItemTempStatus([5, 8], {
-                        reflect: "lightclay",
-                    });
-                    const mon = new Pokemon("magikarp");
-                    its.start(mon, "reflect", true /*infinite*/);
-                    return its;
-                },
-            },
+            "TempStatus",
             {
                 name: "Unset",
-                encoder: encoders.itemTempStatusEncoder(["reflect"]),
-                init: () => new ItemTempStatus([5, 8], {reflect: "lightclay"}),
-                values: new Float32Array([0, 0]),
+                encoder: encoders.tempStatusEncoder,
+                init: () => new TempStatus("x", 3),
+                values: new Float32Array([0]),
+            },
+            {
+                name: "Started",
+                encoder: encoders.tempStatusEncoder,
+                init() {
+                    const ts = new TempStatus("x", 3);
+                    ts.start();
+                    return ts;
+                },
+                values: new Float32Array([1]),
+            },
+            {
+                name: "Ticked",
+                encoder: encoders.tempStatusEncoder,
+                init() {
+                    const ts = new TempStatus("x", 3);
+                    ts.start();
+                    ts.tick();
+                    return ts;
+                },
+                values: new Float32Array([2 / 3]),
+            },
+            {
+                name: "Over duration",
+                encoder: encoders.tempStatusEncoder,
+                init() {
+                    const ts = new TempStatus("x", 3);
+                    ts.start();
+                    ts.tick();
+                    ts.tick();
+                    expect(() => ts.tick()).to.throw(
+                        Error,
+                        "TempStatus 'x' lasted longer than expected " +
+                            "(3/3 turns)",
+                    );
+                    return ts;
+                },
+                values: new Float32Array([0]),
             },
         );
 
-        testEncoder("VariableTempStatus", {
-            name: "Unset",
-            encoder: encoders.variableTempStatusEncoder(["x", "y"]),
-            init: () => new VariableTempStatus({x: 1, y: 2}, 5),
-        });
+        testEncoder(
+            "MultiTempStatus",
+            {
+                name: "Unset",
+                encoder: encoders.multiTempStatusEncoder(["x", "y", "z"]),
+                init: () => new MultiTempStatus({x: true, y: true, z: true}, 3),
+                values: new Float32Array([0, 0, 0]),
+            },
+            {
+                name: "Started",
+                encoder: encoders.multiTempStatusEncoder(["x", "y", "z"]),
+                init() {
+                    const mts = new MultiTempStatus(
+                        {x: true, y: true, z: true},
+                        3,
+                    );
+                    mts.start("y");
+                    return mts;
+                },
+                values: new Float32Array([0, 1, 0]),
+            },
+            {
+                name: "Ticked",
+                encoder: encoders.multiTempStatusEncoder(["x", "y", "z"]),
+                init() {
+                    const mts = new MultiTempStatus(
+                        {x: true, y: true, z: true},
+                        3,
+                    );
+                    mts.start("z");
+                    mts.tick();
+                    return mts;
+                },
+                values: new Float32Array([0, 0, 2 / 3]),
+            },
+            {
+                name: "Started + Infinite",
+                encoder: encoders.multiTempStatusEncoder(["x", "y", "z"]),
+                init() {
+                    const mts = new MultiTempStatus(
+                        {x: true, y: true, z: true},
+                        3,
+                    );
+                    mts.start("x", true /*infinite*/);
+                    mts.tick();
+                    return mts;
+                },
+                values: new Float32Array([1, 0, 0]),
+            },
+        );
+
+        testEncoder(
+            "typesEncoder",
+            {
+                name: "Typeless",
+                encoder: encoders.typesEncoder,
+                init: () => ["???", "???"] as dex.Type[],
+                values: new Float32Array(dex.typeKeys.length - 1).fill(0),
+            },
+            {
+                name: "One Type",
+                encoder: encoders.typesEncoder,
+                init: () => ["fire", "???"] as dex.Type[],
+                values: new Float32Array(dex.typeKeys.length - 1)
+                    .fill(0)
+                    .fill(1, dex.types.fire, dex.types.fire + 1),
+            },
+            {
+                name: "Two Types",
+                encoder: encoders.typesEncoder,
+                init: () => ["normal", "flying"] as dex.Type[],
+                values: new Float32Array(dex.typeKeys.length - 1)
+                    .fill(0)
+                    .fill(1, dex.types.normal, dex.types.normal + 1)
+                    .fill(1, dex.types.flying, dex.types.flying + 1),
+            },
+        );
 
         testEncoder(
             "StatRange",
@@ -295,79 +306,6 @@ export const test = () =>
         );
 
         testEncoder(
-            "PokemonTraits",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.pokemonTraitsEncoder,
-                init: () => ({
-                    traits: PokemonTraits.base(dex.pokemon["magikarp"], 100),
-                }),
-            },
-            {
-                name: "Added Type",
-                encoder: encoders.pokemonTraitsEncoder,
-                init: () => ({
-                    traits: PokemonTraits.base(dex.pokemon["magikarp"], 100),
-                    addedType: "fire" as const,
-                }),
-            },
-            {
-                name: "Unrevealed",
-                encoder: encoders.unknownPokemonTraitsEncoder,
-                init: () => null,
-            },
-            {
-                name: "Nonexistent",
-                encoder: encoders.emptyPokemonTraitsEncoder,
-                init: () => undefined,
-            },
-        );
-
-        testEncoder(
-            "VolatileStatus",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.volatileStatusEncoder,
-                init() {
-                    const v = new VolatileStatus();
-                    v.overrideTraits = PokemonTraits.base(
-                        dex.pokemon["magikarp"],
-                        100,
-                    );
-                    return v;
-                },
-            },
-            {
-                name: "Everything Set",
-                encoder: encoders.volatileStatusEncoder,
-                init() {
-                    const v = new VolatileStatus();
-                    setAllVolatiles(v);
-                    return v;
-                },
-            },
-        );
-
-        testEncoder(
-            "MajorStatusCounter",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.majorStatusCounterEncoder,
-                init: () => new MajorStatusCounter(),
-            },
-            {
-                name: "Unrevealed",
-                encoder: encoders.unknownMajorStatusCounterEncoder,
-                init: () => null,
-            },
-            {
-                name: "Nonexistent",
-                encoder: encoders.emptyMajorStatusCounterEncoder,
-                init: () => undefined,
-            },
-        );
-
-        testEncoder(
             "Move",
             {
                 name: "Fully Initialized",
@@ -384,8 +322,7 @@ export const test = () =>
                 encoder: encoders.constrainedMoveEncoder,
                 init: (): encoders.ConstrainedMoveArgs => ({
                     move: "constrained",
-                    constraint: {tackle: 2, splash: 1},
-                    total: 3,
+                    constraint: new Set(["tackle", "splash"]),
                 }),
             },
             {
@@ -412,7 +349,6 @@ export const test = () =>
                         3,
                     );
                     moveset.reveal("splash");
-                    moveset.addMoveSlotConstraint(["tackle", "metronome"]);
                     return moveset;
                 },
             },
@@ -462,6 +398,48 @@ export const test = () =>
                 encoder: encoders.emptyHpEncoder,
                 init: () => undefined,
                 values: new Float32Array([-1, -1]),
+            },
+        );
+
+        testEncoder(
+            "MajorStatusCounter",
+            {
+                name: "Fully Initialized",
+                encoder: encoders.majorStatusCounterEncoder,
+                init: () => new MajorStatusCounter(),
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.unknownMajorStatusCounterEncoder,
+                init: () => null,
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.emptyMajorStatusCounterEncoder,
+                init: () => undefined,
+            },
+        );
+
+        testEncoder(
+            "VolatileStatus",
+            {
+                name: "Fully Initialized",
+                encoder: encoders.volatileStatusEncoder,
+                init() {
+                    const vs = new VolatileStatus();
+                    vs.species = "magikarp";
+                    vs.stats = StatTable.base(dex.pokemon["magikarp"], 100);
+                    return vs;
+                },
+            },
+            {
+                name: "Everything Set",
+                encoder: encoders.volatileStatusEncoder,
+                init() {
+                    const v = new VolatileStatus();
+                    setAllVolatiles(v);
+                    return v;
+                },
             },
         );
 

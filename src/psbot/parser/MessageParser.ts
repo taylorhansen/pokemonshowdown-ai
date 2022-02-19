@@ -1,6 +1,6 @@
 import {Transform, TransformCallback} from "stream";
 import {Protocol} from "@pkmn/protocol";
-import {Logger} from "../../logging/Logger";
+import {Logger} from "../../util/logging/Logger";
 import {HaltEvent, RoomEvent} from "./Event";
 
 /**

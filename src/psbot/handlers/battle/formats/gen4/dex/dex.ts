@@ -3,7 +3,6 @@
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
 import * as dex from "./dex-util";
-import * as wrappers from "./wrappers";
 
 /**
  * Contains {@link dex.PokemonData info} about each species, with alternate
@@ -43768,466 +43767,106 @@ export const pokemonKeys: readonly string[] = [
     "zubat",
 ];
 
-/** Memoization of {@link getAbility}. */
-const abilityMemo = new Map<dex.AbilityData, wrappers.Ability>();
-
-/**
- * Gets or creates a {@link dex.AbilityData} wrapper.
- *
- * @param data Data to wrap.
- * @returns The wrapper.
- */
-export function getAbility(data: dex.AbilityData): wrappers.Ability;
-/**
- * Gets or creates a {@link dex.AbilityData} wrapper.
- *
- * @param name Name of the {@link dex.AbilityData}.
- * @returns A {@link dex.AbilityData} wrapper, or `null` if not found in
- * {@link abilities}.
- */
-export function getAbility(name: string): wrappers.Ability | null;
-export function getAbility(
-    name: string | dex.AbilityData,
-): wrappers.Ability | null {
-    if (typeof name === "string") {
-        if (!Object.hasOwnProperty.call(abilities, name)) return null;
-        name = abilities[name];
-    }
-    let result = abilityMemo.get(name);
-    if (!result) abilityMemo.set(name, (result = new wrappers.Ability(name)));
-    return result;
-}
-
 /** Contains {@link dex.AbilityData info} about each ability. */
 export const abilities: {readonly [name: string]: dex.AbilityData} = {
     adaptability: {uid: 0, name: "adaptability", display: "Adaptability"},
-    aftermath: {
-        uid: 1,
-        name: "aftermath",
-        display: "Aftermath",
-        on: {moveContactKo: {explosive: true, percentDamage: -25}},
-    },
-    airlock: {
-        uid: 2,
-        name: "airlock",
-        display: "Air Lock",
-        flags: {suppressWeather: true},
-    },
+    aftermath: {uid: 1, name: "aftermath", display: "Aftermath"},
+    airlock: {uid: 2, name: "airlock", display: "Air Lock"},
     angerpoint: {uid: 3, name: "angerpoint", display: "Anger Point"},
-    anticipation: {
-        uid: 4,
-        name: "anticipation",
-        display: "Anticipation",
-        on: {start: {anticipate: true}},
-    },
+    anticipation: {uid: 4, name: "anticipation", display: "Anticipation"},
     arenatrap: {uid: 5, name: "arenatrap", display: "Arena Trap"},
-    baddreams: {
-        uid: 6,
-        name: "baddreams",
-        display: "Bad Dreams",
-        on: {
-            residual: {
-                damageFoes: {statusTypes: ["slp"], percentDamage: -12.5},
-            },
-        },
-    },
+    baddreams: {uid: 6, name: "baddreams", display: "Bad Dreams"},
     battlearmor: {uid: 7, name: "battlearmor", display: "Battle Armor"},
     blaze: {uid: 8, name: "blaze", display: "Blaze"},
     chlorophyll: {uid: 9, name: "chlorophyll", display: "Chlorophyll"},
-    clearbody: {
-        uid: 10,
-        name: "clearbody",
-        display: "Clear Body",
-        on: {
-            tryUnboost: {
-                block: {
-                    atk: true,
-                    def: true,
-                    spa: true,
-                    spd: true,
-                    spe: true,
-                    accuracy: true,
-                    evasion: true,
-                },
-            },
-        },
-    },
-    cloudnine: {
-        uid: 11,
-        name: "cloudnine",
-        display: "Cloud Nine",
-        flags: {suppressWeather: true},
-    },
-    colorchange: {
-        uid: 12,
-        name: "colorchange",
-        display: "Color Change",
-        on: {moveDamage: {changeToMoveType: true}},
-    },
+    clearbody: {uid: 10, name: "clearbody", display: "Clear Body"},
+    cloudnine: {uid: 11, name: "cloudnine", display: "Cloud Nine"},
+    colorchange: {uid: 12, name: "colorchange", display: "Color Change"},
     compoundeyes: {uid: 13, name: "compoundeyes", display: "Compound Eyes"},
-    cutecharm: {
-        uid: 14,
-        name: "cutecharm",
-        display: "Cute Charm",
-        on: {moveContact: {chance: 30, status: ["attract"]}},
-    },
-    damp: {
-        uid: 15,
-        name: "damp",
-        display: "Damp",
-        on: {block: {effect: {explosive: true}}},
-    },
-    download: {
-        uid: 16,
-        name: "download",
-        display: "Download",
-        on: {start: {boost: {self: "download"}}},
-    },
-    drizzle: {
-        uid: 17,
-        name: "drizzle",
-        display: "Drizzle",
-        on: {start: {weather: "RainDance"}},
-    },
-    drought: {
-        uid: 18,
-        name: "drought",
-        display: "Drought",
-        on: {start: {weather: "SunnyDay"}},
-    },
-    dryskin: {
-        uid: 19,
-        name: "dryskin",
-        display: "Dry Skin",
-        on: {
-            block: {move: {type: "water", percentDamage: 25}},
-            weather: {
-                SunnyDay: {percentDamage: -12.5},
-                RainDance: {percentDamage: 12.5},
-            },
-        },
-    },
+    cutecharm: {uid: 14, name: "cutecharm", display: "Cute Charm"},
+    damp: {uid: 15, name: "damp", display: "Damp"},
+    download: {uid: 16, name: "download", display: "Download"},
+    drizzle: {uid: 17, name: "drizzle", display: "Drizzle"},
+    drought: {uid: 18, name: "drought", display: "Drought"},
+    dryskin: {uid: 19, name: "dryskin", display: "Dry Skin"},
     earlybird: {uid: 20, name: "earlybird", display: "Early Bird"},
-    effectspore: {
-        uid: 21,
-        name: "effectspore",
-        display: "Effect Spore",
-        on: {moveContact: {chance: 30, status: ["par", "psn", "slp"]}},
-    },
+    effectspore: {uid: 21, name: "effectspore", display: "Effect Spore"},
     filter: {uid: 22, name: "filter", display: "Filter"},
-    flamebody: {
-        uid: 23,
-        name: "flamebody",
-        display: "Flame Body",
-        on: {moveContact: {chance: 30, status: ["brn"]}},
-    },
-    flashfire: {
-        uid: 24,
-        name: "flashfire",
-        display: "Flash Fire",
-        on: {block: {move: {type: "fire", status: "flashfire"}}},
-    },
+    flamebody: {uid: 23, name: "flamebody", display: "Flame Body"},
+    flashfire: {uid: 24, name: "flashfire", display: "Flash Fire"},
     flowergift: {uid: 25, name: "flowergift", display: "Flower Gift"},
-    forecast: {
-        uid: 26,
-        name: "forecast",
-        display: "Forecast",
-        on: {update: {forecast: true}},
-        flags: {noCopy: true},
-    },
-    forewarn: {
-        uid: 27,
-        name: "forewarn",
-        display: "Forewarn",
-        on: {start: {warnStrongestMove: true}},
-    },
-    frisk: {
-        uid: 28,
-        name: "frisk",
-        display: "Frisk",
-        on: {start: {revealItem: true}},
-    },
-    gluttony: {
-        uid: 29,
-        name: "gluttony",
-        display: "Gluttony",
-        flags: {earlyBerry: true},
-    },
+    forecast: {uid: 26, name: "forecast", display: "Forecast"},
+    forewarn: {uid: 27, name: "forewarn", display: "Forewarn"},
+    frisk: {uid: 28, name: "frisk", display: "Frisk"},
+    gluttony: {uid: 29, name: "gluttony", display: "Gluttony"},
     guts: {uid: 30, name: "guts", display: "Guts"},
     heatproof: {uid: 31, name: "heatproof", display: "Heatproof"},
     honeygather: {uid: 32, name: "honeygather", display: "Honey Gather"},
     hugepower: {uid: 33, name: "hugepower", display: "Huge Power"},
     hustle: {uid: 34, name: "hustle", display: "Hustle"},
-    hydration: {
-        uid: 35,
-        name: "hydration",
-        display: "Hydration",
-        on: {weather: {RainDance: {cure: true}}},
-        statusImmunity: {
-            brn: true,
-            par: true,
-            psn: true,
-            tox: true,
-            slp: true,
-            frz: true,
-        },
-    },
-    hypercutter: {
-        uid: 36,
-        name: "hypercutter",
-        display: "Hyper Cutter",
-        on: {tryUnboost: {block: {atk: true}}},
-    },
-    icebody: {
-        uid: 37,
-        name: "icebody",
-        display: "Ice Body",
-        on: {weather: {Hail: {percentDamage: 6.25}}},
-        weatherImmunity: "Hail",
-    },
+    hydration: {uid: 35, name: "hydration", display: "Hydration"},
+    hypercutter: {uid: 36, name: "hypercutter", display: "Hyper Cutter"},
+    icebody: {uid: 37, name: "icebody", display: "Ice Body"},
     illuminate: {uid: 38, name: "illuminate", display: "Illuminate"},
-    immunity: {
-        uid: 39,
-        name: "immunity",
-        display: "Immunity",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {psn: true, tox: true},
-    },
+    immunity: {uid: 39, name: "immunity", display: "Immunity"},
     innerfocus: {uid: 40, name: "innerfocus", display: "Inner Focus"},
-    insomnia: {
-        uid: 41,
-        name: "insomnia",
-        display: "Insomnia",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {slp: true},
-    },
-    intimidate: {
-        uid: 42,
-        name: "intimidate",
-        display: "Intimidate",
-        on: {start: {boost: {foes: {atk: -1}}}},
-    },
+    insomnia: {uid: 41, name: "insomnia", display: "Insomnia"},
+    intimidate: {uid: 42, name: "intimidate", display: "Intimidate"},
     ironfist: {uid: 43, name: "ironfist", display: "Iron Fist"},
-    keeneye: {
-        uid: 44,
-        name: "keeneye",
-        display: "Keen Eye",
-        on: {tryUnboost: {block: {accuracy: true}}},
-    },
-    klutz: {
-        uid: 45,
-        name: "klutz",
-        display: "Klutz",
-        flags: {ignoreItem: true},
-    },
-    leafguard: {
-        uid: 46,
-        name: "leafguard",
-        display: "Leaf Guard",
-        on: {block: {status: "SunnyDay"}},
-        statusImmunity: {
-            brn: "silent",
-            par: "silent",
-            psn: "silent",
-            tox: "silent",
-            slp: "silent",
-            frz: "silent",
-            yawn: true,
-        },
-    },
-    levitate: {
-        uid: 47,
-        name: "levitate",
-        display: "Levitate",
-        on: {block: {move: {type: "ground"}}},
-    },
+    keeneye: {uid: 44, name: "keeneye", display: "Keen Eye"},
+    klutz: {uid: 45, name: "klutz", display: "Klutz"},
+    leafguard: {uid: 46, name: "leafguard", display: "Leaf Guard"},
+    levitate: {uid: 47, name: "levitate", display: "Levitate"},
     lightningrod: {uid: 48, name: "lightningrod", display: "Lightning Rod"},
-    limber: {
-        uid: 49,
-        name: "limber",
-        display: "Limber",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {par: true},
-    },
-    liquidooze: {
-        uid: 50,
-        name: "liquidooze",
-        display: "Liquid Ooze",
-        on: {drain: {invert: true}},
-    },
-    magicguard: {
-        uid: 51,
-        name: "magicguard",
-        display: "Magic Guard",
-        flags: {noIndirectDamage: true},
-    },
-    magmaarmor: {
-        uid: 52,
-        name: "magmaarmor",
-        display: "Magma Armor",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {frz: true},
-    },
+    limber: {uid: 49, name: "limber", display: "Limber"},
+    liquidooze: {uid: 50, name: "liquidooze", display: "Liquid Ooze"},
+    magicguard: {uid: 51, name: "magicguard", display: "Magic Guard"},
+    magmaarmor: {uid: 52, name: "magmaarmor", display: "Magma Armor"},
     magnetpull: {uid: 53, name: "magnetpull", display: "Magnet Pull"},
     marvelscale: {uid: 54, name: "marvelscale", display: "Marvel Scale"},
     minus: {uid: 55, name: "minus", display: "Minus"},
-    moldbreaker: {
-        uid: 56,
-        name: "moldbreaker",
-        display: "Mold Breaker",
-        on: {start: {ignoreTargetAbility: true}},
-    },
-    motordrive: {
-        uid: 57,
-        name: "motordrive",
-        display: "Motor Drive",
-        on: {block: {move: {type: "electric", boost: {spe: 1}}}},
-    },
-    multitype: {
-        uid: 58,
-        name: "multitype",
-        display: "Multitype",
-        flags: {noCopy: true},
-    },
-    naturalcure: {
-        uid: 59,
-        name: "naturalcure",
-        display: "Natural Cure",
-        on: {switchOut: {cure: true}},
-    },
+    moldbreaker: {uid: 56, name: "moldbreaker", display: "Mold Breaker"},
+    motordrive: {uid: 57, name: "motordrive", display: "Motor Drive"},
+    multitype: {uid: 58, name: "multitype", display: "Multitype"},
+    naturalcure: {uid: 59, name: "naturalcure", display: "Natural Cure"},
     noguard: {uid: 60, name: "noguard", display: "No Guard"},
     normalize: {uid: 61, name: "normalize", display: "Normalize"},
-    oblivious: {
-        uid: 62,
-        name: "oblivious",
-        display: "Oblivious",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {attract: true},
-    },
+    oblivious: {uid: 62, name: "oblivious", display: "Oblivious"},
     overgrow: {uid: 63, name: "overgrow", display: "Overgrow"},
-    owntempo: {
-        uid: 64,
-        name: "owntempo",
-        display: "Own Tempo",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {confusion: true},
-    },
+    owntempo: {uid: 64, name: "owntempo", display: "Own Tempo"},
     pickup: {uid: 65, name: "pickup", display: "Pickup"},
     plus: {uid: 66, name: "plus", display: "Plus"},
     poisonheal: {uid: 67, name: "poisonheal", display: "Poison Heal"},
-    poisonpoint: {
-        uid: 68,
-        name: "poisonpoint",
-        display: "Poison Point",
-        on: {moveContact: {chance: 30, status: ["psn"]}},
-    },
-    pressure: {
-        uid: 69,
-        name: "pressure",
-        display: "Pressure",
-        on: {start: {extraPpUsage: true}},
-    },
+    poisonpoint: {uid: 68, name: "poisonpoint", display: "Poison Point"},
+    pressure: {uid: 69, name: "pressure", display: "Pressure"},
     purepower: {uid: 70, name: "purepower", display: "Pure Power"},
     quickfeet: {uid: 71, name: "quickfeet", display: "Quick Feet"},
-    raindish: {
-        uid: 72,
-        name: "raindish",
-        display: "Rain Dish",
-        on: {weather: {RainDance: {percentDamage: 6.25}}},
-    },
+    raindish: {uid: 72, name: "raindish", display: "Rain Dish"},
     reckless: {uid: 73, name: "reckless", display: "Reckless"},
     rivalry: {uid: 74, name: "rivalry", display: "Rivalry"},
-    rockhead: {
-        uid: 75,
-        name: "rockhead",
-        display: "Rock Head",
-        flags: {noIndirectDamage: "recoil"},
-    },
-    roughskin: {
-        uid: 76,
-        name: "roughskin",
-        display: "Rough Skin",
-        on: {moveContact: {percentDamage: -6.25}},
-    },
+    rockhead: {uid: 75, name: "rockhead", display: "Rock Head"},
+    roughskin: {uid: 76, name: "roughskin", display: "Rough Skin"},
     runaway: {uid: 77, name: "runaway", display: "Run Away"},
-    sandstream: {
-        uid: 78,
-        name: "sandstream",
-        display: "Sand Stream",
-        on: {start: {weather: "Sandstorm"}},
-    },
-    sandveil: {
-        uid: 79,
-        name: "sandveil",
-        display: "Sand Veil",
-        weatherImmunity: "Sandstorm",
-    },
+    sandstream: {uid: 78, name: "sandstream", display: "Sand Stream"},
+    sandveil: {uid: 79, name: "sandveil", display: "Sand Veil"},
     scrappy: {uid: 80, name: "scrappy", display: "Scrappy"},
     serenegrace: {uid: 81, name: "serenegrace", display: "Serene Grace"},
     shadowtag: {uid: 82, name: "shadowtag", display: "Shadow Tag"},
-    shedskin: {
-        uid: 83,
-        name: "shedskin",
-        display: "Shed Skin",
-        on: {residual: {chance: 33, cure: true}},
-        statusImmunity: {
-            brn: true,
-            par: true,
-            psn: true,
-            tox: true,
-            slp: true,
-            frz: true,
-        },
-    },
+    shedskin: {uid: 83, name: "shedskin", display: "Shed Skin"},
     shellarmor: {uid: 84, name: "shellarmor", display: "Shell Armor"},
     shielddust: {uid: 85, name: "shielddust", display: "Shield Dust"},
     simple: {uid: 86, name: "simple", display: "Simple"},
-    skilllink: {
-        uid: 87,
-        name: "skilllink",
-        display: "Skill Link",
-        flags: {maxMultihit: true},
-    },
-    slowstart: {
-        uid: 88,
-        name: "slowstart",
-        display: "Slow Start",
-        on: {start: {status: {self: ["slowstart"]}}},
-    },
+    skilllink: {uid: 87, name: "skilllink", display: "Skill Link"},
+    slowstart: {uid: 88, name: "slowstart", display: "Slow Start"},
     sniper: {uid: 89, name: "sniper", display: "Sniper"},
-    snowcloak: {
-        uid: 90,
-        name: "snowcloak",
-        display: "Snow Cloak",
-        weatherImmunity: "Hail",
-    },
-    snowwarning: {
-        uid: 91,
-        name: "snowwarning",
-        display: "Snow Warning",
-        on: {start: {weather: "Hail"}},
-    },
-    solarpower: {
-        uid: 92,
-        name: "solarpower",
-        display: "Solar Power",
-        on: {weather: {SunnyDay: {percentDamage: -12.5}}},
-    },
+    snowcloak: {uid: 90, name: "snowcloak", display: "Snow Cloak"},
+    snowwarning: {uid: 91, name: "snowwarning", display: "Snow Warning"},
+    solarpower: {uid: 92, name: "solarpower", display: "Solar Power"},
     solidrock: {uid: 93, name: "solidrock", display: "Solid Rock"},
     soundproof: {uid: 94, name: "soundproof", display: "Soundproof"},
-    speedboost: {
-        uid: 95,
-        name: "speedboost",
-        display: "Speed Boost",
-        on: {residual: {boost: {spe: 1}}},
-    },
+    speedboost: {uid: 95, name: "speedboost", display: "Speed Boost"},
     stall: {uid: 96, name: "stall", display: "Stall"},
-    static: {
-        uid: 97,
-        name: "static",
-        display: "Static",
-        on: {moveContact: {chance: 30, status: ["par"]}},
-    },
+    static: {uid: 97, name: "static", display: "Static"},
     steadfast: {uid: 98, name: "steadfast", display: "Steadfast"},
     stench: {uid: 99, name: "stench", display: "Stench"},
     stickyhold: {uid: 100, name: "stickyhold", display: "Sticky Hold"},
@@ -44243,66 +43882,16 @@ export const abilities: {readonly [name: string]: dex.AbilityData} = {
     thickfat: {uid: 110, name: "thickfat", display: "Thick Fat"},
     tintedlens: {uid: 111, name: "tintedlens", display: "Tinted Lens"},
     torrent: {uid: 112, name: "torrent", display: "Torrent"},
-    trace: {
-        uid: 113,
-        name: "trace",
-        display: "Trace",
-        on: {update: {copyFoeAbility: true}},
-        flags: {noCopy: true},
-    },
+    trace: {uid: 113, name: "trace", display: "Trace"},
     truant: {uid: 114, name: "truant", display: "Truant"},
     unaware: {uid: 115, name: "unaware", display: "Unaware"},
     unburden: {uid: 116, name: "unburden", display: "Unburden"},
-    vitalspirit: {
-        uid: 117,
-        name: "vitalspirit",
-        display: "Vital Spirit",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {slp: true},
-    },
-    voltabsorb: {
-        uid: 118,
-        name: "voltabsorb",
-        display: "Volt Absorb",
-        on: {block: {move: {type: "electric", percentDamage: 25}}},
-    },
-    waterabsorb: {
-        uid: 119,
-        name: "waterabsorb",
-        display: "Water Absorb",
-        on: {block: {move: {type: "water", percentDamage: 25}}},
-    },
-    waterveil: {
-        uid: 120,
-        name: "waterveil",
-        display: "Water Veil",
-        on: {block: {status: true}, update: {cure: true}},
-        statusImmunity: {brn: true},
-    },
-    whitesmoke: {
-        uid: 121,
-        name: "whitesmoke",
-        display: "White Smoke",
-        on: {
-            tryUnboost: {
-                block: {
-                    atk: true,
-                    def: true,
-                    spa: true,
-                    spd: true,
-                    spe: true,
-                    accuracy: true,
-                    evasion: true,
-                },
-            },
-        },
-    },
-    wonderguard: {
-        uid: 122,
-        name: "wonderguard",
-        display: "Wonder Guard",
-        on: {block: {move: {type: "nonSuper"}}},
-    },
+    vitalspirit: {uid: 117, name: "vitalspirit", display: "Vital Spirit"},
+    voltabsorb: {uid: 118, name: "voltabsorb", display: "Volt Absorb"},
+    waterabsorb: {uid: 119, name: "waterabsorb", display: "Water Absorb"},
+    waterveil: {uid: 120, name: "waterveil", display: "Water Veil"},
+    whitesmoke: {uid: 121, name: "whitesmoke", display: "White Smoke"},
+    wonderguard: {uid: 122, name: "wonderguard", display: "Wonder Guard"},
 };
 
 /** Sorted array of all ability names. */
@@ -44432,34 +44021,6 @@ export const abilityKeys: readonly string[] = [
     "wonderguard",
 ];
 
-/** Memoization of {@link getMove}. */
-const moveMemo = new Map<dex.MoveData, wrappers.Move>();
-
-/**
- * Gets or creates a {@link dex.MoveData} wrapper.
- *
- * @param data Data to wrap.
- * @returns The wrapper.
- */
-export function getMove(data: dex.MoveData): wrappers.Move;
-/**
- * Gets or creates a {@link dex.MoveData} wrapper.
- *
- * @param name Name of the {@link dex.MoveData}.
- * @returns A {@link dex.MoveData} wrapper, or `null` if not found in
- * {@link moves}.
- */
-export function getMove(name: string): wrappers.Move | null;
-export function getMove(name: string | dex.MoveData): wrappers.Move | null {
-    if (typeof name === "string") {
-        if (!Object.hasOwnProperty.call(moves, name)) return null;
-        name = moves[name];
-    }
-    let result = moveMemo.get(name);
-    if (!result) moveMemo.set(name, (result = new wrappers.Move(name)));
-    return result;
-}
-
 /** Contains {@link dex.MoveData info} about each move. */
 export const moves: {readonly [name: string]: dex.MoveData} = {
     absorb: {
@@ -44471,7 +44032,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [25, 40],
-        effects: {drain: [1, 2]},
     },
     acid: {
         uid: 1,
@@ -44482,7 +44042,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "allAdjacentFoes",
         pp: [30, 48],
-        effects: {boost: {chance: 10, hit: {spd: -1}}},
     },
     acidarmor: {
         uid: 2,
@@ -44493,7 +44052,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "self",
         pp: [40, 64],
-        effects: {boost: {self: {def: 2}}},
     },
     acupressure: {
         uid: 3,
@@ -44504,7 +44062,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "adjacentAllyOrSelf",
         pp: [30, 48],
-        flags: {noMirror: true},
     },
     aerialace: {
         uid: 4,
@@ -44515,7 +44072,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [20, 32],
-        flags: {contact: true},
     },
     aeroblast: {
         uid: 5,
@@ -44536,7 +44092,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [30, 48],
-        effects: {boost: {self: {spe: 2}}},
     },
     aircutter: {
         uid: 7,
@@ -44567,7 +44122,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {spd: 2}}},
     },
     ancientpower: {
         uid: 10,
@@ -44578,9 +44132,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "normal",
         pp: [5, 8],
-        effects: {
-            boost: {chance: 10, self: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1}},
-        },
     },
     aquajet: {
         uid: 11,
@@ -44591,7 +44142,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     aquaring: {
         uid: 12,
@@ -44602,7 +44152,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "self",
         pp: [20, 32],
-        effects: {status: {self: ["aquaring"]}},
     },
     aquatail: {
         uid: 13,
@@ -44613,7 +44162,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     armthrust: {
         uid: 14,
@@ -44624,8 +44172,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [20, 32],
-        multihit: [2, 5],
-        flags: {contact: true},
     },
     aromatherapy: {
         uid: 15,
@@ -44636,8 +44182,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "allyTeam",
         pp: [5, 8],
-        flags: {noMirror: true},
-        effects: {team: {self: "cure"}},
     },
     assist: {
         uid: 16,
@@ -44648,8 +44192,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [20, 32],
-        flags: {noMirror: true, noCopycat: true},
-        effects: {call: true},
     },
     assurance: {
         uid: 17,
@@ -44660,7 +44202,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     astonish: {
         uid: 18,
@@ -44671,7 +44212,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     attackorder: {
         uid: 19,
@@ -44692,8 +44232,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {ignoreSub: true, reflectable: true},
-        effects: {status: {hit: ["attract"]}},
     },
     aurasphere: {
         uid: 21,
@@ -44714,7 +44252,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "normal",
         pp: [20, 32],
-        effects: {boost: {chance: 10, hit: {atk: -1}}},
     },
     avalanche: {
         uid: 23,
@@ -44725,7 +44262,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     barrage: {
         uid: 24,
@@ -44736,7 +44272,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        multihit: [2, 5],
     },
     barrier: {
         uid: 25,
@@ -44747,7 +44282,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [30, 48],
-        effects: {boost: {self: {def: 2}}},
     },
     batonpass: {
         uid: 26,
@@ -44758,7 +44292,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [40, 64],
-        effects: {selfSwitch: "copyvolatile"},
+        selfSwitch: "copyvolatile",
     },
     beatup: {
         uid: 27,
@@ -44779,10 +44313,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        effects: {
-            damage: {type: "percent", target: "self", percent: -50},
-            boost: {set: true, self: {atk: 6}},
-        },
     },
     bide: {
         uid: 29,
@@ -44790,12 +44320,9 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Bide",
         category: "physical",
         basePower: 0,
-        damage: "bide",
         type: "normal",
         target: "self",
         pp: [10, 16],
-        flags: {contact: true, ignoreImmunity: true},
-        effects: {status: {self: ["bide"]}},
     },
     bind: {
         uid: 30,
@@ -44806,7 +44333,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     bite: {
         uid: 31,
@@ -44817,7 +44343,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
     },
     blastburn: {
         uid: 32,
@@ -44828,7 +44353,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [5, 8],
-        implicit: {status: "mustRecharge"},
     },
     blazekick: {
         uid: 33,
@@ -44839,8 +44363,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     blizzard: {
         uid: 34,
@@ -44851,7 +44373,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "allAdjacentFoes",
         pp: [5, 8],
-        effects: {status: {chance: 10, hit: ["frz"]}},
     },
     block: {
         uid: 35,
@@ -44862,7 +44383,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {reflectable: true},
     },
     bodyslam: {
         uid: 36,
@@ -44873,8 +44393,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     boneclub: {
         uid: 37,
@@ -44895,7 +44413,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [10, 16],
-        multihit: [2, 2],
     },
     bonerush: {
         uid: 39,
@@ -44906,7 +44423,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [10, 16],
-        multihit: [2, 5],
     },
     bounce: {
         uid: 40,
@@ -44917,8 +44433,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [5, 8],
-        flags: {contact: true},
-        effects: {delay: {type: "twoTurn"}, status: {chance: 30, hit: ["par"]}},
     },
     bravebird: {
         uid: 41,
@@ -44929,8 +44443,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {recoil: {ratio: [1, 3]}},
     },
     brickbreak: {
         uid: 42,
@@ -44941,7 +44453,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     brine: {
         uid: 43,
@@ -44962,7 +44473,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "allAdjacentFoes",
         pp: [30, 48],
-        effects: {boost: {chance: 10, hit: {spe: -1}}},
     },
     bubblebeam: {
         uid: 45,
@@ -44973,7 +44483,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [20, 32],
-        effects: {boost: {chance: 10, hit: {spe: -1}}},
     },
     bugbite: {
         uid: 46,
@@ -44984,7 +44493,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     bugbuzz: {
         uid: 47,
@@ -44995,7 +44503,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 10, hit: {spd: -1}}},
     },
     bulkup: {
         uid: 48,
@@ -45006,7 +44513,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {atk: 1, def: 1}}},
     },
     bulletpunch: {
         uid: 49,
@@ -45017,7 +44523,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [30, 48],
-        flags: {contact: true},
     },
     bulletseed: {
         uid: 50,
@@ -45028,7 +44533,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [30, 48],
-        multihit: [2, 5],
     },
     calmmind: {
         uid: 51,
@@ -45039,7 +44543,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {spa: 1, spd: 1}}},
     },
     camouflage: {
         uid: 52,
@@ -45060,8 +44563,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacentFoes",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {spa: -2}}},
     },
     charge: {
         uid: 54,
@@ -45072,7 +44573,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {spd: 1}}, status: {self: ["charge"]}},
     },
     chargebeam: {
         uid: 55,
@@ -45083,7 +44583,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 70, self: {spa: 1}}},
     },
     charm: {
         uid: 56,
@@ -45094,8 +44593,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {atk: -2}}},
     },
     chatter: {
         uid: 57,
@@ -45106,8 +44603,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [20, 32],
-        flags: {noMirror: true, noCopycat: true},
-        effects: {status: {chance: 31, hit: ["confusion"]}},
     },
     clamp: {
         uid: 58,
@@ -45118,7 +44613,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     closecombat: {
         uid: 59,
@@ -45129,8 +44623,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
-        effects: {boost: {self: {def: -1, spd: -1}}},
     },
     cometpunch: {
         uid: 60,
@@ -45141,8 +44633,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        multihit: [2, 5],
-        flags: {contact: true},
     },
     confuseray: {
         uid: 61,
@@ -45153,8 +44643,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["confusion"]}},
     },
     confusion: {
         uid: 62,
@@ -45165,7 +44653,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [25, 40],
-        effects: {status: {chance: 10, hit: ["confusion"]}},
     },
     constrict: {
         uid: 63,
@@ -45176,8 +44663,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [35, 56],
-        flags: {contact: true},
-        effects: {boost: {chance: 10, hit: {spe: -1}}},
     },
     conversion: {
         uid: 64,
@@ -45188,7 +44673,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [30, 48],
-        effects: {changeType: "conversion"},
     },
     conversion2: {
         uid: 65,
@@ -45199,7 +44683,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [30, 48],
-        flags: {ignoreSub: true},
     },
     copycat: {
         uid: 66,
@@ -45210,8 +44693,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [20, 32],
-        flags: {noMirror: true, noCopycat: true},
-        effects: {call: "copycat"},
     },
     cosmicpower: {
         uid: 67,
@@ -45222,7 +44703,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {def: 1, spd: 1}}},
     },
     cottonspore: {
         uid: 68,
@@ -45233,8 +44713,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [40, 64],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {spe: -2}}},
     },
     counter: {
         uid: 69,
@@ -45242,11 +44720,9 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Counter",
         category: "physical",
         basePower: 0,
-        damage: "counter",
         type: "fighting",
         target: "scripted",
         pp: [20, 32],
-        flags: {contact: true, noMirror: true, noCopycat: true},
     },
     covet: {
         uid: 70,
@@ -45257,7 +44733,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [40, 64],
-        flags: {contact: true, noCopycat: true},
     },
     crabhammer: {
         uid: 71,
@@ -45268,7 +44743,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     crosschop: {
         uid: 72,
@@ -45279,7 +44753,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     crosspoison: {
         uid: 73,
@@ -45290,8 +44763,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["psn"]}},
     },
     crunch: {
         uid: 74,
@@ -45302,8 +44773,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {boost: {chance: 20, hit: {def: -1}}},
     },
     crushclaw: {
         uid: 75,
@@ -45314,8 +44783,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {boost: {chance: 50, hit: {def: -1}}},
     },
     crushgrip: {
         uid: 76,
@@ -45326,7 +44793,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     curse: {
         uid: 77,
@@ -45338,17 +44804,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         target: "normal",
         nonGhostTarget: "self",
         pp: [10, 16],
-        flags: {noMirror: true},
-        effects: {
-            damage: {
-                type: "percent",
-                target: "self",
-                percent: -50,
-                ghost: true,
-            },
-            boost: {noGhost: true, self: {atk: 1, def: 1, spe: -1}},
-            status: {ghost: true, hit: ["curse"]},
-        },
     },
     cut: {
         uid: 78,
@@ -45359,7 +44814,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [30, 48],
-        flags: {contact: true},
     },
     darkpulse: {
         uid: 79,
@@ -45380,8 +44834,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "allAdjacentFoes",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["slp"]}},
     },
     defendorder: {
         uid: 81,
@@ -45392,7 +44844,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "self",
         pp: [10, 16],
-        effects: {boost: {self: {def: 1, spd: 1}}},
     },
     defensecurl: {
         uid: 82,
@@ -45403,8 +44854,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [40, 64],
-        effects: {boost: {self: {def: 1}}},
-        implicit: {status: "defensecurl"},
     },
     defog: {
         uid: 83,
@@ -45415,7 +44864,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "normal",
         pp: [15, 24],
-        flags: {ignoreSub: true},
     },
     destinybond: {
         uid: 84,
@@ -45426,8 +44874,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "self",
         pp: [5, 8],
-        flags: {ignoreSub: true, noCopycat: true},
-        effects: {status: {self: ["destinybond"]}},
     },
     detect: {
         uid: 85,
@@ -45438,8 +44884,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "self",
         pp: [5, 8],
-        flags: {noCopycat: true},
-        effects: {status: {self: ["protect"]}},
     },
     dig: {
         uid: 86,
@@ -45450,8 +44894,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {delay: {type: "twoTurn"}},
     },
     disable: {
         uid: 87,
@@ -45462,8 +44904,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {ignoreSub: true},
-        effects: {disableMove: true},
     },
     discharge: {
         uid: 88,
@@ -45474,7 +44914,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "allAdjacent",
         pp: [15, 24],
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     dive: {
         uid: 89,
@@ -45485,8 +44924,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {delay: {type: "twoTurn"}},
     },
     dizzypunch: {
         uid: 90,
@@ -45497,8 +44934,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {status: {chance: 20, hit: ["confusion"]}},
     },
     doomdesire: {
         uid: 91,
@@ -45509,8 +44944,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [5, 8],
-        flags: {noMirror: true},
-        effects: {delay: {type: "future"}},
     },
     doubleedge: {
         uid: 92,
@@ -45521,8 +44954,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {recoil: {ratio: [1, 3]}},
     },
     doublehit: {
         uid: 93,
@@ -45533,8 +44964,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        multihit: [2, 2],
-        flags: {contact: true},
     },
     doublekick: {
         uid: 94,
@@ -45545,8 +44974,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [30, 48],
-        multihit: [2, 2],
-        flags: {contact: true},
     },
     doubleslap: {
         uid: 95,
@@ -45557,8 +44984,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        multihit: [2, 5],
-        flags: {contact: true},
     },
     doubleteam: {
         uid: 96,
@@ -45569,7 +44994,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [15, 24],
-        effects: {boost: {self: {evasion: 1}}},
     },
     dracometeor: {
         uid: 97,
@@ -45580,7 +45004,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dragon",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {self: {spa: -2}}},
     },
     dragonbreath: {
         uid: 98,
@@ -45591,7 +45014,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dragon",
         target: "normal",
         pp: [20, 32],
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     dragonclaw: {
         uid: 99,
@@ -45602,7 +45024,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dragon",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     dragondance: {
         uid: 100,
@@ -45613,7 +45034,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dragon",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {atk: 1, spe: 1}}},
     },
     dragonpulse: {
         uid: 101,
@@ -45631,7 +45051,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Dragon Rage",
         category: "special",
         basePower: 0,
-        damage: 40,
         type: "dragon",
         target: "normal",
         pp: [10, 16],
@@ -45645,7 +45064,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dragon",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     drainpunch: {
         uid: 104,
@@ -45656,8 +45074,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
-        effects: {drain: [1, 2]},
     },
     dreameater: {
         uid: 105,
@@ -45668,7 +45084,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [15, 24],
-        effects: {drain: [1, 2]},
     },
     drillpeck: {
         uid: 106,
@@ -45679,7 +45094,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [20, 32],
-        flags: {contact: true},
     },
     dynamicpunch: {
         uid: 107,
@@ -45690,8 +45104,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
-        effects: {status: {chance: 100, hit: ["confusion"]}},
     },
     earthpower: {
         uid: 108,
@@ -45702,7 +45114,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 10, hit: {spd: -1}}},
     },
     earthquake: {
         uid: 109,
@@ -45733,7 +45144,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [15, 24],
-        effects: {status: {hit: ["embargo"]}},
     },
     ember: {
         uid: 112,
@@ -45744,7 +45154,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [25, 40],
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     encore: {
         uid: 113,
@@ -45755,8 +45164,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {ignoreSub: true},
-        effects: {status: {hit: ["encore"]}},
     },
     endeavor: {
         uid: 114,
@@ -45764,11 +45171,9 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Endeavor",
         category: "physical",
         basePower: 0,
-        damage: "hpdiff",
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     endure: {
         uid: 115,
@@ -45779,8 +45184,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        flags: {noCopycat: true},
-        effects: {status: {self: ["endure"]}},
     },
     energyball: {
         uid: 116,
@@ -45791,7 +45194,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 10, hit: {spd: -1}}},
     },
     eruption: {
         uid: 117,
@@ -45812,8 +45214,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacent",
         pp: [5, 8],
-        flags: {explosive: true},
-        effects: {selfFaint: "always"},
     },
     extrasensory: {
         uid: 119,
@@ -45834,7 +45234,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     facade: {
         uid: 121,
@@ -45845,7 +45244,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     fakeout: {
         uid: 122,
@@ -45856,7 +45254,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     faketears: {
         uid: 123,
@@ -45867,8 +45264,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {spd: -2}}},
     },
     falseswipe: {
         uid: 124,
@@ -45879,7 +45274,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [40, 64],
-        flags: {contact: true},
     },
     featherdance: {
         uid: 125,
@@ -45890,8 +45284,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {atk: -2}}},
     },
     feint: {
         uid: 126,
@@ -45902,7 +45294,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {noMirror: true, noCopycat: true},
     },
     feintattack: {
         uid: 127,
@@ -45913,7 +45304,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     fireblast: {
         uid: 128,
@@ -45924,7 +45314,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [5, 8],
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     firefang: {
         uid: 129,
@@ -45935,8 +45324,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     firepunch: {
         uid: 130,
@@ -45947,8 +45334,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     firespin: {
         uid: 131,
@@ -45966,7 +45351,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Fissure",
         category: "physical",
         basePower: 0,
-        damage: "ohko",
+        ohko: true,
         type: "ground",
         target: "normal",
         pp: [5, 8],
@@ -45980,7 +45365,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     flamethrower: {
         uid: 134,
@@ -45991,7 +45375,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [15, 24],
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     flamewheel: {
         uid: 135,
@@ -46002,8 +45385,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     flareblitz: {
         uid: 136,
@@ -46014,8 +45395,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["brn"]}, recoil: {ratio: [1, 3]}},
     },
     flash: {
         uid: 137,
@@ -46026,8 +45405,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {accuracy: -1}}},
     },
     flashcannon: {
         uid: 138,
@@ -46038,7 +45415,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 10, hit: {spd: -1}}},
     },
     flatter: {
         uid: 139,
@@ -46049,8 +45425,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {spa: 1}}, status: {hit: ["confusion"]}},
     },
     fling: {
         uid: 140,
@@ -46071,8 +45445,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {delay: {type: "twoTurn"}},
     },
     focusblast: {
         uid: 142,
@@ -46083,7 +45455,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {chance: 10, hit: {spd: -1}}},
     },
     focusenergy: {
         uid: 143,
@@ -46094,7 +45465,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [30, 48],
-        effects: {status: {self: ["focusenergy"]}},
     },
     focuspunch: {
         uid: 144,
@@ -46105,7 +45475,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true, focus: true, noMirror: true, noCopycat: true},
     },
     followme: {
         uid: 145,
@@ -46116,7 +45485,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [20, 32],
-        flags: {noCopycat: true},
     },
     forcepalm: {
         uid: 146,
@@ -46127,8 +45495,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     foresight: {
         uid: 147,
@@ -46139,8 +45505,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [40, 64],
-        flags: {ignoreSub: true},
-        effects: {status: {hit: ["foresight"]}},
     },
     frenzyplant: {
         uid: 148,
@@ -46151,7 +45515,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [5, 8],
-        implicit: {status: "mustRecharge"},
     },
     frustration: {
         uid: 149,
@@ -46162,7 +45525,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     furyattack: {
         uid: 150,
@@ -46173,8 +45535,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        multihit: [2, 5],
-        flags: {contact: true},
     },
     furycutter: {
         uid: 151,
@@ -46185,7 +45545,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     furyswipes: {
         uid: 152,
@@ -46196,8 +45555,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        multihit: [2, 5],
-        flags: {contact: true},
     },
     futuresight: {
         uid: 153,
@@ -46208,8 +45565,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [15, 24],
-        flags: {ignoreImmunity: true, noMirror: true},
-        effects: {delay: {type: "future"}},
     },
     gastroacid: {
         uid: 154,
@@ -46220,8 +45575,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["suppressAbility"]}},
     },
     gigadrain: {
         uid: 155,
@@ -46232,7 +45585,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [10, 16],
-        effects: {drain: [1, 2]},
     },
     gigaimpact: {
         uid: 156,
@@ -46243,8 +45595,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
-        implicit: {status: "mustRecharge"},
     },
     glare: {
         uid: 157,
@@ -46255,8 +45605,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [30, 48],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["par"]}},
     },
     grassknot: {
         uid: 158,
@@ -46267,7 +45615,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     grasswhistle: {
         uid: 159,
@@ -46278,8 +45625,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["slp"]}},
     },
     gravity: {
         uid: 160,
@@ -46290,8 +45635,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "all",
         pp: [5, 8],
-        flags: {noMirror: true},
-        effects: {field: {effect: "gravity"}},
     },
     growl: {
         uid: 161,
@@ -46302,8 +45645,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacentFoes",
         pp: [40, 64],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {atk: -1}}},
     },
     growth: {
         uid: 162,
@@ -46314,7 +45655,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [40, 64],
-        effects: {boost: {self: {spa: 1}}},
     },
     grudge: {
         uid: 163,
@@ -46325,8 +45665,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "self",
         pp: [5, 8],
-        flags: {ignoreSub: true},
-        effects: {status: {self: ["grudge"]}},
     },
     guardswap: {
         uid: 164,
@@ -46337,8 +45675,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true},
-        effects: {swapBoosts: {def: true, spd: true}},
     },
     guillotine: {
         uid: 165,
@@ -46346,11 +45682,10 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Guillotine",
         category: "physical",
         basePower: 0,
-        damage: "ohko",
+        ohko: true,
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     gunkshot: {
         uid: 166,
@@ -46361,7 +45696,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [5, 8],
-        effects: {status: {chance: 30, hit: ["psn"]}},
     },
     gust: {
         uid: 167,
@@ -46382,7 +45716,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     hail: {
         uid: 169,
@@ -46393,8 +45726,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "all",
         pp: [10, 16],
-        flags: {noMirror: true},
-        effects: {field: {effect: "Hail"}},
     },
     hammerarm: {
         uid: 170,
@@ -46405,8 +45736,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {boost: {self: {spe: -1}}},
     },
     harden: {
         uid: 171,
@@ -46417,7 +45746,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [30, 48],
-        effects: {boost: {self: {def: 1}}},
     },
     haze: {
         uid: 172,
@@ -46428,7 +45756,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "all",
         pp: [30, 48],
-        flags: {ignoreSub: true, noMirror: true},
     },
     headbutt: {
         uid: 173,
@@ -46439,7 +45766,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     headsmash: {
         uid: 174,
@@ -46450,8 +45776,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
-        effects: {recoil: {ratio: [1, 2]}},
     },
     healbell: {
         uid: 175,
@@ -46462,8 +45786,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allyTeam",
         pp: [5, 8],
-        flags: {noMirror: true},
-        effects: {team: {self: "cure"}},
     },
     healblock: {
         uid: 176,
@@ -46474,7 +45796,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "allAdjacentFoes",
         pp: [15, 24],
-        effects: {status: {hit: ["healblock"]}},
     },
     healingwish: {
         uid: 177,
@@ -46485,8 +45806,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [10, 16],
-        effects: {selfFaint: "ifHit", selfSwitch: true},
-        implicit: {team: "healingwish"},
+        selfSwitch: true,
     },
     healorder: {
         uid: 178,
@@ -46497,7 +45817,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "self",
         pp: [10, 16],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     heartswap: {
         uid: 179,
@@ -46508,18 +45827,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true},
-        effects: {
-            swapBoosts: {
-                atk: true,
-                def: true,
-                spa: true,
-                spd: true,
-                spe: true,
-                accuracy: true,
-                evasion: true,
-            },
-        },
     },
     heatwave: {
         uid: 180,
@@ -46530,7 +45837,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "allAdjacentFoes",
         pp: [10, 16],
-        effects: {status: {chance: 10, hit: ["brn"]}},
     },
     helpinghand: {
         uid: 181,
@@ -46541,7 +45847,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "adjacentAlly",
         pp: [20, 32],
-        flags: {ignoreSub: true, noMirror: true, noCopycat: true},
     },
     hiddenpower: {
         uid: 182,
@@ -46550,7 +45855,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         category: "special",
         basePower: 0,
         type: "normal",
-        modifyType: "hpType",
         target: "normal",
         pp: [15, 24],
     },
@@ -46563,7 +45867,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     hornattack: {
         uid: 184,
@@ -46574,7 +45877,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
     },
     horndrill: {
         uid: 185,
@@ -46582,11 +45884,10 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Horn Drill",
         category: "physical",
         basePower: 0,
-        damage: "ohko",
+        ohko: true,
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     howl: {
         uid: 186,
@@ -46597,7 +45898,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [40, 64],
-        effects: {boost: {self: {atk: 1}}},
     },
     hydrocannon: {
         uid: 187,
@@ -46608,7 +45908,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [5, 8],
-        implicit: {status: "mustRecharge"},
     },
     hydropump: {
         uid: 188,
@@ -46629,7 +45928,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        implicit: {status: "mustRecharge"},
     },
     hyperfang: {
         uid: 190,
@@ -46640,7 +45938,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     hypervoice: {
         uid: 191,
@@ -46661,8 +45958,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["slp"]}},
     },
     iceball: {
         uid: 193,
@@ -46673,7 +45968,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     icebeam: {
         uid: 194,
@@ -46684,7 +45978,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "normal",
         pp: [10, 16],
-        effects: {status: {chance: 10, hit: ["frz"]}},
     },
     icefang: {
         uid: 195,
@@ -46695,8 +45988,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["frz"]}},
     },
     icepunch: {
         uid: 196,
@@ -46707,8 +45998,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["frz"]}},
     },
     iceshard: {
         uid: 197,
@@ -46729,7 +46018,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "normal",
         pp: [30, 48],
-        multihit: [2, 5],
     },
     icywind: {
         uid: 199,
@@ -46740,7 +46028,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "allAdjacentFoes",
         pp: [15, 24],
-        effects: {boost: {chance: 100, hit: {spe: -1}}},
     },
     imprison: {
         uid: 200,
@@ -46751,8 +46038,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [10, 16],
-        flags: {ignoreSub: true},
-        effects: {status: {self: ["imprison"]}},
     },
     ingrain: {
         uid: 201,
@@ -46763,7 +46048,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "self",
         pp: [20, 32],
-        effects: {status: {self: ["ingrain"]}},
     },
     irondefense: {
         uid: 202,
@@ -46774,7 +46058,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "self",
         pp: [15, 24],
-        effects: {boost: {self: {def: 2}}},
     },
     ironhead: {
         uid: 203,
@@ -46785,7 +46068,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     irontail: {
         uid: 204,
@@ -46796,8 +46078,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {boost: {chance: 30, hit: {def: -1}}},
     },
     judgment: {
         uid: 205,
@@ -46806,7 +46086,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         category: "special",
         basePower: 100,
         type: "normal",
-        modifyType: "plateType",
         target: "normal",
         pp: [10, 16],
     },
@@ -46819,7 +46098,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
     },
     karatechop: {
         uid: 207,
@@ -46830,7 +46108,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
     },
     kinesis: {
         uid: 208,
@@ -46841,8 +46118,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {accuracy: -1}}},
     },
     knockoff: {
         uid: 209,
@@ -46853,7 +46128,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     lastresort: {
         uid: 210,
@@ -46864,7 +46138,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     lavaplume: {
         uid: 211,
@@ -46875,7 +46148,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "allAdjacent",
         pp: [15, 24],
-        effects: {status: {chance: 30, hit: ["brn"]}},
     },
     leafblade: {
         uid: 212,
@@ -46886,7 +46158,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     leafstorm: {
         uid: 213,
@@ -46897,7 +46168,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {self: {spa: -2}}},
     },
     leechlife: {
         uid: 214,
@@ -46908,8 +46178,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {drain: [1, 2]},
     },
     leechseed: {
         uid: 215,
@@ -46920,8 +46188,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["leechseed"]}},
     },
     leer: {
         uid: 216,
@@ -46932,8 +46198,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacentFoes",
         pp: [30, 48],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {def: -1}}},
     },
     lick: {
         uid: 217,
@@ -46944,8 +46208,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [30, 48],
-        flags: {contact: true},
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     lightscreen: {
         uid: 218,
@@ -46956,8 +46218,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "allySide",
         pp: [30, 48],
-        flags: {noMirror: true},
-        effects: {team: {self: "lightscreen"}},
     },
     lockon: {
         uid: 219,
@@ -46978,8 +46238,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["slp"]}},
     },
     lowkick: {
         uid: 221,
@@ -46990,7 +46248,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     luckychant: {
         uid: 222,
@@ -47001,8 +46258,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allySide",
         pp: [30, 48],
-        flags: {noMirror: true},
-        effects: {team: {self: "luckychant"}},
     },
     lunardance: {
         uid: 223,
@@ -47013,8 +46268,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [10, 16],
-        effects: {selfFaint: "ifHit", selfSwitch: true},
-        implicit: {team: "lunardance"},
+        selfSwitch: true,
     },
     lusterpurge: {
         uid: 224,
@@ -47025,7 +46279,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {chance: 50, hit: {spd: -1}}},
     },
     machpunch: {
         uid: 225,
@@ -47036,7 +46289,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [30, 48],
-        flags: {contact: true},
     },
     magicalleaf: {
         uid: 226,
@@ -47057,8 +46309,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [15, 24],
-        flags: {noMirror: true},
-        effects: {status: {self: ["magiccoat"]}},
     },
     magmastorm: {
         uid: 228,
@@ -47089,7 +46339,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "self",
         pp: [10, 16],
-        effects: {status: {self: ["magnetrise"]}},
     },
     magnitude: {
         uid: 231,
@@ -47110,7 +46359,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {reflectable: true},
     },
     meditate: {
         uid: 233,
@@ -47121,7 +46369,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [40, 64],
-        effects: {boost: {self: {atk: 1}}},
     },
     mefirst: {
         uid: 234,
@@ -47132,8 +46379,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "adjacentFoe",
         pp: [20, 32],
-        flags: {ignoreSub: true, noMirror: true, noCopycat: true},
-        effects: {call: "target"},
     },
     megadrain: {
         uid: 235,
@@ -47144,7 +46389,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        effects: {drain: [1, 2]},
     },
     megahorn: {
         uid: 236,
@@ -47155,7 +46399,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     megakick: {
         uid: 237,
@@ -47166,7 +46409,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     megapunch: {
         uid: 238,
@@ -47177,7 +46419,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     memento: {
         uid: 239,
@@ -47188,7 +46429,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {hit: {atk: -2, spa: -2}}, selfFaint: "ifHit"},
     },
     metalburst: {
         uid: 240,
@@ -47196,7 +46436,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Metal Burst",
         category: "physical",
         basePower: 0,
-        damage: "metalburst",
         type: "steel",
         target: "scripted",
         pp: [10, 16],
@@ -47210,8 +46449,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [35, 56],
-        flags: {contact: true},
-        effects: {boost: {chance: 10, self: {atk: 1}}},
     },
     metalsound: {
         uid: 242,
@@ -47222,8 +46459,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [40, 64],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {spd: -2}}},
     },
     meteormash: {
         uid: 243,
@@ -47234,8 +46469,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
-        effects: {boost: {chance: 20, self: {atk: 1}}},
     },
     metronome: {
         uid: 244,
@@ -47246,8 +46479,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        flags: {noMirror: true, noCopycat: true},
-        effects: {call: true},
     },
     milkdrink: {
         uid: 245,
@@ -47258,7 +46489,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     mimic: {
         uid: 246,
@@ -47269,7 +46499,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true, noMirror: true, noCopycat: true},
     },
     mindreader: {
         uid: 247,
@@ -47290,8 +46519,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {evasion: 1}}},
-        implicit: {status: "minimize"},
     },
     miracleeye: {
         uid: 249,
@@ -47302,8 +46529,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [40, 64],
-        flags: {ignoreSub: true},
-        effects: {status: {hit: ["miracleeye"]}},
     },
     mirrorcoat: {
         uid: 250,
@@ -47311,11 +46536,9 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Mirror Coat",
         category: "special",
         basePower: 0,
-        damage: "counter",
         type: "psychic",
         target: "scripted",
         pp: [20, 32],
-        flags: {noMirror: true, noCopycat: true},
     },
     mirrormove: {
         uid: 251,
@@ -47326,8 +46549,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "self",
         pp: [20, 32],
-        flags: {noMirror: true, noCopycat: true},
-        effects: {call: "mirror"},
     },
     mirrorshot: {
         uid: 252,
@@ -47338,7 +46559,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 30, hit: {accuracy: -1}}},
     },
     mist: {
         uid: 253,
@@ -47349,8 +46569,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "allySide",
         pp: [30, 48],
-        flags: {noMirror: true},
-        effects: {team: {self: "mist"}},
     },
     mistball: {
         uid: 254,
@@ -47361,7 +46579,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {chance: 50, hit: {spa: -1}}},
     },
     moonlight: {
         uid: 255,
@@ -47372,7 +46589,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [5, 8],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     morningsun: {
         uid: 256,
@@ -47383,7 +46599,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [5, 8],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     mudbomb: {
         uid: 257,
@@ -47394,7 +46609,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 30, hit: {accuracy: -1}}},
     },
     muddywater: {
         uid: 258,
@@ -47405,7 +46619,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "allAdjacentFoes",
         pp: [10, 16],
-        effects: {boost: {chance: 30, hit: {accuracy: -1}}},
     },
     mudshot: {
         uid: 259,
@@ -47416,7 +46629,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [15, 24],
-        effects: {boost: {chance: 100, hit: {spe: -1}}},
     },
     mudslap: {
         uid: 260,
@@ -47427,7 +46639,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 100, hit: {accuracy: -1}}},
     },
     mudsport: {
         uid: 261,
@@ -47438,8 +46649,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "all",
         pp: [15, 24],
-        flags: {noMirror: true},
-        effects: {status: {self: ["mudsport"]}},
     },
     nastyplot: {
         uid: 262,
@@ -47450,7 +46659,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {spa: 2}}},
     },
     naturalgift: {
         uid: 263,
@@ -47471,8 +46679,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [20, 32],
-        flags: {noMirror: true},
-        effects: {call: true},
     },
     needlearm: {
         uid: 265,
@@ -47483,7 +46689,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     nightmare: {
         uid: 266,
@@ -47494,7 +46699,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [15, 24],
-        effects: {status: {hit: ["nightmare"]}},
     },
     nightshade: {
         uid: 267,
@@ -47502,7 +46706,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Night Shade",
         category: "special",
         basePower: 0,
-        damage: "level",
         type: "ghost",
         target: "normal",
         pp: [15, 24],
@@ -47516,7 +46719,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     octazooka: {
         uid: 269,
@@ -47527,7 +46729,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 50, hit: {accuracy: -1}}},
     },
     odorsleuth: {
         uid: 270,
@@ -47538,8 +46739,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [40, 64],
-        flags: {ignoreSub: true},
-        effects: {status: {hit: ["foresight"]}},
     },
     ominouswind: {
         uid: 271,
@@ -47550,9 +46749,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [5, 8],
-        effects: {
-            boost: {chance: 10, self: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1}},
-        },
     },
     outrage: {
         uid: 272,
@@ -47563,8 +46759,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dragon",
         target: "randomNormal",
         pp: [15, 24],
-        flags: {contact: true},
-        implicit: {status: "lockedMove"},
     },
     overheat: {
         uid: 273,
@@ -47575,7 +46769,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {self: {spa: -2}}},
     },
     painsplit: {
         uid: 274,
@@ -47586,7 +46779,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        effects: {damage: {type: "split"}},
     },
     payback: {
         uid: 275,
@@ -47597,7 +46789,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     payday: {
         uid: 276,
@@ -47618,7 +46809,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [35, 56],
-        flags: {contact: true},
     },
     perishsong: {
         uid: 278,
@@ -47629,8 +46819,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "all",
         pp: [5, 8],
-        flags: {noMirror: true},
-        effects: {count: "perish"},
     },
     petaldance: {
         uid: 279,
@@ -47641,8 +46829,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "randomNormal",
         pp: [20, 32],
-        flags: {contact: true},
-        implicit: {status: "lockedMove"},
     },
     pinmissile: {
         uid: 280,
@@ -47653,7 +46839,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [20, 32],
-        multihit: [2, 5],
     },
     pluck: {
         uid: 281,
@@ -47664,7 +46849,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [20, 32],
-        flags: {contact: true},
     },
     poisonfang: {
         uid: 282,
@@ -47675,8 +46859,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 30, hit: ["tox"]}},
     },
     poisongas: {
         uid: 283,
@@ -47687,8 +46869,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [40, 64],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["psn"]}},
     },
     poisonjab: {
         uid: 284,
@@ -47699,8 +46879,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
-        effects: {status: {chance: 30, hit: ["psn"]}},
     },
     poisonpowder: {
         uid: 285,
@@ -47711,8 +46889,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [35, 56],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["psn"]}},
     },
     poisonsting: {
         uid: 286,
@@ -47723,7 +46899,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [35, 56],
-        effects: {status: {chance: 30, hit: ["psn"]}},
     },
     poisontail: {
         uid: 287,
@@ -47734,8 +46909,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["psn"]}},
     },
     pound: {
         uid: 288,
@@ -47746,7 +46919,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [35, 56],
-        flags: {contact: true},
     },
     powdersnow: {
         uid: 289,
@@ -47757,7 +46929,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ice",
         target: "allAdjacentFoes",
         pp: [25, 40],
-        effects: {status: {chance: 10, hit: ["frz"]}},
     },
     powergem: {
         uid: 290,
@@ -47778,8 +46949,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true},
-        effects: {swapBoosts: {atk: true, spa: true}},
     },
     powertrick: {
         uid: 292,
@@ -47790,7 +46959,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [10, 16],
-        effects: {status: {self: ["powertrick"]}},
     },
     powerwhip: {
         uid: 293,
@@ -47801,7 +46969,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     present: {
         uid: 294,
@@ -47822,8 +46989,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        flags: {noCopycat: true},
-        effects: {status: {self: ["protect"]}},
     },
     psybeam: {
         uid: 296,
@@ -47834,7 +46999,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [20, 32],
-        effects: {status: {chance: 10, hit: ["confusion"]}},
     },
     psychic: {
         uid: 297,
@@ -47845,7 +47009,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 10, hit: {spd: -1}}},
     },
     psychoboost: {
         uid: 298,
@@ -47856,7 +47019,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {self: {spa: -2}}},
     },
     psychocut: {
         uid: 299,
@@ -47887,7 +47049,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true, noMirror: true},
     },
     psywave: {
         uid: 302,
@@ -47895,7 +47056,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Psywave",
         category: "special",
         basePower: 0,
-        damage: "psywave",
         type: "psychic",
         target: "normal",
         pp: [15, 24],
@@ -47909,7 +47069,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     pursuit: {
         uid: 304,
@@ -47920,7 +47079,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true, interceptSwitch: true},
     },
     quickattack: {
         uid: 305,
@@ -47931,7 +47089,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [30, 48],
-        flags: {contact: true},
     },
     rage: {
         uid: 306,
@@ -47942,8 +47099,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
-        effects: {status: {self: ["rage"]}},
     },
     raindance: {
         uid: 307,
@@ -47954,8 +47109,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "all",
         pp: [5, 8],
-        flags: {noMirror: true},
-        effects: {field: {effect: "RainDance"}},
     },
     rapidspin: {
         uid: 308,
@@ -47966,7 +47119,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [40, 64],
-        flags: {contact: true},
     },
     razorleaf: {
         uid: 309,
@@ -47987,7 +47139,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacentFoes",
         pp: [10, 16],
-        effects: {delay: {type: "twoTurn"}},
     },
     recover: {
         uid: 311,
@@ -47998,7 +47149,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     recycle: {
         uid: 312,
@@ -48019,8 +47169,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "allySide",
         pp: [20, 32],
-        flags: {noMirror: true},
-        effects: {team: {self: "reflect"}},
     },
     refresh: {
         uid: 314,
@@ -48041,10 +47189,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "self",
         pp: [10, 16],
-        effects: {
-            damage: {type: "percent", target: "self", percent: 100},
-            status: {self: ["slp"]},
-        },
     },
     return: {
         uid: 316,
@@ -48055,7 +47199,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     revenge: {
         uid: 317,
@@ -48066,7 +47209,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     reversal: {
         uid: 318,
@@ -48077,7 +47219,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     roar: {
         uid: 319,
@@ -48088,8 +47229,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {ignoreSub: true},
-        effects: {drag: true},
     },
     roaroftime: {
         uid: 320,
@@ -48100,7 +47239,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dragon",
         target: "normal",
         pp: [5, 8],
-        implicit: {status: "mustRecharge"},
     },
     rockblast: {
         uid: 321,
@@ -48111,7 +47249,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "normal",
         pp: [10, 16],
-        multihit: [2, 5],
     },
     rockclimb: {
         uid: 322,
@@ -48122,8 +47259,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
-        effects: {status: {chance: 20, hit: ["confusion"]}},
     },
     rockpolish: {
         uid: 323,
@@ -48134,7 +47269,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {spe: 2}}},
     },
     rockslide: {
         uid: 324,
@@ -48155,8 +47289,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {boost: {chance: 50, hit: {def: -1}}},
     },
     rockthrow: {
         uid: 326,
@@ -48177,7 +47309,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "normal",
         pp: [10, 16],
-        effects: {boost: {chance: 100, hit: {spe: -1}}},
     },
     rockwrecker: {
         uid: 328,
@@ -48188,7 +47319,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "normal",
         pp: [5, 8],
-        implicit: {status: "mustRecharge"},
     },
     roleplay: {
         uid: 329,
@@ -48199,7 +47329,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true, noMirror: true},
     },
     rollingkick: {
         uid: 330,
@@ -48210,7 +47339,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     rollout: {
         uid: 331,
@@ -48221,7 +47349,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     roost: {
         uid: 332,
@@ -48232,10 +47359,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "self",
         pp: [10, 16],
-        effects: {
-            damage: {type: "percent", target: "self", percent: 50},
-            status: {self: ["roost"]},
-        },
     },
     sacredfire: {
         uid: 333,
@@ -48246,7 +47369,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [5, 8],
-        effects: {status: {chance: 50, hit: ["brn"]}},
     },
     safeguard: {
         uid: 334,
@@ -48257,8 +47379,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allySide",
         pp: [25, 40],
-        flags: {noMirror: true},
-        effects: {team: {self: "safeguard"}},
     },
     sandattack: {
         uid: 335,
@@ -48269,8 +47389,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {accuracy: -1}}},
     },
     sandstorm: {
         uid: 336,
@@ -48281,8 +47399,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "all",
         pp: [10, 16],
-        flags: {noMirror: true},
-        effects: {field: {effect: "Sandstorm"}},
     },
     sandtomb: {
         uid: 337,
@@ -48303,8 +47419,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {spe: -2}}},
     },
     scratch: {
         uid: 339,
@@ -48315,7 +47429,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [35, 56],
-        flags: {contact: true},
     },
     screech: {
         uid: 340,
@@ -48326,8 +47439,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [40, 64],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {def: -2}}},
     },
     secretpower: {
         uid: 341,
@@ -48338,7 +47449,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     seedbomb: {
         uid: 342,
@@ -48359,7 +47469,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [5, 8],
-        effects: {boost: {chance: 40, hit: {spd: -2}}},
     },
     seismictoss: {
         uid: 344,
@@ -48367,11 +47476,9 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Seismic Toss",
         category: "physical",
         basePower: 0,
-        damage: "level",
         type: "fighting",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     selfdestruct: {
         uid: 345,
@@ -48382,8 +47489,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacent",
         pp: [5, 8],
-        flags: {explosive: true},
-        effects: {selfFaint: "always"},
     },
     shadowball: {
         uid: 346,
@@ -48394,7 +47499,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [15, 24],
-        effects: {boost: {chance: 20, hit: {spd: -1}}},
     },
     shadowclaw: {
         uid: 347,
@@ -48405,7 +47509,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     shadowforce: {
         uid: 348,
@@ -48416,8 +47519,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
-        effects: {delay: {type: "twoTurn"}},
     },
     shadowpunch: {
         uid: 349,
@@ -48428,7 +47529,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     shadowsneak: {
         uid: 350,
@@ -48439,7 +47539,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [30, 48],
-        flags: {contact: true},
     },
     sharpen: {
         uid: 351,
@@ -48450,7 +47549,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [30, 48],
-        effects: {boost: {self: {atk: 1}}},
     },
     sheercold: {
         uid: 352,
@@ -48458,7 +47556,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Sheer Cold",
         category: "special",
         basePower: 0,
-        damage: "ohko",
+        ohko: true,
         type: "ice",
         target: "normal",
         pp: [5, 8],
@@ -48482,7 +47580,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [15, 24],
-        effects: {status: {chance: 10, hit: ["confusion"]}},
     },
     silverwind: {
         uid: 355,
@@ -48493,9 +47590,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [5, 8],
-        effects: {
-            boost: {chance: 10, self: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1}},
-        },
     },
     sing: {
         uid: 356,
@@ -48506,8 +47600,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["slp"]}},
     },
     sketch: {
         uid: 357,
@@ -48518,7 +47610,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [1, 1],
-        flags: {ignoreSub: true, noMirror: true, noCopycat: true},
     },
     skillswap: {
         uid: 358,
@@ -48529,7 +47620,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true},
     },
     skullbash: {
         uid: 359,
@@ -48540,8 +47630,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {delay: {type: "twoTurn"}},
     },
     skyattack: {
         uid: 360,
@@ -48552,7 +47640,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [5, 8],
-        effects: {delay: {type: "twoTurn"}},
     },
     skyuppercut: {
         uid: 361,
@@ -48563,7 +47650,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     slackoff: {
         uid: 362,
@@ -48574,7 +47660,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     slam: {
         uid: 363,
@@ -48585,7 +47670,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     slash: {
         uid: 364,
@@ -48596,7 +47680,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     sleeppowder: {
         uid: 365,
@@ -48607,8 +47690,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["slp"]}},
     },
     sleeptalk: {
         uid: 366,
@@ -48619,8 +47700,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        flags: {noMirror: true, noCopycat: true},
-        effects: {call: "self"},
     },
     sludge: {
         uid: 367,
@@ -48631,7 +47710,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [20, 32],
-        effects: {status: {chance: 30, hit: ["psn"]}},
     },
     sludgebomb: {
         uid: 368,
@@ -48642,7 +47720,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [10, 16],
-        effects: {status: {chance: 30, hit: ["psn"]}},
     },
     smellingsalts: {
         uid: 369,
@@ -48653,7 +47730,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     smog: {
         uid: 370,
@@ -48664,7 +47740,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [20, 32],
-        effects: {status: {chance: 40, hit: ["psn"]}},
     },
     smokescreen: {
         uid: 371,
@@ -48675,8 +47750,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {accuracy: -1}}},
     },
     snatch: {
         uid: 372,
@@ -48687,8 +47760,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "self",
         pp: [10, 16],
-        flags: {ignoreSub: true, noMirror: true, noCopycat: true},
-        effects: {status: {self: ["snatch"]}},
     },
     snore: {
         uid: 373,
@@ -48709,7 +47780,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     solarbeam: {
         uid: 375,
@@ -48720,7 +47790,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [10, 16],
-        effects: {delay: {type: "twoTurn", solar: true}},
     },
     sonicboom: {
         uid: 376,
@@ -48728,7 +47797,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Sonic Boom",
         category: "special",
         basePower: 0,
-        damage: 20,
         type: "normal",
         target: "normal",
         pp: [20, 32],
@@ -48752,8 +47820,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     spiderweb: {
         uid: 379,
@@ -48764,7 +47830,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
     },
     spikecannon: {
         uid: 380,
@@ -48775,7 +47840,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        multihit: [2, 5],
     },
     spikes: {
         uid: 381,
@@ -48786,8 +47850,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ground",
         target: "foeSide",
         pp: [20, 32],
-        flags: {noMirror: true},
-        effects: {team: {hit: "spikes"}},
     },
     spite: {
         uid: 382,
@@ -48798,7 +47860,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "ghost",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true},
     },
     spitup: {
         uid: 383,
@@ -48809,7 +47870,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {noMirror: true},
     },
     splash: {
         uid: 384,
@@ -48820,7 +47880,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [40, 64],
-        effects: {status: {self: ["splash"]}},
     },
     spore: {
         uid: 385,
@@ -48831,8 +47890,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["slp"]}},
     },
     stealthrock: {
         uid: 386,
@@ -48843,8 +47900,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "rock",
         target: "foeSide",
         pp: [20, 32],
-        flags: {noMirror: true},
-        effects: {team: {hit: "stealthrock"}},
     },
     steelwing: {
         uid: 387,
@@ -48855,8 +47910,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "steel",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
-        effects: {boost: {chance: 10, self: {def: 1}}},
     },
     stockpile: {
         uid: 388,
@@ -48867,7 +47920,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [20, 32],
-        effects: {count: "stockpile", boost: {self: {def: 1, spd: 1}}},
     },
     stomp: {
         uid: 389,
@@ -48878,7 +47930,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     stoneedge: {
         uid: 390,
@@ -48899,7 +47950,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     stringshot: {
         uid: 392,
@@ -48910,8 +47960,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "allAdjacentFoes",
         pp: [40, 64],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {spe: -1}}},
     },
     struggle: {
         uid: 393,
@@ -48920,11 +47968,8 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         category: "physical",
         basePower: 50,
         type: "normal",
-        modifyType: "???",
         target: "randomNormal",
         pp: [1, 1],
-        flags: {contact: true, noMirror: true, noCopycat: true},
-        effects: {recoil: {ratio: [1, 4], struggle: true}},
     },
     stunspore: {
         uid: 394,
@@ -48935,8 +47980,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [30, 48],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["par"]}},
     },
     submission: {
         uid: 395,
@@ -48947,8 +47990,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [25, 40],
-        flags: {contact: true},
-        effects: {recoil: {ratio: [1, 4]}},
     },
     substitute: {
         uid: 396,
@@ -48959,10 +48000,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        effects: {
-            damage: {type: "percent", target: "self", percent: -25},
-            status: {self: ["substitute"]},
-        },
     },
     suckerpunch: {
         uid: 397,
@@ -48973,7 +48010,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     sunnyday: {
         uid: 398,
@@ -48984,8 +48020,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "all",
         pp: [5, 8],
-        flags: {noMirror: true},
-        effects: {field: {effect: "SunnyDay"}},
     },
     superfang: {
         uid: 399,
@@ -48993,11 +48027,9 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         display: "Super Fang",
         category: "physical",
         basePower: 0,
-        damage: "half",
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     superpower: {
         uid: 400,
@@ -49008,8 +48040,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
-        effects: {boost: {self: {atk: -1, def: -1}}},
     },
     supersonic: {
         uid: 401,
@@ -49020,8 +48050,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["confusion"]}},
     },
     surf: {
         uid: 402,
@@ -49042,8 +48070,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {atk: 2}}, status: {hit: ["confusion"]}},
     },
     swallow: {
         uid: 404,
@@ -49064,8 +48090,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["confusion"]}},
     },
     sweetscent: {
         uid: 406,
@@ -49076,8 +48100,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacentFoes",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {evasion: -1}}},
     },
     swift: {
         uid: 407,
@@ -49098,8 +48120,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [10, 16],
-        flags: {noCopycat: true},
-        effects: {swapItems: true},
     },
     swordsdance: {
         uid: 409,
@@ -49110,7 +48130,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [30, 48],
-        effects: {boost: {self: {atk: 2}}},
     },
     synthesis: {
         uid: 410,
@@ -49121,7 +48140,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "self",
         pp: [5, 8],
-        effects: {damage: {type: "percent", target: "self", percent: 50}},
     },
     tackle: {
         uid: 411,
@@ -49132,7 +48150,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [35, 56],
-        flags: {contact: true},
     },
     tailglow: {
         uid: 412,
@@ -49143,7 +48160,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "self",
         pp: [20, 32],
-        effects: {boost: {self: {spa: 2}}},
     },
     tailwhip: {
         uid: 413,
@@ -49154,8 +48170,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacentFoes",
         pp: [30, 48],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {def: -1}}},
     },
     tailwind: {
         uid: 414,
@@ -49166,8 +48180,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "allySide",
         pp: [30, 48],
-        flags: {noMirror: true},
-        effects: {team: {self: "tailwind"}},
     },
     takedown: {
         uid: 415,
@@ -49178,8 +48190,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
-        effects: {recoil: {ratio: [1, 4]}},
     },
     taunt: {
         uid: 416,
@@ -49190,8 +48200,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [20, 32],
-        flags: {ignoreSub: true},
-        effects: {status: {hit: ["taunt"]}},
     },
     teeterdance: {
         uid: 417,
@@ -49202,7 +48210,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "allAdjacent",
         pp: [20, 32],
-        effects: {status: {hit: ["confusion"]}},
     },
     teleport: {
         uid: 418,
@@ -49223,7 +48230,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true, noCopycat: true},
     },
     thrash: {
         uid: 420,
@@ -49234,8 +48240,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "randomNormal",
         pp: [20, 32],
-        flags: {contact: true},
-        implicit: {status: "lockedMove"},
     },
     thunder: {
         uid: 421,
@@ -49246,7 +48250,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [10, 16],
-        effects: {status: {chance: 30, hit: ["par"]}},
     },
     thunderbolt: {
         uid: 422,
@@ -49257,7 +48260,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [15, 24],
-        effects: {status: {chance: 10, hit: ["par"]}},
     },
     thunderfang: {
         uid: 423,
@@ -49268,8 +48270,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["par"]}},
     },
     thunderpunch: {
         uid: 424,
@@ -49280,8 +48280,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["par"]}},
     },
     thundershock: {
         uid: 425,
@@ -49292,7 +48290,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [30, 48],
-        effects: {status: {chance: 10, hit: ["par"]}},
     },
     thunderwave: {
         uid: 426,
@@ -49303,8 +48300,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["par"]}},
     },
     tickle: {
         uid: 427,
@@ -49315,8 +48310,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {reflectable: true},
-        effects: {boost: {hit: {atk: -1, def: -1}}},
     },
     torment: {
         uid: 428,
@@ -49327,8 +48320,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "dark",
         target: "normal",
         pp: [15, 24],
-        flags: {ignoreSub: true},
-        effects: {status: {hit: ["torment"]}},
     },
     toxic: {
         uid: 429,
@@ -49339,8 +48330,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["tox"]}},
     },
     toxicspikes: {
         uid: 430,
@@ -49351,8 +48340,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "poison",
         target: "foeSide",
         pp: [20, 32],
-        flags: {noMirror: true},
-        effects: {team: {hit: "toxicspikes"}},
     },
     transform: {
         uid: 431,
@@ -49363,8 +48350,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {ignoreSub: true, noMirror: true},
-        effects: {transform: true},
     },
     triattack: {
         uid: 432,
@@ -49375,7 +48360,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        effects: {status: {chance: 20, hit: ["brn", "frz", "par"]}},
     },
     trick: {
         uid: 433,
@@ -49386,8 +48370,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [10, 16],
-        flags: {noCopycat: true},
-        effects: {swapItems: true},
     },
     trickroom: {
         uid: 434,
@@ -49398,7 +48380,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "all",
         pp: [5, 8],
-        effects: {field: {effect: "trickroom", toggle: true}},
     },
     triplekick: {
         uid: 435,
@@ -49409,8 +48390,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [10, 16],
-        multihit: [3, 3],
-        flags: {contact: true},
     },
     trumpcard: {
         uid: 436,
@@ -49421,7 +48400,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 5],
-        flags: {contact: true},
     },
     twineedle: {
         uid: 437,
@@ -49432,8 +48410,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [20, 32],
-        multihit: [2, 2],
-        effects: {status: {chance: 20, hit: ["psn"]}},
     },
     twister: {
         uid: 438,
@@ -49454,7 +48430,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "randomNormal",
         pp: [10, 16],
-        effects: {status: {self: ["uproar"]}},
     },
     uturn: {
         uid: 440,
@@ -49465,8 +48440,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
-        effects: {selfSwitch: true},
+        selfSwitch: true,
     },
     vacuumwave: {
         uid: 441,
@@ -49487,7 +48461,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     visegrip: {
         uid: 443,
@@ -49498,7 +48471,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [30, 48],
-        flags: {contact: true},
     },
     vitalthrow: {
         uid: 444,
@@ -49509,7 +48481,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     volttackle: {
         uid: 445,
@@ -49520,8 +48491,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {status: {chance: 10, hit: ["par"]}, recoil: {ratio: [1, 3]}},
     },
     wakeupslap: {
         uid: 446,
@@ -49532,7 +48501,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fighting",
         target: "normal",
         pp: [10, 16],
-        flags: {contact: true},
     },
     waterfall: {
         uid: 447,
@@ -49543,7 +48511,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     watergun: {
         uid: 448,
@@ -49564,7 +48531,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "any",
         pp: [20, 32],
-        effects: {status: {chance: 20, hit: ["confusion"]}},
     },
     watersport: {
         uid: 450,
@@ -49575,8 +48541,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "all",
         pp: [15, 24],
-        flags: {noMirror: true},
-        effects: {status: {self: ["watersport"]}},
     },
     waterspout: {
         uid: 451,
@@ -49617,8 +48581,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {ignoreSub: true},
-        effects: {drag: true},
     },
     willowisp: {
         uid: 455,
@@ -49629,8 +48591,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "fire",
         target: "normal",
         pp: [15, 24],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["brn"]}},
     },
     wingattack: {
         uid: 456,
@@ -49641,7 +48601,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "flying",
         target: "any",
         pp: [35, 56],
-        flags: {contact: true},
     },
     wish: {
         uid: 457,
@@ -49652,7 +48611,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "self",
         pp: [10, 16],
-        implicit: {team: "wish"},
     },
     withdraw: {
         uid: 458,
@@ -49663,7 +48621,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "water",
         target: "self",
         pp: [40, 64],
-        effects: {boost: {self: {def: 1}}},
     },
     woodhammer: {
         uid: 459,
@@ -49674,8 +48631,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
-        effects: {recoil: {ratio: [1, 3]}},
     },
     worryseed: {
         uid: 460,
@@ -49686,7 +48641,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "grass",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
     },
     wrap: {
         uid: 461,
@@ -49697,7 +48651,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [20, 32],
-        flags: {contact: true},
     },
     wringout: {
         uid: 462,
@@ -49708,7 +48661,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [5, 8],
-        flags: {contact: true},
     },
     xscissor: {
         uid: 463,
@@ -49719,7 +48671,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "bug",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
     yawn: {
         uid: 464,
@@ -49730,8 +48681,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "normal",
         target: "normal",
         pp: [10, 16],
-        flags: {reflectable: true},
-        effects: {status: {hit: ["yawn"]}},
     },
     zapcannon: {
         uid: 465,
@@ -49742,7 +48691,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "electric",
         target: "normal",
         pp: [5, 8],
-        effects: {status: {chance: 100, hit: ["par"]}},
     },
     zenheadbutt: {
         uid: 466,
@@ -49753,7 +48701,6 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         type: "psychic",
         target: "normal",
         pp: [15, 24],
-        flags: {contact: true},
     },
 };
 
@@ -50316,712 +49263,38 @@ export function isTwoTurnMove(value: unknown): value is TwoTurnMove {
     return Object.hasOwnProperty.call(twoTurnMoves, value as PropertyKey);
 }
 
-/** Maps a move name to its {@link dex.CallType}, if any. */
-export const moveCallers: {readonly [name: string]: dex.CallType} = {
-    assist: true,
-    copycat: "copycat",
-    mefirst: "target",
-    metronome: true,
-    mirrormove: "mirror",
-    naturepower: true,
-    sleeptalk: "self",
-};
-
-/** Maps move type to each move of that type. */
-export const typeToMoves: {readonly [T in dex.Type]: readonly string[]} = {
-    "???": ["curse"],
-    bug: [
-        "attackorder",
-        "bugbite",
-        "bugbuzz",
-        "defendorder",
-        "furycutter",
-        "healorder",
-        "leechlife",
-        "megahorn",
-        "pinmissile",
-        "signalbeam",
-        "silverwind",
-        "spiderweb",
-        "stringshot",
-        "tailglow",
-        "twineedle",
-        "uturn",
-        "xscissor",
-    ],
-    dark: [
-        "assurance",
-        "beatup",
-        "bite",
-        "crunch",
-        "darkpulse",
-        "darkvoid",
-        "embargo",
-        "faketears",
-        "feintattack",
-        "flatter",
-        "fling",
-        "knockoff",
-        "memento",
-        "nastyplot",
-        "nightslash",
-        "payback",
-        "punishment",
-        "pursuit",
-        "snatch",
-        "suckerpunch",
-        "switcheroo",
-        "taunt",
-        "thief",
-        "torment",
-    ],
-    dragon: [
-        "dracometeor",
-        "dragonbreath",
-        "dragonclaw",
-        "dragondance",
-        "dragonpulse",
-        "dragonrage",
-        "dragonrush",
-        "outrage",
-        "roaroftime",
-        "spacialrend",
-        "twister",
-    ],
-    electric: [
-        "charge",
-        "chargebeam",
-        "discharge",
-        "magnetrise",
-        "shockwave",
-        "spark",
-        "thunder",
-        "thunderbolt",
-        "thunderfang",
-        "thunderpunch",
-        "thundershock",
-        "thunderwave",
-        "volttackle",
-        "zapcannon",
-    ],
-    fighting: [
-        "armthrust",
-        "aurasphere",
-        "brickbreak",
-        "bulkup",
-        "closecombat",
-        "counter",
-        "crosschop",
-        "detect",
-        "doublekick",
-        "drainpunch",
-        "dynamicpunch",
-        "focusblast",
-        "focuspunch",
-        "forcepalm",
-        "hammerarm",
-        "highjumpkick",
-        "jumpkick",
-        "karatechop",
-        "lowkick",
-        "machpunch",
-        "revenge",
-        "reversal",
-        "rocksmash",
-        "rollingkick",
-        "seismictoss",
-        "skyuppercut",
-        "submission",
-        "superpower",
-        "triplekick",
-        "vacuumwave",
-        "vitalthrow",
-        "wakeupslap",
-    ],
-    fire: [
-        "blastburn",
-        "blazekick",
-        "ember",
-        "eruption",
-        "fireblast",
-        "firefang",
-        "firepunch",
-        "firespin",
-        "flamethrower",
-        "flamewheel",
-        "flareblitz",
-        "heatwave",
-        "lavaplume",
-        "magmastorm",
-        "overheat",
-        "sacredfire",
-        "sunnyday",
-        "willowisp",
-    ],
-    flying: [
-        "aerialace",
-        "aeroblast",
-        "aircutter",
-        "airslash",
-        "bounce",
-        "bravebird",
-        "chatter",
-        "defog",
-        "drillpeck",
-        "featherdance",
-        "fly",
-        "gust",
-        "mirrormove",
-        "peck",
-        "pluck",
-        "roost",
-        "skyattack",
-        "tailwind",
-        "wingattack",
-    ],
-    ghost: [
-        "astonish",
-        "confuseray",
-        "destinybond",
-        "grudge",
-        "lick",
-        "nightmare",
-        "nightshade",
-        "ominouswind",
-        "shadowball",
-        "shadowclaw",
-        "shadowforce",
-        "shadowpunch",
-        "shadowsneak",
-        "spite",
-    ],
-    grass: [
-        "absorb",
-        "aromatherapy",
-        "bulletseed",
-        "cottonspore",
-        "energyball",
-        "frenzyplant",
-        "gigadrain",
-        "grassknot",
-        "grasswhistle",
-        "ingrain",
-        "leafblade",
-        "leafstorm",
-        "leechseed",
-        "magicalleaf",
-        "megadrain",
-        "needlearm",
-        "petaldance",
-        "powerwhip",
-        "razorleaf",
-        "seedbomb",
-        "seedflare",
-        "sleeppowder",
-        "solarbeam",
-        "spore",
-        "stunspore",
-        "synthesis",
-        "vinewhip",
-        "woodhammer",
-        "worryseed",
-    ],
-    ground: [
-        "boneclub",
-        "bonemerang",
-        "bonerush",
-        "dig",
-        "earthpower",
-        "earthquake",
-        "fissure",
-        "magnitude",
-        "mudbomb",
-        "mudshot",
-        "mudslap",
-        "mudsport",
-        "sandattack",
-        "sandtomb",
-        "spikes",
-    ],
-    ice: [
-        "aurorabeam",
-        "avalanche",
-        "blizzard",
-        "hail",
-        "haze",
-        "iceball",
-        "icebeam",
-        "icefang",
-        "icepunch",
-        "iceshard",
-        "iciclespear",
-        "icywind",
-        "mist",
-        "powdersnow",
-        "sheercold",
-    ],
-    normal: [
-        "acupressure",
-        "assist",
-        "attract",
-        "barrage",
-        "batonpass",
-        "bellydrum",
-        "bide",
-        "bind",
-        "block",
-        "bodyslam",
-        "camouflage",
-        "captivate",
-        "charm",
-        "cometpunch",
-        "constrict",
-        "conversion",
-        "conversion2",
-        "copycat",
-        "covet",
-        "crushclaw",
-        "crushgrip",
-        "cut",
-        "defensecurl",
-        "disable",
-        "dizzypunch",
-        "doubleedge",
-        "doublehit",
-        "doubleslap",
-        "doubleteam",
-        "eggbomb",
-        "encore",
-        "endeavor",
-        "endure",
-        "explosion",
-        "extremespeed",
-        "facade",
-        "fakeout",
-        "falseswipe",
-        "feint",
-        "flail",
-        "flash",
-        "focusenergy",
-        "followme",
-        "foresight",
-        "frustration",
-        "furyattack",
-        "furyswipes",
-        "gigaimpact",
-        "glare",
-        "growl",
-        "growth",
-        "guillotine",
-        "harden",
-        "headbutt",
-        "healbell",
-        "helpinghand",
-        "hiddenpower",
-        "hornattack",
-        "horndrill",
-        "howl",
-        "hyperbeam",
-        "hyperfang",
-        "hypervoice",
-        "judgment",
-        "lastresort",
-        "leer",
-        "lockon",
-        "lovelykiss",
-        "luckychant",
-        "meanlook",
-        "mefirst",
-        "megakick",
-        "megapunch",
-        "metronome",
-        "milkdrink",
-        "mimic",
-        "mindreader",
-        "minimize",
-        "moonlight",
-        "morningsun",
-        "naturalgift",
-        "naturepower",
-        "odorsleuth",
-        "painsplit",
-        "payday",
-        "perishsong",
-        "pound",
-        "present",
-        "protect",
-        "psychup",
-        "quickattack",
-        "rage",
-        "rapidspin",
-        "razorwind",
-        "recover",
-        "recycle",
-        "refresh",
-        "return",
-        "roar",
-        "rockclimb",
-        "safeguard",
-        "scaryface",
-        "scratch",
-        "screech",
-        "secretpower",
-        "selfdestruct",
-        "sharpen",
-        "sing",
-        "sketch",
-        "skullbash",
-        "slackoff",
-        "slam",
-        "slash",
-        "sleeptalk",
-        "smellingsalts",
-        "smokescreen",
-        "snore",
-        "softboiled",
-        "sonicboom",
-        "spikecannon",
-        "spitup",
-        "splash",
-        "stockpile",
-        "stomp",
-        "strength",
-        "struggle",
-        "substitute",
-        "superfang",
-        "supersonic",
-        "swagger",
-        "swallow",
-        "sweetkiss",
-        "sweetscent",
-        "swift",
-        "swordsdance",
-        "tackle",
-        "tailwhip",
-        "takedown",
-        "teeterdance",
-        "thrash",
-        "tickle",
-        "transform",
-        "triattack",
-        "trumpcard",
-        "uproar",
-        "visegrip",
-        "weatherball",
-        "whirlwind",
-        "wish",
-        "wrap",
-        "wringout",
-        "yawn",
-    ],
-    poison: [
-        "acid",
-        "acidarmor",
-        "crosspoison",
-        "gastroacid",
-        "gunkshot",
-        "poisonfang",
-        "poisongas",
-        "poisonjab",
-        "poisonpowder",
-        "poisonsting",
-        "poisontail",
-        "sludge",
-        "sludgebomb",
-        "smog",
-        "toxic",
-        "toxicspikes",
-    ],
-    psychic: [
-        "agility",
-        "amnesia",
-        "barrier",
-        "calmmind",
-        "confusion",
-        "cosmicpower",
-        "dreameater",
-        "extrasensory",
-        "futuresight",
-        "gravity",
-        "guardswap",
-        "healblock",
-        "healingwish",
-        "heartswap",
-        "hypnosis",
-        "imprison",
-        "kinesis",
-        "lightscreen",
-        "lunardance",
-        "lusterpurge",
-        "magiccoat",
-        "meditate",
-        "miracleeye",
-        "mirrorcoat",
-        "mistball",
-        "powerswap",
-        "powertrick",
-        "psybeam",
-        "psychic",
-        "psychoboost",
-        "psychocut",
-        "psychoshift",
-        "psywave",
-        "reflect",
-        "rest",
-        "roleplay",
-        "skillswap",
-        "teleport",
-        "trick",
-        "trickroom",
-        "zenheadbutt",
-    ],
-    rock: [
-        "ancientpower",
-        "headsmash",
-        "powergem",
-        "rockblast",
-        "rockpolish",
-        "rockslide",
-        "rockthrow",
-        "rocktomb",
-        "rockwrecker",
-        "rollout",
-        "sandstorm",
-        "stealthrock",
-        "stoneedge",
-    ],
-    steel: [
-        "bulletpunch",
-        "doomdesire",
-        "flashcannon",
-        "gyroball",
-        "irondefense",
-        "ironhead",
-        "irontail",
-        "magnetbomb",
-        "metalburst",
-        "metalclaw",
-        "metalsound",
-        "meteormash",
-        "mirrorshot",
-        "steelwing",
-    ],
-    water: [
-        "aquajet",
-        "aquaring",
-        "aquatail",
-        "brine",
-        "bubble",
-        "bubblebeam",
-        "clamp",
-        "crabhammer",
-        "dive",
-        "hydrocannon",
-        "hydropump",
-        "muddywater",
-        "octazooka",
-        "raindance",
-        "surf",
-        "waterfall",
-        "watergun",
-        "waterpulse",
-        "watersport",
-        "waterspout",
-        "whirlpool",
-        "withdraw",
-    ],
-};
-
-/** Memoization of {@link getItem}. */
-const itemMemo = new Map<dex.ItemData, wrappers.Item>();
-
-/**
- * Gets or creates a {@link dex.ItemData} wrapper.
- *
- * @param data Data to wrap.
- * @returns The wrapper.
- */
-export function getItem(data: dex.ItemData): wrappers.Item;
-/**
- * Gets or creates a {@link dex.ItemData} wrapper.
- *
- * @param name Name of the {@link dex.ItemData}.
- * @returns A {@link dex.ItemData} wrapper, or `null` if not found in
- * {@link items}.
- */
-export function getItem(name: string): wrappers.Item | null;
-export function getItem(name: string | dex.ItemData): wrappers.Item | null {
-    if (typeof name === "string") {
-        if (!Object.hasOwnProperty.call(items, name)) return null;
-        name = items[name];
-    }
-    let result = itemMemo.get(name);
-    if (!result) itemMemo.set(name, (result = new wrappers.Item(name)));
-    return result;
-}
-
 /** Contains {@link dex.ItemData info} about each item. */
 export const items: {readonly [name: string]: dex.ItemData} = {
     none: {uid: 0, name: "none", display: "None"},
     adamantorb: {uid: 1, name: "adamantorb", display: "Adamant Orb"},
-    aguavberry: {
-        uid: 2,
-        name: "aguavberry",
-        display: "Aguav Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "spd"},
-        },
-    },
-    apicotberry: {
-        uid: 3,
-        name: "apicotberry",
-        display: "Apicot Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {spd: 1}},
-        },
-    },
+    aguavberry: {uid: 2, name: "aguavberry", display: "Aguav Berry"},
+    apicotberry: {uid: 3, name: "apicotberry", display: "Apicot Berry"},
     armorfossil: {uid: 4, name: "armorfossil", display: "Armor Fossil"},
-    aspearberry: {
-        uid: 5,
-        name: "aspearberry",
-        display: "Aspear Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "status", status: {frz: true}},
-            eat: {type: "cure", cure: {frz: true}},
-        },
-    },
-    babiriberry: {
-        uid: 6,
-        name: "babiriberry",
-        display: "Babiri Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "steel"}},
-    },
-    belueberry: {
-        uid: 7,
-        name: "belueberry",
-        display: "Belue Berry",
-        isBerry: true,
-    },
-    berryjuice: {
-        uid: 8,
-        name: "berryjuice",
-        display: "Berry Juice",
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healFixed", heal: 20},
-        },
-    },
+    aspearberry: {uid: 5, name: "aspearberry", display: "Aspear Berry"},
+    babiriberry: {uid: 6, name: "babiriberry", display: "Babiri Berry"},
+    belueberry: {uid: 7, name: "belueberry", display: "Belue Berry"},
+    berryjuice: {uid: 8, name: "berryjuice", display: "Berry Juice"},
     bigroot: {uid: 9, name: "bigroot", display: "Big Root"},
     blackbelt: {uid: 10, name: "blackbelt", display: "Black Belt"},
     blackglasses: {uid: 11, name: "blackglasses", display: "Black Glasses"},
-    blacksludge: {
-        uid: 12,
-        name: "blacksludge",
-        display: "Black Sludge",
-        on: {residual: {poisonDamage: 6.25, noPoisonDamage: -12.5}},
-    },
-    blukberry: {
-        uid: 13,
-        name: "blukberry",
-        display: "Bluk Berry",
-        isBerry: true,
-    },
+    blacksludge: {uid: 12, name: "blacksludge", display: "Black Sludge"},
+    blukberry: {uid: 13, name: "blukberry", display: "Bluk Berry"},
     brightpowder: {uid: 14, name: "brightpowder", display: "Bright Powder"},
     charcoal: {uid: 15, name: "charcoal", display: "Charcoal"},
-    chartiberry: {
-        uid: 16,
-        name: "chartiberry",
-        display: "Charti Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "rock"}},
-    },
-    cheriberry: {
-        uid: 17,
-        name: "cheriberry",
-        display: "Cheri Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "status", status: {par: true}},
-            eat: {type: "cure", cure: {par: true}},
-        },
-    },
+    chartiberry: {uid: 16, name: "chartiberry", display: "Charti Berry"},
+    cheriberry: {uid: 17, name: "cheriberry", display: "Cheri Berry"},
     cherishball: {uid: 18, name: "cherishball", display: "Cherish Ball"},
-    chestoberry: {
-        uid: 19,
-        name: "chestoberry",
-        display: "Chesto Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "status", status: {slp: true}},
-            eat: {type: "cure", cure: {slp: true}},
-        },
-    },
-    chilanberry: {
-        uid: 20,
-        name: "chilanberry",
-        display: "Chilan Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "normal"}},
-    },
-    choiceband: {
-        uid: 21,
-        name: "choiceband",
-        display: "Choice Band",
-        isChoice: true,
-    },
-    choicescarf: {
-        uid: 22,
-        name: "choicescarf",
-        display: "Choice Scarf",
-        isChoice: true,
-    },
-    choicespecs: {
-        uid: 23,
-        name: "choicespecs",
-        display: "Choice Specs",
-        isChoice: true,
-    },
-    chopleberry: {
-        uid: 24,
-        name: "chopleberry",
-        display: "Chople Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "fighting"}},
-    },
+    chestoberry: {uid: 19, name: "chestoberry", display: "Chesto Berry"},
+    chilanberry: {uid: 20, name: "chilanberry", display: "Chilan Berry"},
+    choiceband: {uid: 21, name: "choiceband", display: "Choice Band"},
+    choicescarf: {uid: 22, name: "choicescarf", display: "Choice Scarf"},
+    choicespecs: {uid: 23, name: "choicespecs", display: "Choice Specs"},
+    chopleberry: {uid: 24, name: "chopleberry", display: "Chople Berry"},
     clawfossil: {uid: 25, name: "clawfossil", display: "Claw Fossil"},
-    cobaberry: {
-        uid: 26,
-        name: "cobaberry",
-        display: "Coba Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "flying"}},
-    },
-    colburberry: {
-        uid: 27,
-        name: "colburberry",
-        display: "Colbur Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "dark"}},
-    },
-    cornnberry: {
-        uid: 28,
-        name: "cornnberry",
-        display: "Cornn Berry",
-        isBerry: true,
-    },
-    custapberry: {
-        uid: 29,
-        name: "custapberry",
-        display: "Custap Berry",
-        isBerry: true,
-        on: {preMove: {threshold: 25, moveFirst: true}},
-    },
+    cobaberry: {uid: 26, name: "cobaberry", display: "Coba Berry"},
+    colburberry: {uid: 27, name: "colburberry", display: "Colbur Berry"},
+    cornnberry: {uid: 28, name: "cornnberry", display: "Cornn Berry"},
+    custapberry: {uid: 29, name: "custapberry", display: "Custap Berry"},
     damprock: {uid: 30, name: "damprock", display: "Damp Rock"},
     dawnstone: {uid: 31, name: "dawnstone", display: "Dawn Stone"},
     deepseascale: {uid: 32, name: "deepseascale", display: "Deep Sea Scale"},
@@ -51029,666 +49302,183 @@ export const items: {readonly [name: string]: dex.ItemData} = {
     destinyknot: {uid: 34, name: "destinyknot", display: "Destiny Knot"},
     diveball: {uid: 35, name: "diveball", display: "Dive Ball"},
     domefossil: {uid: 36, name: "domefossil", display: "Dome Fossil"},
-    dracoplate: {
-        uid: 37,
-        name: "dracoplate",
-        display: "Draco Plate",
-        plateType: "dragon",
-    },
+    dracoplate: {uid: 37, name: "dracoplate", display: "Draco Plate"},
     dragonfang: {uid: 38, name: "dragonfang", display: "Dragon Fang"},
     dragonscale: {uid: 39, name: "dragonscale", display: "Dragon Scale"},
-    dreadplate: {
-        uid: 40,
-        name: "dreadplate",
-        display: "Dread Plate",
-        plateType: "dark",
-    },
+    dreadplate: {uid: 40, name: "dreadplate", display: "Dread Plate"},
     dubiousdisc: {uid: 41, name: "dubiousdisc", display: "Dubious Disc"},
-    durinberry: {
-        uid: 42,
-        name: "durinberry",
-        display: "Durin Berry",
-        isBerry: true,
-    },
+    durinberry: {uid: 42, name: "durinberry", display: "Durin Berry"},
     duskball: {uid: 43, name: "duskball", display: "Dusk Ball"},
     duskstone: {uid: 44, name: "duskstone", display: "Dusk Stone"},
-    earthplate: {
-        uid: 45,
-        name: "earthplate",
-        display: "Earth Plate",
-        plateType: "ground",
-    },
+    earthplate: {uid: 45, name: "earthplate", display: "Earth Plate"},
     electirizer: {uid: 46, name: "electirizer", display: "Electirizer"},
     energypowder: {uid: 47, name: "energypowder", display: "Energy Powder"},
-    enigmaberry: {
-        uid: 48,
-        name: "enigmaberry",
-        display: "Enigma Berry",
-        isBerry: true,
-        on: {super: {heal: 25}},
-    },
+    enigmaberry: {uid: 48, name: "enigmaberry", display: "Enigma Berry"},
     expertbelt: {uid: 49, name: "expertbelt", display: "Expert Belt"},
     fastball: {uid: 50, name: "fastball", display: "Fast Ball"},
-    figyberry: {
-        uid: 51,
-        name: "figyberry",
-        display: "Figy Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "atk"},
-        },
-    },
+    figyberry: {uid: 51, name: "figyberry", display: "Figy Berry"},
     firestone: {uid: 52, name: "firestone", display: "Fire Stone"},
-    fistplate: {
-        uid: 53,
-        name: "fistplate",
-        display: "Fist Plate",
-        plateType: "fighting",
-    },
-    flameorb: {
-        uid: 54,
-        name: "flameorb",
-        display: "Flame Orb",
-        on: {residual: {status: "brn"}},
-    },
-    flameplate: {
-        uid: 55,
-        name: "flameplate",
-        display: "Flame Plate",
-        plateType: "fire",
-    },
+    fistplate: {uid: 53, name: "fistplate", display: "Fist Plate"},
+    flameorb: {uid: 54, name: "flameorb", display: "Flame Orb"},
+    flameplate: {uid: 55, name: "flameplate", display: "Flame Plate"},
     focusband: {uid: 56, name: "focusband", display: "Focus Band"},
-    focussash: {
-        uid: 57,
-        name: "focussash",
-        display: "Focus Sash",
-        on: {tryOhko: {block: true, consume: true}},
-    },
+    focussash: {uid: 57, name: "focussash", display: "Focus Sash"},
     friendball: {uid: 58, name: "friendball", display: "Friend Ball"},
     fullincense: {uid: 59, name: "fullincense", display: "Full Incense"},
-    ganlonberry: {
-        uid: 60,
-        name: "ganlonberry",
-        display: "Ganlon Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {def: 1}},
-        },
-    },
+    ganlonberry: {uid: 60, name: "ganlonberry", display: "Ganlon Berry"},
     greatball: {uid: 61, name: "greatball", display: "Great Ball"},
-    grepaberry: {
-        uid: 62,
-        name: "grepaberry",
-        display: "Grepa Berry",
-        isBerry: true,
-    },
+    grepaberry: {uid: 62, name: "grepaberry", display: "Grepa Berry"},
     gripclaw: {uid: 63, name: "gripclaw", display: "Grip Claw"},
     griseousorb: {uid: 64, name: "griseousorb", display: "Griseous Orb"},
-    habanberry: {
-        uid: 65,
-        name: "habanberry",
-        display: "Haban Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "dragon"}},
-    },
+    habanberry: {uid: 65, name: "habanberry", display: "Haban Berry"},
     hardstone: {uid: 66, name: "hardstone", display: "Hard Stone"},
     healball: {uid: 67, name: "healball", display: "Heal Ball"},
     heatrock: {uid: 68, name: "heatrock", display: "Heat Rock"},
     heavyball: {uid: 69, name: "heavyball", display: "Heavy Ball"},
     helixfossil: {uid: 70, name: "helixfossil", display: "Helix Fossil"},
-    hondewberry: {
-        uid: 71,
-        name: "hondewberry",
-        display: "Hondew Berry",
-        isBerry: true,
-    },
-    iapapaberry: {
-        uid: 72,
-        name: "iapapaberry",
-        display: "Iapapa Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "def"},
-        },
-    },
-    icicleplate: {
-        uid: 73,
-        name: "icicleplate",
-        display: "Icicle Plate",
-        plateType: "ice",
-    },
+    hondewberry: {uid: 71, name: "hondewberry", display: "Hondew Berry"},
+    iapapaberry: {uid: 72, name: "iapapaberry", display: "Iapapa Berry"},
+    icicleplate: {uid: 73, name: "icicleplate", display: "Icicle Plate"},
     icyrock: {uid: 74, name: "icyrock", display: "Icy Rock"},
-    insectplate: {
-        uid: 75,
-        name: "insectplate",
-        display: "Insect Plate",
-        plateType: "bug",
-    },
+    insectplate: {uid: 75, name: "insectplate", display: "Insect Plate"},
     ironball: {uid: 76, name: "ironball", display: "Iron Ball"},
-    ironplate: {
-        uid: 77,
-        name: "ironplate",
-        display: "Iron Plate",
-        plateType: "steel",
-    },
-    jabocaberry: {
-        uid: 78,
-        name: "jabocaberry",
-        display: "Jaboca Berry",
-        isBerry: true,
-        on: {postHit: {condition: "physical", damage: 12.5}},
-    },
-    kasibberry: {
-        uid: 79,
-        name: "kasibberry",
-        display: "Kasib Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "ghost"}},
-    },
-    kebiaberry: {
-        uid: 80,
-        name: "kebiaberry",
-        display: "Kebia Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "poison"}},
-    },
-    kelpsyberry: {
-        uid: 81,
-        name: "kelpsyberry",
-        display: "Kelpsy Berry",
-        isBerry: true,
-    },
+    ironplate: {uid: 77, name: "ironplate", display: "Iron Plate"},
+    jabocaberry: {uid: 78, name: "jabocaberry", display: "Jaboca Berry"},
+    kasibberry: {uid: 79, name: "kasibberry", display: "Kasib Berry"},
+    kebiaberry: {uid: 80, name: "kebiaberry", display: "Kebia Berry"},
+    kelpsyberry: {uid: 81, name: "kelpsyberry", display: "Kelpsy Berry"},
     kingsrock: {uid: 82, name: "kingsrock", display: "King's Rock"},
     laggingtail: {uid: 83, name: "laggingtail", display: "Lagging Tail"},
-    lansatberry: {
-        uid: 84,
-        name: "lansatberry",
-        display: "Lansat Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 25},
-            eat: {type: "focusenergy"},
-        },
-    },
+    lansatberry: {uid: 84, name: "lansatberry", display: "Lansat Berry"},
     laxincense: {uid: 85, name: "laxincense", display: "Lax Incense"},
     leafstone: {uid: 86, name: "leafstone", display: "Leaf Stone"},
-    leftovers: {
-        uid: 87,
-        name: "leftovers",
-        display: "Leftovers",
-        on: {residual: {poisonDamage: 6.25, noPoisonDamage: 6.25}},
-    },
-    leppaberry: {
-        uid: 88,
-        name: "leppaberry",
-        display: "Leppa Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "depleted"},
-            eat: {type: "restore", restore: 10},
-        },
-    },
+    leftovers: {uid: 87, name: "leftovers", display: "Leftovers"},
+    leppaberry: {uid: 88, name: "leppaberry", display: "Leppa Berry"},
     levelball: {uid: 89, name: "levelball", display: "Level Ball"},
-    liechiberry: {
-        uid: 90,
-        name: "liechiberry",
-        display: "Liechi Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {atk: 1}},
-        },
-    },
-    lifeorb: {
-        uid: 91,
-        name: "lifeorb",
-        display: "Life Orb",
-        on: {movePostDamage: {percentDamage: -10}},
-    },
+    liechiberry: {uid: 90, name: "liechiberry", display: "Liechi Berry"},
+    lifeorb: {uid: 91, name: "lifeorb", display: "Life Orb"},
     lightball: {uid: 92, name: "lightball", display: "Light Ball"},
     lightclay: {uid: 93, name: "lightclay", display: "Light Clay"},
     loveball: {uid: 94, name: "loveball", display: "Love Ball"},
     luckypunch: {uid: 95, name: "luckypunch", display: "Lucky Punch"},
-    lumberry: {
-        uid: 96,
-        name: "lumberry",
-        display: "Lum Berry",
-        isBerry: true,
-        on: {
-            update: {
-                condition: "status",
-                status: {
-                    brn: true,
-                    par: true,
-                    psn: true,
-                    tox: true,
-                    slp: true,
-                    frz: true,
-                    confusion: true,
-                },
-            },
-            eat: {
-                type: "cure",
-                cure: {
-                    brn: true,
-                    par: true,
-                    psn: true,
-                    tox: true,
-                    slp: true,
-                    frz: true,
-                    confusion: true,
-                },
-            },
-        },
-    },
+    lumberry: {uid: 96, name: "lumberry", display: "Lum Berry"},
     lureball: {uid: 97, name: "lureball", display: "Lure Ball"},
     lustrousorb: {uid: 98, name: "lustrousorb", display: "Lustrous Orb"},
     luxuryball: {uid: 99, name: "luxuryball", display: "Luxury Ball"},
     machobrace: {uid: 100, name: "machobrace", display: "Macho Brace"},
     magmarizer: {uid: 101, name: "magmarizer", display: "Magmarizer"},
     magnet: {uid: 102, name: "magnet", display: "Magnet"},
-    magoberry: {
-        uid: 103,
-        name: "magoberry",
-        display: "Mago Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "spe"},
-        },
-    },
-    magostberry: {
-        uid: 104,
-        name: "magostberry",
-        display: "Magost Berry",
-        isBerry: true,
-    },
+    magoberry: {uid: 103, name: "magoberry", display: "Mago Berry"},
+    magostberry: {uid: 104, name: "magostberry", display: "Magost Berry"},
     mail: {uid: 105, name: "mail", display: "Mail"},
     masterball: {uid: 106, name: "masterball", display: "Master Ball"},
-    meadowplate: {
-        uid: 107,
-        name: "meadowplate",
-        display: "Meadow Plate",
-        plateType: "grass",
-    },
-    mentalherb: {
-        uid: 108,
-        name: "mentalherb",
-        display: "Mental Herb",
-        on: {
-            update: {
-                condition: "status",
-                status: {attract: true},
-                cure: true,
-                consume: true,
-            },
-        },
-    },
+    meadowplate: {uid: 107, name: "meadowplate", display: "Meadow Plate"},
+    mentalherb: {uid: 108, name: "mentalherb", display: "Mental Herb"},
     metalcoat: {uid: 109, name: "metalcoat", display: "Metal Coat"},
     metalpowder: {uid: 110, name: "metalpowder", display: "Metal Powder"},
     metronome: {uid: 111, name: "metronome", display: "Metronome"},
-    micleberry: {
-        uid: 112,
-        name: "micleberry",
-        display: "Micle Berry",
-        isBerry: true,
-        on: {
-            residual: {threshold: 25},
-            eat: {type: "status", status: "micleberry"},
-        },
-    },
-    mindplate: {
-        uid: 113,
-        name: "mindplate",
-        display: "Mind Plate",
-        plateType: "psychic",
-    },
+    micleberry: {uid: 112, name: "micleberry", display: "Micle Berry"},
+    mindplate: {uid: 113, name: "mindplate", display: "Mind Plate"},
     miracleseed: {uid: 114, name: "miracleseed", display: "Miracle Seed"},
     moonball: {uid: 115, name: "moonball", display: "Moon Ball"},
     moonstone: {uid: 116, name: "moonstone", display: "Moon Stone"},
     muscleband: {uid: 117, name: "muscleband", display: "Muscle Band"},
     mysticwater: {uid: 118, name: "mysticwater", display: "Mystic Water"},
-    nanabberry: {
-        uid: 119,
-        name: "nanabberry",
-        display: "Nanab Berry",
-        isBerry: true,
-    },
+    nanabberry: {uid: 119, name: "nanabberry", display: "Nanab Berry"},
     nestball: {uid: 120, name: "nestball", display: "Nest Ball"},
     netball: {uid: 121, name: "netball", display: "Net Ball"},
     nevermeltice: {uid: 122, name: "nevermeltice", display: "Never-Melt Ice"},
-    nomelberry: {
-        uid: 123,
-        name: "nomelberry",
-        display: "Nomel Berry",
-        isBerry: true,
-    },
-    occaberry: {
-        uid: 124,
-        name: "occaberry",
-        display: "Occa Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "fire"}},
-    },
+    nomelberry: {uid: 123, name: "nomelberry", display: "Nomel Berry"},
+    occaberry: {uid: 124, name: "occaberry", display: "Occa Berry"},
     oddincense: {uid: 125, name: "oddincense", display: "Odd Incense"},
     oldamber: {uid: 126, name: "oldamber", display: "Old Amber"},
-    oranberry: {
-        uid: 127,
-        name: "oranberry",
-        display: "Oran Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healFixed", heal: 10},
-        },
-    },
+    oranberry: {uid: 127, name: "oranberry", display: "Oran Berry"},
     ovalstone: {uid: 128, name: "ovalstone", display: "Oval Stone"},
-    pamtreberry: {
-        uid: 129,
-        name: "pamtreberry",
-        display: "Pamtre Berry",
-        isBerry: true,
-    },
+    pamtreberry: {uid: 129, name: "pamtreberry", display: "Pamtre Berry"},
     parkball: {uid: 130, name: "parkball", display: "Park Ball"},
-    passhoberry: {
-        uid: 131,
-        name: "passhoberry",
-        display: "Passho Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "water"}},
-    },
-    payapaberry: {
-        uid: 132,
-        name: "payapaberry",
-        display: "Payapa Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "psychic"}},
-    },
-    pechaberry: {
-        uid: 133,
-        name: "pechaberry",
-        display: "Pecha Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "status", status: {psn: true, tox: true}},
-            eat: {type: "cure", cure: {psn: true, tox: true}},
-        },
-    },
-    persimberry: {
-        uid: 134,
-        name: "persimberry",
-        display: "Persim Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "status", status: {confusion: true}},
-            eat: {type: "cure", cure: {confusion: true}},
-        },
-    },
-    petayaberry: {
-        uid: 135,
-        name: "petayaberry",
-        display: "Petaya Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {spa: 1}},
-        },
-    },
-    pinapberry: {
-        uid: 136,
-        name: "pinapberry",
-        display: "Pinap Berry",
-        isBerry: true,
-    },
+    passhoberry: {uid: 131, name: "passhoberry", display: "Passho Berry"},
+    payapaberry: {uid: 132, name: "payapaberry", display: "Payapa Berry"},
+    pechaberry: {uid: 133, name: "pechaberry", display: "Pecha Berry"},
+    persimberry: {uid: 134, name: "persimberry", display: "Persim Berry"},
+    petayaberry: {uid: 135, name: "petayaberry", display: "Petaya Berry"},
+    pinapberry: {uid: 136, name: "pinapberry", display: "Pinap Berry"},
     poisonbarb: {uid: 137, name: "poisonbarb", display: "Poison Barb"},
     pokeball: {uid: 138, name: "pokeball", display: "Poke Ball"},
-    pomegberry: {
-        uid: 139,
-        name: "pomegberry",
-        display: "Pomeg Berry",
-        isBerry: true,
-    },
+    pomegberry: {uid: 139, name: "pomegberry", display: "Pomeg Berry"},
     poweranklet: {uid: 140, name: "poweranklet", display: "Power Anklet"},
     powerband: {uid: 141, name: "powerband", display: "Power Band"},
     powerbelt: {uid: 142, name: "powerbelt", display: "Power Belt"},
     powerbracer: {uid: 143, name: "powerbracer", display: "Power Bracer"},
-    powerherb: {
-        uid: 144,
-        name: "powerherb",
-        display: "Power Herb",
-        on: {moveCharge: {shorten: true, consume: true}},
-    },
+    powerherb: {uid: 144, name: "powerherb", display: "Power Herb"},
     powerlens: {uid: 145, name: "powerlens", display: "Power Lens"},
     powerweight: {uid: 146, name: "powerweight", display: "Power Weight"},
     premierball: {uid: 147, name: "premierball", display: "Premier Ball"},
     protector: {uid: 148, name: "protector", display: "Protector"},
-    qualotberry: {
-        uid: 149,
-        name: "qualotberry",
-        display: "Qualot Berry",
-        isBerry: true,
-    },
+    qualotberry: {uid: 149, name: "qualotberry", display: "Qualot Berry"},
     quickball: {uid: 150, name: "quickball", display: "Quick Ball"},
     quickclaw: {uid: 151, name: "quickclaw", display: "Quick Claw"},
     quickpowder: {uid: 152, name: "quickpowder", display: "Quick Powder"},
-    rabutaberry: {
-        uid: 153,
-        name: "rabutaberry",
-        display: "Rabuta Berry",
-        isBerry: true,
-    },
+    rabutaberry: {uid: 153, name: "rabutaberry", display: "Rabuta Berry"},
     rarebone: {uid: 154, name: "rarebone", display: "Rare Bone"},
-    rawstberry: {
-        uid: 155,
-        name: "rawstberry",
-        display: "Rawst Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "status", status: {brn: true}},
-            eat: {type: "cure", cure: {brn: true}},
-        },
-    },
+    rawstberry: {uid: 155, name: "rawstberry", display: "Rawst Berry"},
     razorclaw: {uid: 156, name: "razorclaw", display: "Razor Claw"},
     razorfang: {uid: 157, name: "razorfang", display: "Razor Fang"},
-    razzberry: {
-        uid: 158,
-        name: "razzberry",
-        display: "Razz Berry",
-        isBerry: true,
-    },
+    razzberry: {uid: 158, name: "razzberry", display: "Razz Berry"},
     reapercloth: {uid: 159, name: "reapercloth", display: "Reaper Cloth"},
     repeatball: {uid: 160, name: "repeatball", display: "Repeat Ball"},
-    rindoberry: {
-        uid: 161,
-        name: "rindoberry",
-        display: "Rindo Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "grass"}},
-    },
+    rindoberry: {uid: 161, name: "rindoberry", display: "Rindo Berry"},
     rockincense: {uid: 162, name: "rockincense", display: "Rock Incense"},
     rootfossil: {uid: 163, name: "rootfossil", display: "Root Fossil"},
     roseincense: {uid: 164, name: "roseincense", display: "Rose Incense"},
-    rowapberry: {
-        uid: 165,
-        name: "rowapberry",
-        display: "Rowap Berry",
-        isBerry: true,
-        on: {postHit: {condition: "special", damage: 12.5}},
-    },
+    rowapberry: {uid: 165, name: "rowapberry", display: "Rowap Berry"},
     safariball: {uid: 166, name: "safariball", display: "Safari Ball"},
-    salacberry: {
-        uid: 167,
-        name: "salacberry",
-        display: "Salac Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {spe: 1}},
-        },
-    },
+    salacberry: {uid: 167, name: "salacberry", display: "Salac Berry"},
     scopelens: {uid: 168, name: "scopelens", display: "Scope Lens"},
     seaincense: {uid: 169, name: "seaincense", display: "Sea Incense"},
     sharpbeak: {uid: 170, name: "sharpbeak", display: "Sharp Beak"},
     shedshell: {uid: 171, name: "shedshell", display: "Shed Shell"},
     shellbell: {uid: 172, name: "shellbell", display: "Shell Bell"},
     shinystone: {uid: 173, name: "shinystone", display: "Shiny Stone"},
-    shucaberry: {
-        uid: 174,
-        name: "shucaberry",
-        display: "Shuca Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "ground"}},
-    },
+    shucaberry: {uid: 174, name: "shucaberry", display: "Shuca Berry"},
     silkscarf: {uid: 175, name: "silkscarf", display: "Silk Scarf"},
     silverpowder: {uid: 176, name: "silverpowder", display: "Silver Powder"},
-    sitrusberry: {
-        uid: 177,
-        name: "sitrusberry",
-        display: "Sitrus Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 25},
-        },
-    },
+    sitrusberry: {uid: 177, name: "sitrusberry", display: "Sitrus Berry"},
     skullfossil: {uid: 178, name: "skullfossil", display: "Skull Fossil"},
-    skyplate: {
-        uid: 179,
-        name: "skyplate",
-        display: "Sky Plate",
-        plateType: "flying",
-    },
+    skyplate: {uid: 179, name: "skyplate", display: "Sky Plate"},
     smoothrock: {uid: 180, name: "smoothrock", display: "Smooth Rock"},
     softsand: {uid: 181, name: "softsand", display: "Soft Sand"},
     souldew: {uid: 182, name: "souldew", display: "Soul Dew"},
     spelltag: {uid: 183, name: "spelltag", display: "Spell Tag"},
-    spelonberry: {
-        uid: 184,
-        name: "spelonberry",
-        display: "Spelon Berry",
-        isBerry: true,
-    },
-    splashplate: {
-        uid: 185,
-        name: "splashplate",
-        display: "Splash Plate",
-        plateType: "water",
-    },
-    spookyplate: {
-        uid: 186,
-        name: "spookyplate",
-        display: "Spooky Plate",
-        plateType: "ghost",
-    },
+    spelonberry: {uid: 184, name: "spelonberry", display: "Spelon Berry"},
+    splashplate: {uid: 185, name: "splashplate", display: "Splash Plate"},
+    spookyplate: {uid: 186, name: "spookyplate", display: "Spooky Plate"},
     sportball: {uid: 187, name: "sportball", display: "Sport Ball"},
-    starfberry: {
-        uid: 188,
-        name: "starfberry",
-        display: "Starf Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 25},
-            eat: {
-                type: "boost",
-                boostOne: {atk: 2, def: 2, spa: 2, spd: 2, spe: 2},
-            },
-        },
-    },
+    starfberry: {uid: 188, name: "starfberry", display: "Starf Berry"},
     stick: {uid: 189, name: "stick", display: "Stick"},
-    stickybarb: {
-        uid: 190,
-        name: "stickybarb",
-        display: "Sticky Barb",
-        on: {residual: {poisonDamage: -12.5, noPoisonDamage: -12.5}},
-    },
-    stoneplate: {
-        uid: 191,
-        name: "stoneplate",
-        display: "Stone Plate",
-        plateType: "rock",
-    },
+    stickybarb: {uid: 190, name: "stickybarb", display: "Sticky Barb"},
+    stoneplate: {uid: 191, name: "stoneplate", display: "Stone Plate"},
     sunstone: {uid: 192, name: "sunstone", display: "Sun Stone"},
-    tamatoberry: {
-        uid: 193,
-        name: "tamatoberry",
-        display: "Tamato Berry",
-        isBerry: true,
-    },
-    tangaberry: {
-        uid: 194,
-        name: "tangaberry",
-        display: "Tanga Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "bug"}},
-    },
+    tamatoberry: {uid: 193, name: "tamatoberry", display: "Tamato Berry"},
+    tangaberry: {uid: 194, name: "tangaberry", display: "Tanga Berry"},
     thickclub: {uid: 195, name: "thickclub", display: "Thick Club"},
     thunderstone: {uid: 196, name: "thunderstone", display: "Thunder Stone"},
     timerball: {uid: 197, name: "timerball", display: "Timer Ball"},
-    toxicorb: {
-        uid: 198,
-        name: "toxicorb",
-        display: "Toxic Orb",
-        on: {residual: {status: "tox"}},
-    },
-    toxicplate: {
-        uid: 199,
-        name: "toxicplate",
-        display: "Toxic Plate",
-        plateType: "poison",
-    },
+    toxicorb: {uid: 198, name: "toxicorb", display: "Toxic Orb"},
+    toxicplate: {uid: 199, name: "toxicplate", display: "Toxic Plate"},
     twistedspoon: {uid: 200, name: "twistedspoon", display: "Twisted Spoon"},
     ultraball: {uid: 201, name: "ultraball", display: "Ultra Ball"},
     upgrade: {uid: 202, name: "upgrade", display: "Up-Grade"},
-    wacanberry: {
-        uid: 203,
-        name: "wacanberry",
-        display: "Wacan Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "electric"}},
-    },
+    wacanberry: {uid: 203, name: "wacanberry", display: "Wacan Berry"},
     waterstone: {uid: 204, name: "waterstone", display: "Water Stone"},
-    watmelberry: {
-        uid: 205,
-        name: "watmelberry",
-        display: "Watmel Berry",
-        isBerry: true,
-    },
+    watmelberry: {uid: 205, name: "watmelberry", display: "Watmel Berry"},
     waveincense: {uid: 206, name: "waveincense", display: "Wave Incense"},
-    wepearberry: {
-        uid: 207,
-        name: "wepearberry",
-        display: "Wepear Berry",
-        isBerry: true,
-    },
+    wepearberry: {uid: 207, name: "wepearberry", display: "Wepear Berry"},
     whiteherb: {uid: 208, name: "whiteherb", display: "White Herb"},
     widelens: {uid: 209, name: "widelens", display: "Wide Lens"},
-    wikiberry: {
-        uid: 210,
-        name: "wikiberry",
-        display: "Wiki Berry",
-        isBerry: true,
-        on: {
-            update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "spa"},
-        },
-    },
+    wikiberry: {uid: 210, name: "wikiberry", display: "Wiki Berry"},
     wiseglasses: {uid: 211, name: "wiseglasses", display: "Wise Glasses"},
-    yacheberry: {
-        uid: 212,
-        name: "yacheberry",
-        display: "Yache Berry",
-        isBerry: true,
-        on: {preHit: {resistSuper: "ice"}},
-    },
-    zapplate: {
-        uid: 213,
-        name: "zapplate",
-        display: "Zap Plate",
-        plateType: "electric",
-    },
+    yacheberry: {uid: 212, name: "yacheberry", display: "Yache Berry"},
+    zapplate: {uid: 213, name: "zapplate", display: "Zap Plate"},
     zoomlens: {uid: 214, name: "zoomlens", display: "Zoom Lens"},
 };
 
@@ -51910,143 +49700,3 @@ export const itemKeys: readonly string[] = [
     "zapplate",
     "zoomlens",
 ];
-
-/**
- * Contains {@link dex.NaturalGiftData additional info} about each berry item.
- */
-export const berries: {readonly [name: string]: dex.NaturalGiftData} = {
-    aguavberry: {basePower: 60, type: "dragon"},
-    apicotberry: {basePower: 80, type: "ground"},
-    aspearberry: {basePower: 60, type: "ice"},
-    babiriberry: {basePower: 60, type: "steel"},
-    belueberry: {basePower: 80, type: "electric"},
-    blukberry: {basePower: 70, type: "fire"},
-    chartiberry: {basePower: 60, type: "rock"},
-    cheriberry: {basePower: 60, type: "fire"},
-    chestoberry: {basePower: 60, type: "water"},
-    chilanberry: {basePower: 60, type: "normal"},
-    chopleberry: {basePower: 60, type: "fighting"},
-    cobaberry: {basePower: 60, type: "flying"},
-    colburberry: {basePower: 60, type: "dark"},
-    cornnberry: {basePower: 70, type: "bug"},
-    custapberry: {basePower: 80, type: "ghost"},
-    durinberry: {basePower: 80, type: "water"},
-    enigmaberry: {basePower: 80, type: "bug"},
-    figyberry: {basePower: 60, type: "bug"},
-    ganlonberry: {basePower: 80, type: "ice"},
-    grepaberry: {basePower: 70, type: "flying"},
-    habanberry: {basePower: 60, type: "dragon"},
-    hondewberry: {basePower: 70, type: "ground"},
-    iapapaberry: {basePower: 60, type: "dark"},
-    jabocaberry: {basePower: 80, type: "dragon"},
-    kasibberry: {basePower: 60, type: "ghost"},
-    kebiaberry: {basePower: 60, type: "poison"},
-    kelpsyberry: {basePower: 70, type: "fighting"},
-    lansatberry: {basePower: 80, type: "flying"},
-    leppaberry: {basePower: 60, type: "fighting"},
-    liechiberry: {basePower: 80, type: "grass"},
-    lumberry: {basePower: 60, type: "flying"},
-    magoberry: {basePower: 60, type: "ghost"},
-    magostberry: {basePower: 70, type: "rock"},
-    micleberry: {basePower: 80, type: "rock"},
-    nanabberry: {basePower: 70, type: "water"},
-    nomelberry: {basePower: 70, type: "dragon"},
-    occaberry: {basePower: 60, type: "fire"},
-    oranberry: {basePower: 60, type: "poison"},
-    pamtreberry: {basePower: 70, type: "steel"},
-    passhoberry: {basePower: 60, type: "water"},
-    payapaberry: {basePower: 60, type: "psychic"},
-    pechaberry: {basePower: 60, type: "electric"},
-    persimberry: {basePower: 60, type: "ground"},
-    petayaberry: {basePower: 80, type: "poison"},
-    pinapberry: {basePower: 70, type: "grass"},
-    pomegberry: {basePower: 70, type: "ice"},
-    qualotberry: {basePower: 70, type: "poison"},
-    rabutaberry: {basePower: 70, type: "ghost"},
-    rawstberry: {basePower: 60, type: "grass"},
-    razzberry: {basePower: 60, type: "steel"},
-    rindoberry: {basePower: 60, type: "grass"},
-    rowapberry: {basePower: 80, type: "dark"},
-    salacberry: {basePower: 80, type: "fighting"},
-    shucaberry: {basePower: 60, type: "ground"},
-    sitrusberry: {basePower: 60, type: "psychic"},
-    spelonberry: {basePower: 70, type: "dark"},
-    starfberry: {basePower: 80, type: "psychic"},
-    tamatoberry: {basePower: 70, type: "psychic"},
-    tangaberry: {basePower: 60, type: "bug"},
-    wacanberry: {basePower: 60, type: "electric"},
-    watmelberry: {basePower: 80, type: "fire"},
-    wepearberry: {basePower: 70, type: "electric"},
-    wikiberry: {basePower: 60, type: "rock"},
-    yacheberry: {basePower: 60, type: "ice"},
-};
-
-/**
- * Contains {@link dex.ConditionResidualData info} about each condition's
- * residual effects, grouped by order and sub-order.
- */
-export const conditionResidualOrderGroups: readonly dex.ConditionResidualData[][][] =
-    [
-        [[{name: "reflect", type: "side"}]] /* 1 */,
-        [[{name: "lightscreen", type: "side"}]] /* 2 */,
-        [[{name: "mist", type: "side"}]] /* 3 */,
-        [[{name: "safeguard", type: "side"}]] /* 4 */,
-        [[{name: "tailwind", type: "side"}]] /* 5 */,
-        [[{name: "luckychant", type: "side"}]] /* 6 */,
-        [[{name: "wish", type: "slot"}]] /* 7 */,
-        [
-            [
-                {name: "hail", type: "field"},
-                {name: "raindance", type: "field"},
-                {name: "sandstorm", type: "field"},
-                {name: "sunnyday", type: "field"},
-            ],
-        ] /* 8 */,
-        [[{name: "gravity", type: "field"}]] /* 9 */,
-        [
-            [{name: "ingrain", type: "pokemon"}] /* 1 */,
-            [{name: "aquaring", type: "pokemon"}] /* 2 */,
-            [
-                {name: "shedskin", type: "ability"},
-                {name: "speedboost", type: "ability"},
-            ] /* 3 */,
-            [
-                {name: "blacksludge", type: "item"},
-                {name: "leftovers", type: "item"},
-            ] /* 4 */,
-            [{name: "leechseed", type: "pokemon"}] /* 5 */,
-            [
-                {name: "brn", type: "pokemon"},
-                {name: "psn", type: "pokemon"},
-                {name: "tox", type: "pokemon"},
-            ] /* 6 */,
-            [{name: "nightmare", type: "pokemon"}] /* 7 */,
-            [{name: "curse", type: "pokemon"}] /* 8 */,
-            [{name: "partiallytrapped", type: "pokemon"}] /* 9 */,
-            [{name: "baddreams", type: "ability"}] /* 10 */,
-            [{name: "uproar", type: "pokemon"}] /* 11 */,
-            [{name: "disable", type: "pokemon"}] /* 13 */,
-            [{name: "encore", type: "pokemon"}] /* 14 */,
-            [{name: "taunt", type: "pokemon"}] /* 15 */,
-            [{name: "magnetrise", type: "pokemon"}] /* 16 */,
-            [{name: "healblock", type: "pokemon"}] /* 17 */,
-            [{name: "embargo", type: "pokemon"}] /* 18 */,
-            [{name: "yawn", type: "pokemon"}] /* 19 */,
-            [
-                {name: "flameorb", type: "item"},
-                {name: "stickybarb", type: "item"},
-                {name: "toxicorb", type: "item"},
-            ] /* 20 */,
-        ] /* 10 */,
-        [[{name: "futuremove", type: "slot"}]] /* 11 */,
-        [[{name: "perishsong", type: "pokemon"}]] /* 12 */,
-        [[{name: "trickroom", type: "field"}]] /* 13 */,
-        [[{name: "roost", type: "pokemon"}]] /* 25 */,
-        [[{name: "slowstart", type: "pokemon"}] /* 2 */] /* 28 */,
-        [
-            [
-                {name: "lockedmove", type: "pokemon"},
-                {name: "micleberry", type: "item"},
-            ],
-        ],
-    ];

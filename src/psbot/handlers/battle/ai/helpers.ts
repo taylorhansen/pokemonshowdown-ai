@@ -40,7 +40,9 @@ export function weightedShuffle<T>(weights: number[], arr: T[]): void {
         // weights that had this value, and also their corresponding values.
         // On the next iteration, the elements that were not selected will
         // compete for the next spot on the list.
-        for (let k = j; k < cw.length; ++k) cw[k] -= weights[j];
+        for (let k = j; k < cw.length; ++k) {
+            cw[k] -= weights[j];
+        }
         cw.splice(j, 1);
         weights.splice(j, 1);
         copy.splice(j, 1);
@@ -59,8 +61,11 @@ export function bisectRight(
 ): number {
     while (beg < end) {
         const mid = Math.floor((beg + end) / 2);
-        if (a[mid] > n) end = mid;
-        else beg = mid + 1;
+        if (a[mid] > n) {
+            end = mid;
+        } else {
+            beg = mid + 1;
+        }
     }
     return beg;
 }

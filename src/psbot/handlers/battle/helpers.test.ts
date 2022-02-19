@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import "mocha";
-import {toIdName} from "../../src/psbot/helpers";
+import {toIdName} from "./helpers";
 
 /**
  * Describes a test case given to a function.

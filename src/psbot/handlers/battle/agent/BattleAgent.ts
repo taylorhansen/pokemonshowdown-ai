@@ -1,4 +1,4 @@
-import {Logger} from "../../../../logging/Logger";
+import {Logger} from "../../../../util/logging/Logger";
 import {FormatType, ReadonlyState} from "../formats";
 import {Choice} from "./Choice";
 

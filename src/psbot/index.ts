@@ -11,8 +11,8 @@ import {
     // For some reason the linter doesn't like gitignored source files.
     // eslint-disable-next-line node/no-unpublished-import
 } from "../config";
-import {Logger} from "../logging/Logger";
 import {importTfn} from "../tfn";
+import {Logger} from "../util/logging/Logger";
 import {PsBot} from "./PsBot";
 import * as handlers from "./handlers";
 import {networkAgent} from "./handlers/battle/ai/networkAgent";
@@ -38,8 +38,12 @@ void (async function () {
         return;
     }
 
-    if (username) await bot.login({username, password, loginServer});
-    if (avatar !== null) bot.setAvatar(avatar);
+    if (username) {
+        await bot.login({username, password, loginServer});
+    }
+    if (avatar !== null) {
+        bot.setAvatar(avatar);
+    }
 
     const model = await modelPromise;
     const agent = networkAgent<"gen4">(

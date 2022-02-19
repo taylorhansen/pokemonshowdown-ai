@@ -51,21 +51,21 @@ export const test = () =>
             });
         });
 
-        describe("#divergeHp()", function () {
+        describe("#transform()", function () {
             it("Should create partial shallow copy", function () {
                 const stats = StatTable.base(dex.pokemon["mew"], 100);
                 const overrideHp = new StatRange(50, 100, true /*hp*/);
-                const dstats = stats.transform(overrideHp);
+                const stats2 = stats.transform(overrideHp);
 
-                expect(stats.level).to.equal(dstats.level);
-                expect(stats.hp).to.not.equal(dstats.hp);
-                expect(dstats.hp).to.equal(overrideHp);
-                expect(stats.atk).to.equal(dstats.atk);
-                expect(stats.def).to.equal(dstats.def);
-                expect(stats.spa).to.equal(dstats.spa);
-                expect(stats.spd).to.equal(dstats.spd);
-                expect(stats.spe).to.equal(dstats.spe);
-                expect(stats.hpType).to.equal(dstats.hpType);
+                expect(stats.level).to.equal(stats2.level);
+                expect(stats.hp).to.not.equal(stats2.hp);
+                expect(stats2.hp).to.equal(overrideHp);
+                expect(stats.atk).to.equal(stats2.atk);
+                expect(stats.def).to.equal(stats2.def);
+                expect(stats.spa).to.equal(stats2.spa);
+                expect(stats.spd).to.equal(stats2.spd);
+                expect(stats.spe).to.equal(stats2.spe);
+                expect(stats.hpType).to.equal(stats2.hpType);
             });
         });
     });

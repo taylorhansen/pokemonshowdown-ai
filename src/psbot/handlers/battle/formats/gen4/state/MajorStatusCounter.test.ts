@@ -67,12 +67,6 @@ export const test = () =>
                     "MajorStatus 'slp' lasted longer than expected (4/4 turns)",
                 );
             });
-
-            it("Should increment turns twice if asleep and earlybird", function () {
-                ms.afflict("slp");
-                ms.tick("earlybird");
-                expect(ms.turns).to.equal(3);
-            });
         });
 
         describe("#postTurn()", function () {
@@ -106,23 +100,6 @@ export const test = () =>
             });
         });
 
-        describe("#assert()", function () {
-            it("Should not throw if status matches", function () {
-                expect(() => ms.assert(null)).to.not.throw();
-            });
-
-            it("Should return this if status matches", function () {
-                expect(ms.assert(null)).to.equal(ms);
-            });
-
-            it("Should throw if status doesn't match", function () {
-                expect(() => ms.assert("slp")).to.throw(
-                    Error,
-                    "MajorStatus 'null' was expected to be 'slp'",
-                );
-            });
-        });
-
         describe("#cure()", function () {
             it("Should cure status", function () {
                 ms.afflict("slp");
@@ -130,17 +107,6 @@ export const test = () =>
                 expect(ms.current).to.be.null;
                 expect(ms.turns).to.equal(0);
                 expect(ms.duration).to.be.null;
-            });
-        });
-
-        describe("#onCure()", function () {
-            it("Should register callback", function (done) {
-                ms.afflict("brn");
-                ms.onCure(() => {
-                    expect(ms.current).to.equal("brn");
-                    done();
-                });
-                ms.cure();
             });
         });
 

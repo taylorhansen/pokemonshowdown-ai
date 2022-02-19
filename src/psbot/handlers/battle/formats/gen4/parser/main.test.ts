@@ -40,11 +40,12 @@ export const test = () =>
             state = ictx.getState();
         });
 
-        let pctx: ParserContext<void> | undefined;
+        let pctx: ParserContext<Awaited<ReturnType<typeof main>>> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         beforeEach("Initialize main BattleParser", function () {
             pctx = initParser(ictx.startArgs, main);
+            state.started = false;
         });
 
         afterEach("Close ParserContext", async function () {
@@ -56,7 +57,7 @@ export const test = () =>
         const sender = setupOverrideSender(ictx);
 
         // This is more of an integration test but hard to setup DI/mocking.
-        it("Should handle init/1st turn and subsequent turns until game-over", async function () {
+        it("Should handle init and 1st turn and subsequent turns until game-over", async function () {
             // Note: the initial |request| event is repeated, once to initialize
             // the team during init(), and another as the actual request for a
             // decision after the initial switch-ins.
@@ -99,7 +100,7 @@ export const test = () =>
             await ph.handle({args: ["teamsize", "p1", toNum(2)], kwArgs: {}});
             await ph.handle({args: ["teamsize", "p2", toNum(2)], kwArgs: {}});
             await ph.handle({args: ["gen", 4], kwArgs: {}});
-            await ph.handle({args: ["rated"], kwArgs: {}}); // Ignored.
+            await ph.handle({args: ["rated"], kwArgs: {}});
             await ph.handle({
                 args: ["tier", toFormatName("[Gen 4] Random Battle")],
                 kwArgs: {},
@@ -363,7 +364,5 @@ export const test = () =>
                 kwArgs: {},
             });
             await ph.handle({args: ["win", toUsername("player2")], kwArgs: {}});
-
-            await ph.return();
         });
     });

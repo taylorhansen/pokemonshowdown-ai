@@ -10,10 +10,13 @@ export class WrappedError extends Error {
      */
     public constructor(err: Error, wrapper: (message: string) => string) {
         super(wrapper(err.message));
+
         this.name = this.constructor.name;
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
-            if (this.stack) this.stack += `\ncaused by: ${err.stack ?? err}`;
+            if (this.stack) {
+                this.stack += `\ncaused by: ${err.stack ?? err}`;
+            }
         }
     }
 

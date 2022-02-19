@@ -1,11 +1,4 @@
-import {
-    HpType,
-    hpTypeKeys,
-    hpTypes,
-    PokemonData,
-    StatName,
-} from "../dex/dex-util";
-import {PossibilityClass, ReadonlyPossibilityClass} from "./PossibilityClass";
+import {HpType, PokemonData, StatName} from "../dex/dex-util";
 import {ReadonlyStatRange, StatRange} from "./StatRange";
 
 type ReadonlyStatRanges = {readonly [T in StatName]: ReadonlyStatRange};
@@ -15,8 +8,8 @@ type StatRanges = {readonly [T in StatName]: StatRange};
 export interface ReadonlyStatTable extends ReadonlyStatRanges {
     /** Pokemon's level from 1 to 100 used for stat calcs. */
     readonly level: number;
-    /** Hidden power type possibility tracker. */
-    readonly hpType: ReadonlyPossibilityClass<HpType>;
+    /** Hidden power type, or `null` if unknown. */
+    readonly hpType: HpType | null;
 }
 
 /** Tracks stat ranges and species/level for stat calculations. */
@@ -40,10 +33,18 @@ export class StatTable implements ReadonlyStatTable, StatRanges {
      * Creates a StatTable and calculates all the stats.
      *
      * @param species Reference to the species data for looking up base stats.
-     * @param level Pokemon's level from `1` to `100`, used to calculate stats.
+     * @param level Pokemon's level from 1 to 100, used to calculate stats.
+     * @param hp Override HP stat.
      */
-    public static base(species: PokemonData, level: number): StatTable {
-        return new StatTable(level, species.baseStats);
+    public static base(
+        species: PokemonData,
+        level: number,
+        hp?: StatRange,
+    ): StatTable {
+        return new StatTable(
+            level,
+            hp ? {...species.baseStats, hp} : species.baseStats,
+        );
     }
 
     // TODO(#311): Make hpType a separate obj backed by ivs implementing this
@@ -51,10 +52,7 @@ export class StatTable implements ReadonlyStatTable, StatRanges {
     private constructor(
         level: number,
         baseStats: {readonly [T in StatName]: number | StatRange},
-        public readonly hpType = new PossibilityClass<HpType>(
-            hpTypes,
-            hpTypeKeys,
-        ),
+        public hpType: HpType | null = null,
     ) {
         // Clamp between 1-100.
         this.level = Math.max(1, Math.min(level, 100));
@@ -85,16 +83,15 @@ export class StatTable implements ReadonlyStatTable, StatRanges {
                 : baseStats.spe;
     }
 
-    // TODO: Change param type to StatTable.
     /**
      * Creates a partial shallow copy from a Transform target, overriding the HP
      * stat with that of the Transform user.
      */
     public transform(hp: StatRange): StatTable {
-        // TODO(gen>4): Transform doesn't copy hpType, override from source mon.
         return new StatTable(
             this.level,
             {
+                // Note: Transform preserves hp stat.
                 hp,
                 atk: this.atk,
                 def: this.def,
@@ -102,11 +99,12 @@ export class StatTable implements ReadonlyStatTable, StatRanges {
                 spd: this.spd,
                 spe: this.spe,
             },
+            // Note(gen4): Transform also copies hpType.
             this.hpType,
         );
     }
 
-    // istanbul ignore next: only used in logging
+    // istanbul ignore next: Only used in logging.
     /** Encodes all stat table data into a string. */
     public toString(): string {
         return `[${[

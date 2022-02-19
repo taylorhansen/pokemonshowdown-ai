@@ -80,15 +80,15 @@ export class StatRange implements ReadonlyStatRange {
         ivs: number,
         nature: 0.9 | 1 | 1.1,
     ): number {
-        if (hp && base === 1) return 1; // Shedinja.
+        // Special case for Shedinja.
+        if (hp && base === 1) {
+            return 1;
+        }
 
         const x = Math.floor(2 * base + ivs + Math.floor(evs / 4));
-
-        let result: number;
-        if (hp) result = Math.floor(((x + 100) * level) / 100 + 10);
-        else result = Math.floor((x * level) / 100 + 5);
-
-        return hp ? result : Math.floor(result * nature);
+        return hp
+            ? Math.floor(((x + 100) * level) / 100 + 10)
+            : Math.floor(nature * Math.floor((x * level) / 100 + 5));
     }
 
     // istanbul ignore next: Only used in logging.

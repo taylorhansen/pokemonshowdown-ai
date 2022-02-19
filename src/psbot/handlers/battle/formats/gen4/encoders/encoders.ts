@@ -17,63 +17,39 @@ import {
     oneHotEncoder,
     zeroEncoder,
 } from "../../../ai/encoder/helpers";
-import * as dex from "../dex/dex";
-import {
-    boostKeys,
-    hpTypeKeys,
-    majorStatuses,
-    majorStatusKeys,
-    rolloutKeys,
-    statKeys,
-    Type,
-    typeKeys,
-    weatherKeys,
-} from "../dex/dex-util";
+import * as dex from "../dex";
 import {ReadonlyBattleState} from "../state/BattleState";
 import {ReadonlyHp} from "../state/Hp";
-import {ReadonlyItemTempStatus} from "../state/ItemTempStatus";
 import {ReadonlyMajorStatusCounter} from "../state/MajorStatusCounter";
 import {ReadonlyMove} from "../state/Move";
 import {Moveset, ReadonlyMoveset} from "../state/Moveset";
+import {ReadonlyMultiTempStatus} from "../state/MultiTempStatus";
 import {ReadonlyPokemon} from "../state/Pokemon";
-import {ReadonlyPokemonTraits} from "../state/PokemonTraits";
-import {ReadonlyPossibilityClass} from "../state/PossibilityClass";
 import {ReadonlyRoomStatus} from "../state/RoomStatus";
 import {ReadonlyStatRange, StatRange} from "../state/StatRange";
 import {ReadonlyStatTable} from "../state/StatTable";
 import {ReadonlyTeam, Team} from "../state/Team";
 import {ReadonlyTeamStatus} from "../state/TeamStatus";
 import {ReadonlyTempStatus} from "../state/TempStatus";
-import {ReadonlyVariableTempStatus} from "../state/VariableTempStatus";
 import {
     ReadonlyMoveStatus,
     ReadonlyVolatileStatus,
 } from "../state/VolatileStatus";
 
-/**
- * Creates a PossibilityClass encoder.
- *
- * @template T The key type of the PossibilityClass.
- * @param keys Class names to encode.
- */
-export function possibilityClassEncoder<T extends string>(
-    keys: readonly T[],
-): Encoder<ReadonlyPossibilityClass<T>> {
+/** Encoder for an unknown key with a set of possible values. */
+export function unknownKeyEncoder(
+    domain: readonly string[],
+): Encoder<readonly string[]> {
     return {
-        encode(arr, pc) {
-            checkLength(arr, keys.length);
-            // istanbul ignore next: Should never happen but ok if it does.
-            if (pc.size < 0) {
-                arr.fill(0);
-                return;
-            }
+        encode(arr, possible) {
+            checkLength(arr, this.size);
 
-            const sumR = 1 / pc.size;
-            for (let i = 0; i < keys.length; ++i) {
-                arr[i] = pc.isSet(keys[i]) ? sumR : 0;
+            const x = 1 / possible.length;
+            for (let i = 0; i < this.size; ++i) {
+                arr[i] = possible.includes(domain[i]) ? x : 0;
             }
         },
-        size: keys.length,
+        size: domain.length,
     };
 }
 
@@ -92,78 +68,49 @@ function tempStatusEncoderImpl(ts: ReadonlyTempStatus): number {
 }
 
 /**
- * Creates an Encoder for an ItemTempStatus.
+ * Creates an Encoder for a MultiTempStatus.
  *
  * @param keys Status types to encode.
  */
-export function itemTempStatusEncoder<TStatusType extends string>(
+export function multiTempStatusEncoder<TStatusType extends string>(
     keys: readonly TStatusType[],
-): Encoder<ReadonlyItemTempStatus<TStatusType>> {
-    const size = keys.length + 1;
-    return {
-        encode(arr, its) {
-            checkLength(arr, size);
-
-            // Modify one-hot value to interpolate status turns/duration.
-            let one: number;
-            // Not applicable.
-            if (its.type === "none") one = 0;
-            // Infinite duration.
-            else if (its.duration === null) one = 1;
-            // Currently assuming short duration but could have extension item.
-            else if (
-                its.duration === its.durations[0] &&
-                its.source &&
-                !its.source.definiteValue &&
-                its.source.isSet(its.items[its.type])
-            ) {
-                // Take average of both durations since either is likely.
-                // TODO: Interpolate instead by the likelihood that the source
-                // has the item.
-                one = limitedStatusTurns(
-                    its.turns + 1,
-                    (its.durations[0] + its.durations[1]) / 2,
-                );
-            }
-            // Extension item possibility (and therefore duration) is definitely
-            // known.
-            else one = limitedStatusTurns(its.turns + 1, its.duration);
-
-            for (let i = 0; i < keys.length; ++i) {
-                arr[i] = keys[i] === its.type ? one : 0;
-            }
-            // Indicate whether the extended duration is being used.
-            arr[keys.length] = its.duration === its.durations[1] ? 1 : 0;
-        },
-        size,
-    };
-}
-
-/**
- * Creates an Encoder for a VariableTempStatus.
- *
- * @param keys Status types to encode.
- */
-export function variableTempStatusEncoder<TStatusType extends string>(
-    keys: readonly TStatusType[],
-): Encoder<ReadonlyVariableTempStatus<TStatusType>> {
+): Encoder<ReadonlyMultiTempStatus<TStatusType>> {
     const size = keys.length;
     return {
-        encode(arr, vts) {
+        encode(arr, mts) {
             checkLength(arr, size);
 
             // One-hot encode status type, with the 1 also encoding the amount
             // of turns left.
             for (let i = 0; i < keys.length; ++i) {
                 arr[i] =
-                    keys[i] === vts.type
-                        ? limitedStatusTurns(vts.turns + 1, vts.duration)
+                    keys[i] === mts.type
+                        ? mts.infinite
+                            ? 1
+                            : limitedStatusTurns(mts.turns + 1, mts.duration)
                         : 0;
             }
         },
         size,
     };
 }
+
+/** Types without `???` type. */
+export const filteredTypes = dex.typeKeys.filter(t => t !== "???") as Exclude<
+    dex.Type,
+    "???"
+>[];
+
+/** Encoder for a pokemon's types. */
+export const typesEncoder: Encoder<readonly dex.Type[]> = {
+    encode(arr, types) {
+        checkLength(arr, this.size);
+        for (let i = 0; i < this.size; ++i) {
+            arr[i] = types.includes(filteredTypes[i]) ? 1 : 0;
+        }
+    },
+    size: filteredTypes.length,
+};
 
 /** Max possible base stat. */
 export const maxBaseStat = 255;
@@ -212,236 +159,34 @@ export const emptyStatRangeEncoder: Encoder<undefined> = fillEncoder(
 
 /** Encoder for a StatTable. */
 export const statTableEncoder: Encoder<ReadonlyStatTable> = concat(
-    ...statKeys.map(statName =>
+    ...dex.statKeys.map(statName =>
         augment((st: ReadonlyStatTable) => st[statName], statRangeEncoder),
     ),
     augment(st => (st.level ?? 0) / 100, numberEncoder), // Level out of 100.
-    augment(st => st.hpType, possibilityClassEncoder(hpTypeKeys)),
+    augment(
+        st => ({id: st.hpType ? dex.hpTypes[st.hpType] : null}),
+        oneHotEncoder(dex.hpTypeKeys.length),
+    ),
 );
 
 /** Encoder for an unknown StatTable. */
 export const unknownStatTableEncoder: Encoder<null> = concat(
-    ...Array.from(statKeys, () => unknownStatRangeEncoder),
+    ...Array.from(dex.statKeys, () => unknownStatRangeEncoder),
     fillEncoder(0.8, 1), // Level out of 100 (guess).
-    fillEncoder(1 / hpTypeKeys.length, hpTypeKeys.length), // Hp type.
+    fillEncoder(1 / dex.hpTypeKeys.length, dex.hpTypeKeys.length), // Hp type.
 );
 
 /** Encoder for a nonexistent StatTable. */
 export const emptyStatTableEncoder: Encoder<undefined> = concat(
-    ...Array.from(statKeys, () => emptyStatRangeEncoder),
+    ...Array.from(dex.statKeys, () => emptyStatRangeEncoder),
     fillEncoder(-1, 1), // No level.
-    fillEncoder(0, hpTypeKeys.length), // No hp type possibilities.
+    fillEncoder(0, dex.hpTypeKeys.length), // No hp type possibilities.
 );
 
-/** Types without `???` type. */
-const filteredTypes = typeKeys.filter(t => t !== "???") as Exclude<
-    Type,
-    "???"
->[];
-
-/** Args for {@link pokemonTraitsEncoder}. */
-export interface PokemonTraitsEncoderArgs {
-    /** Traits object. */
-    readonly traits: ReadonlyPokemonTraits;
-    /** Optional third type. */
-    readonly addedType?: Type;
-}
-
-/** Encoder for a PokemonTraits object. */
-export const pokemonTraitsEncoder: Encoder<PokemonTraitsEncoderArgs> = concat(
-    // Species.
-    augment(
-        ({
-            traits: {
-                species: {uid},
-            },
-        }) => ({id: uid}),
-        oneHotEncoder(dex.pokemonKeys.length),
-    ),
-    // Ability.
-    augment(
-        ({traits: {ability}}) => ability,
-        possibilityClassEncoder(dex.abilityKeys),
-    ),
-    // Stats.
-    augment(({traits: {stats}}) => stats, statTableEncoder),
-    // Multi-hot encode.
-    {
-        encode(arr, {traits: {types: monTypes}, addedType}) {
-            checkLength(arr, this.size);
-            for (let i = 0; i < this.size; ++i) {
-                const type = filteredTypes[i];
-                arr[i] = monTypes.includes(type) || type === addedType ? 1 : 0;
-            }
-        },
-        size: filteredTypes.length,
-    },
-);
-
-/** Encoder for an unknown PokemonTraits object. */
-export const unknownPokemonTraitsEncoder: Encoder<null> = concat(
-    fillEncoder(1 / dex.abilityKeys.length, dex.abilityKeys.length),
-    fillEncoder(1 / dex.pokemonKeys.length, dex.pokemonKeys.length),
-    unknownStatTableEncoder,
-    // Could be any one or two of these types (avg 1 or 2 types).
-    fillEncoder(1.5 / filteredTypes.length, filteredTypes.length),
-);
-
-/** Encoder for a nonexistent PokemonTraits object. */
-export const emptyPokemonTraitsEncoder: Encoder<undefined> = concat(
-    fillEncoder(-1, dex.abilityKeys.length + dex.pokemonKeys.length),
-    emptyStatTableEncoder,
-    fillEncoder(-1, filteredTypes.length),
-);
-
-/** Encoder for a volatile MoveStatus. */
-export const moveStatusEncoder: Encoder<ReadonlyMoveStatus> = augment(
-    ms =>
-        ms.ts.isActive && ms.move
-            ? {
-                  id: dex.moves[ms.move].uid,
-                  one: tempStatusEncoderImpl(ms.ts),
-              }
-            : {id: null},
-    oneHotEncoder(dex.moveKeys.length),
-);
-
-/** Maximum boost value. */
-const maxBoost = 6;
-
-/** Encoder for a VolatileStatus. */
-export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
-    // Passable.
-    augment(vs => vs.aquaring, booleanEncoder),
-    {
-        encode(arr, vs: ReadonlyVolatileStatus) {
-            checkLength(arr, boostKeys.length);
-            for (let i = 0; i < boostKeys.length; ++i) {
-                arr[i] = vs.boosts[boostKeys[i]] / maxBoost;
-            }
-        },
-        size: boostKeys.length,
-    },
-    augment(vs => vs.confusion, tempStatusEncoder),
-    augment(vs => vs.curse, booleanEncoder),
-    augment(vs => vs.embargo, tempStatusEncoder),
-    augment(vs => vs.focusenergy, booleanEncoder),
-    augment(vs => vs.ingrain, booleanEncoder),
-    augment(vs => vs.leechseed, booleanEncoder),
-    augment(
-        vs => vs.lockedOnBy?.lockOnTurns,
-        nullable(tempStatusEncoder, zeroEncoder(tempStatusEncoder.size)),
-    ),
-    augment(vs => vs.lockOnTurns, tempStatusEncoder),
-    augment(vs => vs.magnetrise, tempStatusEncoder),
-    augment(vs => vs.nightmare, booleanEncoder),
-    augment(
-        vs => (vs.perish <= 0 ? 0 : limitedStatusTurns(vs.perish, 3)),
-        numberEncoder,
-    ),
-    augment(vs => vs.powertrick, booleanEncoder),
-    augment(vs => vs.substitute, booleanEncoder),
-    augment(vs => vs.suppressAbility, booleanEncoder),
-    augment(vs => !!vs.trapped, booleanEncoder),
-    augment(vs => !!vs.trapping, booleanEncoder),
-
-    augment(
-        vs => ({id: vs.lastMove ? dex.moves[vs.lastMove].uid : null}),
-        oneHotEncoder(dex.moveKeys.length),
-    ),
-
-    // Non-passable.
-    augment(vs => vs.attract, booleanEncoder),
-    augment(vs => vs.bide, tempStatusEncoder),
-    augment(vs => vs.charge, tempStatusEncoder),
-    augment(
-        vs => ({id: vs.choiceLock ? dex.moves[vs.choiceLock].uid : null}),
-        oneHotEncoder(dex.moveKeys.length),
-    ),
-    augment(vs => vs.damaged, booleanEncoder),
-    augment(vs => vs.defensecurl, booleanEncoder),
-    augment(vs => vs.destinybond, booleanEncoder),
-    augment(vs => vs.disabled, moveStatusEncoder),
-    augment(vs => vs.encore, moveStatusEncoder),
-    augment(vs => vs.flashfire, booleanEncoder),
-    augment(vs => vs.focus, booleanEncoder),
-    augment(vs => vs.grudge, booleanEncoder),
-    augment(vs => vs.healblock, tempStatusEncoder),
-    augment(vs => vs.identified === "foresight", booleanEncoder),
-    augment(vs => vs.identified === "miracleeye", booleanEncoder),
-    augment(vs => vs.imprison, booleanEncoder),
-    augment(vs => vs.lockedMove, variableTempStatusEncoder(dex.lockedMoveKeys)),
-    augment(vs => vs.magiccoat, booleanEncoder),
-    augment(vs => vs.micleberry, booleanEncoder),
-    augment(vs => vs.minimize, booleanEncoder),
-    augment(
-        vs => ({id: vs.mirrormove ? dex.moves[vs.mirrormove].uid : null}),
-        oneHotEncoder(dex.moveKeys.length),
-    ),
-    augment(vs => vs.mudsport, booleanEncoder),
-    augment(vs => vs.mustRecharge, booleanEncoder),
-    augment(
-        vs => ({traits: vs.overrideTraits!, addedType: vs.addedType}),
-        pokemonTraitsEncoder,
-    ),
-    augment(vs => vs.rage, booleanEncoder),
-    augment(vs => vs.rollout, variableTempStatusEncoder(rolloutKeys)),
-    augment(vs => vs.roost, booleanEncoder),
-    augment(vs => vs.slowstart, tempStatusEncoder),
-    augment(vs => vs.snatch, booleanEncoder),
-    // Stall fail rate.
-    // Halves each time a stalling move is used, capped at min 12.5% success
-    // rate in gen4.
-    augment(vs => {
-        const successRate = 2 ** -vs.stallTurns;
-        return Math.min(0.875, 1 - successRate);
-    }, numberEncoder),
-    augment(vs => vs.stockpile / 3, numberEncoder),
-    augment(vs => vs.taunt, tempStatusEncoder),
-    augment(vs => vs.torment, booleanEncoder),
-    augment(vs => vs.transformed, booleanEncoder),
-    augment(vs => vs.twoTurn, variableTempStatusEncoder(dex.twoTurnMoveKeys)),
-    augment(vs => vs.unburden, booleanEncoder),
-    augment(vs => vs.uproar, tempStatusEncoder),
-    augment(vs => vs.watersport, booleanEncoder),
-    augment(vs => vs.willTruant, booleanEncoder),
-    augment(vs => vs.yawn, tempStatusEncoder),
-);
-
-/** Encoder for a MajorStatusCounter. */
-export const majorStatusCounterEncoder: Encoder<ReadonlyMajorStatusCounter> =
-    augment(
-        msc => ({
-            id: msc.current && majorStatuses[msc.current],
-            one:
-                msc.current === "tox"
-                    ? // %hp taken by toxic damage next turn, capped at 15/16.
-                      // Note: Damage is actually turns * max(1, floor(hp/16)).
-                      Math.min(15 / 16, msc.turns / 16)
-                    : msc.current === "slp"
-                    ? // Chance of staying asleep.
-                      limitedStatusTurns(msc.turns, msc.duration!)
-                    : // Irrelevant.
-                      1,
-        }),
-        oneHotEncoder(majorStatusKeys.length),
-    );
-
-/** Encoder for an unknown MajorStatusCounter. */
-export const unknownMajorStatusCounterEncoder: Encoder<null> = fillEncoder(
-    0,
-    majorStatusCounterEncoder.size,
-);
-
-/** Encoder for a nonexistent MajorStatusCounter. */
-export const emptyMajorStatusCounterEncoder: Encoder<undefined> = fillEncoder(
-    0,
-    majorStatusCounterEncoder.size,
-);
-
-// TODO: Move to dex.
 /** Max PP of any move. */
-export const maxPossiblePp = 64;
+export const maxPossiblePp = Math.max(
+    ...dex.moveKeys.map(m => dex.moves[m].pp[1]),
+);
 
 /** Encoder for an unknown Move's PP value. */
 const unknownPpEncoder: Encoder<unknown> = {
@@ -465,24 +210,17 @@ export const moveEncoder: Encoder<ReadonlyMove> = concat(
 /** Args for {@link constrainedMoveEncoder}. */
 export interface ConstrainedMoveArgs {
     readonly move: "constrained";
-    /** Mapping of move name to number of mentions. */
-    readonly constraint: {readonly [name: string]: number};
-    /**
-     * Total number of mentions, i.e. the sum of all the {@link constraint}
-     * entries.
-     */
-    readonly total: number;
+    /** Set of possible moves. */
+    readonly constraint: ReadonlySet<string>;
 }
 
 /** Encoder for an unknown Move slot with a constraint. */
 export const constrainedMoveEncoder: Encoder<ConstrainedMoveArgs> = concat(
     {
-        encode(arr, {constraint, total}) {
+        encode(arr, {constraint}) {
             checkLength(arr, dex.moveKeys.length);
             // Encode constraint data.
-            for (let i = 0; i < dex.moveKeys.length; ++i) {
-                arr[i] = (constraint[dex.moveKeys[i]] ?? 0) / total;
-            }
+            arr.fill(1 / constraint.size, 0, dex.moveKeys.length);
         },
         size: dex.moveKeys.length,
     } as Encoder<ConstrainedMoveArgs>,
@@ -514,10 +252,13 @@ export type MoveSlotArgs = KnownMoveArgs | ConstrainedMoveArgs | undefined;
 export const moveSlotEncoder: Encoder<MoveSlotArgs> = {
     encode(arr, args) {
         checkLength(arr, this.size);
-        if (!args) emptyMoveEncoder.encode(arr, args);
-        else if (args.move === "constrained") {
+        if (!args) {
+            emptyMoveEncoder.encode(arr, args);
+        } else if (args.move === "constrained") {
             constrainedMoveEncoder.encode(arr, args);
-        } else moveEncoder.encode(arr, args.move);
+        } else {
+            moveEncoder.encode(arr, args.move);
+        }
     },
     size: moveEncoder.size,
 };
@@ -539,20 +280,9 @@ function getMoveArgs(ms: ReadonlyMoveset): MoveSlotArgs[] {
     for (const move of ms.moves.values()) result.push({move});
     // Unknown.
     if (ms.moves.size < ms.size) {
-        // Precalculate unknown move encoding.
-        const constraint: {[name: string]: number} = {};
-        let total = ms.constraint.size;
-        for (const name of ms.constraint) constraint[name] = 1;
-        for (const moveConstraint of ms.moveSlotConstraints) {
-            for (const name of moveConstraint) {
-                constraint[name] = (constraint[name] ?? 0) + 1;
-            }
-            total += moveConstraint.size;
-        }
         const constrainedArgs: ConstrainedMoveArgs = {
             move: "constrained",
-            constraint,
-            total,
+            constraint: ms.constraint,
         };
         for (let i = ms.moves.size; i < ms.size; ++i) {
             result.push(constrainedArgs);
@@ -583,8 +313,11 @@ export const hpEncoder: Encoder<{
     encode(arr, {hp, ours}) {
         checkLength(arr, 2);
         arr[0] = hp.max === 0 ? 0 : hp.current / hp.max;
-        if (!ours) arr[1] = 0.5;
-        else arr[1] = hp.max / maxStatHp; // TODO: Guess hp stat.
+        if (!ours) {
+            arr[1] = 0.5;
+        } else {
+            arr[1] = hp.max / maxStatHp; // TODO: Guess hp stat.
+        }
     },
     size: 2,
 };
@@ -602,50 +335,97 @@ export const unknownHpEncoder: Encoder<null> = {
 /** Encoder for a nonexistent Hp object. */
 export const emptyHpEncoder: Encoder<undefined> = fillEncoder(-1, 2);
 
+/** Encoder for a MajorStatusCounter. */
+export const majorStatusCounterEncoder: Encoder<ReadonlyMajorStatusCounter> =
+    augment(
+        msc => ({
+            id: msc.current && dex.majorStatuses[msc.current],
+            one:
+                msc.current === "tox"
+                    ? // %hp taken by toxic damage next turn, capped at 15/16.
+                      // Note: Damage is actually turns * max(1, floor(hp/16)).
+                      Math.min(15 / 16, msc.turns / 16)
+                    : msc.current === "slp"
+                    ? // Chance of staying asleep.
+                      limitedStatusTurns(msc.turns, msc.duration!)
+                    : // Irrelevant.
+                      1,
+        }),
+        oneHotEncoder(dex.majorStatusKeys.length),
+    );
+
+/** Encoder for an unknown MajorStatusCounter. */
+export const unknownMajorStatusCounterEncoder: Encoder<null> = fillEncoder(
+    0,
+    majorStatusCounterEncoder.size,
+);
+
+/** Encoder for a nonexistent MajorStatusCounter. */
+export const emptyMajorStatusCounterEncoder: Encoder<undefined> = fillEncoder(
+    0,
+    majorStatusCounterEncoder.size,
+);
+
 /** Encoder for an inactive Pokemon. */
 export const inactivePokemonEncoder: Encoder<{
     readonly mon: ReadonlyPokemon;
     readonly ours: boolean;
 }> = concat(
-    augment(({mon: p}) => ({traits: p.traits}), pokemonTraitsEncoder),
-    augment(({mon: p}) => p.item, possibilityClassEncoder(dex.itemKeys)),
-    augment(({mon: p}) => p.lastItem, possibilityClassEncoder(dex.itemKeys)),
-    augment(({mon: p}) => p.moveset, movesetEncoder),
+    augment(
+        ({mon: p}) => ({id: dex.pokemon[p.baseSpecies].uid}),
+        oneHotEncoder(dex.pokemonKeys.length),
+    ),
+    augment(({mon: p}) => p.baseTypes, typesEncoder),
+    augment(({mon: p}) => p.baseStats, statTableEncoder),
+    augment(
+        ({mon: p}) =>
+            p.baseAbility ? [p.baseAbility] : dex.pokemon[p.species].abilities,
+        unknownKeyEncoder(dex.abilityKeys),
+    ),
+    augment(
+        ({mon: p}) => (p.item ? [p.item] : []),
+        unknownKeyEncoder(dex.itemKeys),
+    ),
+    augment(
+        ({mon: p}) => (p.lastItem ? [p.lastItem] : []),
+        unknownKeyEncoder(dex.itemKeys),
+    ),
+    augment(({mon: p}) => p.baseMoveset, movesetEncoder),
     augment(({mon: p}) => p.gender === "M", booleanEncoder),
     augment(({mon: p}) => p.gender === "F", booleanEncoder),
     augment(({mon: p}) => p.gender === null, booleanEncoder),
-    augment(({mon: p}) => (p.happiness ?? /*half*/ 127.5) / 255, numberEncoder),
+    augment(({mon: p}) => (p.happiness ?? /*guess*/ 255) / 255, numberEncoder),
     augment(({mon: p, ours}) => ({hp: p.hp, ours}), hpEncoder),
     augment(({mon: p}) => p.majorStatus, majorStatusCounterEncoder),
-    augment(({mon: p}) => {
-        const {grounded} = p;
-        if (grounded === true) return [1, 0];
-        if (grounded === false) return [0, 1];
-        return [0.5, 0.5];
-    }, map(2, numberEncoder)),
 );
 
 /** Encoder for an unrevealed Pokemon. */
 export const unknownPokemonEncoder: Encoder<null> = concat(
-    unknownPokemonTraitsEncoder,
-    zeroEncoder(2 * dex.itemKeys.length), // Item + lastItem.
+    fillEncoder(1 / dex.pokemonKeys.length, dex.pokemonKeys.length),
+    // Note: Could be any one or two of these types (avg 1-2 types).
+    fillEncoder(1.5 / filteredTypes.length, filteredTypes.length),
+    unknownStatTableEncoder,
+    fillEncoder(1 / dex.abilityKeys.length, dex.abilityKeys.length),
+    augment(() => [], unknownKeyEncoder(dex.itemKeys)), // Item.
+    augment(() => ["none"], unknownKeyEncoder(dex.itemKeys)), // Last item.
     unknownMovesetEncoder,
     fillEncoder(1 / 3, 3), // Gender possibilities.
-    fillEncoder(1, 1), // Happiness guess.
+    fillEncoder(1, 1), // Happiness (guess 255).
     unknownHpEncoder,
     unknownMajorStatusCounterEncoder,
-    fillEncoder(0.5, 2), // Grounded guess.
 );
 
 /** Encoder for an empty Pokemon slot. */
 export const emptyPokemonEncoder: Encoder<undefined> = concat(
-    emptyPokemonTraitsEncoder,
-    fillEncoder(0, 2 * dex.itemKeys.length), // Item + lastItem.
+    fillEncoder(-1, dex.pokemonKeys.length),
+    fillEncoder(-1, filteredTypes.length),
+    emptyStatTableEncoder,
+    fillEncoder(-1, dex.abilityKeys.length),
+    zeroEncoder(2 * dex.itemKeys.length), // Item + lastItem.
     emptyMovesetEncoder,
     fillEncoder(-1, 4), // Gender + happiness.
     emptyHpEncoder,
     emptyMajorStatusCounterEncoder,
-    fillEncoder(-1, 2), // Grounded.
 );
 
 /** Encoder for a benched Pokemon slot, which may be unknown or empty. */
@@ -655,14 +435,128 @@ export const benchedPokemonEncoder = optional(
     emptyPokemonEncoder,
 );
 
-// TODO: Should Team manage active slots and VolatileStatus?
+// TODO: Move these to status counters on the moves themselves rather than
+// bloating the array with one-hots.
+/** Encoder for a volatile MoveStatus. */
+export const moveStatusEncoder: Encoder<ReadonlyMoveStatus> = augment(
+    ms =>
+        ms.ts.isActive && ms.move
+            ? {
+                  id: dex.moves[ms.move].uid,
+                  one: tempStatusEncoderImpl(ms.ts),
+              }
+            : {id: null},
+    oneHotEncoder(dex.moveKeys.length),
+);
+
+/** Encoder for a VolatileStatus. */
+export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
+    // Passable.
+    augment(vs => vs.aquaring, booleanEncoder),
+    {
+        encode(arr, vs: ReadonlyVolatileStatus) {
+            checkLength(arr, dex.boostKeys.length);
+            for (let i = 0; i < dex.boostKeys.length; ++i) {
+                arr[i] = vs.boosts[dex.boostKeys[i]] / 6;
+            }
+        },
+        size: dex.boostKeys.length,
+    },
+    augment(vs => vs.confusion, tempStatusEncoder),
+    augment(vs => vs.curse, booleanEncoder),
+    augment(vs => vs.embargo, tempStatusEncoder),
+    augment(vs => vs.focusenergy, booleanEncoder),
+    augment(vs => vs.ingrain, booleanEncoder),
+    augment(vs => vs.leechseed, booleanEncoder),
+    augment(
+        vs => vs.lockedOnBy?.lockOnTurns,
+        nullable(tempStatusEncoder, zeroEncoder(tempStatusEncoder.size)),
+    ),
+    augment(vs => vs.lockOnTurns, tempStatusEncoder),
+    augment(vs => vs.magnetrise, tempStatusEncoder),
+    augment(vs => vs.nightmare, booleanEncoder),
+    augment(
+        vs => (vs.perish <= 0 ? 0 : limitedStatusTurns(vs.perish, 3)),
+        numberEncoder,
+    ),
+    augment(vs => vs.powertrick, booleanEncoder),
+    augment(vs => vs.substitute, booleanEncoder),
+    augment(vs => vs.suppressAbility, booleanEncoder),
+    augment(vs => !!vs.trapped, booleanEncoder),
+    augment(vs => !!vs.trapping, booleanEncoder),
+
+    // Semi-passable.
+    augment(
+        vs => ({id: vs.lastMove ? dex.moves[vs.lastMove].uid : null}),
+        oneHotEncoder(dex.moveKeys.length),
+    ),
+
+    // Override traits.
+    augment(
+        vs => ({id: dex.pokemon[vs.species].uid}),
+        oneHotEncoder(dex.pokemonKeys.length),
+    ),
+    augment(vs => vs.types, typesEncoder),
+    assertEncoder(vs => {
+        if (!vs.stats) {
+            throw new Error("VolatileStatus' stat table not initialized");
+        }
+    }),
+    augment(vs => vs.stats!, statTableEncoder),
+    augment(
+        vs => (vs.ability ? [vs.ability] : dex.pokemon[vs.species].abilities),
+        unknownKeyEncoder(dex.abilityKeys),
+    ),
+    augment(vs => vs.moveset, movesetEncoder),
+
+    // Non-passable.
+    augment(vs => vs.attract, booleanEncoder),
+    augment(vs => vs.bide, tempStatusEncoder),
+    augment(vs => vs.charge, tempStatusEncoder),
+    augment(vs => vs.defensecurl, booleanEncoder),
+    augment(vs => vs.destinybond, booleanEncoder),
+    augment(vs => vs.disabled, moveStatusEncoder),
+    augment(vs => vs.encore, moveStatusEncoder),
+    augment(vs => vs.flashfire, booleanEncoder),
+    augment(vs => vs.focus, booleanEncoder),
+    augment(vs => vs.grudge, booleanEncoder),
+    augment(vs => vs.healblock, tempStatusEncoder),
+    augment(vs => vs.identified === "foresight", booleanEncoder),
+    augment(vs => vs.identified === "miracleeye", booleanEncoder),
+    augment(vs => vs.imprison, booleanEncoder),
+    augment(vs => vs.lockedMove, multiTempStatusEncoder(dex.lockedMoveKeys)),
+    augment(vs => vs.magiccoat, booleanEncoder),
+    augment(vs => vs.micleberry, booleanEncoder),
+    augment(vs => vs.minimize, booleanEncoder),
+    augment(vs => vs.mudsport, booleanEncoder),
+    augment(vs => vs.mustRecharge, booleanEncoder),
+    augment(vs => vs.rage, booleanEncoder),
+    augment(vs => vs.rollout, multiTempStatusEncoder(dex.rolloutKeys)),
+    augment(vs => vs.roost, booleanEncoder),
+    augment(vs => vs.slowstart, tempStatusEncoder),
+    augment(vs => vs.snatch, booleanEncoder),
+    // Stall fail rate.
+    // Note(gen4): Success rate halves each time a stalling move is used, capped
+    // at min 12.5%.
+    augment(vs => Math.min(0.875, 1 - 2 ** -vs.stallTurns), numberEncoder),
+    augment(vs => vs.stockpile / 3, numberEncoder),
+    augment(vs => vs.taunt, tempStatusEncoder),
+    augment(vs => vs.torment, booleanEncoder),
+    augment(vs => vs.transformed, booleanEncoder),
+    augment(vs => vs.twoTurn, multiTempStatusEncoder(dex.twoTurnMoveKeys)),
+    augment(vs => vs.uproar, tempStatusEncoder),
+    augment(vs => vs.watersport, booleanEncoder),
+    augment(vs => vs.willTruant, booleanEncoder),
+    augment(vs => vs.yawn, tempStatusEncoder),
+);
+
 /** Encoder for an active Pokemon. */
 export const activePokemonEncoder: Encoder<{
     readonly mon: ReadonlyPokemon;
     readonly ours: boolean;
 }> = concat(
-    inactivePokemonEncoder,
     augment(({mon: p}) => p.volatile, volatileStatusEncoder),
+    inactivePokemonEncoder,
 );
 
 /** Encoder for a {@link TeamStatus}. */
@@ -674,11 +568,11 @@ export const teamStatusEncoder: Encoder<ReadonlyTeamStatus> = concat(
         ),
     ),
     augment(ts => ts.healingwish, booleanEncoder),
-    augment(ts => ts.lightscreen, itemTempStatusEncoder(["lightscreen"])),
+    augment(ts => ts.lightscreen, tempStatusEncoder),
     augment(ts => ts.luckychant, tempStatusEncoder),
     augment(ts => ts.lunardance, booleanEncoder),
     augment(ts => ts.mist, tempStatusEncoder),
-    augment(ts => ts.reflect, itemTempStatusEncoder(["reflect"])),
+    augment(ts => ts.reflect, tempStatusEncoder),
     augment(ts => ts.safeguard, tempStatusEncoder),
     augment(ts => !!ts.selfSwitch, booleanEncoder),
     augment(ts => ts.selfSwitch === "copyvolatile", booleanEncoder),
@@ -706,7 +600,7 @@ export const teamEncoder: Encoder<TeamEncoderArgs> = concat(
         }
         // istanbul ignore if: Should never happen.
         if (t.active !== t.pokemon[0]) {
-            throw new Error("Active Pokemon is not in the right Team slot");
+            throw new Error("Active Pokemon is not in the first Team slot");
         }
         // istanbul ignore if: Should never happen.
         if (!t.active.active) {
@@ -725,7 +619,7 @@ export const teamEncoder: Encoder<TeamEncoderArgs> = concat(
             ({team: t, ours}: TeamEncoderArgs) =>
                 // Note: Treat fainted mons as nonexistent since they're
                 // permanently removed from the game.
-                t.pokemon[i]?.fainted
+                (t.pokemon[i]?.hp.current ?? 0) <= 0
                     ? undefined
                     : t.pokemon[i] && {mon: t.pokemon[i]!, ours},
             benchedPokemonEncoder,
@@ -738,13 +632,15 @@ export const teamEncoder: Encoder<TeamEncoderArgs> = concat(
 export const roomStatusEncoder: Encoder<ReadonlyRoomStatus> = concat(
     augment(rs => rs.gravity, tempStatusEncoder),
     augment(rs => rs.trickroom, tempStatusEncoder),
-    augment(rs => rs.weather, itemTempStatusEncoder(weatherKeys)),
+    augment(rs => rs.weather, multiTempStatusEncoder(dex.weatherKeys)),
 );
 
 /** Encoder for a BattleState. */
 export const battleStateEncoder: Encoder<ReadonlyBattleState> = concat(
     assertEncoder(state => {
-        if (!state.ourSide) throw new Error("state.ourSide is undefined");
+        if (!state.ourSide) {
+            throw new Error("state.ourSide is undefined");
+        }
     }),
     augment(bs => bs.status, roomStatusEncoder),
     augment(bs => ({team: bs.getTeam(bs.ourSide!), ours: true}), teamEncoder),

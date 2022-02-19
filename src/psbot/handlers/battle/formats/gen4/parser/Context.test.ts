@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Logger} from "../../../../../../logging/Logger";
+import {Logger} from "../../../../../../util/logging/Logger";
 import {BattleAgent, Choice} from "../../../agent";
 import {
     BattleIterator,
@@ -10,7 +10,7 @@ import {
 import {BattleState} from "../state";
 import {StateHelpers} from "./StateHelpers.test";
 
-/** Initial context from the main `testEvents()` function. */
+/** Initial context data required to start up the battle parser. */
 export interface InitialContext extends StartBattleParserArgs<"gen4"> {
     /** Initial args for starting the BattleParser. */
     readonly startArgs: StartBattleParserArgs<"gen4">;
@@ -41,7 +41,7 @@ export interface InitialContext extends StartBattleParserArgs<"gen4"> {
 export interface ParserContext<TResult = unknown> {
     /** Iterator for sending events to the BattleParser. */
     readonly battleIt: BattleIterator;
-    /** Return value of the BattleParser/SubParser. */
+    /** Return value of the BattleParser. Resolves once the game ends. */
     readonly finish: Promise<TResult>;
 }
 
@@ -70,8 +70,8 @@ export function createInitialContext(): InitialContext {
     const getState = () => state;
     const ictx: InitialContext = {
         startArgs: {
-            // Use a level of indirection so that agent/sender can be overridden
-            // later.
+            // Use an additional level of indirection so that agent/sender can
+            // be overridden by test code.
             agent: async (s, choices) => await ictx.agent(s, choices),
             logger: new Logger(
                 msg => ictx.logger.debug(msg),
@@ -97,6 +97,7 @@ export function createInitialContext(): InitialContext {
     // eslint-disable-next-line mocha/no-top-level-hooks
     beforeEach("Initialize BattleState", function () {
         state = new BattleState("username");
+        state.started = true;
         state.ourSide = "p1";
     });
 

@@ -17,7 +17,7 @@ export interface ReadonlyTeam {
      */
     readonly size: number;
     /**
-     * The pokemon that compose this team. First one is always active. Null
+     * The pokemon that compose this team. First one is always active. `null`
      * means unrevealed while undefined means nonexistent.
      */
     readonly pokemon: readonly (ReadonlyPokemon | null | undefined)[];
@@ -29,7 +29,7 @@ export interface ReadonlyTeam {
 export interface SwitchOptions {
     /** Species id name. */
     readonly species: string;
-    /** Level between `1` and `100`. */
+    /** Level between 1 and 100. */
     readonly level: number;
     /** Pokemon's gender. Can be `"M"`, `"F"`, or `"N"`. */
     readonly gender: GenderName;
@@ -45,13 +45,6 @@ export interface TeamRevealOptions extends SwitchOptions {
     readonly moves?: readonly string[];
 }
 
-/** Partial snapshot of the active pokemon at the start of the turn. */
-export interface PreTurnSnapshotPokemon
-    extends Pick<Pokemon, "item" | "traits"> {
-    readonly hp: {readonly current: number; readonly max: number};
-    readonly volatile: {readonly suppressAbility: boolean};
-}
-
 /** Team state. */
 export class Team implements ReadonlyTeam {
     /** Maximum team size. */
@@ -62,10 +55,12 @@ export class Team implements ReadonlyTeam {
     /** @override */
     public readonly side: SideID;
 
-    // As long as at least one pokemon was revealed, this will be valid.
     /** @override */
     public get active(): Pokemon {
-        return this._pokemon[0]!;
+        if (!this._pokemon[0]) {
+            throw new Error("No active pokemon");
+        }
+        return this._pokemon[0];
     }
 
     /**
@@ -105,12 +100,6 @@ export class Team implements ReadonlyTeam {
      */
     private unrevealed = 0;
 
-    /** Used for custapberry check at the beginning of the turn. */
-    public get preTurnSnapshotPokemon(): PreTurnSnapshotPokemon | null {
-        return this._preTurnSnapshotPokemon;
-    }
-    private _preTurnSnapshotPokemon: PreTurnSnapshotPokemon | null = null;
-
     /**
      * Creates a Team object.
      *
@@ -128,22 +117,17 @@ export class Team implements ReadonlyTeam {
 
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void {
-        const m = this.active;
-        this._preTurnSnapshotPokemon = {
-            item: m.item,
-            traits: m.traits,
-            hp: {current: m.hp.current, max: m.hp.max},
-            volatile: {suppressAbility: m.volatile.suppressAbility},
-        };
-
-        for (const mon of this._pokemon) mon?.preTurn();
+        for (const mon of this._pokemon) {
+            mon?.preTurn();
+        }
     }
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void {
-        this._preTurnSnapshotPokemon = null;
         this.status.postTurn();
-        for (const mon of this._pokemon) mon?.postTurn();
+        for (const mon of this._pokemon) {
+            mon?.postTurn();
+        }
     }
 
     /**
@@ -157,21 +141,27 @@ export class Team implements ReadonlyTeam {
         let index = -1;
         for (let i = 0; i < this.unrevealed; ++i) {
             const m = this._pokemon[i];
-            // TODO(gen5): Check everything since it could be Illusion.
-            if (m?.baseTraits.species.name === options.species) {
+            // TODO(gen5): Check everything since it could be Illusion ability.
+            if (m?.baseSpecies === options.species) {
                 index = i;
                 break;
             }
         }
 
         // Revealing a new pokemon.
-        if (index < 0) index = this.revealIndex(options);
+        if (index < 0) {
+            index = this.revealIndex(options);
+        }
 
         // Trying to access an invalid pokemon.
-        if (index < 0 || index >= this.unrevealed) return null;
+        if (index < 0 || index >= this.unrevealed) {
+            return null;
+        }
 
         const mon = this._pokemon[index];
-        if (!mon) throw new Error(`Uninitialized pokemon slot ${index}`);
+        if (!mon) {
+            throw new Error(`Uninitialized pokemon slot ${index}`);
+        }
 
         if (mon.active) {
             throw new Error(
@@ -203,7 +193,9 @@ export class Team implements ReadonlyTeam {
      */
     public reveal(options: TeamRevealOptions): Pokemon | null {
         const index = this.revealIndex(options);
-        if (index < 0) return null;
+        if (index < 0) {
+            return null;
+        }
         return this._pokemon[index] ?? null;
     }
 
@@ -224,14 +216,15 @@ export class Team implements ReadonlyTeam {
         // Team already full.
         if (this.unrevealed === this._size) return -1;
 
-        const newMon = new Pokemon(species, level, moves, this);
+        const newMon = new Pokemon(species, level, moves, gender, this);
         this._pokemon[this.unrevealed] = newMon;
 
         // Initialize new pokemon.
-        newMon.gender = gender;
         newMon.hp.set(hp, hpMax);
         const isOurSide = this.state?.ourSide === this.side;
-        if (isOurSide) newMon.traits.stats.hp.set(hpMax);
+        if (isOurSide) {
+            newMon.stats.hp.set(hpMax);
+        }
 
         return this.unrevealed++;
     }
@@ -254,9 +247,11 @@ export class Team implements ReadonlyTeam {
         for (let i = 0; i < this._pokemon.length; ++i) {
             const mon = this._pokemon[i];
             res += `\n${s}mon${i + 1}:`;
-            if (mon === null) res += " <unrevealed>";
-            else if (!mon) res += " <empty>";
-            else {
+            if (mon === null) {
+                res += " <unrevealed>";
+            } else if (!mon) {
+                res += " <empty>";
+            } else {
                 const isOurSide = this.state?.ourSide === this.side;
                 res += "\n" + mon.toString(indent + 4, !isOurSide);
             }

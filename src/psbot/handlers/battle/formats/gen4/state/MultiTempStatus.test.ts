@@ -1,114 +1,107 @@
 import {expect} from "chai";
 import "mocha";
-import {VariableTempStatus} from "./VariableTempStatus";
+import {MultiTempStatus} from "./MultiTempStatus";
 
 export const test = () =>
-    describe("VariableTempStatus", function () {
+    describe("MultiTempStatus", function () {
         const map = {a: true, b: true} as const;
-        let vts: VariableTempStatus<keyof typeof map>;
+        let mts: MultiTempStatus<keyof typeof map>;
 
-        /** Checks VariableTempStatus properties. */
+        /** Checks MultiTempStatus properties. */
         function check(
             type: keyof typeof map | "none",
             active: boolean,
             turns: number,
-            called = false,
         ): void {
-            expect(vts.type).to.equal(type);
-            expect(vts.isActive).to.be[active ? "true" : "false"];
-            expect(vts.turns).to.equal(turns);
-            expect(vts.called).to.be[called ? "true" : "false"];
+            expect(mts.type).to.equal(type);
+            expect(mts.isActive).to.be[active ? "true" : "false"];
+            expect(mts.turns).to.equal(turns);
         }
 
         it("Should be reset initially", function () {
-            vts = new VariableTempStatus(map, 4);
+            mts = new MultiTempStatus(map, 4);
             check("none", false, 0);
         });
 
         function setupImpl(silent = false) {
-            vts = new VariableTempStatus(map, 4, silent);
+            mts = new MultiTempStatus(map, 4, silent);
         }
 
-        function setupVts(silent = false) {
+        function setupmts(silent = false) {
             beforeEach(
-                `Initialize VariableTempStatus with silent=${silent}`,
+                `Initialize MultiTempStatus with silent=${silent}`,
                 setupImpl.bind(undefined, silent),
             );
         }
 
         describe("#reset()", function () {
-            setupVts();
+            setupmts();
 
             it("Should reset status", function () {
-                vts.start("b");
-                vts.tick();
-                vts.reset();
+                mts.start("b");
+                mts.tick();
+                mts.reset();
                 check("none", false, 0);
             });
         });
 
         describe("#start()", function () {
-            setupVts();
+            setupmts();
 
             it("Should start a status", function () {
-                vts.start("a");
+                mts.start("a");
                 check("a", true, 0);
-            });
-
-            it("Should start a called status", function () {
-                vts.start("a", true /*called*/);
-                check("a", true, 0, true /*called*/);
             });
         });
 
         describe("#tick()", function () {
             it("Should not tick if not active", function () {
                 setupImpl();
-                vts.tick();
+                mts.tick();
                 check("none", false, 0);
             });
 
             function shouldIncTurns() {
                 it("Should increment turns", function () {
-                    vts.start("b");
-                    vts.tick();
+                    mts.start("b");
+                    mts.tick();
                     check("b", true, 1);
                 });
             }
 
             /** Ticks one less than the required duration. */
             function tickToDuration() {
-                for (let i = vts.turns + 1; i < vts.duration; ++i) {
-                    vts.tick();
-                    check(vts.type, true, i);
+                for (let i = mts.turns + 1; i < mts.duration; ++i) {
+                    mts.tick();
+                    check(mts.type, true, i);
                 }
             }
 
-            describe("silent = false", function () {
-                setupVts();
+            describe("#silent = false", function () {
+                setupmts();
                 shouldIncTurns();
 
                 it("Should throw once over duration", function () {
-                    vts.start("a");
+                    mts.start("a");
                     tickToDuration();
-                    check("a", true, vts.duration - 1);
-                    expect(() => vts.tick()).to.throw(
+                    check("a", true, mts.duration - 1);
+                    expect(() => mts.tick()).to.throw(
                         Error,
                         "Status 'a' went longer than expected " +
-                            `(duration=${vts.duration}, turns=${vts.duration})`,
+                            `(duration=${mts.duration}, turns=${mts.duration})`,
                     );
                 });
             });
 
-            describe("silent = true", function () {
-                setupVts(true /*silent*/);
+            describe("#silent = true", function () {
+                setupmts(true /*silent*/);
                 shouldIncTurns();
 
                 it("Should reset when at duration limit", function () {
-                    vts.start("a");
+                    mts.start("a");
                     tickToDuration();
-                    check("a", true, vts.duration - 1);
-                    vts.tick();
+                    check("a", true, mts.duration - 1);
+                    mts.tick();
                     check("none", false, 0);
                 });
             });

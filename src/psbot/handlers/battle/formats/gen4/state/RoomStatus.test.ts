@@ -10,21 +10,14 @@ export const test = () =>
             room = new RoomStatus();
         });
 
-        describe("#gravity", function () {
-            it("Should tick on #postTurn()", function () {
-                room.gravity.start();
-                expect(room.gravity.turns).to.equal(0);
-                room.postTurn();
-                expect(room.gravity.turns).to.equal(1);
-            });
-        });
-
-        describe("#trickRoom", function () {
-            it("Should tick on #postTurn()", function () {
-                room.trickroom.start();
-                expect(room.trickroom.turns).to.equal(0);
-                room.postTurn();
-                expect(room.trickroom.turns).to.equal(1);
-            });
+        describe("#postTurn()", function () {
+            for (const type of ["gravity", "trickroom"] as const) {
+                it(`Should tick ${type}`, function () {
+                    room[type].start();
+                    expect(room[type].turns).to.equal(0);
+                    room.postTurn();
+                    expect(room[type].turns).to.equal(1);
+                });
+            }
         });
     });

@@ -27,7 +27,9 @@ export function checkLength(
  */
 export function limitedStatusTurns(turns: number, duration: number): number {
     // Turns left excluding current turn / total expected duration.
-    if (turns <= 0) return 0;
+    if (turns <= 0) {
+        return 0;
+    }
     return Math.max(0, (duration - turns + 1) / duration);
 }
 
@@ -62,7 +64,9 @@ export function fillEncoder(value: number, size: number): Encoder<unknown> {
     let memoValue = memoizedFillEncoders.get(value);
     if (memoValue) {
         const memoValueSize = memoValue.get(size);
-        if (memoValueSize) return memoValueSize;
+        if (memoValueSize) {
+            return memoValueSize;
+        }
     } else {
         memoValue = new Map();
         memoizedFillEncoders.set(value, memoValue);
@@ -115,8 +119,9 @@ export function oneHotEncoder(size: number): Encoder<OneHotEncoderArgs> {
     const encoder: Encoder<OneHotEncoderArgs> = {
         encode(arr, {id, one = 1, zero = 0}) {
             checkLength(arr, this.size);
-            if (id === null || id < 0 || id >= this.size) arr.fill(zero);
-            else
+            if (id === null || id < 0 || id >= this.size) {
+                arr.fill(zero);
+            } else
                 for (let i = 0; i < this.size; ++i) {
                     arr[i] = i === id ? one : zero;
                 }

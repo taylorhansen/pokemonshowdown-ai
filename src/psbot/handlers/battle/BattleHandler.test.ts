@@ -19,7 +19,20 @@ export const test = () =>
                 username: "username",
                 // Fake BattleParser for demonstration.
                 async parser(ctx) {
+                    // Initializer event.
+                    await verify(ctx, "|request|");
+                    await consume(ctx);
+
                     await verify(ctx, "|start|");
+                    await consume(ctx);
+                    await verify(ctx, "|turn|");
+                    await consume(ctx);
+
+                    await verify(ctx, "|request|");
+                    (ctx.state as unknown as FakeState).requested = true;
+                    let choices: Choice[] = ["move 1", "move 2"];
+                    await ctx.agent(ctx.state, choices);
+                    await expect(ctx.sender(choices[0])).to.eventually.be.false;
                     await consume(ctx);
 
                     await verify(ctx, "|turn|");
@@ -27,12 +40,9 @@ export const test = () =>
 
                     await verify(ctx, "|request|");
                     (ctx.state as unknown as FakeState).requested = true;
-                    const choices: Choice[] = ["move 1", "move 2"];
+                    choices = ["move 1", "move 2"];
                     await ctx.agent(ctx.state, choices);
                     await expect(ctx.sender(choices[0])).to.eventually.be.false;
-                    await consume(ctx);
-
-                    await verify(ctx, "|turn|");
                     await consume(ctx);
 
                     await verify(ctx, "|tie|");
@@ -56,7 +66,6 @@ export const test = () =>
             });
 
             // Turn 1.
-            await bh.handle({args: ["start"], kwArgs: {}});
             await bh.handle({
                 args: [
                     "request",
@@ -68,14 +77,32 @@ export const test = () =>
                 ],
                 kwArgs: {},
             });
+            bh.halt();
+            await bh.handle({args: ["start"], kwArgs: {}});
             await bh.handle({args: ["turn", "1" as Protocol.Num], kwArgs: {}});
             bh.halt();
             // Wait an extra tick to allow for the choice to be sent and
             // verified.
             await new Promise<void>(res => setImmediate(res));
 
-            // Turn 2: Game-over.
+            // Turn 2.
+            await bh.handle({
+                args: [
+                    "request",
+                    JSON.stringify({
+                        requestType: "wait",
+                        side: undefined,
+                        rqid: 2,
+                    }) as Protocol.RequestJSON,
+                ],
+                kwArgs: {},
+            });
+            bh.halt();
             await bh.handle({args: ["turn", "2" as Protocol.Num], kwArgs: {}});
+            bh.halt();
+            await new Promise<void>(res => setImmediate(res));
+
+            // Turn 3: Game-over.
             await bh.handle({args: ["tie"], kwArgs: {}});
             bh.halt();
             await bh.finish();
@@ -87,82 +114,27 @@ export const test = () =>
                 format: "gen4",
                 username: "username",
                 async parser(ctx) {
+                    // Initializer event.
+                    await verify(ctx, "|request|");
+                    await consume(ctx);
+
                     await verify(ctx, "|start|");
+                    await consume(ctx);
+                    await verify(ctx, "|turn|");
                     await consume(ctx);
 
                     await verify(ctx, "|request|");
-                    const choices: Choice[] = ["move 1", "move 2"];
+                    let choices: Choice[] = ["move 1", "move 2"];
                     await ctx.agent(ctx.state, choices);
                     await expect(ctx.sender(choices[0])).to.eventually.be.true;
                     await expect(ctx.sender(choices[1])).to.eventually.be.false;
                     await consume(ctx);
 
-                    await verify(ctx, "|tie|");
-                    await consume(ctx);
-                },
-                // Fake BattleState for demonstration.
-                stateCtor:
-                    FakeState as unknown as formats.StateConstructor<"gen4">,
-                agent: async (state, choices) => {
-                    [choices[0], choices[1]] = [choices[1], choices[0]];
-                    return await Promise.resolve();
-                },
-                sender: msg => {
-                    if (senderState === 0)
-                        expect(msg).to.equal("|/choose move 2");
-                    else expect(msg).to.equal("|/choose move 1");
-                    ++senderState;
-                    return true;
-                },
-            });
-
-            // Turn 1.
-            await bh.handle({args: ["start"], kwArgs: {}});
-            await bh.handle({
-                args: [
-                    "request",
-                    JSON.stringify({
-                        requestType: "wait",
-                        side: undefined,
-                        rqid: 1,
-                    }) as Protocol.RequestJSON,
-                ],
-                kwArgs: {},
-            });
-            bh.halt();
-            // Wait an extra tick to allow for the choice to be sent and
-            // verified.
-            await new Promise<void>(res => setImmediate(res));
-
-            // First choice is rejected.
-            await bh.handle({
-                args: ["error", "[Invalid choice]" as Protocol.Message],
-                kwArgs: {},
-            });
-            await new Promise<void>(res => setImmediate(res));
-
-            // Turn 2: Game-over.
-            await bh.handle({args: ["tie"], kwArgs: {}});
-            bh.halt();
-            await bh.finish();
-            expect(senderState).to.equal(2);
-        });
-
-        it("Should handle choice rejection and retrying due to newly revealed info", async function () {
-            let senderState = 0;
-            const bh = new BattleHandler({
-                format: "gen4",
-                username: "username",
-                async parser(ctx) {
-                    await verify(ctx, "|start|");
+                    await verify(ctx, "|turn|");
                     await consume(ctx);
 
                     await verify(ctx, "|request|");
-                    const choices: Choice[] = ["move 1", "move 2"];
-                    await ctx.agent(ctx.state, choices);
-                    await expect(ctx.sender(choices[0])).to.eventually.equal(
-                        "disabled",
-                    );
+                    choices = ["move 2", "move 1"];
                     await ctx.agent(ctx.state, choices);
                     await expect(ctx.sender(choices[0])).to.eventually.be.false;
                     await consume(ctx);
@@ -178,16 +150,17 @@ export const test = () =>
                     return await Promise.resolve();
                 },
                 sender: msg => {
-                    if (senderState === 0)
+                    if (senderState === 0) {
                         expect(msg).to.equal("|/choose move 2");
-                    else expect(msg).to.equal("|/choose move 1");
+                    } else {
+                        expect(msg).to.equal("|/choose move 1");
+                    }
                     ++senderState;
                     return true;
                 },
             });
 
             // Turn 1.
-            await bh.handle({args: ["start"], kwArgs: {}});
             await bh.handle({
                 args: [
                     "request",
@@ -199,6 +172,124 @@ export const test = () =>
                 ],
                 kwArgs: {},
             });
+            bh.halt();
+            await bh.handle({args: ["start"], kwArgs: {}});
+            await bh.handle({args: ["turn", "1" as Protocol.Num], kwArgs: {}});
+            bh.halt();
+            // Wait an extra tick to allow for the choice to be sent and
+            // verified.
+            await new Promise<void>(res => setImmediate(res));
+
+            // First choice is rejected.
+            await bh.handle({
+                args: ["error", "[Invalid choice]" as Protocol.Message],
+                kwArgs: {},
+            });
+            await new Promise<void>(res => setImmediate(res));
+
+            // Turn 2 after retried choice is accepted.
+            await bh.handle({
+                args: [
+                    "request",
+                    JSON.stringify({
+                        requestType: "wait",
+                        side: undefined,
+                        rqid: 2,
+                    }) as Protocol.RequestJSON,
+                ],
+                kwArgs: {},
+            });
+            bh.halt();
+            await bh.handle({args: ["turn", "2" as Protocol.Num], kwArgs: {}});
+            bh.halt();
+            await new Promise<void>(res => setImmediate(res));
+
+            // Turn 3: Game-over.
+            await bh.handle({args: ["tie"], kwArgs: {}});
+            bh.halt();
+            await bh.finish();
+            expect(senderState).to.equal(3);
+        });
+
+        it("Should handle choice rejection and retrying due to newly revealed info", async function () {
+            let senderState = 0;
+            const bh = new BattleHandler({
+                format: "gen4",
+                username: "username",
+                async parser(ctx) {
+                    // Initializer event.
+                    await verify(ctx, "|request|");
+                    await consume(ctx);
+
+                    await verify(ctx, "|start|");
+                    await consume(ctx);
+                    await verify(ctx, "|turn|");
+                    await consume(ctx);
+
+                    await verify(ctx, "|request|");
+                    let choices: Choice[] = ["move 1", "move 2"];
+                    await ctx.agent(ctx.state, choices);
+                    await expect(ctx.sender(choices[0])).to.eventually.equal(
+                        "disabled",
+                    );
+                    await ctx.agent(ctx.state, choices);
+                    await expect(ctx.sender(choices[0])).to.eventually.be.false;
+                    await consume(ctx);
+
+                    await verify(ctx, "|turn|");
+                    await consume(ctx);
+
+                    await verify(ctx, "|request|");
+                    choices = ["move 2", "move 1"];
+                    await ctx.agent(ctx.state, choices);
+                    await expect(ctx.sender(choices[0])).to.eventually.be.false;
+                    await consume(ctx);
+
+                    await verify(ctx, "|tie|");
+                    await consume(ctx);
+                },
+                // Fake BattleState for demonstration.
+                stateCtor:
+                    FakeState as unknown as formats.StateConstructor<"gen4">,
+                agent: async (state, choices) => {
+                    [choices[0], choices[1]] = [choices[1], choices[0]];
+                    return await Promise.resolve();
+                },
+                sender: msg => {
+                    if (senderState === 0) {
+                        expect(msg).to.equal("|/choose move 2");
+                    } else {
+                        expect(msg).to.equal("|/choose move 1");
+                    }
+                    ++senderState;
+                    return true;
+                },
+            });
+
+            // Turn 1.
+            await bh.handle({
+                args: [
+                    "request",
+                    // Minimal json to get the test to run.
+                    JSON.stringify({
+                        requestType: "move",
+                        active: [{moves: [{}]}],
+                        side: {
+                            pokemon: [
+                                {
+                                    ident: "p1a: Smeargle",
+                                    condition: "100/100",
+                                },
+                            ],
+                        },
+                        rqid: 1,
+                    }) as Protocol.RequestJSON,
+                ],
+                kwArgs: {},
+            });
+            bh.halt();
+            await bh.handle({args: ["start"], kwArgs: {}});
+            await bh.handle({args: ["turn", "1" as Protocol.Num], kwArgs: {}});
             bh.halt();
             // Wait an extra tick to allow for the choice to be sent and
             // verified.
@@ -216,7 +307,6 @@ export const test = () =>
             await bh.handle({
                 args: [
                     "request",
-                    // Minimal json to get the test to run.
                     JSON.stringify({
                         requestType: "move",
                         active: [{moves: [{}]}],
@@ -233,12 +323,30 @@ export const test = () =>
                 ],
                 kwArgs: {},
             });
+            bh.halt();
             await new Promise<void>(res => setImmediate(res));
 
-            // Turn 2: Game-over.
+            // Turn 2 after accepting retried choice.
+            await bh.handle({
+                args: [
+                    "request",
+                    JSON.stringify({
+                        requestType: "wait",
+                        side: undefined,
+                        rqid: 3,
+                    }) as Protocol.RequestJSON,
+                ],
+                kwArgs: {},
+            });
+            bh.halt();
+            await bh.handle({args: ["turn", "2" as Protocol.Num], kwArgs: {}});
+            bh.halt();
+            await new Promise<void>(res => setImmediate(res));
+
+            // Turn 3: Game-over.
             await bh.handle({args: ["tie"], kwArgs: {}});
             bh.halt();
             await bh.finish();
-            expect(senderState).to.equal(2);
+            expect(senderState).to.equal(3);
         });
     });

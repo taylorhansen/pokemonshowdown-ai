@@ -114,10 +114,11 @@ export function map<TState>(
 }
 
 /**
- * Creates an encoder that defaults to another if the state input is null.
+ * Creates an encoder that defaults to another if the state input is
+ * `undefined`.
  *
  * @param encoder Encoder when the state is defined.
- * @param alt Encoder when the state input is null.
+ * @param alt Encoder when the state input is `undefined`.
  */
 export function nullable<TState>(
     encoder: Encoder<TState>,
@@ -131,8 +132,11 @@ export function nullable<TState>(
     }
     return {
         encode(arr, state) {
-            if (!state) alt.encode(arr, undefined);
-            else encoder.encode(arr, state);
+            if (!state) {
+                alt.encode(arr, undefined);
+            } else {
+                encoder.encode(arr, state);
+            }
         },
         size: encoder.size,
     };
@@ -159,9 +163,13 @@ export function optional<TState>(
     }
     return {
         encode(arr, state) {
-            if (state === undefined) empty.encode(arr, undefined);
-            else if (state === null) unknown.encode(arr, null);
-            else defined.encode(arr, state);
+            if (state === undefined) {
+                empty.encode(arr, undefined);
+            } else if (state === null) {
+                unknown.encode(arr, null);
+            } else {
+                defined.encode(arr, state);
+            }
         },
         size: defined.size,
     };
