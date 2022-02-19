@@ -447,8 +447,9 @@ handlersImpl["|turn|"] = async function (ctx) {
     ctx.logger.debug(`Turn ${event.args[1]}`);
     await consume(ctx);
 };
-handlersImpl["|win|"] = "default";
-handlersImpl["|tie|"] = "default";
+// Note: Win/tie are handled by the top-level main.ts parser to end the game.
+handlersImpl["|win|"] = async () => await Promise.resolve();
+handlersImpl["|tie|"] = async () => await Promise.resolve();
 handlersImpl["|move|"] = async function (ctx) {
     const event = await verify(ctx, "|move|");
     const [, identStr, moveStr] = event.args;
