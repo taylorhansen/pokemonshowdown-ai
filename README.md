@@ -11,9 +11,7 @@ This project has three parts:
 
 -   [PsBot](/src/psbot) framework for creating a general Pokemon Showdown bot
     and setting up the battle interface.
--   [Battle](/src/psbot/handlers/battle) state tracker, able to make logical
-    deductions about the opponent's team by observing the events that happen in
-    each turn.
+-   [Battle](/src/psbot/handlers/battle) state tracker and PS protocol parser.
 -   Neural network [management](/src/psbot/handlers/battle/ai) and
     [training](/src/train) scripts.
 
@@ -37,12 +35,12 @@ npm test
 # Train a neural network through self-play.
 # WARNING: Requires a powerful computer, may take several hours.
 npm run train
-# The above command includes an option to enable GPU acceleration if supported:
+# Enable GPU acceleration:
 npm run train:gpu
 
 # Connect to the server specified in config.ts and start accepting challenges.
 npm run psbot
-# The above command includes an option to enable GPU acceleration if supported:
+# Enable GPU acceleration:
 npm run psbot:gpu
 ```
 
