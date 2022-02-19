@@ -95,8 +95,11 @@ export class StatRange implements ReadonlyStatRange {
     /** Encodes all stat range data into a string. */
     public toString(): string {
         let s: string;
-        if (this._min === this._max) s = this._min.toString();
-        else s = `${this._min}-${this._max}`;
+        if (this._min === this._max) {
+            s = this._min.toString();
+        } else {
+            s = `${this._min}-${this._max}`;
+        }
         return `${s}(${this.base})`;
     }
 }

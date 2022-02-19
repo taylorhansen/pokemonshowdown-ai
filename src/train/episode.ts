@@ -97,7 +97,9 @@ export async function episode({
     let progress: ProgressBar | undefined;
     let numBatches: number | undefined;
     function startProgress() {
-        if (!numBatches) throw new Error("numBatches not initialized");
+        if (!numBatches) {
+            throw new Error("numBatches not initialized");
+        }
         progress = new ProgressBar(
             `Batch :current/:total: eta=:etas :bar loss=:loss`,
             {
@@ -137,7 +139,9 @@ export async function episode({
                     );
 
                     // Restart progress bar for the next epoch.
-                    if (data.epoch < epochs) startProgress();
+                    if (data.epoch < epochs) {
+                        startProgress();
+                    }
                     break;
                 case "batch":
                     progress?.tick(data);

@@ -44,7 +44,9 @@ export function experienceBattleParser<
         let lastChoice: Choice | null = null;
         let reward = 0;
         function emitExperience() {
-            if (!expAgentData || !lastChoice) return;
+            if (!expAgentData || !lastChoice) {
+                return;
+            }
             // Collect data to emit an experience.
             const action = choiceIds[lastChoice];
             ctx.logger.debug(`Emitting experience, reward=${reward}`);
@@ -82,7 +84,9 @@ export function experienceBattleParser<
                 // Extract the last choice that was accepted.
                 async sender(choice) {
                     const r = await ctx.sender(choice);
-                    if (!r) lastChoice = choice;
+                    if (!r) {
+                        lastChoice = choice;
+                    }
                     return r;
                 },
             },

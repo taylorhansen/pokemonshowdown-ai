@@ -102,7 +102,9 @@ export class ModelRegistry {
                     async r => await r.data().finally(() => r.dispose()),
                 ),
             ).finally(() => fakeInput.dispose());
-        } else this.inUse = Promise.resolve();
+        } else {
+            this.inUse = Promise.resolve();
+        }
     }
 
     /** Saves the neural network to the given url. */
@@ -114,7 +116,9 @@ export class ModelRegistry {
     /** Deletes everything in this registry. */
     public async unload(): Promise<void> {
         await this.inUse;
-        for (const port of this.ports) port.close();
+        for (const port of this.ports) {
+            port.close();
+        }
         this.model.dispose();
     }
 
@@ -222,7 +226,9 @@ export class ModelRegistry {
         }
 
         // Batch timer is already setup.
-        if (this.timeoutPromise) return;
+        if (this.timeoutPromise) {
+            return;
+        }
 
         // Setup batch timer.
         let didTimeout = false;
@@ -255,7 +261,9 @@ export class ModelRegistry {
 
     /** Flushes the predict buffer and executes the batch. */
     private async executeBatch(): Promise<void> {
-        if (this.nextBatch.length <= 0) return;
+        if (this.nextBatch.length <= 0) {
+            return;
+        }
 
         // Allow for the next batch to start filling up.
         const batch = [...this.nextBatch];

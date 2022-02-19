@@ -277,7 +277,9 @@ export const movesetEncoder: Encoder<ReadonlyMoveset> = augment(
 function getMoveArgs(ms: ReadonlyMoveset): MoveSlotArgs[] {
     const result: MoveSlotArgs[] = [];
     // Known.
-    for (const move of ms.moves.values()) result.push({move});
+    for (const move of ms.moves.values()) {
+        result.push({move});
+    }
     // Unknown.
     if (ms.moves.size < ms.size) {
         const constrainedArgs: ConstrainedMoveArgs = {

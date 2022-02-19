@@ -66,7 +66,9 @@ export class AExpDecoderPool {
         // This lets each thread take the next unprocessed file without multiple
         // threads processing the same file.
         const fileGen = (function* () {
-            for (const file of files) yield file;
+            for (const file of files) {
+                yield file;
+            }
         })();
 
         // Setup threads for loading/extracting tfrecords.
@@ -79,13 +81,17 @@ export class AExpDecoderPool {
                     try {
                         // Get the next file path.
                         for (const file of fileGen) {
-                            if (done) break;
+                            if (done) {
+                                break;
+                            }
                             // Extract all aexps from the file and push to the
                             // aexpInput stream.
                             let aexp: AugmentedExperience | null;
                             while (!done && (aexp = await port.decode(file))) {
                                 // Respect backpressure.
-                                if (aexpInput.push(aexp)) continue;
+                                if (aexpInput.push(aexp)) {
+                                    continue;
+                                }
                                 await new Promise(res =>
                                     aexpInput.once(readAExp, res),
                                 );
@@ -110,7 +116,9 @@ export class AExpDecoderPool {
         allDone.catch(() => {});
 
         // Generator loop.
-        for await (const aexp of aexpInput) yield aexp;
+        for await (const aexp of aexpInput) {
+            yield aexp;
+        }
 
         // Force errors to propagate, if any.
         await allDone;

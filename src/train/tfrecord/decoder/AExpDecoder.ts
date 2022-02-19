@@ -140,7 +140,10 @@ export class AExpDecoder extends Transform {
             this.lengthAndCrcBuffer,
             headerBytes,
         );
-        if (bytesRead === 0) return null; // Eof
+        // Eof.
+        if (bytesRead === 0) {
+            return null;
+        }
         if (bytesRead !== this.lengthAndCrcBuffer.length) {
             throw new Error(
                 "Incomplete read. Expected a " +
@@ -160,8 +163,10 @@ export class AExpDecoder extends Transform {
             true /*littleEndian*/,
         );
 
-        // TODO: support 64bit length via Long
-        if (lengthHigh) throw new Error("4gb+ tfrecords not supported");
+        // TODO: Support 64bit length via Long pkg.
+        if (lengthHigh) {
+            throw new Error("4gb+ tfrecords not supported");
+        }
 
         let expectedCrc = maskedCrc32c(this.lengthBuffer);
         if (lengthCrc !== expectedCrc) {
@@ -177,7 +182,9 @@ export class AExpDecoder extends Transform {
         if (this.recordAndCrcBuffer.length < readLength) {
             // Grow record+crc buffer.
             let newLength = this.recordAndCrcBuffer.length;
-            while (newLength < readLength) newLength *= 2;
+            while (newLength < readLength) {
+                newLength *= 2;
+            }
 
             // Alloc new record+crc buffer.
             this.recordAndCrcBuffer = new Uint8Array(newLength);
@@ -236,15 +243,18 @@ export class AExpDecoder extends Transform {
         const bytesRead = await this.bufferChunks(length);
         const totalBuffer = prevLength + bytesRead;
 
-        if (!this.dataBuffer) return 0;
+        if (!this.dataBuffer) {
+            return 0;
+        }
 
         // Consume data and write to argument buffer.
         const bytesConsumed = Math.min(totalBuffer, length);
         this.dataBuffer.copy(buffer, 0, 0, bytesConsumed);
 
         // Remove the consumed bytes out of the data buffer.
-        if (totalBuffer - length === 0) this.dataBuffer = null;
-        else {
+        if (totalBuffer - length === 0) {
+            this.dataBuffer = null;
+        } else {
             // Splice out the requested length.
             const newBuf = Buffer.allocUnsafe(totalBuffer - length);
             this.dataBuffer.copy(newBuf, 0, length);
@@ -269,7 +279,10 @@ export class AExpDecoder extends Transform {
         while ((this.dataBuffer?.length ?? 0) + bytesRead < length) {
             // Add the next chunk to the data buffer.
             const chunk = await this.readChunk();
-            if (!chunk) break; // No more data.
+            // No more data.
+            if (!chunk) {
+                break;
+            }
             chunks.push(chunk);
             bytesRead += chunk.length;
         }
@@ -321,7 +334,9 @@ export class AExpDecoder extends Transform {
         example: tfrecord.Example,
     ): AugmentedExperience {
         const featureMap = example.features?.feature;
-        if (!featureMap) throw new Error("AExp Example has no features");
+        if (!featureMap) {
+            throw new Error("AExp Example has no features");
+        }
         return {
             action: AExpDecoder.getUint32(featureMap, "action"),
             advantage: AExpDecoder.getFloat(featureMap, "advantage"),
@@ -345,7 +360,9 @@ export class AExpDecoder extends Transform {
         }
 
         const [v] = value;
-        if (Long.isLong(v)) return v.getLowBitsUnsigned();
+        if (Long.isLong(v)) {
+            return v.getLowBitsUnsigned();
+        }
         return v as number;
     }
 

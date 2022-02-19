@@ -59,12 +59,16 @@ function dispatchTimer(timerState: TimerState) {
         );
     }
     // Check as often as possible for the last 10ms.
-    else setImmediate(checkTimer, timerState);
+    else {
+        setImmediate(checkTimer, timerState);
+    }
 }
 
 /** Checks the time left on the timer or otherwise restarts the timer. */
 function checkTimer(timerState: TimerState) {
-    if (timerState.canceled) return;
+    if (timerState.canceled) {
+        return;
+    }
 
     // See if we crossed the threshold.
     const timestamp = process.hrtime.bigint();

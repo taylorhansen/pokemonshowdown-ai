@@ -33,8 +33,9 @@ export function pluralTurns(
     limit?: number | null,
 ): string {
     let prefix = "";
-    if (typeof name === "string") prefix = `${name} for `;
-    else {
+    if (typeof name === "string") {
+        prefix = `${name} for `;
+    } else {
         // Name is omitted, shift args to match first overload.
         limit = turns;
         turns = name;

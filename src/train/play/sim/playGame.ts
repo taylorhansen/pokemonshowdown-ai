@@ -78,7 +78,9 @@ export async function playGame(
     // Detect battle agents that want to generate Experience objects.
     const experiences: Experience[][] = [];
     const [p1, p2] = args.agents.map<PlayerOptions>(function (agentArgs, i) {
-        if (!agentArgs.exp) return {agent: agentArgs.agent};
+        if (!agentArgs.exp) {
+            return {agent: agentArgs.agent};
+        }
 
         // Agent is configured to emit partial Experience data, so override the
         // BattleParser to process them into full Experience objects.

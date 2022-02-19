@@ -28,7 +28,9 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler {
     /** @override */
     public handle(event: Event): void {
         const key = Protocol.key(event.args);
-        if (!key) return;
+        if (!key) {
+            return;
+        }
         (
             (this as Protocol.Handler)[key] as (
                 args: Event["args"],

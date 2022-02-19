@@ -91,7 +91,9 @@ export class Moveset implements ReadonlyMoveset {
     /** Creates a Moveset of specified movepool and size. */
     public constructor(movepool: readonly string[], size?: number);
     public constructor(movepool?: readonly string[] | number, size?: number) {
-        if (typeof movepool === "number") size = movepool;
+        if (typeof movepool === "number") {
+            size = movepool;
+        }
         // Fill in default size.
         size = size ?? Moveset.maxSize;
 
@@ -228,7 +230,9 @@ export class Moveset implements ReadonlyMoveset {
 
         let result: Move | undefined;
         this.propagateReveal(name, maxpp, (moveset, move) => {
-            if (moveset === this) result = move;
+            if (moveset === this) {
+                result = move;
+            }
         });
 
         // istanbul ignore next: Can't reproduce.
@@ -370,7 +374,9 @@ export class Moveset implements ReadonlyMoveset {
         }
 
         // Constraints narrow enough to infer the rest of the moveset.
-        if (this._constraint.size > numUnknown) return;
+        if (this._constraint.size > numUnknown) {
+            return;
+        }
 
         const constraintsArr = [...this._constraint];
         for (let i = 0; i < constraintsArr.length; ++i) {

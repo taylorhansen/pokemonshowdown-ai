@@ -97,10 +97,14 @@ export class AsyncPort<
     public receiveMessage(result: ProtocolResultRaw<TProtocol, TTypes>): void {
         // Find a registered callback.
         const callback = this.requests.get(result.rid);
-        if (!callback) throw new Error(`Invalid rid ${result.rid}`);
+        if (!callback) {
+            throw new Error(`Invalid rid ${result.rid}`);
+        }
 
         // De-register.
-        if (result.done) this.requests.delete(result.rid);
+        if (result.done) {
+            this.requests.delete(result.rid);
+        }
 
         // Process raw port result.
         if (result.type === "error") {
@@ -111,7 +115,9 @@ export class AsyncPort<
                 err: deserialize(rawResult.err) as Error,
             };
             callback(errorResult);
-        } else callback(result);
+        } else {
+            callback(result);
+        }
     }
 
     /**

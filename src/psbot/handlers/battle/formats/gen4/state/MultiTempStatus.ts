@@ -91,14 +91,22 @@ export class MultiTempStatus<TStatusType extends string>
     /** Indicates that the status lasted another turn. */
     public tick(): void {
         // No need to increment turns if it's none.
-        if (this._type === "none") return;
+        if (this._type === "none") {
+            return;
+        }
         ++this._turns;
 
         // Went over duration.
-        if (this._infinite) return;
-        if (this._turns < this.duration) return;
+        if (this._infinite) {
+            return;
+        }
+        if (this._turns < this.duration) {
+            return;
+        }
         // Should've reset() on last tick() unless silent.
-        if (this.silent) return this.reset();
+        if (this.silent) {
+            return this.reset();
+        }
         throw new Error(
             `Status '${this._type}' went longer than expected ` +
                 `(duration=${this.duration}, turns=${this._turns})`,
@@ -108,7 +116,9 @@ export class MultiTempStatus<TStatusType extends string>
     // istanbul ignore next: Only used in logging.
     /** Encodes status data into a log string. */
     public toString(): string {
-        if (this._type === "none") return "inactive";
+        if (this._type === "none") {
+            return "inactive";
+        }
         return pluralTurns(
             this._type,
             this._turns,

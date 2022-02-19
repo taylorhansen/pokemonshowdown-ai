@@ -15,8 +15,9 @@ let importGpu: boolean | undefined;
  * parameter must not change from the first call.
  */
 export function importTfn(gpu = false): Tfn {
-    if (importGpu === undefined) importGpu = gpu;
-    else if (importGpu !== gpu) {
+    if (importGpu === undefined) {
+        importGpu = gpu;
+    } else if (importGpu !== gpu) {
         throw new Error(
             `tfImport was previously called with gpu=${importGpu} but is ` +
                 `now being called with gpu=${gpu}`,

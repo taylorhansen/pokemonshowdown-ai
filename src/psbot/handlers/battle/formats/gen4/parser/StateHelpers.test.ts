@@ -29,7 +29,9 @@ export class StateHelpers {
         const result: Pokemon[] = [];
         let i = 0;
         for (const op of options) {
-            if (!op) continue;
+            if (!op) {
+                continue;
+            }
             const mon = team.switchIn(op);
             expect(mon, `Switch-in slot ${i} couldn't be filled`).to.not.be
                 .null;

@@ -111,7 +111,9 @@ export class MockPsServer {
 
     /** Disconnects from current client. */
     public disconnect(): void {
-        if (!this.connection) return;
+        if (!this.connection) {
+            return;
+        }
 
         this.connection.removeAllListeners();
         this.connection.close();

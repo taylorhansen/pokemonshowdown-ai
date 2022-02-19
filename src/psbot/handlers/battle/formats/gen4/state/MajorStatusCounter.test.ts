@@ -61,7 +61,9 @@ export const test = () =>
             it("Should fail if exceeded duration", function () {
                 ms.afflict("slp");
                 expect(ms.duration).to.not.be.null;
-                for (let i = 0; i < ms.duration!; ++i) ms.tick();
+                for (let i = 0; i < ms.duration!; ++i) {
+                    ms.tick();
+                }
                 expect(() => ms.tick()).to.throw(
                     Error,
                     "MajorStatus 'slp' lasted longer than expected (4/4 turns)",

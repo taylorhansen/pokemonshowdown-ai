@@ -165,7 +165,9 @@ export async function learn({
     // Setup training callbacks for metrics logging.
     const callbacks = new tf.CallbackList();
     // TODO: Early stopping.
-    if (trainCallback) callbacks.append(trainCallback);
+    if (trainCallback) {
+        callbacks.append(trainCallback);
+    }
 
     // Have to do this manually (instead of #compile()-ing the model and calling
     // #fit()) since the loss function changes based on the advantage values.
@@ -215,23 +217,31 @@ export async function learn({
                     });
 
                     for (const name in result) {
-                        if (!Object.hasOwnProperty.call(result, name)) continue;
+                        if (!Object.hasOwnProperty.call(result, name)) {
+                            continue;
+                        }
                         const metric = result[name as keyof LossResult];
-                        if (!metric) continue;
+                        if (!metric) {
+                            continue;
+                        }
 
                         // Record metrics for epoch average later
                         if (
                             !Object.hasOwnProperty.call(metricsPerBatch, name)
                         ) {
                             metricsPerBatch[name] = [metric];
-                        } else metricsPerBatch[name].push(metric);
+                        } else {
+                            metricsPerBatch[name].push(metric);
+                        }
 
                         // Record metrics for batch summary
                         // If using tensorboard, requires updateFreq=batch
                         batchLogs[name] = tf.keep(metric.clone());
 
                         // Record kl for adaptive penalty
-                        if (name === "kl") kl = metric;
+                        if (name === "kl") {
+                            kl = metric;
+                        }
                     }
                     return result.loss;
                 }
@@ -252,12 +262,17 @@ export async function learn({
                     kl
                 ) {
                     const klValue = await kl.array();
-                    if (algorithm.beta === undefined) algorithm.beta = 1;
+                    if (algorithm.beta === undefined) {
+                        algorithm.beta = 1;
+                    }
 
                     // Adapt penalty coefficient.
                     const target = algorithm.klTarget;
-                    if (klValue < target / 1.5) algorithm.beta /= 2;
-                    else if (klValue > target * 1.5) algorithm.beta *= 2;
+                    if (klValue < target / 1.5) {
+                        algorithm.beta /= 2;
+                    } else if (klValue > target * 1.5) {
+                        algorithm.beta *= 2;
+                    }
 
                     // Record new coefficient value.
                     if (!Object.hasOwnProperty.call(metricsPerBatch, "beta")) {
@@ -290,7 +305,9 @@ export async function learn({
 
         // Average all batch metrics.
         for (const name in metricsPerBatch) {
-            if (!Object.hasOwnProperty.call(metricsPerBatch, name)) continue;
+            if (!Object.hasOwnProperty.call(metricsPerBatch, name)) {
+                continue;
+            }
             epochLogs[name] = tf.tidy(() =>
                 tf.mean(tf.stack(metricsPerBatch[name])).asScalar(),
             );

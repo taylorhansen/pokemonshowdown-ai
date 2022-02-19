@@ -134,9 +134,13 @@ export async function playGames({
                 );
             }
 
-            if (result.winner === 0) ++wins;
-            else if (result.winner === 1) ++losses;
-            else ++ties;
+            if (result.winner === 0) {
+                ++wins;
+            } else if (result.winner === 1) {
+                ++losses;
+            } else {
+                ++ties;
+            }
 
             progress.tick({wlt: `${wins}-${losses}-${ties}`});
 

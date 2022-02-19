@@ -53,7 +53,7 @@ export interface GameOptions<T extends FormatType = FormatType> {
     readonly maxTurns?: number;
     /** Path to the file to store game logs in. Optional. */
     readonly logPath?: string;
-    /** Prefix for logs. Default `Battle: `. */
+    /** Prefix for logs. Default `"Battle: "`. */
     readonly logPrefix?: string;
 }
 
@@ -105,10 +105,11 @@ export async function startPsBattle(
                 // Extract choice from args.
                 // Format: |/choose <choice>
                 if (arg.startsWith("|/choose ")) {
-                    const choice = arg.substr("|/choose ".length);
+                    const choice = arg.substring("|/choose ".length);
                     innerLog.debug(`Sending choice '${choice}'`);
-                    if (!battleStream.atEOF) void streams[id].write(choice);
-                    else {
+                    if (!battleStream.atEOF) {
+                        void streams[id].write(choice);
+                    } else {
                         innerLog.error("Can't send: At end of stream");
                         return false;
                     }
@@ -142,7 +143,9 @@ export async function startPsBattle(
                     }
                 }
             };
-        } else handlerCtor = BattleHandler;
+        } else {
+            handlerCtor = BattleHandler;
+        }
 
         const handler = new handlerCtor({
             format: options.format,
@@ -175,8 +178,11 @@ export async function startPsBattle(
                 try {
                     for await (const event of messageParser) {
                         const e = event as RoomEvent | HaltEvent;
-                        if (e.args[0] === "halt") handler.halt();
-                        else await handler.handle(e as RoomEvent);
+                        if (e.args[0] === "halt") {
+                            handler.halt();
+                        } else {
+                            await handler.handle(e as RoomEvent);
+                        }
                     }
                 } catch (e) {
                     // Log game errors and leave a new exception specifying
@@ -186,8 +192,11 @@ export async function startPsBattle(
                 } finally {
                     innerLog.debug("Finishing");
                     try {
-                        if (loopErr) await handler.forceFinish();
-                        else await handler.finish();
+                        if (loopErr) {
+                            await handler.forceFinish();
+                        } else {
+                            await handler.finish();
+                        }
                     } catch (e) {
                         if (loopErr !== e) {
                             logError(innerLog, battleStream, e as Error);
@@ -196,7 +205,9 @@ export async function startPsBattle(
                                 "Same error encountered while finishing",
                             );
                         }
-                        if (!loopErr) throwLog(logPath);
+                        if (!loopErr) {
+                            throwLog(logPath);
+                        }
                     }
                 }
             })(),
@@ -234,10 +245,14 @@ function logError(
     battleStream: BattleStreams.BattleStream,
     err?: Error,
 ): void {
-    if (err) logger.error(err.stack ?? err.toString());
+    if (err) {
+        logger.error(err.stack ?? err.toString());
+    }
     logger.debug("Error encountered, force tie and discard game");
     void battleStream.write(">forcetie");
-    if (!battleStream.atEOF) battleStream.destroy();
+    if (!battleStream.atEOF) {
+        battleStream.destroy();
+    }
 }
 
 function throwLog(logPath: string): never {

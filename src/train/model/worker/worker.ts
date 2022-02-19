@@ -17,7 +17,9 @@ import {
 } from "./ModelProtocol";
 import {ModelRegistry} from "./ModelRegistry";
 
-if (!parentPort) throw new Error("No parent port!");
+if (!parentPort) {
+    throw new Error("No parent port!");
+}
 
 /** Maps model uid to their registry objects. */
 const models = new Map<number, ModelRegistry>();
@@ -32,7 +34,9 @@ let uidCounter = 0;
  */
 function getRegistry(uid: number): ModelRegistry {
     const registry = models.get(uid);
-    if (!registry) throw new Error(`No such model with uid ${uid}`);
+    if (!registry) {
+        throw new Error(`No such model with uid ${uid}`);
+    }
     return registry;
 }
 
@@ -59,8 +63,9 @@ parentPort.on("message", function handle(msg: ModelMessage) {
     switch (msg.type) {
         case "load":
             // Note: Downcasting msg to BatchPredictOptions.
-            if (!msg.url) load(rid, createModel(msg.format), msg.format, msg);
-            else {
+            if (!msg.url) {
+                load(rid, createModel(msg.format), msg.format, msg);
+            } else {
                 promise = tf
                     .loadLayersModel(msg.url)
                     .then(m => load(rid, m, msg.format, msg));

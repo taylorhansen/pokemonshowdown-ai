@@ -214,7 +214,9 @@ export class Team implements ReadonlyTeam {
         moves,
     }: TeamRevealOptions): number {
         // Team already full.
-        if (this.unrevealed === this._size) return -1;
+        if (this.unrevealed === this._size) {
+            return -1;
+        }
 
         const newMon = new Pokemon(species, level, moves, gender, this);
         this._pokemon[this.unrevealed] = newMon;
@@ -231,7 +233,9 @@ export class Team implements ReadonlyTeam {
 
     /** Cures all pokemon of any major status conditions. */
     public cure(): void {
-        for (const mon of this._pokemon) mon?.majorStatus.cure();
+        for (const mon of this._pokemon) {
+            mon?.majorStatus.cure();
+        }
     }
 
     // istanbul ignore next: Only used for logging.

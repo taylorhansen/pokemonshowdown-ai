@@ -98,7 +98,9 @@ export const loss = ({
             }
         }
         // Vanilla policy gradient.
-        else pgObjs = tf.mul(tf.log(actProbs), advantage);
+        else {
+            pgObjs = tf.mul(tf.log(actProbs), advantage);
+        }
 
         // Calculate main policy gradient loss.
         // By minimizing loss, we maximize the objective.
@@ -131,7 +133,9 @@ export const loss = ({
         }
 
         // Sum all the losses together.
-        if (losses.length > 1) result.loss = tf.keep(tf.addN(losses));
+        if (losses.length > 1) {
+            result.loss = tf.keep(tf.addN(losses));
+        }
 
         return result;
     });

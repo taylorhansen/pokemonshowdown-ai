@@ -219,7 +219,9 @@ export class PsBot {
             this.logger.debug("Connected");
 
             this.sender = (...responses: string[]) => {
-                if (!connection.connected) return false;
+                if (!connection.connected) {
+                    return false;
+                }
                 for (const response of responses) {
                     connection.sendUTF(response);
                     this.logger.debug(`Sent: ${response}`);

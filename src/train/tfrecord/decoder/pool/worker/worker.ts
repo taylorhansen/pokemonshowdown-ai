@@ -9,7 +9,9 @@ import {WorkerClosed} from "../../../../port/WorkerProtocol";
 import {AExpDecoder} from "../../AExpDecoder";
 import {DecodeResult, DecoderMessage} from "./DecoderProtocol";
 
-if (!parentPort) throw new Error("No parent port!");
+if (!parentPort) {
+    throw new Error("No parent port!");
+}
 
 /** Manages a decoder instance. */
 interface DecoderRegistry {
@@ -30,7 +32,8 @@ parentPort.on("message", (msg: DecoderMessage) => {
             closePromises.push(
                 (async function () {
                     // Indicate that the stream needs to close prematurely.
-                    while (!(await gen.next(true)).done);
+                    // eslint-disable-next-line no-empty
+                    while (!(await gen.next(true)).done) {}
                 })(),
             );
         }
@@ -60,7 +63,9 @@ parentPort.on("message", (msg: DecoderMessage) => {
         > {
             // Continuously read aexps from decoder unless signaled to stop.
             for await (const aexp of decoderStream) {
-                if (yield aexp as AugmentedExperience) break;
+                if (yield aexp as AugmentedExperience) {
+                    break;
+                }
             }
 
             fileStream.close();

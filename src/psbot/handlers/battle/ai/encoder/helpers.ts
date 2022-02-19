@@ -114,17 +114,20 @@ const memoizedOneHotEncoders = new Map<number, Encoder<OneHotEncoderArgs>>();
  */
 export function oneHotEncoder(size: number): Encoder<OneHotEncoderArgs> {
     const memo = memoizedOneHotEncoders.get(size);
-    if (memo) return memo;
+    if (memo) {
+        return memo;
+    }
 
     const encoder: Encoder<OneHotEncoderArgs> = {
         encode(arr, {id, one = 1, zero = 0}) {
             checkLength(arr, this.size);
             if (id === null || id < 0 || id >= this.size) {
                 arr.fill(zero);
-            } else
+            } else {
                 for (let i = 0; i < this.size; ++i) {
                     arr[i] = i === id ? one : zero;
                 }
+            }
         },
         size,
     };

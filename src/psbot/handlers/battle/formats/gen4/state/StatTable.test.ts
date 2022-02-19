@@ -11,8 +11,9 @@ export const test = () =>
                 // All base 100 stats.
                 const stats = StatTable.base(dex.pokemon["mew"], 100);
                 for (const stat in dex.statNames) {
-                    if (!Object.hasOwnProperty.call(dex.statNames, stat))
+                    if (!Object.hasOwnProperty.call(dex.statNames, stat)) {
                         continue;
+                    }
 
                     if (stat === "hp") {
                         expect(stats[stat].min).to.equal(310);

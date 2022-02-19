@@ -15,7 +15,9 @@ import {
     GamePlayResult,
 } from "./GameProtocol";
 
-if (!parentPort) throw new Error("No parent port!");
+if (!parentPort) {
+    throw new Error("No parent port!");
+}
 
 // Setup input stream.
 
@@ -91,7 +93,9 @@ const gameStream = new stream.Transform({
                 parentPort!.postMessage(result, [result.err.buffer]);
                 aexps = [];
             }
-            for (const aexp of aexps) this.push(aexp);
+            for (const aexp of aexps) {
+                this.push(aexp);
+            }
             callback();
         })();
     },

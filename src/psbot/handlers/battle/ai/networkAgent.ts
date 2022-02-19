@@ -101,7 +101,9 @@ function isValidInput(input: tf.SymbolicTensor, size: number): boolean {
 
 /** Ensures that a network output shape is valid. */
 function isValidOutput(output: tf.SymbolicTensor[]): boolean {
-    if (output.length !== 2) return false;
+    if (output.length !== 2) {
+        return false;
+    }
     const actionShape = output[0].shape;
     const valueShape = output[1].shape;
     // Action output shape should be [null, intToChoice.length].

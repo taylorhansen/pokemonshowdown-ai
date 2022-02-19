@@ -574,7 +574,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         }
         this._lockedOnBy = null;
         // Clear our lockon status.
-        if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
+        if (this._lockOnTarget) {
+            this._lockOnTarget._lockedOnBy = null;
+        }
         this._lockOnTarget = null;
         this._lockOnTurns.end();
         this.magnetrise.end();
@@ -584,10 +586,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.substitute = false;
         this.suppressAbility = false;
         // Clear opponent's trapping status.
-        if (this._trapped) this._trapped._trapping = null;
+        if (this._trapped) {
+            this._trapped._trapping = null;
+        }
         this._trapped = null;
         // Clear our trapping status.
-        if (this._trapping) this._trapping._trapped = null;
+        if (this._trapping) {
+            this._trapping._trapped = null;
+        }
         this._trapping = null;
     }
 
@@ -647,9 +653,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
      */
     public batonPass(majorStatus?: dex.MajorStatus): void {
         // Restart lockon so the recipient can use it.
-        if (this._lockOnTurns.isActive) this._lockOnTurns.start();
+        if (this._lockOnTurns.isActive) {
+            this._lockOnTurns.start();
+        }
         // Nightmare status shouldn't persist if the recipient isn't asleep.
-        if (majorStatus !== "slp") this.nightmare = false;
+        if (majorStatus !== "slp") {
+            this.nightmare = false;
+        }
     }
 
     /** Updates some statuses after handling a self-switch. */
@@ -709,7 +719,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
 
         // Handle lockon ending.
         if (!this._lockOnTurns.isActive) {
-            if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
+            if (this._lockOnTarget) {
+                this._lockOnTarget._lockedOnBy = null;
+            }
             this._lockOnTarget = null;
         }
 
@@ -723,7 +735,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         // Toggle truant activation.
         if (this.ability === "truant") {
             this._willTruant = !this._willTruant;
-        } else this._willTruant = false;
+        } else {
+            this._willTruant = false;
+        }
     }
 
     // istanbul ignore next: Only used in logging.

@@ -129,8 +129,12 @@ export class ModelPort<
      */
     private static verifyInput(arr: Float32Array): number {
         for (let i = 0; i < arr.length; ++i) {
-            if (isNaN(arr[i])) return i;
-            if (Math.abs(arr[i]) > 1) return i;
+            if (isNaN(arr[i])) {
+                return i;
+            }
+            if (Math.abs(arr[i]) > 1) {
+                return i;
+            }
         }
         return -1;
     }
@@ -145,8 +149,12 @@ export class ModelPort<
      */
     private static verifyOutput(arr: Float32Array): number {
         for (let i = 0; i < arr.length; ++i) {
-            if (isNaN(arr[i])) return i;
-            if (arr[i] < 1e-4) return i;
+            if (isNaN(arr[i])) {
+                return i;
+            }
+            if (arr[i] < 1e-4) {
+                return i;
+            }
         }
         return -1;
     }

@@ -156,10 +156,15 @@ export class ModelWorker {
 
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"learn">(msg, [], result => {
-                if (result.type === "error") rej(result.err);
-                else {
-                    if (callback && result.data) callback(result.data);
-                    if (result.done) res();
+                if (result.type === "error") {
+                    rej(result.err);
+                } else {
+                    if (callback && result.data) {
+                        callback(result.data);
+                    }
+                    if (result.done) {
+                        res();
+                    }
                 }
             }),
         );

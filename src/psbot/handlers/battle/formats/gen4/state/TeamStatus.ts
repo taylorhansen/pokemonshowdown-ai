@@ -84,7 +84,9 @@ export class TeamStatus implements ReadonlyTeamStatus {
      * server.
      */
     public postTurn(): void {
-        for (const id of futureMoveKeys) this.futureMoves[id].tick();
+        for (const id of futureMoveKeys) {
+            this.futureMoves[id].tick();
+        }
         this.lightscreen.tick();
         this.luckychant.tick();
         this.mist.tick();

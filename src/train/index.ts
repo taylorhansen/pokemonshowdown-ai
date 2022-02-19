@@ -142,7 +142,9 @@ const batchOptions: BatchPredictOptions = {
     // Unload all the models and then the ModelWorker itself.
     const promises = [models.unload(model)];
     for (const opponent of evalOpponents) {
-        if (opponent.agentConfig.model === model) continue;
+        if (opponent.agentConfig.model === model) {
+            continue;
+        }
         promises.push(models.unload(opponent.agentConfig.model));
     }
     await Promise.all(promises);

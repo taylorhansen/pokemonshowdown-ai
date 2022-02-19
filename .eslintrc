@@ -151,6 +151,7 @@
       }
     ],
     "consistent-this": "warn",
+    "curly": "warn",
     "eqeqeq": "warn",
     "eslint-comments/no-unused-disable": "error",
     "grouped-accessor-pairs": ["warn", "getBeforeSet"],
