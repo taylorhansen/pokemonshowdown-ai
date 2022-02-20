@@ -86,9 +86,12 @@ export async function playGame(
         // BattleParser to process them into full Experience objects.
         const exps: Experience[] = [];
         experiences[i] = exps;
-        const parser = formats.parser[
-            format
-        ] as BattleParser<formats.FormatType>;
+        const parser = formats.parser[format] as BattleParser<
+            formats.FormatType,
+            BattleAgent,
+            [],
+            void
+        >;
         return {
             agent: agentArgs.agent,
             parser: rollout
@@ -97,7 +100,7 @@ export async function playGame(
                       exp => exps.push(exp),
                       // Note: startPSBattle uses raw SideID as username.
                       `p${i + 1}`,
-                  ) as BattleParser<formats.FormatType>)
+                  ) as BattleParser<formats.FormatType, BattleAgent, [], void>)
                 : parser,
         };
     });

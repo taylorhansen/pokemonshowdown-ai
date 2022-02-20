@@ -31,7 +31,7 @@ export interface PlayerOptions<T extends FormatType = FormatType> {
     /** Battle decision-maker. */
     readonly agent: BattleAgent<T>;
     /** Override BattleParser if needed. */
-    readonly parser?: BattleParser<T>;
+    readonly parser?: BattleParser<T, BattleAgent<T>, [], void>;
 }
 
 /**
@@ -150,7 +150,7 @@ export async function startPsBattle(
         const handler = new handlerCtor({
             format: options.format,
             username: id,
-            agent: options.players[id].agent,
+            ...options.players[id],
             sender,
             logger: innerLog.addPrefix("BattleHandler: "),
         });
