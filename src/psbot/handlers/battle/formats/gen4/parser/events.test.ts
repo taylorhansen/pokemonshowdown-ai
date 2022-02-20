@@ -946,21 +946,21 @@ export const test = () =>
                 describe("momentum move", function () {
                     it("Should start momentum move status", async function () {
                         const mon = sh.initActive("p1");
-                        expect(mon.volatile.rollout.isActive).to.be.false;
+                        expect(mon.volatile.momentum.isActive).to.be.false;
                         sh.initActive("p2");
 
                         await ph.handle(moveEvent("p1", "rollout"));
                         await ph.return();
-                        expect(mon.volatile.rollout.isActive).to.be.true;
-                        expect(mon.volatile.rollout.type).to.equal("rollout");
+                        expect(mon.volatile.momentum.isActive).to.be.true;
+                        expect(mon.volatile.momentum.type).to.equal("rollout");
                     });
 
                     it("Should continue momentum move status", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.rollout.start("iceball");
-                        expect(mon.volatile.rollout.isActive).to.be.true;
-                        expect(mon.volatile.rollout.type).to.equal("iceball");
-                        expect(mon.volatile.rollout.turns).to.equal(0);
+                        mon.volatile.momentum.start("iceball");
+                        expect(mon.volatile.momentum.isActive).to.be.true;
+                        expect(mon.volatile.momentum.type).to.equal("iceball");
+                        expect(mon.volatile.momentum.turns).to.equal(0);
 
                         await ph.handle(
                             moveEvent("p1", "iceball", {
@@ -968,40 +968,40 @@ export const test = () =>
                             }),
                         );
                         await ph.return();
-                        expect(mon.volatile.rollout.isActive).to.be.true;
-                        expect(mon.volatile.rollout.type).to.equal("iceball");
-                        expect(mon.volatile.rollout.turns).to.equal(1);
+                        expect(mon.volatile.momentum.isActive).to.be.true;
+                        expect(mon.volatile.momentum.type).to.equal("iceball");
+                        expect(mon.volatile.momentum.turns).to.equal(1);
                     });
 
                     it("Should restart momentum if different move", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.rollout.start("rollout");
-                        expect(mon.volatile.rollout.isActive).to.be.true;
-                        expect(mon.volatile.rollout.type).to.equal("rollout");
-                        expect(mon.volatile.rollout.turns).to.equal(0);
+                        mon.volatile.momentum.start("rollout");
+                        expect(mon.volatile.momentum.isActive).to.be.true;
+                        expect(mon.volatile.momentum.type).to.equal("rollout");
+                        expect(mon.volatile.momentum.turns).to.equal(0);
                         sh.initActive("p2");
 
                         await ph.handle(moveEvent("p1", "iceball"));
                         await ph.return();
-                        expect(mon.volatile.rollout.isActive).to.be.true;
-                        expect(mon.volatile.rollout.type).to.equal("iceball");
-                        expect(mon.volatile.rollout.turns).to.equal(0);
+                        expect(mon.volatile.momentum.isActive).to.be.true;
+                        expect(mon.volatile.momentum.type).to.equal("iceball");
+                        expect(mon.volatile.momentum.turns).to.equal(0);
                     });
 
                     it("Should reset momentum if unrelated move", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.rollout.start("iceball");
-                        expect(mon.volatile.rollout.isActive).to.be.true;
+                        mon.volatile.momentum.start("iceball");
+                        expect(mon.volatile.momentum.isActive).to.be.true;
 
                         await ph.handle(moveEvent("p1", "splash"));
                         await ph.return();
-                        expect(mon.volatile.rollout.isActive).to.be.false;
+                        expect(mon.volatile.momentum.isActive).to.be.false;
                     });
 
                     it("Should reset momentum if notarget", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.rollout.start("rollout");
-                        expect(mon.volatile.rollout.isActive).to.be.true;
+                        mon.volatile.momentum.start("rollout");
+                        expect(mon.volatile.momentum.isActive).to.be.true;
 
                         await ph.handle(
                             moveEvent("p1", "rollout", {
@@ -1010,13 +1010,13 @@ export const test = () =>
                             }),
                         );
                         await ph.return();
-                        expect(mon.volatile.rollout.isActive).to.be.false;
+                        expect(mon.volatile.momentum.isActive).to.be.false;
                     });
 
                     it("Should reset momentum if miss", async function () {
                         const mon = sh.initActive("p1");
-                        mon.volatile.rollout.start("iceball");
-                        expect(mon.volatile.rollout.isActive).to.be.true;
+                        mon.volatile.momentum.start("iceball");
+                        expect(mon.volatile.momentum.isActive).to.be.true;
 
                         await ph.handle(
                             moveEvent("p1", "iceball", {
@@ -1025,7 +1025,7 @@ export const test = () =>
                             }),
                         );
                         await ph.return();
-                        expect(mon.volatile.rollout.isActive).to.be.false;
+                        expect(mon.volatile.momentum.isActive).to.be.false;
                     });
                 });
 

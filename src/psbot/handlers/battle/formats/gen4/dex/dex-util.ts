@@ -117,23 +117,23 @@ export const weatherKeys = Object.keys(
 /** Types of weather conditions. */
 export type WeatherType = keyof typeof weatherItems;
 
-// TODO: Move to dex, rename to momentum moves.
+// TODO: Move to generated dex?
 /** Moves similar to Rollout. */
-export const rolloutMoves = {rollout: true, iceball: true} as const;
-/** Sorted array of all {@link RolloutMove} names. */
-export const rolloutKeys = Object.keys(
-    rolloutMoves,
-).sort() as readonly RolloutMove[];
+export const momentumMoves = {rollout: true, iceball: true} as const;
+/** Sorted array of all {@link MomentumMove} names. */
+export const momentumMoveKeys = Object.keys(
+    momentumMoves,
+).sort() as readonly MomentumMove[];
 /** Moves that are similar to Rollout. */
-export type RolloutMove = keyof typeof rolloutMoves;
+export type MomentumMove = keyof typeof momentumMoves;
 /**
  * Checks if a value matches a Rollout-like move.
  *
  * @param type Value to be checked.
  * @returns `true` if the name matches, `false` otherwise.
  */
-export function isRolloutMove(type: unknown): type is RolloutMove {
-    return Object.hasOwnProperty.call(rolloutMoves, type as PropertyKey);
+export function isMomentumMove(type: unknown): type is MomentumMove {
+    return Object.hasOwnProperty.call(momentumMoves, type as PropertyKey);
 }
 
 /** Base interface for dex data entries. */

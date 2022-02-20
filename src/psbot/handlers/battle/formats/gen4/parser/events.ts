@@ -472,21 +472,21 @@ handlersImpl["|move|"] = async function (ctx) {
         // Same move continues the sequence.
         mon.volatile.rampage.tick();
     }
-    if (!dex.isRolloutMove(moveId)) {
-        mon.volatile.rollout.reset();
-    } else if (mon.volatile.rollout.type !== moveId) {
-        mon.volatile.rollout.start(moveId);
+    if (!dex.isMomentumMove(moveId)) {
+        mon.volatile.momentum.reset();
+    } else if (mon.volatile.momentum.type !== moveId) {
+        mon.volatile.momentum.start(moveId);
     } else {
-        mon.volatile.rollout.tick();
+        mon.volatile.momentum.tick();
     }
     // Failed move clears continuous moves.
     if (event.kwArgs.notarget) {
         mon.volatile.rampage.reset();
-        mon.volatile.rollout.reset();
+        mon.volatile.momentum.reset();
     }
     // Note(gen4): Rampage move doesn't reset on miss.
     if (event.kwArgs.miss) {
-        mon.volatile.rollout.reset();
+        mon.volatile.momentum.reset();
     }
 
     // Release two-turn move.

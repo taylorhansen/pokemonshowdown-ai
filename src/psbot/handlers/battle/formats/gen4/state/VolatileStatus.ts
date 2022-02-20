@@ -139,6 +139,8 @@ export interface ReadonlyVolatileStatus {
     readonly micleberry: boolean;
     /** Minimize move status. */
     readonly minimize: boolean;
+    /** Rollout-like move status. */
+    readonly momentum: ReadonlyMultiTempStatus<keyof typeof dex.momentumMoves>;
     /** Mud Sport move status. */
     readonly mudsport: boolean;
     /** Whether this pokemon must recharge on the next turn. */
@@ -155,8 +157,6 @@ export interface ReadonlyVolatileStatus {
      * silent-endable.
      */
     readonly rampage: ReadonlyMultiTempStatus<dex.RampageMove>;
-    /** Rollout-like move status. */
-    readonly rollout: ReadonlyMultiTempStatus<keyof typeof dex.rolloutMoves>;
     /** Roost move status. */
     readonly roost: boolean;
     /** Slow Start ability status. */
@@ -415,6 +415,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     /** @override */
     public minimize!: boolean;
 
+    // 5 move attempts (including start), end on last or if inactive.
+    /** @override */
+    public readonly momentum = new MultiTempStatus(
+        dex.momentumMoves,
+        4,
+        true /*silent*/,
+    );
+
     /** @override */
     public mudsport!: boolean;
 
@@ -430,14 +438,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     public readonly rampage = new MultiTempStatus(
         dex.rampageMoves,
         2,
-        true /*silent*/,
-    );
-
-    // 5 move attempts (including start), end on last or if inactive.
-    /** @override */
-    public readonly rollout = new MultiTempStatus(
-        dex.rolloutMoves,
-        4,
         true /*silent*/,
     );
 
@@ -625,11 +625,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.magiccoat = false;
         this.micleberry = false;
         this.minimize = false;
+        this.momentum.reset();
         this.mudsport = false;
         this.mustRecharge = false;
         this.rage = false;
         this.rampage.reset();
-        this.rollout.reset();
         this.roost = false;
         this.slowstart.end();
         this.snatch = false;
@@ -680,8 +680,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.resetSingleMove();
 
         this.bide.end();
+        this.momentum.reset();
         this.rampage.reset();
-        this.rollout.reset();
         this.twoTurn.reset();
         // Note(gen4): Uproar doesn't end here.
 
@@ -792,11 +792,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
                 this.magiccoat ? ["magic coat"] : [],
                 this.micleberry ? ["micle berry"] : [],
                 this.minimize ? ["minimize"] : [],
+                this.momentum.isActive ? [this.momentum.toString()] : [],
                 this.mudsport ? ["mud sport"] : [],
                 this.mustRecharge ? ["must recharge"] : [],
                 this.rage ? ["rage"] : [],
                 this.rampage.isActive ? [this.rampage.toString()] : [],
-                this.rollout.isActive ? [this.rollout.toString()] : [],
                 this.roost ? ["roosting"] : [],
                 this.slowstart.isActive ? [this.slowstart.toString()] : [],
                 this.snatch ? ["snatching"] : [],
