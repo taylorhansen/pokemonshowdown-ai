@@ -36,8 +36,10 @@ export class WorkerPort<
      */
     public constructor(worker: Worker) {
         this.asyncPort = new AsyncPort(worker);
-        worker.on("message", (res: ProtocolResultRaw<TProtocol, TTypes>) =>
-            this.asyncPort.receiveMessage(res),
+        worker.on(
+            "message",
+            (res: ProtocolResultRaw<TProtocol, TTypes, TTypes>) =>
+                this.asyncPort.receiveMessage(res),
         );
         worker.on("error", err =>
             this.asyncPort.receiveError(

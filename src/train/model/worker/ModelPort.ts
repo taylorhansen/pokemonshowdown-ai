@@ -51,6 +51,7 @@ export class ModelPort<
             (
                 res: ProtocolResultRaw<
                     ModelPortProtocol,
+                    keyof ModelPortProtocol,
                     keyof ModelPortProtocol
                 >,
             ) => this.asyncPort.receiveMessage(res),

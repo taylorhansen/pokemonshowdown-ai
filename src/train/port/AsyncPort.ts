@@ -18,7 +18,7 @@ export interface ProtocolPort<
     TTypes extends string,
 > {
     readonly postMessage: (
-        msg: ProtocolMessage<TProtocol, TTypes>,
+        msg: ProtocolMessage<TProtocol, TTypes, TTypes>,
         transferList?: readonly TransferListItem[],
     ) => void;
 }
@@ -27,7 +27,7 @@ export interface ProtocolPort<
 export type AsyncPortCallback<
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string,
-> = (result: ProtocolResult<TProtocol, TTypes>) => void;
+> = (result: ProtocolResult<TProtocol, TTypes, TTypes>) => void;
 
 /**
  * Helper type for extracting the message type from a {@link PortProtocol} type.
@@ -35,7 +35,7 @@ export type AsyncPortCallback<
 export type ProtocolMessage<
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string,
-    T extends TTypes = TTypes,
+    T extends TTypes,
 > = TProtocol[T]["message"];
 
 /**
@@ -45,7 +45,7 @@ export type ProtocolMessage<
 export type ProtocolResult<
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string,
-    T extends TTypes = TTypes,
+    T extends TTypes,
 > = TProtocol[T]["result"] | PortResultError;
 
 /**
@@ -55,7 +55,7 @@ export type ProtocolResult<
 export type ProtocolResultRaw<
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string,
-    T extends TTypes = TTypes,
+    T extends TTypes,
 > = TProtocol[T]["result"] | RawPortResultError;
 
 /**
@@ -77,7 +77,7 @@ export class AsyncPort<
     /** Tracks current outgoing requests to the port. */
     private readonly requests: Map<
         number,
-        (result: ProtocolResult<TProtocol, TTypes>) => void
+        (result: ProtocolResult<TProtocol, TTypes, TTypes>) => void
     > = new Map();
 
     /**
@@ -94,7 +94,9 @@ export class AsyncPort<
      *
      * @param result Result object from the port defined by the protocol.
      */
-    public receiveMessage(result: ProtocolResultRaw<TProtocol, TTypes>): void {
+    public receiveMessage(
+        result: ProtocolResultRaw<TProtocol, TTypes, TTypes>,
+    ): void {
         // Find a registered callback.
         const callback = this.requests.get(result.rid);
         if (!callback) {
@@ -170,7 +172,7 @@ export class AsyncPort<
 
         this.requests.set(
             msg.rid,
-            (result: ProtocolResult<TProtocol, TTypes>) => {
+            (result: ProtocolResult<TProtocol, TTypes, TTypes>) => {
                 // Should never happen.
                 if (msg.rid !== result.rid) {
                     throw new Error(
