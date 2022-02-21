@@ -300,6 +300,7 @@ export async function learn({
                         : []),
                 ]);
                 tf.dispose(batchLogs);
+                tf.dispose(batch);
 
                 ++batchId;
             })
