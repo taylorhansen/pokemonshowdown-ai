@@ -125,9 +125,14 @@ export const test = () =>
 
                     await verify(ctx, "|request|");
                     let choices: Choice[] = ["move 1", "move 2"];
+                    // Try move 1.
                     await ctx.agent(ctx.state, choices);
                     await expect(ctx.sender(choices[0])).to.eventually.be.true;
-                    await expect(ctx.sender(choices[1])).to.eventually.be.false;
+                    // Try move 2 after move 1 was rejected.
+                    choices.shift();
+                    await ctx.agent(ctx.state, choices);
+                    await expect(ctx.sender(choices[0])).to.eventually.be.false;
+                    // Move 2 was accepted.
                     await consume(ctx);
 
                     await verify(ctx, "|turn|");
@@ -146,14 +151,14 @@ export const test = () =>
                 stateCtor:
                     FakeState as unknown as formats.StateConstructor<"gen4">,
                 agent: async (state, choices) => {
-                    [choices[0], choices[1]] = [choices[1], choices[0]];
+                    void state, choices;
                     return await Promise.resolve();
                 },
                 sender: msg => {
                     if (senderState === 0) {
-                        expect(msg).to.equal("|/choose move 2");
-                    } else {
                         expect(msg).to.equal("|/choose move 1");
+                    } else {
+                        expect(msg).to.equal("|/choose move 2");
                     }
                     ++senderState;
                     return true;
@@ -185,6 +190,7 @@ export const test = () =>
                 args: ["error", "[Invalid choice]" as Protocol.Message],
                 kwArgs: {},
             });
+            bh.halt();
             await new Promise<void>(res => setImmediate(res));
 
             // Turn 2 after retried choice is accepted.
@@ -227,11 +233,20 @@ export const test = () =>
                     await consume(ctx);
 
                     await verify(ctx, "|request|");
-                    let choices: Choice[] = ["move 1", "move 2"];
+                    let choices: Choice[] = ["move 1", "move 2", "move 3"];
+                    // Try move 1.
                     await ctx.agent(ctx.state, choices);
                     await expect(ctx.sender(choices[0])).to.eventually.equal(
                         "disabled",
                     );
+                    // Move 1 is disabled, instead try move 2.
+                    choices.shift();
+                    await ctx.agent(ctx.state, choices);
+                    await expect(ctx.sender(choices[0])).to.eventually.equal(
+                        "disabled",
+                    );
+                    // Move 2 is also disabled, try final move 3.
+                    choices.shift();
                     await ctx.agent(ctx.state, choices);
                     await expect(ctx.sender(choices[0])).to.eventually.be.false;
                     await consume(ctx);
@@ -240,7 +255,7 @@ export const test = () =>
                     await consume(ctx);
 
                     await verify(ctx, "|request|");
-                    choices = ["move 2", "move 1"];
+                    choices = ["move 3", "move 1"];
                     await ctx.agent(ctx.state, choices);
                     await expect(ctx.sender(choices[0])).to.eventually.be.false;
                     await consume(ctx);
@@ -252,14 +267,16 @@ export const test = () =>
                 stateCtor:
                     FakeState as unknown as formats.StateConstructor<"gen4">,
                 agent: async (state, choices) => {
-                    [choices[0], choices[1]] = [choices[1], choices[0]];
+                    void state, choices;
                     return await Promise.resolve();
                 },
                 sender: msg => {
                     if (senderState === 0) {
+                        expect(msg).to.equal("|/choose move 1");
+                    } else if (senderState === 1) {
                         expect(msg).to.equal("|/choose move 2");
                     } else {
-                        expect(msg).to.equal("|/choose move 1");
+                        expect(msg).to.equal("|/choose move 3");
                     }
                     ++senderState;
                     return true;
@@ -303,6 +320,7 @@ export const test = () =>
                 ],
                 kwArgs: {},
             });
+            bh.halt();
             // Agent makes new choice using updated info.
             await bh.handle({
                 args: [
@@ -326,6 +344,38 @@ export const test = () =>
             bh.halt();
             await new Promise<void>(res => setImmediate(res));
 
+            // Second choice is rejected.
+            await bh.handle({
+                args: [
+                    "error",
+                    "[Unavailable choice] Can't move" as Protocol.Message,
+                ],
+                kwArgs: {},
+            });
+            bh.halt();
+            // Agent makes new choice using updated info.
+            await bh.handle({
+                args: [
+                    "request",
+                    JSON.stringify({
+                        requestType: "move",
+                        active: [{moves: [{}]}],
+                        side: {
+                            pokemon: [
+                                {
+                                    ident: "p1a: Smeargle",
+                                    condition: "100/100",
+                                },
+                            ],
+                        },
+                        rqid: 3,
+                    }) as Protocol.RequestJSON,
+                ],
+                kwArgs: {},
+            });
+            bh.halt();
+            await new Promise<void>(res => setImmediate(res));
+
             // Turn 2 after accepting retried choice.
             await bh.handle({
                 args: [
@@ -333,7 +383,7 @@ export const test = () =>
                     JSON.stringify({
                         requestType: "wait",
                         side: undefined,
-                        rqid: 3,
+                        rqid: 4,
                     }) as Protocol.RequestJSON,
                 ],
                 kwArgs: {},
@@ -347,6 +397,6 @@ export const test = () =>
             await bh.handle({args: ["tie"], kwArgs: {}});
             bh.halt();
             await bh.finish();
-            expect(senderState).to.equal(3);
+            expect(senderState).to.equal(4);
         });
     });

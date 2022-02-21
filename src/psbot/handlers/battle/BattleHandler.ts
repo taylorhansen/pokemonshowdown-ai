@@ -64,8 +64,6 @@ export class BattleHandler<
     /** Logger object. */
     private readonly logger: Logger;
 
-    /** Last received `|request|` event for {@link ChoiceSender} handling. */
-    private lastRequestEvent: Event<"|request|"> | null = null;
     /** Last unactioned `|request|` event for reordering. */
     private pendingRequest: Event<"|request|"> | null = null;
 
@@ -241,58 +239,46 @@ export class BattleHandler<
 
     private handleRequest(event: Event<"|request|">): void {
         if (this.pendingRequest) {
-            if (!this.unavailableChoice) {
-                // Same case as below if statement, except this also handles the
-                // case where an extra |request| is emitted to provide context
-                // to a rejected decision.
-                this.choiceSenderRes?.(false);
-                return;
-            }
+            // Two |request| events in a row without an |error| event in between
+            // to indicate a choice-retrying scenario.
             throw new Error(
-                `Unhandled |request| event: pending rqid=${
-                    Protocol.parseRequest(this.pendingRequest.args[1]).rqid
-                }, new rqid=${Protocol.parseRequest(event.args[1]).rqid}`,
+                `Unhandled |request| event:\npending: ${JSON.stringify(
+                    Protocol.parseRequest(this.pendingRequest.args[1]),
+                )}\nnew: ${JSON.stringify(
+                    Protocol.parseRequest(event.args[1]),
+                )}`,
             );
         }
-        this.pendingRequest = event;
-
-        const {lastRequestEvent} = this;
-        this.lastRequestEvent = event;
 
         if (!this.unavailableChoice) {
-            // Last sent choice was accepted, so this is the next request
-            // containing the state after handling our choice.
-            // The request state json provided always reflects the results of
-            // the next block of game events coming after this event.
+            // Just received a new |request| event, which we won't send to the
+            // BattleParser until we've first sent all of the game-progressing
+            // events that follow it (handled by halt method).
+            this.pendingRequest = event;
+            // Since this event indicates the next step in the battle, we should
+            // let the parser know that its previous decision was accepted by
+            // the game.
             this.choiceSenderRes?.(false);
             return;
         }
 
-        // Consume unavailableChoice error from last |error| event.
-        const lastRequest =
-            lastRequestEvent && Protocol.parseRequest(lastRequestEvent.args[1]);
-        const request = Protocol.parseRequest(event.args[1]);
-
-        // New info may be revealed.
-        if (
-            this.unavailableChoice === "switch" &&
-            lastRequest?.requestType === "move" &&
-            lastRequest.active[0] &&
-            !lastRequest.active[0].trapped &&
-            request.requestType === "move" &&
-            request.active[0]?.trapped
-        ) {
-            this.choiceSenderRes?.("trapped");
-        } else if (
-            this.unavailableChoice === "move" &&
-            request.requestType === "move" &&
-            request.active[0]
-        ) {
-            this.choiceSenderRes?.("disabled");
-        } else {
-            this.choiceSenderRes?.(true);
+        // Since we already handled a |request| event from the last halt() call,
+        // then this current event is supposed to give new information after a
+        // decision was rejected by the game.
+        // TODO: Process newly-revealed info.
+        // After updating the battle state, we finally resolve the choiceSender
+        // promise that the parser is waiting on.
+        switch (this.unavailableChoice) {
+            case "switch":
+                this.choiceSenderRes?.("trapped");
+                break;
+            case "move":
+                this.choiceSenderRes?.("disabled");
+                break;
+            // istanbul ignore next: Unreachable.
+            default:
+                this.choiceSenderRes?.(true);
         }
-
         this.unavailableChoice = null;
     }
 
@@ -300,16 +286,17 @@ export class BattleHandler<
         const [, reason] = event.args;
         if (reason.startsWith("[Unavailable choice] Can't ")) {
             // Rejected last choice based on unknown info.
-            // Wait for another (guaranteed) request message before proceeding.
+            // Here we're guaranteed to get another |request| event afterwards,
+            // so consume that event to possibly update the battle state while
+            // still leaving the original |request| event pending.
             const s = reason.substring("[Unavailable choice] Can't ".length);
-            // TODO: Does this distinction matter?
             if (s.startsWith("move")) {
                 this.unavailableChoice = "move";
             } else if (s.startsWith("switch")) {
                 this.unavailableChoice = "switch";
             }
-            // Note: now that this info has been revealed, we should get an
-            // updated |request| message.
+            // Note: Now that this info has been revealed, we should get an
+            // updated |request| message afterwards.
         } else if (reason.startsWith("[Invalid choice]")) {
             // Rejected last choice based on unrevealed or already-known info.
             this.choiceSenderRes?.(true);

@@ -117,7 +117,8 @@ handlersImpl["|request|"] = async function (ctx) {
     const [, json] = event.args;
     const req = Protocol.parseRequest(json);
     ctx.logger.debug(
-        `Request ${req.requestType}${ctx.state.started ? "" : " (init)"}`,
+        `Request ${req.requestType}${ctx.state.started ? "" : " (init)"}: ` +
+            JSON.stringify(req),
     );
 
     switch (req.requestType) {
@@ -377,7 +378,7 @@ async function sendFinalchoice(
     if (!res) {
         return;
     }
-    ctx.logger.error(`Choice '${choice}' was rejected as '${res}'`);
+    ctx.logger.debug(`Choice '${choice}' was rejected as '${res}'`);
     throw new Error(`Final choice '${choice}' was rejected as '${res}'`);
 }
 /**
