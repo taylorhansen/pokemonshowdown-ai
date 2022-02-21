@@ -142,11 +142,11 @@ export const test = () =>
 
             it("Should throw if state not fully initialized", async function () {
                 state.ourSide = undefined;
-                await ph.rejectError(
-                    {
-                        args: ["teamsize", "p1", toNum(3)],
-                        kwArgs: {},
-                    },
+                await ph.reject({
+                    args: ["teamsize", "p1", toNum(3)],
+                    kwArgs: {},
+                });
+                await ph.error(
                     Error,
                     "Expected |player| event for client before |teamsize| " +
                         "event",
@@ -250,8 +250,8 @@ export const test = () =>
             it("Should throw if state not fully initialized", async function () {
                 state.started = false;
                 state.ourSide = undefined;
-                await ph.rejectError(
-                    {args: ["start"], kwArgs: {}},
+                await ph.reject({args: ["start"], kwArgs: {}});
+                await ph.error(
                     Error,
                     "Expected |player| event for client before |start event",
                 );
@@ -530,38 +530,45 @@ export const test = () =>
                     expect(mon.moveset.reveal("ember").pp).to.equal(40);
                     expect(mon.moveset.get("tackle")).to.be.null;
 
-                    const p = ph.rejectError(
-                        requestEvent(
-                            "move",
-                            [
-                                {
-                                    ...benchInfo[0],
-                                    moves: [toID("tackle"), toID("ember")],
-                                },
-                                ...benchInfo.slice(1),
-                            ],
-                            {
-                                moves: [
+                    const p = ph
+                        .reject(
+                            requestEvent(
+                                "move",
+                                [
                                     {
-                                        id: toID("tackle"),
-                                        name: toMoveName("tackle"),
-                                        pp: 32,
-                                        maxpp: 32,
-                                        target: "normal",
+                                        ...benchInfo[0],
+                                        moves: [toID("tackle"), toID("ember")],
                                     },
-                                    {
-                                        id: toID("ember"),
-                                        name: toMoveName("ember"),
-                                        pp: 10,
-                                        maxpp: 40,
-                                        target: "normal",
-                                    },
+                                    ...benchInfo.slice(1),
                                 ],
-                            },
-                        ),
-                        Error,
-                        "Final choice 'move 2' was rejected as 'true'",
-                    );
+                                {
+                                    moves: [
+                                        {
+                                            id: toID("tackle"),
+                                            name: toMoveName("tackle"),
+                                            pp: 32,
+                                            maxpp: 32,
+                                            target: "normal",
+                                        },
+                                        {
+                                            id: toID("ember"),
+                                            name: toMoveName("ember"),
+                                            pp: 10,
+                                            maxpp: 40,
+                                            target: "normal",
+                                        },
+                                    ],
+                                },
+                            ),
+                        )
+                        .then(
+                            async () =>
+                                await ph.error(
+                                    Error,
+                                    "Final choice 'move 2' was rejected as " +
+                                        "'true'",
+                                ),
+                        );
 
                     const choices = await agent.choices();
                     expect(choices).to.have.members([
@@ -1787,40 +1794,34 @@ export const test = () =>
                 sh.initActive("p1");
                 sh.initActive("p2");
 
-                await ph.rejectError(
-                    {
-                        args: [
-                            "-sethp",
-                            toIdent("p2"),
-                            toNum(NaN),
-                            toIdent("p1"),
-                            toNum(13),
-                        ],
-                        kwArgs: {},
-                    },
-                    Error,
-                    "Invalid health number 'NaN'",
-                );
+                await ph.reject({
+                    args: [
+                        "-sethp",
+                        toIdent("p2"),
+                        toNum(NaN),
+                        toIdent("p1"),
+                        toNum(13),
+                    ],
+                    kwArgs: {},
+                });
+                await ph.error(Error, "Invalid health number 'NaN'");
             });
 
             it("Should throw if second health number is invalid", async function () {
                 sh.initActive("p1");
                 sh.initActive("p2");
 
-                await ph.rejectError(
-                    {
-                        args: [
-                            "-sethp",
-                            toIdent("p2"),
-                            toNum(50),
-                            toIdent("p1"),
-                            toNum(NaN),
-                        ],
-                        kwArgs: {},
-                    },
-                    Error,
-                    "Invalid health number 'NaN'",
-                );
+                await ph.reject({
+                    args: [
+                        "-sethp",
+                        toIdent("p2"),
+                        toNum(50),
+                        toIdent("p1"),
+                        toNum(NaN),
+                    ],
+                    kwArgs: {},
+                });
+                await ph.error(Error, "Invalid health number 'NaN'");
             });
         });
 
@@ -1946,14 +1947,11 @@ export const test = () =>
             it("Should throw if invalid boost number", async function () {
                 sh.initActive("p1");
 
-                await ph.rejectError(
-                    {
-                        args: ["-boost", toIdent("p1"), "atk", toNum(NaN)],
-                        kwArgs: {},
-                    },
-                    Error,
-                    "Invalid boost num 'NaN'",
-                );
+                await ph.reject({
+                    args: ["-boost", toIdent("p1"), "atk", toNum(NaN)],
+                    kwArgs: {},
+                });
+                await ph.error(Error, "Invalid boost num 'NaN'");
             });
         });
 
@@ -1973,14 +1971,11 @@ export const test = () =>
             it("Should throw if invalid unboost number", async function () {
                 sh.initActive("p1");
 
-                await ph.rejectError(
-                    {
-                        args: ["-unboost", toIdent("p1"), "atk", toNum(NaN)],
-                        kwArgs: {},
-                    },
-                    Error,
-                    "Invalid unboost num 'NaN'",
-                );
+                await ph.reject({
+                    args: ["-unboost", toIdent("p1"), "atk", toNum(NaN)],
+                    kwArgs: {},
+                });
+                await ph.error(Error, "Invalid unboost num 'NaN'");
             });
         });
 
@@ -2000,14 +1995,11 @@ export const test = () =>
             it("Should throw if invalid boost number", async function () {
                 sh.initActive("p2");
 
-                await ph.rejectError(
-                    {
-                        args: ["-setboost", toIdent("p2"), "spe", toNum(NaN)],
-                        kwArgs: {},
-                    },
-                    Error,
-                    "Invalid setboost num 'NaN'",
-                );
+                await ph.reject({
+                    args: ["-setboost", toIdent("p2"), "spe", toNum(NaN)],
+                    kwArgs: {},
+                });
+                await ph.error(Error, "Invalid setboost num 'NaN'");
             });
         });
 

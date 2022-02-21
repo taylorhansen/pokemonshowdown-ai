@@ -11,6 +11,9 @@ import {episode} from "./episode";
 import {BatchPredictOptions, ModelWorker} from "./model/worker";
 import {Opponent} from "./play";
 
+// Used for debugging.
+Error.stackTraceLimit = Infinity;
+
 (setGracefulCleanup as () => void)();
 
 /** Number of training episodes to complete. */

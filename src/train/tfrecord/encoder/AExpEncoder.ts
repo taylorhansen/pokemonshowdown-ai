@@ -14,12 +14,15 @@ export class AExpEncoder extends Transform {
     /** TFRecord Example builder. */
     private readonly builder = tfrecord.createBuilder();
 
-    // Adapted from tfrecord/src/record_writer.ts and writer.ts.
+    // Adapted from tfrecord/src/record_writer.ts and writer.ts to work with
+    // streams/buffers directly rather than just files.
     /**
      * Main metadata buffer that wraps serialized TFRecord Examples. Reused for
      * each `_transform` call to save on allocations.
      */
-    private readonly metadata = new ArrayBuffer(headerBytes);
+    private readonly metadata = new ArrayBuffer(
+        Math.max(headerBytes, footerBytes),
+    );
     /** Buffer for reading 8byte length and 4byte crc32c header. */
     private readonly lengthAndCrcBuffer = new Uint8Array(
         this.metadata,
@@ -44,7 +47,7 @@ export class AExpEncoder extends Transform {
             writableHighWaterMark: maxExp,
         });
 
-        // High order bits of length segment should stay unset.
+        // High-order bits of length segment should stay unset.
         this.lengthAndCrc.setUint32(4, 0, true /*littleEndian*/);
     }
 
@@ -61,10 +64,8 @@ export class AExpEncoder extends Transform {
             throw new Error("Example encoder didn't use Buffers");
         }
 
-        // Encode length in metadata.
+        // Compute length with header.
         this.lengthAndCrc.setUint32(0, record.length, true /*littleEndian*/);
-
-        // Compute header.
         this.lengthAndCrc.setUint32(
             lengthBytes,
             maskedCrc32c(this.lengthBuffer),

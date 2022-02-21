@@ -95,6 +95,7 @@ export class AExpDecoder extends Transform {
             callback();
         } else {
             // Wait for the next chunk to be consumed.
+            // Note: Order is still guaranteed here due to once() call order.
             this.once(AExpDecoder.chunkConsumed, () =>
                 this._transform(chunk, encoding, callback),
             );
@@ -102,8 +103,8 @@ export class AExpDecoder extends Transform {
     }
 
     public override _flush(callback: (err?: Error | null) => void): void {
+        // Wait for the remaining chunks to be consumed then try again.
         if (this.listenerCount(AExpDecoder.chunkConsumed) > 0) {
-            // Wait for the remaining chunks to be consumed.
             this.once(AExpDecoder.chunkConsumed, () => this._flush(callback));
             return;
         }

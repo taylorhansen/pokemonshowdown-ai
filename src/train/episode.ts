@@ -83,8 +83,8 @@ export async function episode({
     // Summary statement after rollout games.
     const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
     logger.debug(
-        `Played ${numGames} games total, yielding ${numAExps} ` +
-            `experiences (avg ${(numAExps / numGames).toFixed(2)} per game)`,
+        `Played ${numGames} games total, yielding ${numAExps} experiences ` +
+            `(avg ${(numAExps / numGames).toFixed(2)} per game)`,
     );
 
     if (numAExps <= 0) {

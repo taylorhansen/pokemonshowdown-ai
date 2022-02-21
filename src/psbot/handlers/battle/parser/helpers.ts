@@ -1,5 +1,6 @@
 /** @file Useful BattleParser-related helper functions. */
 import {Protocol} from "@pkmn/protocol";
+import {WrappedError} from "../../../../util/errors/WrappedError";
 import {Event} from "../../../parser";
 import {BattleAgent} from "../agent";
 import {FormatType, State} from "../formats";
@@ -59,21 +60,18 @@ export function startBattleParser<
     };
     const finish = (async function asyncBattleParserCtx() {
         try {
-            const result = await parser(ctx, ...args);
+            return await parser(ctx, ...args);
+        } catch (e) {
+            // Wrap the error here so that the stack trace of whoever's awaiting
+            // the finish promise is included.
+            throw new WrappedError(
+                e as Error,
+                msg => "BattleParser error: " + msg,
+            );
+        } finally {
+            // Resolve any pending iterator.next() calls.
             await eventIt.return?.();
             await battleIt.return?.();
-            return result;
-        } catch (e) {
-            // If the BattleParser threw an exception, make sure both iterators
-            // also get the error to settle any pending next() calls.
-            // TODO: Wrap errors to preserve current stack and make it clear in
-            // the logs that the next() errors came from these rethrows here.
-            // TODO: Also include startBattleParser() parent's stack?
-            await eventIt.throw?.(e);
-            await battleIt.throw?.(e);
-            // Rethrow the error here so that the final Promise as well as the
-            // last iterator.next() Promises contain the error.
-            throw e;
         }
     })();
     return {iter: battleIt, finish};

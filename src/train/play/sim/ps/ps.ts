@@ -92,7 +92,7 @@ export async function startPsBattle(
     const streams = BattleStreams.getPlayerStreams(battleStream);
     void streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
-    const eventLoops: Promise<void>[] = [];
+    const gamePromises: Promise<void>[] = [];
 
     let winner: SideID | undefined;
     for (const id of ["p1", "p2"] as const) {
@@ -162,7 +162,7 @@ export async function startPsBattle(
             innerLog.addPrefix("MessageParser: "),
         );
 
-        eventLoops.push(
+        gamePromises.push(
             stream.promises.pipeline(battleTextStream, messageParser),
         );
 
@@ -172,7 +172,7 @@ export async function startPsBattle(
         // some reason it causes the whole worker process to crash when an
         // error is encountered due to the underlying handler.finish() promise
         // rejecting before the method itself can be called/caught.
-        eventLoops.push(
+        gamePromises.push(
             (async function () {
                 let loopErr: Error | undefined;
                 try {
@@ -213,13 +213,26 @@ export async function startPsBattle(
             })(),
         );
 
+        // Attach the finish promise to a catch handler/logger so it doesn't
+        // crash the worker.
+        gamePromises.push(
+            (async function () {
+                try {
+                    await handler.finish();
+                } catch (e) {
+                    logError(innerLog, battleStream, e as Error);
+                    throwLog(logPath);
+                }
+            })(),
+        );
+
         void streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
     }
 
-    // Don't let game errors propagate, instead capture it for logging later.
+    // Capture the first game error so we can notify the main thread.
     let err: Error | undefined;
     try {
-        await Promise.all(eventLoops);
+        await Promise.all(gamePromises);
     } catch (e) {
         err = e as Error;
     }
@@ -231,8 +244,10 @@ export async function startPsBattle(
     }
 
     // Make sure the game completely ends so that the logs are complete.
+    // Note: Subsequent errors are swallowed since they've already been logged
+    // and we already captured one via Promise.all() to notify the main thread.
     logger.debug("Settling");
-    await Promise.allSettled(eventLoops);
+    await Promise.allSettled(gamePromises);
 
     // Close the log file and return.
     await new Promise<void>(res => file.end("Done\n", "utf8", res));
@@ -257,7 +272,6 @@ function logError(
 
 function throwLog(logPath: string): never {
     throw new Error(
-        "startPSBattle() encountered an " +
-            `error. Check ${logPath} for details.`,
+        `startPSBattle() encountered an error. Check ${logPath} for details.`,
     );
 }

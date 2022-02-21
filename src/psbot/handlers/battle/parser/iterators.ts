@@ -11,17 +11,12 @@ export class IteratorPair {
     /** Battle iterator for sending events to the BattleParser. */
     public readonly battleIt: BattleIterator;
 
-    private error: unknown;
-    private hasError?: boolean;
-
     private nextEventPromise: Promise<Event | undefined> | null = null;
     private nextEventRes: ((event?: Event) => void) | null = null;
-    private nextEventRej: ((reason?: unknown) => void) | null = null;
 
     private battlePromise: Promise<boolean> | null = null;
     private battleRes: ((done: boolean | PromiseLike<boolean>) => void) | null =
         null;
-    private battleRej: ((reason?: unknown) => void) | null = null;
 
     /**
      * Creates a pair of corresponding AsyncIterators, one for sending
@@ -36,12 +31,10 @@ export class IteratorPair {
             next: async () => await this.eventNext(),
             peek: async () => await this.eventPeek(),
             return: async () => await this.eventReturn(),
-            throw: async e => await this.eventThrow(e),
         };
         this.battleIt = {
             next: async (...args) => await this.battleNext(...args),
             return: async () => await this.battleReturn(),
-            throw: async e => await this.battleThrow(e),
         };
     }
 
@@ -55,18 +48,9 @@ export class IteratorPair {
         }
 
         // Wait for a response or consume the cached response
-        this.nextEventPromise ??= new Promise(
-            (res, rej) => ([this.nextEventRes, this.nextEventRej] = [res, rej]),
-        );
-        if (this.hasError) {
-            this.nextEventRej!(this.error);
-        }
+        this.nextEventPromise ??= new Promise(res => (this.nextEventRes = res));
         const event = await this.nextEventPromise.finally(
-            () =>
-                (this.nextEventPromise =
-                    this.nextEventRes =
-                    this.nextEventRej =
-                        null),
+            () => (this.nextEventPromise = this.nextEventRes = null),
         );
 
         if (!event) {
@@ -78,14 +62,9 @@ export class IteratorPair {
     /** Implementation for {@link EventIterator.peek}. */
     private async eventPeek(): Promise<IteratorResult<Event, void>> {
         // Wait for a response and cache it, or get the cached response.
-        this.nextEventPromise ??= new Promise(
-            (res, rej) => ([this.nextEventRes, this.nextEventRej] = [res, rej]),
-        );
-        if (this.hasError) {
-            this.nextEventRej!(this.error);
-        }
+        this.nextEventPromise ??= new Promise(res => (this.nextEventRes = res));
         const event = await this.nextEventPromise.finally(
-            () => (this.nextEventRes = this.nextEventRej = null),
+            () => (this.nextEventRes = null),
         );
 
         if (!event) {
@@ -101,20 +80,6 @@ export class IteratorPair {
         // Resolve any pending iterator calls so they don't hang.
         this.nextEventRes?.();
         await this.battleIt.return?.();
-
-        return {value: undefined, done: true};
-    }
-
-    /** Implementation for {@link EventIterator.throw}. */
-    private async eventThrow(e?: unknown): Promise<IteratorReturnResult<void>> {
-        this.disableEvent();
-
-        this.error = e;
-        this.hasError = true;
-
-        // Reject any pending iterator calls so they don't hang.
-        this.nextEventRej?.(e);
-        await this.battleIt.throw?.(e);
 
         return {value: undefined, done: true};
     }
@@ -141,14 +106,9 @@ export class IteratorPair {
         }
 
         // Wait for a response or consume the cached response.
-        this.battlePromise ??= new Promise(
-            (res, rej) => ([this.battleRes, this.battleRej] = [res, rej]),
-        );
-        if (this.error) {
-            this.battleRej!(this.error);
-        }
+        this.battlePromise ??= new Promise(res => (this.battleRes = res));
         const done = await this.battlePromise.finally(
-            () => (this.battlePromise = this.battleRes = this.battleRej = null),
+            () => (this.battlePromise = this.battleRes = null),
         );
 
         return {value: undefined, done};
@@ -167,23 +127,6 @@ export class IteratorPair {
         return {value: undefined, done: true};
     }
 
-    /** Implementation for {@link BattleIterator.throw}. */
-    private async battleThrow(
-        e?: unknown,
-    ): Promise<IteratorReturnResult<void>> {
-        this.disableBattle();
-        this.error = e;
-        this.hasError = true;
-
-        // Resolve any pending battleIt.next() calls.
-        this.battleRej?.(e);
-
-        // Make sure the corresponding iterator doesn't hang.
-        await this.eventIt.throw?.(e);
-
-        return {value: undefined, done: true};
-    }
-
     /** Disables the BattleIterator and activates cleanup. */
     private disableBattle() {
         this.battleIt.next =
@@ -197,8 +140,8 @@ export class IteratorPair {
 /**
  * Iterator for receiving the next event, includeing a peek operation.
  *
- * Calling {@link return} or {@link throw} will call the same respective method
- * of the corresponding {@link BattleIterator} and resolve/reject any pending
+ * Calling {@link return} will call the same respective method of the
+ * corresponding {@link BattleIterator} and resolve/reject any pending
  * {@link next}/{@link peek} promises.
  */
 export interface EventIterator
@@ -217,8 +160,8 @@ export interface EventIterator
  * Calling {@link next} will resolve once the corresponding
  * {@link EventIterator} consumes it via {@link EventIterator.next}.
  *
- * Calling {@link return} or {@link throw} will call the same respective method
- * of the corresponding {@link BattleIterator} and resolve/reject any pending
+ * Calling {@link return} will call the same respective method of the
+ * corresponding {@link BattleIterator} and resolve/reject any pending
  * {@link next} promises.
  */
 export type BattleIterator = AsyncIterator<void, void, Event>;

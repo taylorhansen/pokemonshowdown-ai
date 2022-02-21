@@ -78,26 +78,21 @@ export class ParserHelpers<TResult = unknown> {
     }
 
     /**
-     * Handles an event that should throw.
+     * Expects the BattleParser to throw.
      *
      * @param event Event to handle.
      * @param errorCtor Error type.
      * @param message Optional error message.
      */
-    public async rejectError(
-        event: Event,
+    public async error(
         errorCtor: ErrorConstructor,
         message?: string | RegExp,
     ): Promise<void> {
-        await expect(this.next(event)).to.eventually.be.rejectedWith(
-            errorCtor,
-            message,
-        );
-        // Exception should propagate to the finish promise as well.
         await expect(this.guaranteePctx().finish).to.eventually.be.rejectedWith(
             errorCtor,
             message,
         );
+        this.handledError = true;
     }
 
     // TODO: Why not just return TResult and let the caller make its own
