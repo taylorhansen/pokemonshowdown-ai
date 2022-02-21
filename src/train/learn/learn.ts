@@ -188,6 +188,8 @@ export async function learn({
         } = {loss: []};
         let batchId = 0;
 
+        // Note: We reload the dataset from disk on each epoch to conserve
+        // memory.
         await createAExpDataset(
             aexpPaths,
             numDecoderThreads,

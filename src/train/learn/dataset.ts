@@ -43,7 +43,7 @@ function aexpToTensor(aexp: AugmentedExperience): TensorAExp {
 /**
  * Wraps a set of `.tfrecord` files as a TensorFlow
  * {@link tf.data.Dataset Dataset}, parsing each file in parallel and shuffling
- * according to the preftech buffer.
+ * according to the prefetch buffer.
  *
  * @param aexpPaths Array of paths to the `.tfrecord` files holding the
  * AugmentedExperiences.
@@ -64,7 +64,7 @@ export function createAExpDataset(
     return (
         tf.data
             .generator<TensorAExp>(
-                // Note: Yhis still works with async generators even though the
+                // Note: This still works with async generators even though the
                 // typings don't explicitly support it.
                 async function* () {
                     const gen = pool.decode(

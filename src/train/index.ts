@@ -43,7 +43,7 @@ const batchOptions: BatchPredictOptions = {
     // updates.
     // TODO: Tuning.
     maxSize: numThreads * 2,
-    timeoutNs: /*50us*/ 50000n,
+    timeoutNs: 50000n /*50us*/,
 };
 
 (async function () {

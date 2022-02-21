@@ -40,7 +40,8 @@ export class AExpDecoderPool {
     /**
      * Dispatches the thread pool to decode the files.
      *
-     * @param files Files to decode.
+     * @param files Files to decode. Workers are assigned to files one-by-one in
+     * the order specified.
      * @param highWaterMark High water mark buffer limit for AugmentedExperience
      * objs. Defaults to the number of threads.
      * @yields Decoded AugmentedExperience objs. Order may be nondeterministic
@@ -71,7 +72,7 @@ export class AExpDecoderPool {
             }
         })();
 
-        // Setup threads for loading/extracting tfrecords.
+        // Setup threads for reading tfrecords.
         const threadPromises: Promise<void>[] = [];
         let done = false; // Signal to prematurely close the thread pool.
         for (let i = 0; i < this.numThreads; ++i) {
@@ -80,6 +81,9 @@ export class AExpDecoderPool {
                     const port = await this.pool.takePort();
                     try {
                         // Get the next file path.
+                        // Note: As multiple async contexts are looping through
+                        // the fileGen, it'll be giving its next path to
+                        // whoever's ready first until it's done.
                         for (const file of fileGen) {
                             if (done) {
                                 break;
