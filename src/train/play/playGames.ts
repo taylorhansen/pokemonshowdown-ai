@@ -150,12 +150,15 @@ export async function playGames({
 
     // TODO: Move pool outside for reuse?
     const pool = new GamePool(numThreads, getExpPath);
-    await stream.promises.pipeline(
-        poolArgs,
-        new GamePoolStream(pool),
-        processResults,
-    );
-    await pool.close();
+    try {
+        await stream.promises.pipeline(
+            poolArgs,
+            new GamePoolStream(pool),
+            processResults,
+        );
+    } finally {
+        await pool.close();
+    }
 
     progress.terminate();
     // TODO: Also display separate records for each opponent.

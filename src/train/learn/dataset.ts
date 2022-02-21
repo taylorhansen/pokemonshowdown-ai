@@ -46,8 +46,8 @@ function aexpToTensor(aexp: AugmentedExperience): TensorAExp {
  * according to the prefetch buffer.
  *
  * @param aexpPaths Array of paths to the `.tfrecord` files holding the
- * AugmentedExperiences.
- * @param numThreads Max number of files to read in parallel.
+ * AugmentedExperiences. Fed into the `decoderPool` in order.
+ * @param decoderPool Object used to read `.tfrecord` files.
  * @param batchSize AugmentedExperience batch size.
  * @param prefetch Amount to buffer for prefetching/shuffling.
  * @returns A TensorFlow Dataset that contains batched AugmentedExperience
@@ -55,19 +55,17 @@ function aexpToTensor(aexp: AugmentedExperience): TensorAExp {
  */
 export function createAExpDataset(
     aexpPaths: readonly string[],
-    numThreads: number,
+    decoderPool: AExpDecoderPool,
     batchSize: number,
     prefetch: number,
 ): tf.data.Dataset<BatchedAExp> {
-    const pool = new AExpDecoderPool(numThreads);
-
     return (
         tf.data
             .generator<TensorAExp>(
                 // Note: This still works with async generators even though the
                 // typings don't explicitly support it.
                 async function* () {
-                    const gen = pool.decode(
+                    const gen = decoderPool.decode(
                         aexpPaths,
                         prefetch /*highWaterMark*/,
                     );

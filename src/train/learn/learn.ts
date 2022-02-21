@@ -1,5 +1,6 @@
 import * as tf from "@tensorflow/tfjs";
 import {ModelLearnData} from "../model/worker";
+import {AExpDecoderPool} from "../tfrecord/decoder";
 import {BatchedAExp, createAExpDataset} from "./dataset";
 import {loss, LossResult} from "./loss";
 import {shuffle} from "./shuffle";
@@ -176,160 +177,175 @@ export async function learn({
     const optimizer = tf.train.adam(1e-5);
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
 
+    const decoderPool = new AExpDecoderPool(numDecoderThreads);
+
     callback?.({type: "start", numBatches: Math.ceil(numAExps / batchSize)});
     await callbacks.onTrainBegin();
 
-    for (let i = 0; i < epochs; ++i) {
-        const epochLogs: {[name: string]: tf.Scalar} = {};
-        await callbacks.onEpochBegin(i, epochLogs);
+    try {
+        for (let i = 0; i < epochs; ++i) {
+            const epochLogs: {[name: string]: tf.Scalar} = {};
+            await callbacks.onEpochBegin(i, epochLogs);
 
-        const metricsPerBatch: {
-            [name: string]: tf.Scalar[];
-            loss: tf.Scalar[];
-        } = {loss: []};
-        let batchId = 0;
+            const metricsPerBatch: {
+                [name: string]: tf.Scalar[];
+                loss: tf.Scalar[];
+            } = {loss: []};
+            let batchId = 0;
 
-        // Note: We reload the dataset from disk on each epoch to conserve
-        // memory.
-        await createAExpDataset(
-            // Shuffle paths each time to reduce bias.
-            shuffle([...aexpPaths]),
-            numDecoderThreads,
-            batchSize,
-            shufflePrefetch,
-        )
-            // Training loop.
-            .mapAsync(async function (batch: BatchedAExp) {
-                const batchLogs: {[name: string]: tf.Scalar | number} = {
-                    batch: batchId,
-                    size: batch.state.shape[0],
-                };
-                await callbacks.onBatchBegin(batchId, batchLogs);
-                // Create loss function that records the metrics data.
-                let kl: tf.Scalar | undefined;
-                // Note: Internally this function is wrapped in a tf.tidy
-                // context by the optimier.
-                function f(): tf.Scalar {
-                    const result = loss({
-                        model,
-                        state: batch.state,
-                        oldProbs: batch.probs,
-                        action: batch.action,
-                        returns: batch.returns,
-                        advantage: batch.advantage,
-                        algorithm,
-                    });
+            // Note: We reload the dataset from disk on each epoch to conserve
+            // memory.
+            await createAExpDataset(
+                // Shuffle paths each time to reduce bias.
+                shuffle([...aexpPaths]),
+                decoderPool,
+                batchSize,
+                shufflePrefetch,
+            )
+                // Training loop.
+                .mapAsync(async function (batch: BatchedAExp) {
+                    const batchLogs: {[name: string]: tf.Scalar | number} = {
+                        batch: batchId,
+                        size: batch.state.shape[0],
+                    };
+                    await callbacks.onBatchBegin(batchId, batchLogs);
+                    // Create loss function that records the metrics data.
+                    let kl: tf.Scalar | undefined;
+                    // Note: Internally this function is wrapped in a tf.tidy
+                    // context by the optimier.
+                    function f(): tf.Scalar {
+                        const result = loss({
+                            model,
+                            state: batch.state,
+                            oldProbs: batch.probs,
+                            action: batch.action,
+                            returns: batch.returns,
+                            advantage: batch.advantage,
+                            algorithm,
+                        });
 
-                    for (const name in result) {
-                        if (!Object.hasOwnProperty.call(result, name)) {
-                            continue;
+                        for (const name in result) {
+                            if (!Object.hasOwnProperty.call(result, name)) {
+                                continue;
+                            }
+                            const metric = result[name as keyof LossResult];
+                            if (!metric) {
+                                continue;
+                            }
+
+                            // Record metrics for epoch average later
+                            if (
+                                !Object.hasOwnProperty.call(
+                                    metricsPerBatch,
+                                    name,
+                                )
+                            ) {
+                                metricsPerBatch[name] = [metric];
+                            } else {
+                                metricsPerBatch[name].push(metric);
+                            }
+
+                            // Record metrics for batch summary
+                            // If using tensorboard, requires updateFreq=batch.
+                            batchLogs[name] = tf.keep(metric.clone());
+
+                            // Record kl for adaptive penalty
+                            if (name === "kl") {
+                                kl = metric;
+                            }
                         }
-                        const metric = result[name as keyof LossResult];
-                        if (!metric) {
-                            continue;
+                        return result.loss;
+                    }
+
+                    // Compute the gradients for this batch.
+                    // Don't dispose() the cost tensor since it's being used in
+                    // metricsPerBatch as well.
+                    const cost = optimizer.minimize(
+                        f,
+                        true /*returnCost*/,
+                        variables,
+                    )!;
+
+                    // Update adaptive kl penalty if applicable.
+                    if (
+                        algorithm.type === "ppo" &&
+                        algorithm.variant === "klAdaptive" &&
+                        kl
+                    ) {
+                        const klValue = await kl.array();
+                        if (algorithm.beta === undefined) {
+                            algorithm.beta = 1;
                         }
 
-                        // Record metrics for epoch average later
+                        // Adapt penalty coefficient.
+                        const target = algorithm.klTarget;
+                        if (klValue < target / 1.5) {
+                            algorithm.beta /= 2;
+                        } else if (klValue > target * 1.5) {
+                            algorithm.beta *= 2;
+                        }
+
+                        // Record new coefficient value.
                         if (
-                            !Object.hasOwnProperty.call(metricsPerBatch, name)
+                            !Object.hasOwnProperty.call(metricsPerBatch, "beta")
                         ) {
-                            metricsPerBatch[name] = [metric];
+                            metricsPerBatch["beta"] = [
+                                tf.scalar(algorithm.beta),
+                            ];
                         } else {
-                            metricsPerBatch[name].push(metric);
-                        }
-
-                        // Record metrics for batch summary
-                        // If using tensorboard, requires updateFreq=batch
-                        batchLogs[name] = tf.keep(metric.clone());
-
-                        // Record kl for adaptive penalty
-                        if (name === "kl") {
-                            kl = metric;
+                            metricsPerBatch["beta"].push(
+                                tf.scalar(algorithm.beta),
+                            );
                         }
                     }
-                    return result.loss;
+
+                    await Promise.all([
+                        callbacks.onBatchEnd(batchId, batchLogs),
+                        ...(callback
+                            ? [
+                                  cost.array().then(costData =>
+                                      callback({
+                                          type: "batch",
+                                          epoch: i + 1,
+                                          batch: batchId,
+                                          loss: costData,
+                                      }),
+                                  ),
+                              ]
+                            : []),
+                    ]);
+                    tf.dispose([batchLogs, batch]);
+
+                    ++batchId;
+                })
+                .forEachAsync(() => {});
+
+            // Average all batch metrics.
+            for (const name in metricsPerBatch) {
+                if (!Object.hasOwnProperty.call(metricsPerBatch, name)) {
+                    continue;
                 }
-
-                // Compute the gradients for this batch.
-                // Don't dispose() the cost tensor since it's being used in
-                // metricsPerBatch as well.
-                const cost = optimizer.minimize(
-                    f,
-                    true /*returnCost*/,
-                    variables,
-                )!;
-
-                // Update adaptive kl penalty if applicable.
-                if (
-                    algorithm.type === "ppo" &&
-                    algorithm.variant === "klAdaptive" &&
-                    kl
-                ) {
-                    const klValue = await kl.array();
-                    if (algorithm.beta === undefined) {
-                        algorithm.beta = 1;
-                    }
-
-                    // Adapt penalty coefficient.
-                    const target = algorithm.klTarget;
-                    if (klValue < target / 1.5) {
-                        algorithm.beta /= 2;
-                    } else if (klValue > target * 1.5) {
-                        algorithm.beta *= 2;
-                    }
-
-                    // Record new coefficient value.
-                    if (!Object.hasOwnProperty.call(metricsPerBatch, "beta")) {
-                        metricsPerBatch["beta"] = [tf.scalar(algorithm.beta)];
-                    } else {
-                        metricsPerBatch["beta"].push(tf.scalar(algorithm.beta));
-                    }
-                }
-
-                await Promise.all([
-                    callbacks.onBatchEnd(batchId, batchLogs),
-                    ...(callback
-                        ? [
-                              cost.array().then(costData =>
-                                  callback({
-                                      type: "batch",
-                                      epoch: i + 1,
-                                      batch: batchId,
-                                      loss: costData,
-                                  }),
-                              ),
-                          ]
-                        : []),
-                ]);
-                tf.dispose(batchLogs);
-                tf.dispose(batch);
-
-                ++batchId;
-            })
-            .forEachAsync(() => {});
-
-        // Average all batch metrics.
-        for (const name in metricsPerBatch) {
-            if (!Object.hasOwnProperty.call(metricsPerBatch, name)) {
-                continue;
+                epochLogs[name] = tf.tidy(() =>
+                    tf.mean(tf.stack(metricsPerBatch[name])).asScalar(),
+                );
             }
-            epochLogs[name] = tf.tidy(() =>
-                tf.mean(tf.stack(metricsPerBatch[name])).asScalar(),
-            );
-        }
 
-        await Promise.all([
-            callbacks.onEpochEnd(i, epochLogs),
-            callback &&
-                epochLogs["loss"]
-                    .array()
-                    .then(lossData =>
-                        callback({type: "epoch", epoch: i + 1, loss: lossData}),
+            await Promise.all([
+                callbacks.onEpochEnd(i, epochLogs),
+                callback &&
+                    epochLogs["loss"].array().then(lossData =>
+                        callback({
+                            type: "epoch",
+                            epoch: i + 1,
+                            loss: lossData,
+                        }),
                     ),
-        ]);
-        tf.dispose([metricsPerBatch, epochLogs]);
+            ]);
+            tf.dispose([metricsPerBatch, epochLogs]);
+        }
+    } finally {
+        await callbacks.onTrainEnd();
+        await decoderPool.close();
+        optimizer.dispose();
     }
-    await callbacks.onTrainEnd();
-
-    optimizer.dispose();
 }

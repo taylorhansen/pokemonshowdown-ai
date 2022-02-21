@@ -93,12 +93,11 @@ export class AExpDecoderPool {
                             let aexp: AugmentedExperience | null;
                             while (!done && (aexp = await port.decode(file))) {
                                 // Respect backpressure.
-                                if (aexpInput.push(aexp)) {
-                                    continue;
+                                if (!aexpInput.push(aexp)) {
+                                    await new Promise(res =>
+                                        aexpInput.once(readAExp, res),
+                                    );
                                 }
-                                await new Promise(res =>
-                                    aexpInput.once(readAExp, res),
-                                );
                             }
                         }
                     } finally {
