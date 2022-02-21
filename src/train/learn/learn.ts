@@ -2,6 +2,7 @@ import * as tf from "@tensorflow/tfjs";
 import {ModelLearnData} from "../model/worker";
 import {BatchedAExp, createAExpDataset} from "./dataset";
 import {loss, LossResult} from "./loss";
+import {shuffle} from "./shuffle";
 
 /** Base type for AdvantageConfigs. */
 interface AdvantageConfigBase<T extends string> {
@@ -191,7 +192,8 @@ export async function learn({
         // Note: We reload the dataset from disk on each epoch to conserve
         // memory.
         await createAExpDataset(
-            aexpPaths,
+            // Shuffle paths each time to reduce bias.
+            shuffle([...aexpPaths]),
             numDecoderThreads,
             batchSize,
             shufflePrefetch,
