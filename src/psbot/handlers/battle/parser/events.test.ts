@@ -2,7 +2,7 @@ import {Protocol} from "@pkmn/protocol";
 import {SideID} from "@pkmn/types";
 import {expect} from "chai";
 import "mocha";
-import {Event} from "../../../../../parser";
+import {Event} from "../../../parser";
 import * as dex from "../dex";
 import {BattleState} from "../state/BattleState";
 import {SwitchOptions} from "../state/Team";

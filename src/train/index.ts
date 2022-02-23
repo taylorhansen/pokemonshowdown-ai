@@ -24,8 +24,6 @@ const numEvalGames = 32;
 /** Main Logger object. */
 const logger = Logger.stderr.addPrefix("Train: ");
 
-const format = "gen4";
-
 /** Flag for debugging. */
 const singleThreaded = false;
 const numThreads = singleThreaded ? 1 : os.cpus().length;
@@ -53,11 +51,11 @@ const batchOptions: BatchPredictOptions = {
     const loadUrl = `file://${join(latestModelFolder, "model.json")}`;
     logger.debug("Loading latest model");
     try {
-        model = await models.load(batchOptions, format, loadUrl);
+        model = await models.load(batchOptions, loadUrl);
     } catch (e) {
         logger.error(`Error opening model: ${e}`);
         logger.debug("Creating default model instead");
-        model = await models.load(batchOptions, format);
+        model = await models.load(batchOptions);
 
         logger.debug("Saving");
         await ensureDir(latestModelFolder);
@@ -66,7 +64,7 @@ const batchOptions: BatchPredictOptions = {
 
     // Save a copy of the original model for evaluating the trained model later.
     logger.debug("Saving copy of original for reference");
-    const originalModel = await models.load(batchOptions, format, loadUrl);
+    const originalModel = await models.load(batchOptions, loadUrl);
     const originalModelFolder = join(modelsFolder, "original");
     await models.save(originalModel, `file://${originalModelFolder}`);
 
@@ -96,7 +94,6 @@ const batchOptions: BatchPredictOptions = {
                 },
             ],
             evalOpponents,
-            format,
             numThreads,
             maxTurns: 128,
             algorithm: {
@@ -129,7 +126,6 @@ const batchOptions: BatchPredictOptions = {
         // Re-load it so we have a copy.
         const modelCopy = await models.load(
             batchOptions,
-            format,
             `file://${join(episodeModelFolder, "model.json")}`,
         );
         evalOpponents.push({

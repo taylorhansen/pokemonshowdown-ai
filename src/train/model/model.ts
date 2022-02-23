@@ -1,17 +1,13 @@
 import * as tf from "@tensorflow/tfjs";
-import {formats} from "../../psbot/handlers/battle";
 import {intToChoice} from "../../psbot/handlers/battle/agent";
+import {battleStateEncoder} from "../../psbot/handlers/battle/ai/encoder/encoders";
 
-/**
- * Creates a model for training.
- *
- * @param format Game format type.
- */
-export function createModel(format: formats.FormatType): tf.LayersModel {
+/** Creates a model for training. */
+export function createModel(): tf.LayersModel {
     // Input layer.
     const state = tf.layers.input({
         name: "network/state",
-        shape: [formats.encoder[format].size],
+        shape: [battleStateEncoder.size],
     });
     // Shared layer.
     const fc1 = tf.layers

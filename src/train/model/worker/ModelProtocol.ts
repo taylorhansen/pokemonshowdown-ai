@@ -1,6 +1,5 @@
 /** @file Defines the protocol typings for ModelWorkers. */
 import {MessagePort} from "worker_threads";
-import {FormatType} from "../../../psbot/handlers/battle/formats";
 import {LearnConfig} from "../../learn";
 import {PortMessageBase, PortResultBase} from "../../port/PortProtocol";
 import {WorkerProtocol} from "../../port/WorkerProtocol";
@@ -31,8 +30,6 @@ type ModelMessageBase<T extends ModelRequestType> = PortMessageBase<T>;
 export interface ModelLoadMessage
     extends ModelMessageBase<"load">,
         BatchPredictOptions {
-    /** Game format for model verification. */
-    format: FormatType;
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
 }

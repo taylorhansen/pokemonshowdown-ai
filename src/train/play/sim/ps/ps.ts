@@ -8,8 +8,7 @@ import * as tmp from "tmp-promise";
 import {Sender} from "../../../../psbot/PsBot";
 import {BattleHandler} from "../../../../psbot/handlers/battle";
 import {BattleAgent} from "../../../../psbot/handlers/battle/agent";
-import {FormatType} from "../../../../psbot/handlers/battle/formats";
-import {BattleParser} from "../../../../psbot/handlers/battle/parser";
+import {BattleParser} from "../../../../psbot/handlers/battle/parser/BattleParser";
 import {
     Event,
     HaltEvent,
@@ -27,24 +26,18 @@ Teams.setGeneratorFactory(TeamGenerators);
  *
  * @template T Game format type.
  */
-export interface PlayerOptions<T extends FormatType = FormatType> {
+export interface PlayerOptions {
     /** Battle decision-maker. */
-    readonly agent: BattleAgent<T>;
+    readonly agent: BattleAgent;
     /** Override BattleParser if needed. */
-    readonly parser?: BattleParser<T, BattleAgent<T>, [], void>;
+    readonly parser?: BattleParser<BattleAgent, [], void>;
 }
 
-/**
- * Options for {@link startBattle}.
- *
- * @template T Game format type.
- */
-export interface GameOptions<T extends FormatType = FormatType> {
-    /** Game format type. */
-    readonly format: T;
+/** Options for {@link startPsBattle}.  */
+export interface GameOptions {
     /** Player configs. */
     readonly players: {
-        readonly [P in Exclude<SideID, "p3" | "p4">]: PlayerOptions<T>;
+        readonly [P in Exclude<SideID, "p3" | "p4">]: PlayerOptions;
     };
     /**
      * Maximum amount of turns until the game is considered a tie. Games can go
@@ -121,10 +114,9 @@ export async function startPsBattle(
         let handlerCtor: typeof BattleHandler;
         // Add game-over checks to one side.
         if (id === "p1") {
-            handlerCtor = class<
-                T extends FormatType,
-                TAgent extends BattleAgent<T>,
-            > extends BattleHandler<T, TAgent> {
+            handlerCtor = class<TAgent extends BattleAgent> extends (
+                BattleHandler
+            )<TAgent> {
                 public override async handle(event: Event): Promise<void> {
                     try {
                         return await super.handle(event);
@@ -148,7 +140,6 @@ export async function startPsBattle(
         }
 
         const handler = new handlerCtor({
-            format: options.format,
             username: id,
             ...options.players[id],
             sender,

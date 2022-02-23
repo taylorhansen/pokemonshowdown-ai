@@ -1,7 +1,7 @@
 import {Logger} from "../../../../util/logging/Logger";
 import {BattleAgent} from "../agent/BattleAgent";
 import {Choice, choiceIds, intToChoice} from "../agent/Choice";
-import {FormatType, ReadonlyState} from "../formats/formats";
+import {ReadonlyBattleState} from "../state";
 import {weightedShuffle} from "./helpers";
 
 /**
@@ -51,13 +51,15 @@ const sorters: {readonly [T in PolicyType]: Sorter} = {
  * @param type Action selection method after getting decision data.
  * @returns A suitable BattleAgent for running the policy.
  */
-export function policyAgent<T extends FormatType = FormatType>(
-    getProbs: (state: ReadonlyState<T>) => Float32Array | Promise<Float32Array>,
+export function policyAgent(
+    getProbs: (
+        state: ReadonlyBattleState,
+    ) => Float32Array | Promise<Float32Array>,
     type: PolicyType,
-): BattleAgent<T, void> {
+): BattleAgent<void> {
     const sorter = sorters[type];
     return async function (
-        state: ReadonlyState<T>,
+        state: ReadonlyBattleState,
         choices: Choice[],
         logger?: Logger,
     ): Promise<void> {

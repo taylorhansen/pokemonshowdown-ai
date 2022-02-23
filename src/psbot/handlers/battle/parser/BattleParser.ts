@@ -1,13 +1,12 @@
 /** @file Defines the core BattleParser function type. */
 import {Logger} from "../../../../util/logging/Logger";
 import {BattleAgent, Choice} from "../agent";
-import {FormatType, State} from "../formats";
+import {BattleState} from "../state";
 import {EventIterator} from "./iterators";
 
 /**
  * Function type for parsing battle events.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
  * @template TResult Result type.
@@ -16,24 +15,17 @@ import {EventIterator} from "./iterators";
  * @returns A custom result value to be handled by the caller.
  */
 export type BattleParser<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TAgent extends BattleAgent = BattleAgent,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
-> = (ctx: BattleParserContext<T, TAgent>, ...args: TArgs) => Promise<TResult>;
+> = (ctx: BattleParserContext<TAgent>, ...args: TArgs) => Promise<TResult>;
 
 /**
  * Context container needed to call a BattleParser.
  *
- * @template TEvent Game event type.
- * @template TState Battle state type.
- * @template TRState Readonly battle state type.
  * @template TAgent Battle agent type.
  */
-export interface BattleParserContext<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
-> {
+export interface BattleParserContext<TAgent extends BattleAgent = BattleAgent> {
     /** Function that makes the decisions for this battle. */
     readonly agent: TAgent;
     /** Iterator for getting the next event.  */
@@ -43,7 +35,7 @@ export interface BattleParserContext<
     /** Function for sending the BattleAgent's Choice to the game. */
     readonly sender: ChoiceSender;
     /** Battle state tracker. */
-    readonly state: State<T>;
+    readonly state: BattleState;
 }
 
 /** Function type for sending a Choice to the game. */

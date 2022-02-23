@@ -3,8 +3,8 @@ import {expect} from "chai";
 import "mocha";
 import {BattleHandler} from "./BattleHandler";
 import {Choice} from "./agent";
-import * as formats from "./formats";
-import {consume, verify} from "./parser";
+import {consume, verify} from "./parser/parsing";
+import {BattleState} from "./state";
 
 export const test = () =>
     describe("BattleHandler", function () {
@@ -15,7 +15,6 @@ export const test = () =>
 
         it("Should correctly manage underlying BattleParser", async function () {
             const bh = new BattleHandler({
-                format: "gen4",
                 username: "username",
                 // Fake BattleParser for demonstration.
                 async parser(ctx) {
@@ -49,8 +48,7 @@ export const test = () =>
                     await consume(ctx);
                 },
                 // Fake BattleState for demonstration.
-                stateCtor:
-                    FakeState as unknown as formats.StateConstructor<"gen4">,
+                stateCtor: FakeState as unknown as typeof BattleState,
                 // Fake BattleAgent for demonstration.
                 agent: async (state, choices) => {
                     if ((state as unknown as FakeState).requested) {
@@ -111,7 +109,6 @@ export const test = () =>
         it("Should handle choice rejection and retrying due to unknown info", async function () {
             let senderState = 0;
             const bh = new BattleHandler({
-                format: "gen4",
                 username: "username",
                 async parser(ctx) {
                     // Initializer event.
@@ -148,8 +145,7 @@ export const test = () =>
                     await consume(ctx);
                 },
                 // Fake BattleState for demonstration.
-                stateCtor:
-                    FakeState as unknown as formats.StateConstructor<"gen4">,
+                stateCtor: FakeState as unknown as typeof BattleState,
                 agent: async (state, choices) => {
                     void state, choices;
                     return await Promise.resolve();
@@ -220,7 +216,6 @@ export const test = () =>
         it("Should handle choice rejection and retrying due to newly revealed info", async function () {
             let senderState = 0;
             const bh = new BattleHandler({
-                format: "gen4",
                 username: "username",
                 async parser(ctx) {
                     // Initializer event.
@@ -264,8 +259,7 @@ export const test = () =>
                     await consume(ctx);
                 },
                 // Fake BattleState for demonstration.
-                stateCtor:
-                    FakeState as unknown as formats.StateConstructor<"gen4">,
+                stateCtor: FakeState as unknown as typeof BattleState,
                 agent: async (state, choices) => {
                     void state, choices;
                     return await Promise.resolve();

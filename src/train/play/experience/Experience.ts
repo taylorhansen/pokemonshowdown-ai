@@ -1,5 +1,4 @@
 import {BattleAgent} from "../../../psbot/handlers/battle/agent";
-import {FormatType} from "../../../psbot/handlers/battle/formats";
 import {PredictResult} from "../../model/worker/ModelPortProtocol";
 
 /** BattleAgent decision data. */
@@ -9,10 +8,7 @@ export interface ExperienceAgentData extends PredictResult {
 }
 
 /** BattleAgent type that emits partial Experience objects. */
-export type ExperienceAgent<T extends FormatType = FormatType> = BattleAgent<
-    T,
-    ExperienceAgentData
->;
+export type ExperienceAgent = BattleAgent<ExperienceAgentData>;
 
 /**
  * BattleAgent decision evaluation data. Can be processed in batches to

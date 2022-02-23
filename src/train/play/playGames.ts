@@ -1,7 +1,6 @@
 import {join} from "path";
 import * as stream from "stream";
 import ProgressBar from "progress";
-import {formats} from "../../psbot/handlers/battle";
 import {LogFunc, Logger} from "../../util/logging/Logger";
 import {AdvantageConfig} from "../learn";
 import {ModelWorker} from "../model/worker";
@@ -33,8 +32,6 @@ export interface PlayGamesArgs {
     readonly agentConfig: GamePoolAgentConfig;
     /** Opponents to play against. */
     readonly opponents: readonly Opponent[];
-    /** Game format type. */
-    readonly format: formats.FormatType;
     /** Number of games to play in parallel. */
     readonly numThreads: number;
     /** Number of turns before a game is considered a tie. */
@@ -62,7 +59,6 @@ export async function playGames({
     models,
     agentConfig,
     opponents,
-    format,
     numThreads,
     maxTurns,
     logger,
@@ -99,7 +95,6 @@ export async function playGames({
                         join(logPath, `${opponent.name}/game-${i + 1}`);
                     const args: GamePoolArgs = {
                         id: i + 1,
-                        format,
                         maxTurns,
                         logPath: gameLogPath,
                         rollout,

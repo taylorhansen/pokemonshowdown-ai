@@ -1,6 +1,6 @@
-import {formats} from "../../../psbot/handlers/battle";
 import {BattleAgent} from "../../../psbot/handlers/battle/agent";
-import {BattleParser} from "../../../psbot/handlers/battle/parser";
+import {BattleParser} from "../../../psbot/handlers/battle/parser/BattleParser";
+import {main} from "../../../psbot/handlers/battle/parser/main";
 import {AdvantageConfig} from "../../learn";
 import {
     AugmentedExperience,
@@ -71,7 +71,6 @@ export interface PlayGameResult extends SimResult {
  * are configured to emit them. If omitted, the Experiences will be ignored.
  */
 export async function playGame(
-    format: formats.FormatType,
     args: SimArgs,
     rollout?: AdvantageConfig,
 ): Promise<PlayGameResult> {
@@ -86,28 +85,21 @@ export async function playGame(
         // BattleParser to process them into full Experience objects.
         const exps: Experience[] = [];
         experiences[i] = exps;
-        const parser = formats.parser[format] as BattleParser<
-            formats.FormatType,
-            BattleAgent,
-            [],
-            void
-        >;
         return {
             agent: agentArgs.agent,
             parser: rollout
                 ? (experienceBattleParser(
-                      parser,
+                      main,
                       exp => exps.push(exp),
                       // Note: startPSBattle uses raw SideID as username.
                       `p${i + 1}`,
-                  ) as BattleParser<formats.FormatType, BattleAgent, [], void>)
-                : parser,
+                  ) as BattleParser<BattleAgent, [], void>)
+                : main,
         };
     });
 
     // Play the game.
     const {winner, err} = await startPsBattle({
-        format,
         players: {p1, p2},
         maxTurns: args.maxTurns,
         logPath: args.logPath,

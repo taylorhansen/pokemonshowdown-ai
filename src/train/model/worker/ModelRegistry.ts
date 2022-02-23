@@ -3,8 +3,8 @@ import {serialize} from "v8";
 import {MessageChannel, MessagePort, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
-import {formats} from "../../../psbot/handlers/battle";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
+import {battleStateEncoder} from "../../../psbot/handlers/battle/ai/encoder/encoders";
 import {verifyModel} from "../../../psbot/handlers/battle/ai/networkAgent";
 import {importTfn} from "../../../tfn";
 import {ensureDir} from "../../../util/paths/ensureDir";
@@ -67,16 +67,14 @@ export class ModelRegistry {
      * Creates a NetworkRegistry.
      *
      * @param model Neural network object.
-     * @param format Game format for model verification.
      * @param batchOptions Options for batching predict requests.
      */
     public constructor(
         model: tf.LayersModel,
-        format: formats.FormatType,
         private readonly batchOptions: BatchPredictOptions,
     ) {
         try {
-            verifyModel(model, formats.encoder[format].size);
+            verifyModel(model, battleStateEncoder.size);
         } catch (e) {
             // Cleanup model so it doesn't cause a memory leak.
             model.dispose();
@@ -95,7 +93,7 @@ export class ModelRegistry {
         // Warmup the model using fake data.
         // Only useful with gpu backend.
         if (gpu) {
-            const fakeInput = tf.zeros([1, formats.encoder[format].size]);
+            const fakeInput = tf.zeros([1, battleStateEncoder.size]);
             const fakeResult = model.predict(fakeInput) as tf.Tensor[];
             this.inUse = Promise.all(
                 fakeResult.map(

@@ -1,4 +1,3 @@
-import {formats} from "../../../../psbot/handlers/battle";
 import {
     BattleAgent,
     Choice,
@@ -7,7 +6,7 @@ import {
 import {
     BattleParser,
     BattleParserContext,
-} from "../../../../psbot/handlers/battle/parser";
+} from "../../../../psbot/handlers/battle/parser/BattleParser";
 import {
     Experience,
     ExperienceAgent,
@@ -19,7 +18,6 @@ import {
  *
  * Returned wrapper requires an {@link ExperienceAgent}.
  *
- * @template T Game format type.
  * @template TArgs Parser arguments.
  * @template TResult Parser return type.
  * @param parser Parser function to wrap.
@@ -28,16 +26,15 @@ import {
  * @returns The wrapped BattleParser function.
  */
 export function experienceBattleParser<
-    T extends formats.FormatType = formats.FormatType,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
 >(
-    parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>,
+    parser: BattleParser<BattleAgent, TArgs, TResult>,
     callback: (exp: Experience) => void,
     username: string,
-): BattleParser<T, ExperienceAgent<T>, TArgs, TResult> {
+): BattleParser<ExperienceAgent, TArgs, TResult> {
     return async function _experienceBattleParser(
-        ctx: BattleParserContext<T, ExperienceAgent<T>>,
+        ctx: BattleParserContext<ExperienceAgent>,
         ...args: TArgs
     ): Promise<TResult> {
         let expAgentData: ExperienceAgentData | null = null;

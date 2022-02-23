@@ -5,7 +5,7 @@
 import {Generations} from "@pkmn/data";
 import {Dex} from "@pkmn/dex";
 import {SpeciesAbility} from "@pkmn/dex-types";
-import * as dex from "../src/psbot/handlers/battle/formats/gen4/dex/dex-util";
+import * as dex from "../src/psbot/handlers/battle/dex/dex-util";
 import {toIdName} from "../src/psbot/handlers/battle/helpers";
 
 // TODO: Split into multiple scripts with separate dex output files?

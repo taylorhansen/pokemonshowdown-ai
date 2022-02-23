@@ -1,7 +1,6 @@
 import {join} from "path";
 import ProgressBar from "progress";
 import * as tmp from "tmp-promise";
-import {formats} from "../psbot/handlers/battle";
 import {Logger} from "../util/logging/Logger";
 import {AlgorithmArgs} from "./learn";
 import {ModelWorker} from "./model/worker";
@@ -17,8 +16,6 @@ export interface EpisodeArgs {
     readonly trainOpponents: readonly Opponent[];
     /** Opponent data for evaluating the model. */
     readonly evalOpponents: readonly Opponent[];
-    /** Name of the simulator to use for each game. */
-    readonly format: formats.FormatType;
     /** Number of games to play in parallel. */
     readonly numThreads: number;
     /** Number of turns before a game is considered a tie. */
@@ -45,7 +42,6 @@ export async function episode({
     model,
     trainOpponents,
     evalOpponents,
-    format,
     numThreads,
     maxTurns,
     algorithm,
@@ -71,7 +67,6 @@ export async function episode({
         models,
         agentConfig: {model, exp: true},
         opponents: trainOpponents,
-        format,
         numThreads,
         maxTurns,
         logger: logger.addPrefix("Rollout: "),
@@ -158,7 +153,6 @@ export async function episode({
         models,
         agentConfig: {model, exp: false},
         opponents: evalOpponents,
-        format,
         numThreads,
         maxTurns,
         logger: logger.addPrefix("Eval: "),

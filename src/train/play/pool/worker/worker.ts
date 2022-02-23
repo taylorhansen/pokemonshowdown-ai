@@ -32,14 +32,13 @@ async function processMessage(msg: GamePlay): Promise<AugmentedExperience[]> {
     // case it does, the caller should be able to handle it.
     try {
         const agents = msg.agents.map<SimArgsAgent>(config => {
-            const modelPort = new ModelPort(config.port, msg.format);
+            const modelPort = new ModelPort(config.port);
             modelPorts.push(modelPort);
             return {agent: modelPort.getAgent("stochastic"), exp: config.exp};
         }) as [SimArgsAgent, SimArgsAgent];
 
         // Simulate the game.
         const gameResult = await playGame(
-            msg.format,
             {agents, maxTurns: msg.maxTurns, logPath: msg.logPath},
             msg.rollout,
         );

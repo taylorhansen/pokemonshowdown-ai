@@ -1,8 +1,7 @@
 import {MessagePort} from "worker_threads";
 import {alloc} from "../../../buf";
-import {formats} from "../../../psbot/handlers/battle";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
-import {Encoder} from "../../../psbot/handlers/battle/ai/encoder/Encoder";
+import {battleStateEncoder} from "../../../psbot/handlers/battle/ai/encoder/encoders";
 import {
     policyAgent,
     PolicyType,
@@ -25,12 +24,8 @@ import {
  *
  * Intended to be used by only one BattleAgent within a game worker that
  * received a port to connect to a model.
- *
- * @template TFormatType Game format type.
  */
-export class ModelPort<
-    TFormatType extends formats.FormatType = formats.FormatType,
-> {
+export class ModelPort {
     /** Port wrapper. */
     private readonly asyncPort: AsyncPort<
         MessagePort,
@@ -42,9 +37,8 @@ export class ModelPort<
      * Creates a ModelPort.
      *
      * @param port Message port.
-     * @param format Game format type that the message port supports.
      */
-    public constructor(port: MessagePort, public readonly format: TFormatType) {
+    public constructor(port: MessagePort) {
         this.asyncPort = new AsyncPort(port);
         port.on(
             "message",
@@ -78,15 +72,12 @@ export class ModelPort<
      * @param policy Action selection method.
      * @see {@link policyAgent}
      */
-    public getAgent(policy: PolicyType): ExperienceAgent<TFormatType> {
+    public getAgent(policy: PolicyType): ExperienceAgent {
         let data: ExperienceAgentData | null = null;
 
-        const innerAgent = policyAgent<TFormatType>(async state => {
-            const encoder = formats.encoder[this.format] as Encoder<
-                formats.ReadonlyState<TFormatType>
-            >;
-            const arr = alloc(encoder.size, true /*shared*/);
-            encoder.encode(arr, state);
+        const innerAgent = policyAgent(async state => {
+            const arr = alloc(battleStateEncoder.size, true /*shared*/);
+            battleStateEncoder.encode(arr, state);
             let i = ModelPort.verifyInput(arr);
             if (i >= 0) {
                 throw new Error(

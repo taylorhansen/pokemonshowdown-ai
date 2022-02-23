@@ -1,21 +1,15 @@
 /** @file Base game event handler implementations. */
 import {Protocol} from "@pkmn/protocol";
 import {BoostID, SideID, StatID} from "@pkmn/types";
-import {Event} from "../../../../../parser";
-import {BattleAgent, Choice} from "../../../agent";
-import {toIdName} from "../../../helpers";
-import {
-    BattleParserContext,
-    consume,
-    dispatcher,
-    EventHandlerMap,
-    SenderResult,
-    verify,
-} from "../../../parser";
+import {Event} from "../../../parser";
+import {BattleAgent, Choice} from "../agent";
 import * as dex from "../dex";
+import {toIdName} from "../helpers";
 import {Move} from "../state/Move";
 import {Pokemon, ReadonlyPokemon} from "../state/Pokemon";
 import {SwitchOptions, TeamRevealOptions} from "../state/Team";
+import {BattleParserContext, SenderResult} from "./BattleParser";
+import {consume, dispatcher, EventHandlerMap, verify} from "./parsing";
 
 /** Private mapped type for {@link handlersImpl}. */
 type HandlersImpl<T> = {
@@ -23,7 +17,7 @@ type HandlersImpl<T> = {
 };
 
 /** Private mapped type for {@link handlersImpl} and {@link handlers}. */
-type HandlerMap = EventHandlerMap<"gen4", BattleAgent<"gen4">, [], void>;
+type HandlerMap = EventHandlerMap<BattleAgent, [], void>;
 
 /**
  * BattleParser handlers for each event type. Larger handler functions or
@@ -183,7 +177,7 @@ handlersImpl["|request|"] = async function (ctx) {
 
     await consume(ctx);
 };
-function initRequest(ctx: BattleParserContext<"gen4">, req: Protocol.Request) {
+function initRequest(ctx: BattleParserContext, req: Protocol.Request) {
     // istanbul ignore if: Should never happen.
     if (!req.side) {
         ctx.logger.error("Request with no side");
@@ -293,7 +287,7 @@ export function sanitizeMoveId(id: string): {
     return {id, happiness, hpType, hpPower};
 }
 async function decide(
-    ctx: BattleParserContext<"gen4">,
+    ctx: BattleParserContext,
     req: Protocol.MoveRequest | Protocol.SwitchRequest,
 ): Promise<void> {
     ctx = {
@@ -371,7 +365,7 @@ function getChoices(req: Protocol.Request): Choice[] {
     return result;
 }
 async function sendFinalchoice(
-    ctx: BattleParserContext<"gen4">,
+    ctx: BattleParserContext,
     choice: Choice,
 ): Promise<void> {
     const res = await ctx.sender(choice);
@@ -393,7 +387,7 @@ async function sendFinalchoice(
  * function if some turn out to be invalid.
  */
 async function evaluateChoices(
-    ctx: BattleParserContext<"gen4">,
+    ctx: BattleParserContext,
     choices: Choice[],
 ): Promise<void> {
     const agentLogger = ctx.logger.addPrefix("BattleAgent: ");
@@ -615,7 +609,7 @@ handlersImpl["|switch|"] = async function (ctx) {
 handlersImpl["|drag|"] = async function (ctx) {
     await switchEvent(ctx);
 };
-async function switchEvent(ctx: BattleParserContext<"gen4">): Promise<void> {
+async function switchEvent(ctx: BattleParserContext): Promise<void> {
     const event = await verify(ctx, "|switch|", "|drag|");
     const [, identStr, detailsStr, healthStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
@@ -770,7 +764,7 @@ handlersImpl["|-damage|"] = async function (ctx) {
 handlersImpl["|-heal|"] = async function (ctx) {
     await handleDamage(ctx, true /*heal*/);
 };
-async function handleDamage(ctx: BattleParserContext<"gen4">, heal?: boolean) {
+async function handleDamage(ctx: BattleParserContext, heal?: boolean) {
     const event = await verify(ctx, heal ? "|-heal|" : "|-damage|");
     const [, identStr, healthStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
@@ -916,7 +910,7 @@ handlersImpl["|-boost|"] = async function (ctx) {
 handlersImpl["|-unboost|"] = async function (ctx) {
     await handleBoost(ctx, true /*flip*/);
 };
-async function handleBoost(ctx: BattleParserContext<"gen4">, flip?: boolean) {
+async function handleBoost(ctx: BattleParserContext, flip?: boolean) {
     const event = await verify(ctx, flip ? "|-unboost|" : "|-boost|");
     const [, identStr, stat, numStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
@@ -1083,10 +1077,7 @@ handlersImpl["|-fieldstart|"] = async function (ctx) {
 handlersImpl["|-fieldend|"] = async function (ctx) {
     await updateFieldEffect(ctx, false /*start*/);
 };
-async function updateFieldEffect(
-    ctx: BattleParserContext<"gen4">,
-    start: boolean,
-) {
+async function updateFieldEffect(ctx: BattleParserContext, start: boolean) {
     const event = await verify(ctx, start ? "|-fieldstart|" : "|-fieldend|");
     const [, effectStr] = event.args;
     const effect = Protocol.parseEffect(effectStr, toIdName);
@@ -1106,10 +1097,7 @@ handlersImpl["|-sidestart|"] = async function (ctx) {
 handlersImpl["|-sideend|"] = async function (ctx) {
     await handleSideCondition(ctx, false /*start*/);
 };
-async function handleSideCondition(
-    ctx: BattleParserContext<"gen4">,
-    start: boolean,
-) {
+async function handleSideCondition(ctx: BattleParserContext, start: boolean) {
     const event = await verify(ctx, start ? "|-sidestart|" : "|-sideend|");
     const [, sideStr, effectStr] = event.args;
     // Note: parsePokemonIdent() supports side identifiers.
@@ -1236,7 +1224,7 @@ handlersImpl["|-end|"] = async function (ctx) {
     await consume(ctx);
 };
 function handleStartEndTrivial(
-    ctx: BattleParserContext<"gen4">,
+    ctx: BattleParserContext,
     event: Event<"|-start|" | "|-end|">,
     side: SideID,
     effectId: string,
@@ -1775,14 +1763,14 @@ export const handlers =
                       // Default parser just consumes the event.
                       // Note: This is used even if the key was never mentioned
                       // in this file.
-                      async [key](ctx: BattleParserContext<"gen4">) {
+                      async [key](ctx: BattleParserContext) {
                           await defaultParser(ctx, key);
                       },
                   }
                 : handlersImpl[key] === "unsupported"
                 ? {
                       // Unsupported parser throws an error.
-                      async [key](ctx: BattleParserContext<"gen4">) {
+                      async [key](ctx: BattleParserContext) {
                           await unsupportedParser(ctx, key);
                       },
                   }
@@ -1791,16 +1779,13 @@ export const handlers =
         ),
     ) as Required<HandlerMap>;
 
-async function defaultParser(
-    ctx: BattleParserContext<"gen4">,
-    key: Protocol.ArgName,
-) {
+async function defaultParser(ctx: BattleParserContext, key: Protocol.ArgName) {
     await verify(ctx, key);
     await consume(ctx);
 }
 
 async function unsupportedParser(
-    ctx: BattleParserContext<"gen4">,
+    ctx: BattleParserContext,
     key: Protocol.ArgName,
 ) {
     await verify(ctx, key);

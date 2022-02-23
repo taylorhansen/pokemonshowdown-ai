@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
 import {allocUnsafe} from "../../../../buf";
 import {BattleAgent, intToChoice} from "../agent";
-import {FormatType, ReadonlyState} from "../formats";
+import {ReadonlyBattleState} from "../state";
 import {Encoder} from "./encoder/Encoder";
 import {policyAgent, PolicyType} from "./policyAgent";
 
@@ -19,7 +19,6 @@ export type NetworkData = {
  * Creates a BattleAgent (via {@link policyAgent}) that uses a neural network
  * for choice selection.
  *
- * @template T format type.
  * @param model The neural network.
  * @param policy Action selection method. See {@link policyAgent} for details.
  * @param encoder How to encode the battle state for neural network input.
@@ -29,12 +28,12 @@ export type NetworkData = {
  * @throws Error if the given model does not have the right input and output
  * shapes.
  */
-export function networkAgent<T extends FormatType = FormatType>(
+export function networkAgent(
     model: tf.LayersModel,
     policy: PolicyType,
-    encoder: Encoder<ReadonlyState<T>>,
+    encoder: Encoder<ReadonlyBattleState>,
     callback: (data: NetworkData) => void = tf.dispose,
-): BattleAgent<T, void> {
+): BattleAgent<void> {
     verifyModel(model, encoder.size);
     return policyAgent(async function (state) {
         const stateData = allocUnsafe(encoder.size);

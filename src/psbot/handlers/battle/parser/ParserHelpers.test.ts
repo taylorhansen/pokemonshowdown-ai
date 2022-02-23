@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {Event} from "../../../../../parser";
-import {BattleIterator} from "../../../parser";
+import {Event} from "../../../parser";
+import {BattleIterator} from "../parser/iterators";
 import {ParserContext} from "./Context.test";
 
 // TODO: Should this be merged with ParserContext?

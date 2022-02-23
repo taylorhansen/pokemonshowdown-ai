@@ -1,4 +1,4 @@
-import {HpType, PokemonData, StatName} from "../dex/dex-util";
+import {HpType, PokemonData, StatName} from "../dex";
 import {ReadonlyStatRange, StatRange} from "./StatRange";
 
 type ReadonlyStatRanges = {readonly [T in StatName]: ReadonlyStatRange};

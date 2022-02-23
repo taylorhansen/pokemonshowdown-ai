@@ -1,19 +1,16 @@
 import {expect} from "chai";
-import {Logger} from "../../../../../../util/logging/Logger";
-import {BattleAgent, Choice} from "../../../agent";
-import {
-    BattleIterator,
-    ChoiceSender,
-    SenderResult,
-    StartBattleParserArgs,
-} from "../../../parser";
+import {Logger} from "../../../../util/logging/Logger";
+import {BattleAgent, Choice} from "../agent";
 import {BattleState} from "../state";
+import {ChoiceSender, SenderResult} from "./BattleParser";
 import {StateHelpers} from "./StateHelpers.test";
+import {BattleIterator} from "./iterators";
+import {StartBattleParserArgs} from "./parsing";
 
 /** Initial context data required to start up the battle parser. */
-export interface InitialContext extends StartBattleParserArgs<"gen4"> {
+export interface InitialContext extends StartBattleParserArgs {
     /** Initial args for starting the BattleParser. */
-    readonly startArgs: StartBattleParserArgs<"gen4">;
+    readonly startArgs: StartBattleParserArgs;
     /**
      * Agent deconstructed from {@link startArgs}. Can be overridden.
      * @override

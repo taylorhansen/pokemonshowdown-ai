@@ -8,17 +8,13 @@ import {
     TypeName,
     Weather,
 } from "@pkmn/types";
-import {BattleAgent} from "../../../agent";
-import {toIdName} from "../../../helpers";
-import {BattleParser} from "../../../parser";
-import {
-    startBattleParser,
-    StartBattleParserArgs,
-} from "../../../parser/helpers";
-import {FormatType} from "../../formats";
+import {BattleAgent} from "../agent";
 import * as dex from "../dex";
+import {toIdName} from "../helpers";
 import {smeargle} from "../state/switchOptions.test";
+import {BattleParser} from "./BattleParser";
 import {ParserContext} from "./Context.test";
+import {startBattleParser, StartBattleParserArgs} from "./parsing";
 
 /**
  * Starts a {@link BattleParser}.
@@ -30,12 +26,11 @@ import {ParserContext} from "./Context.test";
  * BattleParser.
  */
 export function initParser<
-    T extends FormatType = FormatType,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
 >(
-    startArgs: StartBattleParserArgs<T>,
-    parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>,
+    startArgs: StartBattleParserArgs,
+    parser: BattleParser<BattleAgent, TArgs, TResult>,
     ...args: TArgs
 ): ParserContext<TResult> {
     const {iter, finish} = startBattleParser(startArgs, parser, ...args);
@@ -58,12 +53,11 @@ export function initParser<
  * before calling `initParser()`.
  */
 export function setupBattleParser<
-    T extends FormatType = FormatType,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
 >(
-    startArgs: StartBattleParserArgs<T>,
-    parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>,
+    startArgs: StartBattleParserArgs,
+    parser: BattleParser<BattleAgent, TArgs, TResult>,
 ): (...args: TArgs) => ParserContext<TResult> {
     return (...args: TArgs): ParserContext<TResult> =>
         initParser(startArgs, parser, ...args);

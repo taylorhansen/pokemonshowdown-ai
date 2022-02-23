@@ -3,31 +3,27 @@ import {Protocol} from "@pkmn/protocol";
 import {WrappedError} from "../../../../util/errors/WrappedError";
 import {Event} from "../../../parser";
 import {BattleAgent} from "../agent";
-import {FormatType, State} from "../formats";
+import {BattleState} from "../state";
 import {BattleParser, BattleParserContext} from "./BattleParser";
 import {BattleIterator, IteratorPair} from "./iterators";
 
 /**
  * Config for {@link startBattleParser}.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  */
-export interface StartBattleParserArgs<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
-> extends Omit<BattleParserContext<T, TAgent>, "iter" | "state"> {
+export interface StartBattleParserArgs<TAgent extends BattleAgent = BattleAgent>
+    extends Omit<BattleParserContext<TAgent>, "iter" | "state"> {
     /**
      * Gets or constructs the battle state tracker object that will be used by
      * the BattleParser. Only called once.
      */
-    readonly getState: () => State<T>;
+    readonly getState: () => BattleState;
 }
 
 /**
  * Initializes a BattleParser.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
  * @template TResult Result type.
@@ -41,17 +37,16 @@ export interface StartBattleParserArgs<
  * log an uncaught promise rejection (which can crash Workers during training).
  */
 export function startBattleParser<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TAgent extends BattleAgent = BattleAgent,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
 >(
-    cfg: StartBattleParserArgs<T, TAgent>,
-    parser: BattleParser<T, TAgent, TArgs, TResult>,
+    cfg: StartBattleParserArgs<TAgent>,
+    parser: BattleParser<TAgent, TArgs, TResult>,
     ...args: TArgs
 ): {iter: BattleIterator; finish: Promise<TResult>} {
     const {eventIt, battleIt} = new IteratorPair();
-    const ctx: BattleParserContext<T, TAgent> = {
+    const ctx: BattleParserContext<TAgent> = {
         agent: cfg.agent,
         iter: eventIt,
         logger: cfg.logger,
@@ -80,18 +75,16 @@ export function startBattleParser<
 /**
  * Maps an event type to a BattleParser handler.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
  * @template TResult Result type.
  */
 export type EventHandlerMap<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TAgent extends BattleAgent = BattleAgent,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
 > = {
-    readonly [_ in Protocol.ArgName]?: BattleParser<T, TAgent, TArgs, TResult>;
+    readonly [_ in Protocol.ArgName]?: BattleParser<TAgent, TArgs, TResult>;
 };
 
 /**
@@ -99,22 +92,20 @@ export type EventHandlerMap<
  * the given map, or can return `null` if there are no events left or there is
  * no handler defined to handle it.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
  * @template TResult Result type.
  * @param handlers Map of event handlers.
  */
 export function dispatcher<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TAgent extends BattleAgent = BattleAgent,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
 >(
-    handlers: EventHandlerMap<T, TAgent, TArgs, TResult>,
-): BattleParser<T, TAgent, TArgs, TResult | null> {
+    handlers: EventHandlerMap<TAgent, TArgs, TResult>,
+): BattleParser<TAgent, TArgs, TResult | null> {
     return async function eventDispatcher(
-        ctx: BattleParserContext<T, TAgent>,
+        ctx: BattleParserContext<TAgent>,
         ...args: TArgs
     ): Promise<TResult | null> {
         const event = await tryPeek(ctx);
@@ -137,7 +128,6 @@ export function dispatcher<
  * Keeps calling a BattleParser with the given args until it doesn't consume an
  * event or until the end of the event stream.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
  * @template TResult Result type.
@@ -147,13 +137,12 @@ export function dispatcher<
  * @returns All of the returned `TResult`s in an array.
  */
 export async function eventLoop<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
+    TAgent extends BattleAgent = BattleAgent,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
 >(
-    ctx: BattleParserContext<T, TAgent>,
-    parser: BattleParser<T, TAgent, TArgs, TResult>,
+    ctx: BattleParserContext<TAgent>,
+    parser: BattleParser<TAgent, TArgs, TResult>,
     ...args: TArgs
 ): Promise<TResult[]> {
     const results: TResult[] = [];
@@ -179,15 +168,11 @@ export async function eventLoop<
 /**
  * Peeks at the next event.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  * @param ctx Parser context.
  * @throws Error if there are no events left.
  */
-export async function peek<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
->(ctx: BattleParserContext<T, TAgent>): Promise<Event> {
+export async function peek(ctx: BattleParserContext): Promise<Event> {
     const event = await tryPeek(ctx);
     if (!event) {
         throw new Error("Expected event");
@@ -198,15 +183,12 @@ export async function peek<
 /**
  * Peeks at the next event.
  *
- * @template T Format type.
- * @template TAgent Battle agent type.
  * @param ctx Parser context.
  * @returns The next event, or `undefined` if there are no events left.
  */
-export async function tryPeek<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
->(ctx: BattleParserContext<T, TAgent>): Promise<Event | undefined> {
+export async function tryPeek(
+    ctx: BattleParserContext,
+): Promise<Event | undefined> {
     const result = await ctx.iter.peek();
     return result.done ? undefined : result.value;
 }
@@ -215,17 +197,13 @@ export async function tryPeek<
  * Peeks and verifies the next event according to the given event type.
  *
  * @template TName Event type identifier.
- * @template T Format type.
  * @param ctx Parser context.
  * @param expectedKey Expected event type.
- * @returns The next event if it matches, "null` if it doesn't match, or
- * `undefined" if there are no events left.
+ * @returns The next event if it matches, `null` if it doesn't match, or
+ * `undefined` if there are no events left.
  */
-export async function tryVerify<
-    TName extends Protocol.ArgName,
-    T extends FormatType = FormatType,
->(
-    ctx: BattleParserContext<T>,
+export async function tryVerify<TName extends Protocol.ArgName>(
+    ctx: BattleParserContext,
     ...expectedKeys: TName[]
 ): Promise<Event<TName> | null | undefined> {
     const event = await tryPeek(ctx);
@@ -244,16 +222,12 @@ export async function tryVerify<
  * Peeks and verifies the next event according to the given event type.
  *
  * @template TName Event type identifier.
- * @template T Format type.
  * @param ctx Parser context.
  * @param expectedKey Expected event type.
  * @throws Error if the event type doesn't match or if there are no events left.
  */
-export async function verify<
-    TName extends Protocol.ArgName,
-    T extends FormatType = FormatType,
->(
-    ctx: BattleParserContext<T>,
+export async function verify<TName extends Protocol.ArgName>(
+    ctx: BattleParserContext,
     ...expectedKeys: TName[]
 ): Promise<Event<TName>> {
     const event = await peek(ctx);
@@ -272,15 +246,13 @@ export async function verify<
 /**
  * Consumes an event.
  *
- * @template T Format type.
  * @template TAgent Battle agent type.
  * @param ctx Parser context.
  * @throws Error if there are no events left.
  */
-export async function consume<
-    T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
->(ctx: BattleParserContext<T, TAgent>): Promise<Event> {
+export async function consume<TAgent extends BattleAgent = BattleAgent>(
+    ctx: BattleParserContext<TAgent>,
+): Promise<Event> {
     const result = await ctx.iter.next();
     if (result.done) {
         throw new Error("Expected event");

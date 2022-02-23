@@ -2,7 +2,6 @@
 import {serialize} from "v8";
 import {parentPort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
-import {FormatType} from "../../../psbot/handlers/battle/formats";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
 import {createModel} from "../model";
@@ -44,10 +43,9 @@ function getRegistry(uid: number): ModelRegistry {
 function load(
     rid: number,
     model: tf.LayersModel,
-    format: FormatType,
     batchOptions: BatchPredictOptions,
 ) {
-    models.set(uidCounter, new ModelRegistry(model, format, batchOptions));
+    models.set(uidCounter, new ModelRegistry(model, batchOptions));
     const result: ModelLoadResult = {
         type: "load",
         rid,
@@ -64,11 +62,11 @@ parentPort.on("message", function handle(msg: ModelMessage) {
         case "load":
             // Note: Downcasting msg to BatchPredictOptions.
             if (!msg.url) {
-                load(rid, createModel(msg.format), msg.format, msg);
+                load(rid, createModel(), msg);
             } else {
                 promise = tf
                     .loadLayersModel(msg.url)
-                    .then(m => load(rid, m, msg.format, msg));
+                    .then(m => load(rid, m, msg));
             }
             break;
         case "save":

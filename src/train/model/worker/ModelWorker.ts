@@ -1,6 +1,5 @@
 import {resolve} from "path";
 import {MessagePort, Worker} from "worker_threads";
-import {FormatType} from "../../../psbot/handlers/battle/formats";
 import {WorkerPort} from "../../port/WorkerPort";
 import {
     BatchPredictOptions,
@@ -47,20 +46,17 @@ export class ModelWorker {
      * Loads and registers a neural network.
      *
      * @param batchOptions Options for batching predict requests.
-     * @param format Game format for model verification.
      * @param url URL to load from. If omitted, creates a default model.
      * @returns A unique identifier for further requests involving this network.
      */
     public async load(
         batchOptions: BatchPredictOptions,
-        format: FormatType,
         url?: string,
     ): Promise<number> {
         const msg: ModelLoadMessage = {
             type: "load",
             rid: this.workerPort.nextRid(),
             ...batchOptions,
-            format,
             ...(url && {url}),
         };
 

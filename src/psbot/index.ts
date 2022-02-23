@@ -15,8 +15,8 @@ import {importTfn} from "../tfn";
 import {Logger} from "../util/logging/Logger";
 import {PsBot} from "./PsBot";
 import * as handlers from "./handlers";
+import {battleStateEncoder} from "./handlers/battle/ai/encoder/encoders";
 import {networkAgent} from "./handlers/battle/ai/networkAgent";
-import {battleStateEncoder} from "./handlers/battle/formats/gen4/encoders/encoders";
 
 // Select native backend.
 importTfn(process.argv[2] === "--gpu" /*use gpu*/);
@@ -46,17 +46,12 @@ void (async function () {
     }
 
     const model = await modelPromise;
-    const agent = networkAgent<"gen4">(
-        model,
-        "deterministic",
-        battleStateEncoder,
-    );
+    const agent = networkAgent(model, "deterministic", battleStateEncoder);
 
     bot.acceptChallenges(
         "gen4randombattle",
         (room, user, sender) =>
             new handlers.battle.BattleHandler({
-                format: "gen4",
                 username: user,
                 agent,
                 sender,

@@ -1,5 +1,5 @@
 import {Protocol} from "@pkmn/protocol";
-import {Event} from "../../../../../parser";
+import {Event} from "../../../parser";
 import {
     toDetails,
     toHPStatus,

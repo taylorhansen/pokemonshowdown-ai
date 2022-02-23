@@ -4,7 +4,6 @@ import * as main from "./main.test";
 
 export const test = () =>
     describe("parser", function () {
-        // Directory structure order.
         events.test();
         main.test();
     });

@@ -4,40 +4,30 @@ import {Sender} from "../../PsBot";
 import {Event} from "../../parser";
 import {RoomHandler} from "../RoomHandler";
 import {BattleAgent} from "./agent";
-import * as formats from "./formats";
-import {
-    BattleIterator,
-    BattleParser,
-    ChoiceSender,
-    SenderResult,
-    startBattleParser,
-    StartBattleParserArgs,
-} from "./parser";
+import {BattleParser, ChoiceSender, SenderResult} from "./parser/BattleParser";
+import {BattleIterator} from "./parser/iterators";
+import {main} from "./parser/main";
+import {startBattleParser, StartBattleParserArgs} from "./parser/parsing";
+import {BattleState} from "./state";
 
 /**
  * Args for the {@link BattleHandler} constructor.
  *
- * @template T Battle format for this room.
  * @template TAgent Battle agent type.
  */
-export interface BattleHandlerArgs<
-    T extends formats.FormatType = formats.FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
-> {
-    /** Battle format for this room. */
-    readonly format: T;
+export interface BattleHandlerArgs<TAgent extends BattleAgent = BattleAgent> {
     /** Client's username. */
     readonly username: string;
     /**
      * Function for building up a battle state for the BattleAgent. Defaults to
      * format default.
      */
-    readonly parser?: BattleParser<T, TAgent, [], void>;
+    readonly parser?: BattleParser<TAgent, [], void>;
     /**
      * {@link formats.State BattleState} constructor function. Defaults to
      * format default.
      */
-    readonly stateCtor?: formats.StateConstructor<T>;
+    readonly stateCtor?: typeof BattleState;
     /** Function for deciding what to do. */
     readonly agent: TAgent;
     /** Used for sending messages to the assigned server room. */
@@ -49,16 +39,11 @@ export interface BattleHandlerArgs<
 /**
  * Base handler for battle rooms.
  *
- * @template T Battle format for this room.
  * @template TAgent Battle agent type.
  */
-export class BattleHandler<
-    T extends formats.FormatType = formats.FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>,
-> implements RoomHandler
+export class BattleHandler<TAgent extends BattleAgent = BattleAgent>
+    implements RoomHandler
 {
-    /** Battle format for this room. */
-    public readonly format: T;
     /** Used for sending messages to the assigned server room. */
     private readonly sender: Sender;
     /** Logger object. */
@@ -101,20 +86,13 @@ export class BattleHandler<
 
     /** Creates a BattleHandler. */
     public constructor({
-        format,
         username,
-        parser = formats.parser[format] as unknown as BattleParser<
-            T,
-            TAgent,
-            [],
-            void
-        >,
-        stateCtor = formats.state[format],
+        parser = main as unknown as BattleParser<TAgent, [], void>,
+        stateCtor = BattleState,
         agent,
         sender,
         logger = Logger.stderr,
-    }: BattleHandlerArgs<T, TAgent>) {
-        this.format = format;
+    }: BattleHandlerArgs<TAgent>) {
         this.sender = sender;
         this.logger = logger;
 
@@ -127,7 +105,7 @@ export class BattleHandler<
                 }
             }).finally(() => (this.choiceSenderRes = null));
 
-        const cfg: StartBattleParserArgs<T, TAgent> = {
+        const cfg: StartBattleParserArgs<TAgent> = {
             agent,
             logger: this.logger.addPrefix("BattleParser: "),
             sender: choiceSender,

@@ -36,7 +36,6 @@ export class GameWorker {
         const msg: GamePlay = {
             type: "play",
             rid: this.workerPort.nextRid(),
-            format: args.format,
             agents: await agentsPromise,
             ...(args.maxTurns && {maxTurns: args.maxTurns}),
             ...(args.logPath && {logPath: args.logPath}),

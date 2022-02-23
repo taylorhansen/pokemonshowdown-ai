@@ -1,4 +1,22 @@
 /** @file Formats BattleState objects into data usable by the neural network. */
+import * as dex from "../../dex";
+import {ReadonlyBattleState} from "../../state/BattleState";
+import {ReadonlyHp} from "../../state/Hp";
+import {ReadonlyMajorStatusCounter} from "../../state/MajorStatusCounter";
+import {ReadonlyMove} from "../../state/Move";
+import {Moveset, ReadonlyMoveset} from "../../state/Moveset";
+import {ReadonlyMultiTempStatus} from "../../state/MultiTempStatus";
+import {ReadonlyPokemon} from "../../state/Pokemon";
+import {ReadonlyRoomStatus} from "../../state/RoomStatus";
+import {ReadonlyStatRange, StatRange} from "../../state/StatRange";
+import {ReadonlyStatTable} from "../../state/StatTable";
+import {ReadonlyTeam, Team} from "../../state/Team";
+import {ReadonlyTeamStatus} from "../../state/TeamStatus";
+import {ReadonlyTempStatus} from "../../state/TempStatus";
+import {
+    ReadonlyMoveStatus,
+    ReadonlyVolatileStatus,
+} from "../../state/VolatileStatus";
 import {
     assertEncoder,
     augment,
@@ -7,7 +25,7 @@ import {
     map,
     nullable,
     optional,
-} from "../../../ai/encoder/Encoder";
+} from "./Encoder";
 import {
     booleanEncoder,
     checkLength,
@@ -16,25 +34,7 @@ import {
     numberEncoder,
     oneHotEncoder,
     zeroEncoder,
-} from "../../../ai/encoder/helpers";
-import * as dex from "../dex";
-import {ReadonlyBattleState} from "../state/BattleState";
-import {ReadonlyHp} from "../state/Hp";
-import {ReadonlyMajorStatusCounter} from "../state/MajorStatusCounter";
-import {ReadonlyMove} from "../state/Move";
-import {Moveset, ReadonlyMoveset} from "../state/Moveset";
-import {ReadonlyMultiTempStatus} from "../state/MultiTempStatus";
-import {ReadonlyPokemon} from "../state/Pokemon";
-import {ReadonlyRoomStatus} from "../state/RoomStatus";
-import {ReadonlyStatRange, StatRange} from "../state/StatRange";
-import {ReadonlyStatTable} from "../state/StatTable";
-import {ReadonlyTeam, Team} from "../state/Team";
-import {ReadonlyTeamStatus} from "../state/TeamStatus";
-import {ReadonlyTempStatus} from "../state/TempStatus";
-import {
-    ReadonlyMoveStatus,
-    ReadonlyVolatileStatus,
-} from "../state/VolatileStatus";
+} from "./helpers";
 
 /** Encoder for an unknown key with a set of possible values. */
 export function unknownKeyEncoder(

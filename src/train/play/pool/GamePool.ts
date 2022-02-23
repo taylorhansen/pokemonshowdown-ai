@@ -1,5 +1,4 @@
 import {resolve} from "path";
-import {formats} from "../../../psbot/handlers/battle";
 import {AdvantageConfig} from "../../learn";
 import {ModelWorker} from "../../model/worker";
 import {ThreadPool} from "../../pool";
@@ -9,8 +8,6 @@ import {GameWorker} from "./worker/GameWorker";
 
 /** Config for starting a game. */
 export interface GameConfig {
-    /** Game format type. */
-    readonly format: formats.FormatType;
     /**
      * Maximum amount of turns until the game is considered a tie. Games can go
      * on forever if this is not set and both agents only decide to switch.
