@@ -1,4 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
+import {encodedStateToTensors} from "../../psbot/handlers/battle/ai/networkAgent";
 import {AugmentedExperience} from "../play/experience/AugmentedExperience";
 import {AExpDecoderPool} from "../tfrecord/decoder";
 
@@ -11,6 +12,8 @@ export type TensorAExp = {
         ? tf.Scalar
         : AugmentedExperience[T] extends Float32Array
         ? tf.Tensor1D
+        : AugmentedExperience[T] extends Float32Array[]
+        ? {[index: number]: tf.Tensor}
         : never;
 };
 
@@ -25,15 +28,19 @@ export type BatchedAExp = {
         ? tf.Tensor1D
         : AugmentedExperience[T] extends Float32Array
         ? tf.Tensor2D
+        : AugmentedExperience[T] extends Float32Array[]
+        ? {[index: number]: tf.Tensor}
         : never;
 };
 
-/** Converts AugmentedExperience fields to tensors. */
+/** Converts AugmentedExperience fields to tensors suitable for batching. */
 function aexpToTensor(aexp: AugmentedExperience): TensorAExp {
     return {
         probs: tf.tensor1d(aexp.probs, "float32"),
         value: tf.scalar(aexp.value, "float32"),
-        state: tf.tensor1d(aexp.state, "float32"),
+        // Convert array into an object with integer keys in order to prevent
+        // the array itself from being batched, just the contained tensors.
+        state: {...encodedStateToTensors(aexp.state)},
         action: tf.scalar(aexp.action, "int32"),
         returns: tf.scalar(aexp.returns, "float32"),
         advantage: tf.scalar(aexp.advantage, "float32"),

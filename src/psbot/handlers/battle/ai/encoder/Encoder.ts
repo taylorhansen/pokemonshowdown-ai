@@ -1,16 +1,20 @@
 /** @file Encoder combinators. */
 import {checkLength} from "./helpers";
 
-/** Describes a state object encoder. */
+/**
+ * Describes a state object encoder that outputs into an array.
+ *
+ * @template TState State object type.
+ */
 export interface Encoder<TState> {
     /**
      * Encoder function.
      *
-     * @param arr Array to fill with the encoded data. Length should be at least
-     * {@link size}.
+     * @param data Array to fill with the encoded data. Length should be at
+     * least {@link size}.
      * @param args Data to encode.
      */
-    readonly encode: (arr: Float32Array, args: TState) => void;
+    readonly encode: (data: Float32Array, args: TState) => void;
     /** Minimum size of data required for `#encode()` array. */
     readonly size: number;
 }

@@ -16,7 +16,7 @@ type PredictRequestBase = PortRequestBase<"predict">;
 /** Prediction request message format. */
 export interface PredictMessage extends PredictRequestBase {
     /** State data. */
-    state: Float32Array;
+    state: Float32Array[];
 }
 
 /** Prediction returned from the model. */

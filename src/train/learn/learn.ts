@@ -204,9 +204,17 @@ export async function learn({
             )
                 // Training loop.
                 .mapAsync(async function (batch: BatchedAExp) {
+                    // Convert object with integer keys back into array due to
+                    // dataset batching process.
+                    const batchState: tf.Tensor[] = [];
+                    for (const key of Object.keys(batch.state)) {
+                        const index = Number(key);
+                        batchState[index] = batch.state[index];
+                    }
+
                     const batchLogs: {[name: string]: tf.Scalar | number} = {
                         batch: batchId,
-                        size: batch.state.shape[0],
+                        size: batchState[0].shape[0],
                     };
                     await callbacks.onBatchBegin(batchId, batchLogs);
                     // Create loss function that records the metrics data.
@@ -216,7 +224,7 @@ export async function learn({
                     function f(): tf.Scalar {
                         const result = loss({
                             model,
-                            state: batch.state,
+                            state: batchState,
                             oldProbs: batch.probs,
                             action: batch.action,
                             returns: batch.returns,

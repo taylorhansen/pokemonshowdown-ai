@@ -86,6 +86,8 @@ export function fillEncoder(value: number, size: number): Encoder<unknown> {
 /**
  * Encoder that fills an array with zeros.
  *
+ * Equivalent to {@link fillEncoder}(0, size).
+ *
  * @param size Amount of zeros to fill.
  */
 export function zeroEncoder(size: number): Encoder<unknown> {

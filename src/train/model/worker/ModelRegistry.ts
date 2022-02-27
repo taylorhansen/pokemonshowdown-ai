@@ -4,12 +4,11 @@ import {MessageChannel, MessagePort, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
-import {battleStateEncoder} from "../../../psbot/handlers/battle/ai/encoder/encoders";
-import {verifyModel} from "../../../psbot/handlers/battle/ai/networkAgent";
 import {importTfn} from "../../../tfn";
 import {ensureDir} from "../../../util/paths/ensureDir";
 import {learn, LearnConfig} from "../../learn";
 import {RawPortResultError} from "../../port/PortProtocol";
+import {modelInputShapes, verifyModel} from "../shapes";
 import {
     PredictMessage,
     PredictResult,
@@ -28,7 +27,7 @@ const tfn = importTfn(gpu);
 /** State+callback entry for a {@link ModelRegistry}'s batch queue. */
 interface BatchEntry {
     /** Encoded battle state. */
-    readonly state: Float32Array;
+    readonly state: Float32Array[];
     /** Callback after getting the prediction for the given state. */
     readonly res: (result: PredictResult) => void;
 }
@@ -74,7 +73,7 @@ export class ModelRegistry {
         private readonly batchOptions: BatchPredictOptions,
     ) {
         try {
-            verifyModel(model, battleStateEncoder.size);
+            verifyModel(model);
         } catch (e) {
             // Cleanup model so it doesn't cause a memory leak.
             model.dispose();
@@ -90,19 +89,7 @@ export class ModelRegistry {
         // Setup batch event listener.
         this.batchEvents.on(batchExecute, () => void this.executeBatch());
 
-        // Warmup the model using fake data.
-        // Only useful with gpu backend.
-        if (gpu) {
-            const fakeInput = tf.zeros([1, battleStateEncoder.size]);
-            const fakeResult = model.predict(fakeInput) as tf.Tensor[];
-            this.inUse = Promise.all(
-                fakeResult.map(
-                    async r => await r.data().finally(() => r.dispose()),
-                ),
-            ).finally(() => fakeInput.dispose());
-        } else {
-            this.inUse = Promise.resolve();
-        }
+        this.inUse = Promise.resolve();
     }
 
     /** Saves the neural network to the given url. */
@@ -269,10 +256,22 @@ export class ModelRegistry {
 
         // Batch and execute model.
 
+        // Here the batchStates array is a 2D array of encoded Float32Arrays of
+        // shape [batch, num_arrays].
+        // We then need to transpose it to [num_arrays, batch] in order to stack
+        // the arrays into batch tensors for the neural network.
+        const batchStates = batch.map(({state}) => state);
+        const batchStatesT = batchStates[0].map((_, colIndex) =>
+            batchStates.map(row => row[colIndex]),
+        );
+
         const [batchedProbs, batchedValues] = tf.tidy(() => {
-            const batchStates = tf.stack(batch.map(req => req.state));
+            const batchInput = modelInputShapes.map((shape, i) =>
+                tf.stack(batchStatesT[i]).reshape([batch.length, ...shape]),
+            );
+
             const [batchProbs, batchValues] = this.model.predictOnBatch(
-                batchStates,
+                batchInput,
             ) as tf.Tensor[];
             return [
                 batchProbs

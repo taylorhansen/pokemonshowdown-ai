@@ -1,7 +1,10 @@
+import * as util from "util";
 import {MessagePort} from "worker_threads";
-import {alloc} from "../../../buf";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
-import {battleStateEncoder} from "../../../psbot/handlers/battle/ai/encoder/encoders";
+import {
+    allocEncodedState,
+    encodeState,
+} from "../../../psbot/handlers/battle/ai/encoder";
 import {
     policyAgent,
     PolicyType,
@@ -12,6 +15,7 @@ import {
     ExperienceAgentData,
 } from "../../play/experience/Experience";
 import {AsyncPort, ProtocolResultRaw} from "../../port/AsyncPort";
+import {modelInputNames} from "../shapes";
 import {
     ModelPortProtocol,
     PredictMessage,
@@ -76,26 +80,14 @@ export class ModelPort {
         let data: ExperienceAgentData | null = null;
 
         const innerAgent = policyAgent(async state => {
-            const arr = alloc(battleStateEncoder.size, true /*shared*/);
-            battleStateEncoder.encode(arr, state);
-            let i = ModelPort.verifyInput(arr);
-            if (i >= 0) {
-                throw new Error(
-                    `Model input contains an invalid value '${arr[i]}' at ` +
-                        `index ${i}\nState:\n${state.toString()}`,
-                );
-            }
+            const stateData = allocEncodedState("shared");
+            encodeState(stateData, state);
+            ModelPort.verifyInput(stateData);
 
-            const result = await this.predict(arr, true /*shared*/);
-            i = ModelPort.verifyOutput(result.probs);
-            if (i >= 0) {
-                throw new Error(
-                    "Model output contains an invalid value " +
-                        `'${intToChoice[i]}' at index ${i}`,
-                );
-            }
+            const result = await this.predict(stateData);
+            ModelPort.verifyOutput(result.probs, result.value);
 
-            data = {...result, state: arr};
+            data = {...result, state: stateData};
             return result.probs;
         }, policy);
 
@@ -115,60 +107,69 @@ export class ModelPort {
     /**
      * Makes sure that the input doesn't contain invalid values, i.e. `NaN`s or
      * values outside the range `[-1, 1]`.
-     *
-     * @param arr Array input.
-     * @returns The index of an invalid value, or `-1` if none found.
      */
-    private static verifyInput(arr: Float32Array): number {
-        for (let i = 0; i < arr.length; ++i) {
-            if (isNaN(arr[i])) {
-                return i;
-            }
-            if (Math.abs(arr[i]) > 1) {
-                return i;
+    private static verifyInput(data: Float32Array[]): void {
+        for (let i = 0; i < data.length; ++i) {
+            const arr = data[i];
+            for (let j = 0; j < arr.length; ++j) {
+                const value = arr[j];
+                if (isNaN(value)) {
+                    throw new Error(
+                        `Model input ${i} (${modelInputNames[i]}) contains ` +
+                            `NaN at index ${j}`,
+                    );
+                }
+                if (value < -1 || value > 1) {
+                    throw new Error(
+                        `Model input ${i} (${modelInputNames[i]}) contains ` +
+                            `an out-of-range value ${value} at index ${j}`,
+                    );
+                }
             }
         }
-        return -1;
     }
 
     /**
      * Makes sure that the output doesn't contain invalid values, i.e. `NaN`s or
-     * highly concentrated softmax outputs which tend to mess with
-     * `policyAgent`'s weighted shuffle algorithm.
-     *
-     * @param arr Array input.
-     * @returns The index of an invalid value, or `-1` if none found.
+     * highly concentrated softmax outputs which tend to mess with the
+     * {@link policyAgent}'s weighted shuffle algorithm.
      */
-    private static verifyOutput(arr: Float32Array): number {
-        for (let i = 0; i < arr.length; ++i) {
-            if (isNaN(arr[i])) {
-                return i;
+    private static verifyOutput(action: Float32Array, value: number): void {
+        for (let i = 0; i < action.length; ++i) {
+            if (isNaN(action[i])) {
+                throw new Error(
+                    `Model output contains NaN for action ${i} ` +
+                        `(${intToChoice[i]}) at index ${i}`,
+                );
             }
-            if (arr[i] < 1e-4) {
-                return i;
+            if (action[i] < 1e-4) {
+                throw new Error(
+                    `Model output contains an invalid value ${action[i]} for ` +
+                        `action ${i} (${intToChoice[i]}) at index ${i}`,
+                );
             }
         }
-        return -1;
+        if (isNaN(value)) {
+            throw new Error("Model output contains NaN for value");
+        }
     }
 
     /**
      * Requests a prediction from the neural network.
      *
      * @param state State data.
-     * @param shared Whether the array uses a SharedArrayBuffer.
      */
-    public async predict(
-        state: Float32Array,
-        shared = false,
-    ): Promise<PredictResult> {
+    private async predict(state: Float32Array[]): Promise<PredictResult> {
         const msg: PredictMessage = {
             type: "predict",
             rid: this.asyncPort.nextRid(),
             state,
         };
-        // SharedArrayBuffers can't be in the transfer list since they're
+        // Note: SharedArrayBuffers can't be in the transfer list since they're
         // already accessible from both threads.
-        const transferList = shared ? [] : [state.buffer];
+        const transferList = state.flatMap(arr =>
+            util.types.isSharedArrayBuffer(arr.buffer) ? [] : [arr.buffer],
+        );
 
         return await new Promise((res, rej) =>
             this.asyncPort.postMessage(msg, transferList, result =>

@@ -2,6 +2,7 @@ import {Transform, TransformCallback} from "stream";
 import Long from "long";
 import * as tfrecord from "tfrecord";
 import {maskedCrc32c} from "tfrecord/lib/crc32c";
+import {modelInputNames} from "../../model/shapes";
 import {AugmentedExperience} from "../../play/experience";
 import {footerBytes, headerBytes, lengthBytes} from "../helpers";
 
@@ -343,7 +344,10 @@ export class AExpDecoder extends Transform {
             advantage: AExpDecoder.getFloat(featureMap, "advantage"),
             probs: AExpDecoder.getFloats(featureMap, "probs"),
             returns: AExpDecoder.getFloat(featureMap, "returns"),
-            state: AExpDecoder.getFloats(featureMap, "state"),
+            // TODO: Use TypedArrays to prevent copying via binaryList.
+            state: Array.from(modelInputNames, (_, i) =>
+                AExpDecoder.getFloats(featureMap, `state/${i}`),
+            ),
             value: AExpDecoder.getFloat(featureMap, "value"),
         };
     }

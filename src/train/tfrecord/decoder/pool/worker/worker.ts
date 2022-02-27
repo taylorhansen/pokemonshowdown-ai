@@ -96,7 +96,9 @@ parentPort.on("message", (msg: DecoderMessage) => {
             };
             parentPort!.postMessage(
                 result,
-                aexp ? [aexp.probs.buffer, aexp.state.buffer] : undefined,
+                aexp
+                    ? [aexp.probs.buffer, ...aexp.state.map(a => a.buffer)]
+                    : undefined,
             );
         })
         .catch((err: Error) => {

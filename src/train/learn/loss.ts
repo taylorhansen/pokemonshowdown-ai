@@ -6,8 +6,8 @@ import {AlgorithmArgs} from "./learn";
 export interface LossArgs {
     /** Model that will be trained. */
     readonly model: tf.LayersModel;
-    /** States for each sample. */
-    readonly state: tf.Tensor;
+    /** State inputs, batched for each sample. */
+    readonly state: tf.Tensor[];
     /** Baseline probabilities. */
     readonly oldProbs: tf.Tensor;
     /** Choice ids for each sample. Must be an int32 tensor. */

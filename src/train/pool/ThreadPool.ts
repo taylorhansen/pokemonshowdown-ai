@@ -81,6 +81,9 @@ export class ThreadPool<
                 `Expected positive numThreads but got ${numThreads}`,
             );
         }
+        // Note: Heavy takePort() usage can cause listeners to build up, but
+        // they should always stay under the number of threads.
+        this.workerEvents.setMaxListeners(this.numThreads);
 
         for (let i = 0; i < this.numThreads; ++i) {
             void (async () => await workerData?.())().then(data =>
@@ -94,6 +97,9 @@ export class ThreadPool<
      *
      * After the port is no longer needed, {@link givePort} must be called with
      * the same port.
+     *
+     * Heavy usage can cause listeners to build up, so try to limit the number
+     * of outstanding calls to this method by the {@link numThreads}.
      */
     public async takePort(): Promise<TWorker> {
         // Wait until a port is open.

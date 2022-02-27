@@ -62,6 +62,9 @@ export class AExpDecoderPool {
                 this.emit(readAExp);
             },
         });
+        // Note: Backpressure can cause listeners to build up, but they should
+        // always stay under the number of threads.
+        aexpInput.setMaxListeners(this.numThreads);
 
         // Setup path generator.
         // This lets each thread take the next unprocessed file without multiple

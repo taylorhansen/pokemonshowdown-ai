@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import "mocha";
-import {allocUnsafe} from "../../../../../buf";
+import {alloc} from "../../../../../util/buf";
 import * as dex from "../../dex";
-import {BattleState} from "../../state/BattleState";
 import {Hp} from "../../state/Hp";
 import {MajorStatusCounter} from "../../state/MajorStatusCounter";
 import {Move} from "../../state/Move";
@@ -12,21 +11,12 @@ import {Pokemon} from "../../state/Pokemon";
 import {RoomStatus} from "../../state/RoomStatus";
 import {StatRange} from "../../state/StatRange";
 import {StatTable} from "../../state/StatTable";
-import {SwitchOptions, Team} from "../../state/Team";
 import {TeamStatus} from "../../state/TeamStatus";
 import {TempStatus} from "../../state/TempStatus";
 import {VolatileStatus} from "../../state/VolatileStatus";
 import {setAllVolatiles} from "../../state/VolatileStatus.test";
 import {Encoder} from "./Encoder";
 import * as encoders from "./encoders";
-
-const switchInOptions: SwitchOptions = {
-    species: "magikarp",
-    level: 100,
-    gender: "M",
-    hp: 200,
-    hpMax: 200,
-};
 
 /**
  * Allocates an array filled with `NaN`. This is used to test that encoders
@@ -35,7 +25,7 @@ const switchInOptions: SwitchOptions = {
  * @param size Array size.
  */
 function allocNaN(size: number): Float32Array {
-    return allocUnsafe(size).fill(NaN);
+    return alloc(size, "unsafe").fill(NaN);
 }
 
 export const test = () =>
@@ -233,6 +223,147 @@ export const test = () =>
             },
         );
 
+        testEncoder("RoomStatus", {
+            name: "Unset",
+            encoder: encoders.roomStatusEncoder,
+            init: () => new RoomStatus(),
+        });
+
+        testEncoder("TeamStatus", {
+            name: "Unset",
+            encoder: encoders.teamStatusEncoder,
+            init: () => new TeamStatus(),
+        });
+
+        testEncoder(
+            "Hp",
+            {
+                name: "Fully Initialized",
+                encoder: encoders.hpEncoder,
+                init() {
+                    const hp = new Hp();
+                    hp.set(50, 100);
+                    return hp;
+                },
+                values: new Float32Array([0.5]),
+            },
+            {
+                name: "Uninitialized",
+                encoder: encoders.hpEncoder,
+                init: () => new Hp(),
+                values: new Float32Array([0]),
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.unknownHpEncoder,
+                init: () => null,
+                values: new Float32Array([1]),
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.emptyHpEncoder,
+                init: () => undefined,
+                values: new Float32Array([-1]),
+            },
+        );
+
+        testEncoder(
+            "MajorStatusCounter",
+            {
+                name: "Fully Initialized",
+                encoder: encoders.definedMajorStatusCounterEncoder,
+                init: () => {
+                    const msc = new MajorStatusCounter();
+                    msc.afflict("slp");
+                    return msc;
+                },
+            },
+            {
+                name: "No status",
+                encoder: encoders.definedMajorStatusCounterEncoder,
+                init: () => new MajorStatusCounter(),
+                values: new Float32Array(dex.majorStatusKeys.length).fill(0),
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.unknownMajorStatusCounterEncoder,
+                init: () => null,
+                values: new Float32Array(dex.majorStatusKeys.length).fill(0),
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.emptyMajorStatusCounterEncoder,
+                init: () => undefined,
+                values: new Float32Array(dex.majorStatusKeys.length).fill(0),
+            },
+        );
+
+        testEncoder(
+            "basicEncoder",
+            {
+                name: "Fully Initialized",
+                encoder: encoders.definedBasicEncoder,
+                init: () => {
+                    const mon = new Pokemon("magikarp", 100, ["splash"], "F");
+                    mon.happiness = 128;
+                    mon.hp.set(50, 50);
+                    return mon;
+                },
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.unknownBasicEncoder,
+                init: () => null,
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.emptyBasicEncoder,
+                init: () => undefined,
+            },
+        );
+
+        testEncoder(
+            "VolatileStatus",
+            {
+                name: "Fully Initialized",
+                encoder: encoders.volatileStatusEncoder,
+                init() {
+                    const vs = new VolatileStatus();
+                    vs.species = "magikarp";
+                    vs.stats = StatTable.base(dex.pokemon["magikarp"], 100);
+                    return vs;
+                },
+            },
+            {
+                name: "Everything Set",
+                encoder: encoders.volatileStatusEncoder,
+                init() {
+                    const v = new VolatileStatus();
+                    setAllVolatiles(v);
+                    return v;
+                },
+            },
+        );
+
+        testEncoder(
+            "speciesEncoder",
+            {
+                name: "Species",
+                encoder: encoders.definedSpeciesEncoder,
+                init: () => "magikarp",
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.unknownSpeciesEncoder,
+                init: () => null,
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.emptySpeciesEncoder,
+                init: () => undefined,
+            },
+        );
+
         testEncoder(
             "typesEncoder",
             {
@@ -264,12 +395,12 @@ export const test = () =>
             "StatRange",
             {
                 name: "Fully Initialized",
-                encoder: encoders.statRangeEncoder,
+                encoder: encoders.definedStatRangeEncoder,
                 init: () => new StatRange(100, 100, false /*hp*/),
             },
             {
                 name: "Fully Initialized + HP",
-                encoder: encoders.statRangeEncoder,
+                encoder: encoders.definedStatRangeEncoder,
                 init: () => new StatRange(100, 100, true /*hp*/),
             },
             {
@@ -290,7 +421,7 @@ export const test = () =>
             "StatTable",
             {
                 name: "Fully Initialized",
-                encoder: encoders.statTableEncoder,
+                encoder: encoders.definedStatTableEncoder,
                 init: () => StatTable.base(dex.pokemon["magikarp"], 100),
             },
             {
@@ -306,11 +437,52 @@ export const test = () =>
         );
 
         testEncoder(
+            "abilityEncoder",
+            {
+                name: "Ability",
+                encoder: encoders.definedAbilityEncoder,
+                init: () => ["sturdy", "illuminate"],
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.unknownAbilityEncoder,
+                init: () => null,
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.emptyAbilityEncoder,
+                init: () => undefined,
+            },
+        );
+
+        testEncoder(
+            "itemEncoder",
+            {
+                name: "Item",
+                encoder: encoders.definedItemEncoder,
+                init: () => "leftovers",
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.unknownItemEncoder,
+                init: () => null,
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.emptyItemEncoder,
+                init: () => undefined,
+            },
+        );
+
+        testEncoder(
             "Move",
             {
                 name: "Fully Initialized",
-                encoder: encoders.moveEncoder,
-                init: () => new Move("tackle"),
+                encoder: encoders.definedMoveEncoder,
+                init: () => ({
+                    move: new Move("tackle"),
+                    volatile: new VolatileStatus(),
+                }),
             },
             {
                 name: "Unrevealed",
@@ -336,26 +508,36 @@ export const test = () =>
             "Moveset",
             {
                 name: "Fully Initialized",
-                encoder: encoders.movesetEncoder,
-                init: () =>
-                    new Moveset(["splash", "tackle", "hiddenpower", "return"]),
+                encoder: encoders.definedMovesetEncoder,
+                init: () => ({
+                    moveset: new Moveset([
+                        "splash",
+                        "tackle",
+                        "hiddenpower",
+                        "return",
+                    ]),
+                    volatile: new VolatileStatus(),
+                }),
             },
             {
                 name: "Partially Initialized",
-                encoder: encoders.movesetEncoder,
+                encoder: encoders.definedMovesetEncoder,
                 init() {
                     const moveset = new Moveset(
                         ["splash", "tackle", "metronome", "protect"],
                         3,
                     );
                     moveset.reveal("splash");
-                    return moveset;
+                    return {moveset, volatile: new VolatileStatus()};
                 },
             },
             {
                 name: "Uninitialized",
-                encoder: encoders.movesetEncoder,
-                init: () => new Moveset(),
+                encoder: encoders.definedMovesetEncoder,
+                init: () => ({
+                    moveset: new Moveset(),
+                    volatile: new VolatileStatus(),
+                }),
             },
             {
                 name: "Unrevealed",
@@ -368,139 +550,4 @@ export const test = () =>
                 init: () => undefined,
             },
         );
-
-        testEncoder(
-            "Hp",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.hpEncoder,
-                init() {
-                    const hp = new Hp();
-                    hp.set(50, 100);
-                    return {hp, ours: true};
-                },
-                values: new Float32Array([0.5, 100 / encoders.maxStatHp]),
-            },
-            {
-                name: "Uninitialized",
-                encoder: encoders.hpEncoder,
-                init: () => ({hp: new Hp(), ours: true}),
-                values: new Float32Array([0, 0]),
-            },
-            {
-                name: "Unrevealed",
-                encoder: encoders.unknownHpEncoder,
-                init: () => null,
-                values: new Float32Array([1, 0.5]),
-            },
-            {
-                name: "Nonexistent",
-                encoder: encoders.emptyHpEncoder,
-                init: () => undefined,
-                values: new Float32Array([-1, -1]),
-            },
-        );
-
-        testEncoder(
-            "MajorStatusCounter",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.majorStatusCounterEncoder,
-                init: () => new MajorStatusCounter(),
-            },
-            {
-                name: "Unrevealed",
-                encoder: encoders.unknownMajorStatusCounterEncoder,
-                init: () => null,
-            },
-            {
-                name: "Nonexistent",
-                encoder: encoders.emptyMajorStatusCounterEncoder,
-                init: () => undefined,
-            },
-        );
-
-        testEncoder(
-            "VolatileStatus",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.volatileStatusEncoder,
-                init() {
-                    const vs = new VolatileStatus();
-                    vs.species = "magikarp";
-                    vs.stats = StatTable.base(dex.pokemon["magikarp"], 100);
-                    return vs;
-                },
-            },
-            {
-                name: "Everything Set",
-                encoder: encoders.volatileStatusEncoder,
-                init() {
-                    const v = new VolatileStatus();
-                    setAllVolatiles(v);
-                    return v;
-                },
-            },
-        );
-
-        testEncoder(
-            "Pokemon",
-            {
-                name: "Active",
-                encoder: encoders.activePokemonEncoder,
-                init() {
-                    const mon = new Pokemon("magikarp");
-                    mon.switchInto();
-                    return {mon, ours: true};
-                },
-            },
-            {
-                name: "Inactive",
-                encoder: encoders.inactivePokemonEncoder,
-                init: () => ({mon: new Pokemon("magikarp"), ours: true}),
-            },
-            {
-                name: "Unrevealed",
-                encoder: encoders.unknownPokemonEncoder,
-                init: () => null,
-            },
-            {
-                name: "Nonexistent",
-                encoder: encoders.emptyPokemonEncoder,
-                init: () => undefined,
-            },
-        );
-
-        testEncoder("TeamStatus", {
-            encoder: encoders.teamStatusEncoder,
-            init: () => new TeamStatus(),
-        });
-
-        testEncoder("Team", {
-            encoder: encoders.teamEncoder,
-            init() {
-                const team = new Team("p1");
-                team.size = 2;
-                team.switchIn(switchInOptions);
-                return {team, ours: true};
-            },
-        });
-
-        testEncoder("RoomStatus", {
-            encoder: encoders.roomStatusEncoder,
-            init: () => new RoomStatus(),
-        });
-
-        testEncoder("BattleState", {
-            encoder: encoders.battleStateEncoder,
-            init() {
-                const state = new BattleState("username");
-                state.ourSide = "p2";
-                state.teams.p1!.size = 1;
-                state.teams.p1!.switchIn(switchInOptions);
-                state.teams.p2!.size = 1;
-                state.teams.p2!.switchIn(switchInOptions);
-                return state;
-            },
-        });
     });

@@ -2,7 +2,7 @@ import {Logger} from "../../../../util/logging/Logger";
 import {BattleAgent} from "../agent/BattleAgent";
 import {Choice, choiceIds, intToChoice} from "../agent/Choice";
 import {ReadonlyBattleState} from "../state";
-import {weightedShuffle} from "./helpers";
+import {weightedShuffle} from "./weightedShuffle";
 
 /**
  * Policy type for a {@link policyAgent}.

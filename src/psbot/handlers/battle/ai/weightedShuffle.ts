@@ -55,7 +55,7 @@ export function weightedShuffle<T>(weights: number[], arr: T[]): void {
  * Searches a sorted array `a` for an insertion index for the given number `n`.
  * If there are any duplicates, the right-most insertion index is chosen.
  */
-export function bisectRight(
+function bisectRight(
     a: readonly number[],
     n: number,
     beg = 0,

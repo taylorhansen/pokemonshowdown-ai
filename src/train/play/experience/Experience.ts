@@ -3,8 +3,8 @@ import {PredictResult} from "../../model/worker/ModelPortProtocol";
 
 /** BattleAgent decision data. */
 export interface ExperienceAgentData extends PredictResult {
-    /** State in which the action was taken. */
-    state: Float32Array;
+    /** State in which the action was taken. Flattened array data. */
+    state: Float32Array[];
 }
 
 /** BattleAgent type that emits partial Experience objects. */

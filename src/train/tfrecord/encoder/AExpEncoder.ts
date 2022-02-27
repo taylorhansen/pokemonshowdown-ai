@@ -93,7 +93,10 @@ export class AExpEncoder extends Transform {
         this.builder.setFloat("advantage", aexp.advantage);
         this.builder.setFloats("probs", Array.from(aexp.probs));
         this.builder.setFloat("returns", aexp.returns);
-        this.builder.setFloats("state", Array.from(aexp.state));
+        for (let i = 0; i < aexp.state.length; ++i) {
+            // TODO: Use TypedArrays to prevent copying via setBinaries.
+            this.builder.setFloats(`state/${i}`, Array.from(aexp.state[i]));
+        }
         this.builder.setFloat("value", aexp.value);
         return this.builder.releaseExample();
     }
