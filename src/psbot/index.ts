@@ -16,6 +16,8 @@ import {Logger} from "../util/logging/Logger";
 import {PsBot} from "./PsBot";
 import * as handlers from "./handlers";
 import {networkAgent} from "./handlers/battle/ai/networkAgent";
+// Make sure custom layers can be deserialized.
+import "../train/model/custom_layers";
 
 // Select native backend.
 importTfn(process.argv[2] === "--gpu" /*use gpu*/);
