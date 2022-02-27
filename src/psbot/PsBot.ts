@@ -283,6 +283,13 @@ export class PsBot {
         args,
         kwArgs,
     }: RoomEvent | HaltEvent): Promise<void> {
+        if (args[0] === "deinit") {
+            // The roomid defaults to lobby if the |deinit event didn't come
+            // from a room.
+            this.rooms.delete(roomid || ("lobby" as Protocol.RoomID));
+            return;
+        }
+
         let handler = this.rooms.get(roomid);
         if (!handler) {
             // First msg when joining a battle room must be an |init|battle
@@ -327,14 +334,9 @@ export class PsBot {
             await handler.handle({args, kwArgs});
         }
 
-        if (args[0] === "deinit") {
-            // The roomid defaults to lobby if the |deinit event didn't come
-            // from a room.
-            this.rooms.delete(roomid || ("lobby" as Protocol.RoomID));
-        }
         // Leave respectfully once the battle ends.
-        // TODO: Move this to BattleHandler?
-        else if (args[0] === "tie" || args[0] === "win") {
+        // TODO: Move this to BattleHandler.
+        if (args[0] === "tie" || args[0] === "win") {
             this.addResponses(roomid, "|gg", "|/leave");
         }
     }
