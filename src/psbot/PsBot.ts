@@ -12,7 +12,7 @@ export interface LoginOptions {
     /** Account password. */
     readonly password?: string;
     /** Server url used for login. */
-    readonly loginServer: string;
+    readonly loginUrl: string;
 }
 
 /**
@@ -125,9 +125,12 @@ export class PsBot {
     }
 
     // TODO: Support reconnect/disconnect.
-    /** Connects to the server and starts handling messages. */
-    public async connect(url: string): Promise<void> {
-        this.client.connect(url);
+    /**
+     * Connects to the server through websocket and starts handling messages.
+     */
+    public async connect(route: string): Promise<void> {
+        // TODO: Use actual url api.
+        this.client.connect(route + "showdown/websocket");
         return await this.connected;
     }
 
@@ -159,12 +162,15 @@ export class PsBot {
         // Get the assertion string used to confirm login.
         let assertion: string;
 
+        // TODO: Use actual url api.
+        const loginServer = options.loginUrl + "~~showdown/action.php";
+
         if (!options.password) {
             // Login without password.
             init.body =
                 `act=getassertion&userid=${options.username}` +
                 `&challstr=${challstr}`;
-            const result = await fetch(options.loginServer, init);
+            const result = await fetch(loginServer, init);
             assertion = await result.text();
 
             if (assertion.startsWith(";")) {
@@ -183,7 +189,7 @@ export class PsBot {
             init.body =
                 `act=login&name=${options.username}` +
                 `&pass=${options.password}&challstr=${challstr}`;
-            const result = await fetch(options.loginServer, init);
+            const result = await fetch(loginServer, init);
             const text = await result.text();
             // Response text returns "]" followed by json.
             const json = JSON.parse(text.substring(1)) as {
@@ -210,7 +216,7 @@ export class PsBot {
     }
 
     /** Sets avatar id. */
-    public setAvatar(avatar: number): void {
+    public setAvatar(avatar: string): void {
         this.addResponses("", `|/avatar ${avatar}`);
     }
 

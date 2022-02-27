@@ -20,7 +20,7 @@
 /npm-debug.log
 
 # private config
-/src/config.ts
+/src/config/config.ts
 
 # tsc build file
 /*.tsbuildinfo

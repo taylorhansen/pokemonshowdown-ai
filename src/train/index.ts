@@ -1,14 +1,11 @@
 /** @file Sets up a training session for the neural network. */
-import * as os from "os";
-import {join} from "path";
+import * as path from "path";
 import {setGracefulCleanup} from "tmp-promise";
-// For some reason eslint doesn't like gitignored source files.
-// eslint-disable-next-line node/no-unpublished-import
-import {latestModelFolder, logPath, modelsFolder} from "../config";
+import {config} from "../config";
 import {Logger} from "../util/logging/Logger";
 import {ensureDir} from "../util/paths/ensureDir";
 import {episode} from "./episode";
-import {BatchPredictOptions, ModelWorker} from "./model/worker";
+import {ModelWorker} from "./model/worker";
 import {Opponent} from "./play";
 
 // Used for debugging.
@@ -19,70 +16,52 @@ Error.stackTraceLimit = Infinity;
 // eslint-disable-next-line no-process-exit
 process.once("SIGINT", () => process.exit(1));
 
-/** Number of training episodes to complete. */
-const numEpisodes = 4;
-/** Max amount of evaluation games against one ancestor. */
-const numEvalGames = 32;
-
 /** Main Logger object. */
 const logger = Logger.stderr.addPrefix("Train: ");
 
-/** Flag for debugging. */
-const singleThreaded = false;
-const numThreads = singleThreaded ? 1 : os.cpus().length;
-
 /** Manages the worker thread for Tensorflow ops. */
-const models = new ModelWorker(process.argv[2] === "--gpu" /*gpu*/);
-/** Options for predict batching. */
-const batchOptions: BatchPredictOptions = {
-    // When running games on multiple threads, the GamePool workers can tend to
-    // "spam" the TF worker with messages, forcing the worker to queue them all
-    // into a batch before the timer has a chance to update.
-    // Waiting for the next "wave" of messages could take several ms, around the
-    // time it would take to execute the currently sitting batch (assuming gpu,
-    // most likely), so it's best to cut it off nearly as soon as the timer
-    // updates.
-    // TODO: Tuning.
-    maxSize: numThreads * 2,
-    timeoutNs: 50000n /*50us*/,
-};
+const models = new ModelWorker(config.tf.gpu);
 
 (async function () {
     // Create or load neural network.
     let model: number;
-    const latestModelUrl = `file://${latestModelFolder}`;
-    const loadUrl = `file://${join(latestModelFolder, "model.json")}`;
+    // TODO: Use url.pathToFileURL() and pass actual URL objects instead.
+    const latestModelUrl = `file://${config.paths.latestModel}`;
+    const loadUrl = `file://${path.join(
+        config.paths.latestModel,
+        "model.json",
+    )}`;
     logger.debug("Loading latest model");
     try {
-        model = await models.load(batchOptions, loadUrl);
+        model = await models.load(config.train.batchPredict, loadUrl);
     } catch (e) {
         logger.error(`Error opening model: ${e}`);
         logger.debug("Creating default model instead");
-        model = await models.load(batchOptions);
+        model = await models.load(config.train.batchPredict);
 
         logger.debug("Saving");
-        await ensureDir(latestModelFolder);
+        await ensureDir(config.paths.latestModel);
         await models.save(model, latestModelUrl);
     }
 
     // Save a copy of the original model for evaluating the trained model later.
     logger.debug("Saving copy of original for reference");
-    const originalModel = await models.load(batchOptions, loadUrl);
-    const originalModelFolder = join(modelsFolder, "original");
+    const originalModel = await models.load(config.train.batchPredict, loadUrl);
+    const originalModelFolder = path.join(config.paths.models, "original");
     await models.save(originalModel, `file://${originalModelFolder}`);
 
     const evalOpponents: Opponent[] = [
         {
             name: "original",
             agentConfig: {model: originalModel, exp: false},
-            numGames: numEvalGames,
+            numGames: config.train.eval.numGames,
         },
     ];
 
     // Train network.
-    for (let i = 0; i < numEpisodes; ++i) {
+    for (let i = 0; i < config.train.numEpisodes; ++i) {
         const episodeLog = logger.addPrefix(
-            `Episode(${i + 1}/${numEpisodes}): `,
+            `Episode(${i + 1}/${config.train.numEpisodes}): `,
         );
 
         // TODO: Reference models by file urls to conserve memory.
@@ -93,12 +72,13 @@ const batchOptions: BatchPredictOptions = {
                 {
                     name: "self",
                     agentConfig: {model, exp: true},
-                    numGames: 128,
+                    numGames: config.train.rollout.numGames,
                 },
             ],
             evalOpponents,
-            numThreads,
-            maxTurns: 128,
+            numThreads: config.train.game.numThreads,
+            maxTurns: config.train.game.maxTurns,
+            // TODO: Move algorithm to config.
             algorithm: {
                 type: "ppo",
                 variant: "clipped",
@@ -112,29 +92,32 @@ const batchOptions: BatchPredictOptions = {
                 valueCoeff: 0.55,
                 entropyCoeff: 0.1,
             },
-            epochs: 8,
-            numDecoderThreads: Math.ceil(numThreads / 2),
-            batchSize: 16,
-            shufflePrefetch: 16 * 128,
+            epochs: config.train.learn.epochs,
+            numDecoderThreads: config.train.learn.numDecoderThreads,
+            batchSize: config.train.learn.batchSize,
+            shufflePrefetch: config.train.learn.shufflePrefetch,
             logger: episodeLog,
-            logPath: join(logPath, `episode-${i + 1}`),
+            logPath: path.join(config.paths.logs, `episode-${i + 1}`),
         });
 
         // Save the model for evaluation at the end of the next episode.
         episodeLog.debug("Saving");
         const episodeFolderName = `episode-${i + 1}`;
-        const episodeModelFolder = join(modelsFolder, episodeFolderName);
+        const episodeModelFolder = path.join(
+            config.paths.models,
+            episodeFolderName,
+        );
         await models.save(model, `file://${episodeModelFolder}`);
 
         // Re-load it so we have a copy.
         const modelCopy = await models.load(
-            batchOptions,
-            `file://${join(episodeModelFolder, "model.json")}`,
+            config.train.batchPredict,
+            `file://${path.join(episodeModelFolder, "model.json")}`,
         );
         evalOpponents.push({
             name: episodeFolderName,
             agentConfig: {model: modelCopy, exp: false},
-            numGames: numEvalGames,
+            numGames: config.train.eval.numGames,
         });
     }
 

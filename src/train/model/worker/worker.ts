@@ -2,11 +2,11 @@
 import {serialize} from "v8";
 import {parentPort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
+import {BatchPredictConfig} from "../../../config/types";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
 import {createModel} from "../model";
 import {
-    BatchPredictOptions,
     ModelLearnResult,
     ModelLoadResult,
     ModelMessage,
@@ -43,9 +43,9 @@ function getRegistry(uid: number): ModelRegistry {
 function load(
     rid: number,
     model: tf.LayersModel,
-    batchOptions: BatchPredictOptions,
+    batchConfig: BatchPredictConfig,
 ) {
-    models.set(uidCounter, new ModelRegistry(model, batchOptions));
+    models.set(uidCounter, new ModelRegistry(model, batchConfig));
     const result: ModelLoadResult = {
         type: "load",
         rid,

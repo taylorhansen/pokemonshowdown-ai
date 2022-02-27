@@ -1,5 +1,6 @@
 /** @file Defines the protocol typings for ModelWorkers. */
 import {MessagePort} from "worker_threads";
+import {BatchPredictConfig} from "../../../config/types";
 import {LearnConfig} from "../../learn";
 import {PortMessageBase, PortResultBase} from "../../port/PortProtocol";
 import {WorkerProtocol} from "../../port/WorkerProtocol";
@@ -29,20 +30,9 @@ type ModelMessageBase<T extends ModelRequestType> = PortMessageBase<T>;
 /** Loads a neural network and registers it for the worker. */
 export interface ModelLoadMessage
     extends ModelMessageBase<"load">,
-        BatchPredictOptions {
+        BatchPredictConfig {
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
-}
-
-/** Options for batching predict requests. */
-export interface BatchPredictOptions {
-    /** Maximum size of a batch. */
-    readonly maxSize: number;
-    /**
-     * Max amount of time to wait until the next batch should be processed, in
-     * nanoseconds.
-     */
-    readonly timeoutNs: bigint;
 }
 
 /** Saves a neural network to a given URL. */

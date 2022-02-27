@@ -3,9 +3,10 @@ import {serialize} from "v8";
 import {MessageChannel, MessagePort, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
+import {BatchPredictConfig} from "../../../config/types";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
-import {importTfn} from "../../../tfn";
 import {ensureDir} from "../../../util/paths/ensureDir";
+import {importTfn} from "../../../util/tfn";
 import {learn, LearnConfig} from "../../learn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {modelInputShapes, verifyModel} from "../shapes";
@@ -14,11 +15,7 @@ import {
     PredictResult,
     PredictWorkerResult,
 } from "./ModelPortProtocol";
-import {
-    ModelWorkerData,
-    BatchPredictOptions,
-    ModelLearnData,
-} from "./ModelProtocol";
+import {ModelWorkerData, ModelLearnData} from "./ModelProtocol";
 import {setTimeoutNs} from "./nanosecond";
 
 const {gpu} = workerData as ModelWorkerData;
@@ -70,7 +67,7 @@ export class ModelRegistry {
      */
     public constructor(
         model: tf.LayersModel,
-        private readonly batchOptions: BatchPredictOptions,
+        private readonly batchConfig: BatchPredictConfig,
     ) {
         try {
             verifyModel(model);
@@ -80,11 +77,6 @@ export class ModelRegistry {
             throw e;
         }
         this.model = model;
-
-        this.batchOptions = {
-            ...batchOptions,
-            timeoutNs: batchOptions.timeoutNs,
-        };
 
         // Setup batch event listener.
         this.batchEvents.on(batchExecute, () => void this.executeBatch());
@@ -204,7 +196,7 @@ export class ModelRegistry {
      * executed.
      */
     private checkPredictBatch(): void {
-        if (this.nextBatch.length >= this.batchOptions.maxSize) {
+        if (this.nextBatch.length >= this.batchConfig.maxSize) {
             // Full batch.
             this.batchEvents.emit(batchExecute);
             return;
@@ -221,7 +213,7 @@ export class ModelRegistry {
             res =>
                 (this.cancelTimer = setTimeoutNs(
                     res,
-                    this.batchOptions.timeoutNs,
+                    this.batchConfig.timeoutNs,
                 )),
         )
             .then(canceled => void (didTimeout = !canceled))

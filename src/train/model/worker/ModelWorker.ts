@@ -1,8 +1,8 @@
 import {resolve} from "path";
 import {MessagePort, Worker} from "worker_threads";
+import {BatchPredictConfig} from "../../../config/types";
 import {WorkerPort} from "../../port/WorkerPort";
 import {
-    BatchPredictOptions,
     ModelLearnConfig,
     ModelLearnData,
     ModelLearnMessage,
@@ -45,18 +45,18 @@ export class ModelWorker {
     /**
      * Loads and registers a neural network.
      *
-     * @param batchOptions Options for batching predict requests.
+     * @param batchConfig Options for batching predict requests.
      * @param url URL to load from. If omitted, creates a default model.
      * @returns A unique identifier for further requests involving this network.
      */
     public async load(
-        batchOptions: BatchPredictOptions,
+        batchConfig: BatchPredictConfig,
         url?: string,
     ): Promise<number> {
         const msg: ModelLoadMessage = {
             type: "load",
             rid: this.workerPort.nextRid(),
-            ...batchOptions,
+            ...batchConfig,
             ...(url && {url}),
         };
 

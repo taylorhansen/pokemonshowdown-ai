@@ -24,7 +24,7 @@ cd pokemonshowdown-ai
 npm install
 
 # Setup config, edit if needed.
-cp src/config.example.ts src/config.ts
+cp src/config/config.example.ts src/config/config.ts
 
 # Compile the project.
 npm run build
@@ -35,13 +35,9 @@ npm test
 # Train a neural network through self-play.
 # WARNING: Requires a powerful computer, may take several hours.
 npm run train
-# Enable GPU acceleration:
-npm run train:gpu
 
 # Connect to the server specified in config.ts and start accepting challenges.
 npm run psbot
-# Enable GPU acceleration:
-npm run psbot:gpu
 ```
 
 ## License

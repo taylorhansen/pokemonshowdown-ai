@@ -1,18 +1,9 @@
 // istanbul ignore file: demo
-import {join} from "path";
+import * as path from "path";
 import * as tf from "@tensorflow/tfjs";
-import {
-    avatar,
-    latestModelFolder,
-    loginServer,
-    password,
-    playServer,
-    username,
-    // For some reason the linter doesn't like gitignored source files.
-    // eslint-disable-next-line node/no-unpublished-import
-} from "../config";
-import {importTfn} from "../tfn";
+import {config} from "../config";
 import {Logger} from "../util/logging/Logger";
+import {importTfn} from "../util/tfn";
 import {PsBot} from "./PsBot";
 import * as handlers from "./handlers";
 import {networkAgent} from "./handlers/battle/ai/networkAgent";
@@ -20,11 +11,11 @@ import {networkAgent} from "./handlers/battle/ai/networkAgent";
 import "../train/model/custom_layers";
 
 // Select native backend.
-importTfn(process.argv[2] === "--gpu" /*use gpu*/);
+importTfn(config.tf.gpu);
 
 // Load neural network from disk in the background while connecting.
 const modelPromise = tf.loadLayersModel(
-    `file://${join(latestModelFolder, "model.json")}`,
+    `file://${path.join(config.paths.latestModel, "model.json")}`,
 );
 
 const logger = Logger.stderr;
@@ -33,17 +24,21 @@ void (async function () {
     const bot = new PsBot(logger.addPrefix("PSBot: "));
 
     try {
-        await bot.connect(playServer);
+        await bot.connect(config.psbot.websocketRoute);
     } catch (e) {
         logger.error(`Connection error: ${(e as Error)?.stack ?? e}`);
         return;
     }
 
-    if (username) {
-        await bot.login({username, password, loginServer});
+    if (config.psbot.username) {
+        await bot.login({
+            username: config.psbot.username,
+            ...(config.psbot.password && {password: config.psbot.password}),
+            loginUrl: config.psbot.loginUrl,
+        });
     }
-    if (avatar !== null) {
-        bot.setAvatar(avatar);
+    if (config.psbot.avatar) {
+        bot.setAvatar(config.psbot.avatar);
     }
 
     const model = await modelPromise;
