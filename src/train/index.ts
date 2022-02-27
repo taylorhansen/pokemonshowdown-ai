@@ -82,7 +82,7 @@ const batchOptions: BatchPredictOptions = {
             `Episode(${i + 1}/${numEpisodes}): `,
         );
 
-        // TODO: Should opponents be stored as file urls to conserve memory?
+        // TODO: Reference models by file urls to conserve memory.
         await episode({
             models,
             model,
