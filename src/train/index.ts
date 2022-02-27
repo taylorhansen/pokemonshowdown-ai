@@ -15,6 +15,9 @@ import {Opponent} from "./play";
 Error.stackTraceLimit = Infinity;
 
 (setGracefulCleanup as () => void)();
+// Still terminate normally on ctrl-c so that tmp files can be cleaned up.
+// eslint-disable-next-line no-process-exit
+process.once("SIGINT", () => process.exit(1));
 
 /** Number of training episodes to complete. */
 const numEpisodes = 4;

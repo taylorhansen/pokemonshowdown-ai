@@ -145,7 +145,7 @@ export async function episode({
         },
     );
     progress?.terminate();
-    const cleanupPromise = expFiles.map(async f => await f.cleanup());
+    const cleanupPromises = expFiles.map(async f => await f.cleanup());
 
     // Evaluation games.
     logger.debug("Evaluating new network against benchmarks");
@@ -159,5 +159,5 @@ export async function episode({
         ...(logPath && {logPath: join(logPath, "eval")}),
     });
 
-    await Promise.all([cleanupPromise, evalPromise]);
+    await Promise.all([evalPromise, ...cleanupPromises]);
 }
