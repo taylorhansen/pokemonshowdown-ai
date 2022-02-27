@@ -53,17 +53,20 @@ export class WorkerPort<
 
     /** Safely closes the worker. */
     public async close(): Promise<void> {
-        // Send the close message and await a response.
-        return await new Promise((res, rej) =>
-            this.asyncPort.postMessage(
-                {type: "close", rid: this.asyncPort.nextRid()},
-                [],
-                result =>
-                    result.type === "error"
-                        ? rej((result as PortResultError).err)
-                        : res(),
-            ),
-        );
+        try {
+            await new Promise<void>((res, rej) =>
+                this.asyncPort.postMessage(
+                    {type: "close", rid: this.asyncPort.nextRid()},
+                    [],
+                    result =>
+                        result.type === "error"
+                            ? rej((result as PortResultError).err)
+                            : res(),
+                ),
+            );
+        } finally {
+            await this.worker.terminate();
+        }
     }
 
     /**
