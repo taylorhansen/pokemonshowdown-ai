@@ -23,7 +23,6 @@ export function createModel(): tf.LayersModel {
     const volatileLayer = tf.layers.dense({
         name: "model/team/active/volatile/dense",
         units: 32,
-        // TODO: Separate into basic statuses and override traits.
         activation: "tanh",
         kernelInitializer: "heNormal",
         biasInitializer: "heNormal",
@@ -129,7 +128,8 @@ export function createModel(): tf.LayersModel {
     let usMoveFeatures: tf.SymbolicTensor | undefined;
     let usPokemonFeatures: tf.SymbolicTensor | undefined;
 
-    // TODO: Add another dimension for the number of sides?
+    // TODO: Add another dimension for the number of sides. Can use
+    // customLayers.slice() to get client features for choice evaluation.
     for (const side of ["us", "them"]) {
         //#region Team status.
 
