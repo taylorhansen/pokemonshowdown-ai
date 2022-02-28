@@ -95,13 +95,24 @@ export async function episode({
         if (!numBatches) {
             throw new Error("numBatches not initialized");
         }
+        const prefixWidth =
+            logger.prefix.length +
+            "Batch /: ".length +
+            2 * Math.ceil(Math.log10(numBatches));
+        const postFixWidth = " loss=-0.00000000".length;
+        const padding = 2;
+        const barWidth =
+            (process.stderr.columns || 80) -
+            prefixWidth -
+            postFixWidth -
+            padding;
         progress = new ProgressBar(
-            `Batch :current/:total: eta=:etas :bar loss=:loss`,
+            `${logger.prefix}Batch :current/:total: :bar loss=:loss`,
             {
                 total: numBatches,
                 head: ">",
                 clear: true,
-                width: Math.floor((process.stderr.columns ?? 80) / 3),
+                width: barWidth,
             },
         );
         progress.render({loss: "n/a"});
@@ -139,7 +150,10 @@ export async function episode({
                     }
                     break;
                 case "batch":
-                    progress?.tick(data);
+                    progress?.tick({
+                        batch: data.batch + 1,
+                        loss: data.loss.toFixed(8),
+                    });
                     break;
             }
         },

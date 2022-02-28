@@ -1,4 +1,4 @@
-import {join} from "path";
+import * as path from "path";
 import * as stream from "stream";
 import ProgressBar from "progress";
 import {LogFunc, Logger} from "../../util/logging/Logger";
@@ -67,15 +67,18 @@ export async function playGames({
     getExpPath,
 }: PlayGamesArgs): Promise<number> {
     const totalGames = opponents.reduce((n, op) => n + op.numGames, 0);
-    const progress = new ProgressBar(
-        `${logger.prefix}eta=:etas :bar wlt=:wlt`,
-        {
-            total: totalGames,
-            head: ">",
-            clear: true,
-            width: Math.floor((process.stderr.columns ?? 80) / 2),
-        },
-    );
+    const prefixWidth = logger.prefix.length;
+    const postfixWidth =
+        " wlt=--".length + 3 * Math.ceil(Math.log10(totalGames));
+    const padding = 2;
+    const barWidth =
+        (process.stdout.columns || 80) - prefixWidth - postfixWidth - padding;
+    const progress = new ProgressBar(`${logger.prefix}:bar wlt=:wlt`, {
+        total: totalGames,
+        head: ">",
+        clear: true,
+        width: barWidth,
+    });
     progress.render({wlt: "0-0-0"});
     const progressLogFunc: LogFunc = msg => progress.interrupt(msg);
     const progressLog = new Logger(
@@ -92,7 +95,7 @@ export async function playGames({
                 for (let i = 0; i < opponent.numGames; ++i) {
                     const gameLogPath =
                         logPath &&
-                        join(logPath, `${opponent.name}/game-${i + 1}`);
+                        path.join(logPath, `${opponent.name}/game-${i + 1}`);
                     const args: GamePoolArgs = {
                         id: i + 1,
                         maxTurns,
