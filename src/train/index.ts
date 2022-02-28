@@ -1,5 +1,6 @@
 /** @file Sets up a training session for the neural network. */
 import * as path from "path";
+import {pathToFileURL} from "url";
 import {setGracefulCleanup} from "tmp-promise";
 import {config} from "../config";
 import {Logger} from "../util/logging/Logger";
@@ -25,12 +26,10 @@ const models = new ModelWorker(config.tf.gpu);
 (async function () {
     // Create or load neural network.
     let model: number;
-    // TODO: Use url.pathToFileURL() and pass actual URL objects instead.
-    const latestModelUrl = `file://${config.paths.latestModel}`;
-    const loadUrl = `file://${path.join(
-        config.paths.latestModel,
-        "model.json",
-    )}`;
+    const latestModelUrl = pathToFileURL(config.paths.latestModel).href;
+    const loadUrl = pathToFileURL(
+        path.join(config.paths.latestModel, "model.json"),
+    ).href;
     logger.debug("Loading latest model");
     try {
         model = await models.load(config.train.batchPredict, loadUrl);
@@ -48,7 +47,7 @@ const models = new ModelWorker(config.tf.gpu);
     logger.debug("Saving copy of original for reference");
     const originalModel = await models.load(config.train.batchPredict, loadUrl);
     const originalModelFolder = path.join(config.paths.models, "original");
-    await models.save(originalModel, `file://${originalModelFolder}`);
+    await models.save(originalModel, pathToFileURL(originalModelFolder).href);
 
     const evalOpponents: Opponent[] = [
         {
@@ -107,12 +106,12 @@ const models = new ModelWorker(config.tf.gpu);
             config.paths.models,
             episodeFolderName,
         );
-        await models.save(model, `file://${episodeModelFolder}`);
+        await models.save(model, pathToFileURL(episodeModelFolder).href);
 
         // Re-load it so we have a copy.
         const modelCopy = await models.load(
             config.train.batchPredict,
-            `file://${path.join(episodeModelFolder, "model.json")}`,
+            pathToFileURL(path.join(episodeModelFolder, "model.json")).href,
         );
         evalOpponents.push({
             name: episodeFolderName,

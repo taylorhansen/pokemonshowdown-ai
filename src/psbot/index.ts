@@ -1,5 +1,6 @@
 // istanbul ignore file: demo
 import * as path from "path";
+import {pathToFileURL} from "url";
 import * as tf from "@tensorflow/tfjs";
 import {config} from "../config";
 import {Logger} from "../util/logging/Logger";
@@ -15,7 +16,7 @@ importTfn(config.tf.gpu);
 
 // Load neural network from disk in the background while connecting.
 const modelPromise = tf.loadLayersModel(
-    `file://${path.join(config.paths.latestModel, "model.json")}`,
+    pathToFileURL(path.join(config.paths.latestModel, "model.json")).href,
 );
 
 const logger = Logger.stderr;
