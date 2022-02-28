@@ -1,3 +1,4 @@
+import {URL} from "url";
 import {Protocol} from "@pkmn/protocol";
 import fetch, {RequestInit} from "node-fetch";
 import {client as WSClient} from "websocket";
@@ -129,8 +130,7 @@ export class PsBot {
      * Connects to the server through websocket and starts handling messages.
      */
     public async connect(route: string): Promise<void> {
-        // TODO: Use actual url api.
-        this.client.connect(route + "showdown/websocket");
+        this.client.connect(new URL("showdown/websocket", route).href);
         return await this.connected;
     }
 
@@ -148,7 +148,7 @@ export class PsBot {
         }
 
         this.logger.debug(
-            "Configured to login under username " + `'${options.username}'`,
+            `Configured to login under username '${options.username}'`,
         );
 
         const challstr = await this.globalHandler.challstr;
@@ -162,8 +162,7 @@ export class PsBot {
         // Get the assertion string used to confirm login.
         let assertion: string;
 
-        // TODO: Use actual url api.
-        const loginServer = options.loginUrl + "~~showdown/action.php";
+        const loginServer = new URL("~~showdown/action.php", options.loginUrl);
 
         if (!options.password) {
             // Login without password.
@@ -180,8 +179,7 @@ export class PsBot {
                     throw new Error(assertion.substring(2));
                 }
                 throw new Error(
-                    "A password is required for user " +
-                        `'${options.username}'`,
+                    `A password is required for user '${options.username}'`,
                 );
             }
         } else {
@@ -307,8 +305,8 @@ export class PsBot {
                 if (f) {
                     if (!this.username) {
                         this.logger.error(
-                            "Could not join battle room " +
-                                `'${roomid}': Username not initialized`,
+                            `Could not join battle room '${roomid}': ` +
+                                "Username not initialized",
                         );
                         return;
                     }
@@ -319,15 +317,14 @@ export class PsBot {
                     this.addHandler(roomid, handler);
                 } else {
                     this.logger.error(
-                        "Could not join battle room " +
-                            `'${roomid}': Format '${format}' not supported`,
+                        `Could not join battle room '${roomid}': ` +
+                            `Format '${format}' not supported`,
                     );
                     return;
                 }
             } else {
                 this.logger.error(
-                    `Could not join chat room '${roomid}': ` +
-                        "No handlers found",
+                    `Could not join chat room '${roomid}': No handlers found`,
                 );
                 return;
             }
