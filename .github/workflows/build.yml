@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Configure config
-        run: cp src/config.example.ts src/config.ts
+        run: cp src/config/config.example.ts src/config/config.ts
       - name: Check formatting
         run: npm run format:check
       - name: Run linter
