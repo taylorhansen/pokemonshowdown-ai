@@ -14,8 +14,8 @@ export const test = () =>
         const format = "gen4randombattle";
         const assertion = "someassertion";
         const port = 8000;
-        const loginServer = `http://localhost:${port}/~~showdown/action.php`;
-        const playServer = `ws://localhost:${port}/showdown/websocket`;
+        const loginUrl = `http://localhost:${port}/`;
+        const websocketRoute = `ws://localhost:${port}/`;
 
         let bot: PsBot;
         let server: MockPsServer;
@@ -26,7 +26,7 @@ export const test = () =>
 
         beforeEach("Initialize and connect PsBot", async function () {
             bot = new PsBot(Logger.null);
-            await bot.connect(playServer);
+            await bot.connect(websocketRoute);
             expect(server.isConnected).to.be.true;
         });
 
@@ -68,7 +68,7 @@ export const test = () =>
 
         describe("#setAvatar()", function () {
             it("Should set avatar", async function () {
-                const avatar = 1;
+                const avatar = "supernerd";
                 bot.setAvatar(avatar);
                 const msg = await server.nextMessage();
                 expect(msg.type).to.equal("utf8");
@@ -82,7 +82,7 @@ export const test = () =>
             it("Should login without password", async function () {
                 server.username = username;
                 server.password = undefined;
-                const promise = bot.login({username, loginServer});
+                const promise = bot.login({username, loginUrl});
                 server.sendToClient(`|challstr|${challstr}`);
                 await promise;
 
@@ -102,7 +102,7 @@ export const test = () =>
             it("Should reject login without password if registered", async function () {
                 server.username = username;
                 server.password = password;
-                const promise = bot.login({username, loginServer});
+                const promise = bot.login({username, loginUrl});
                 server.sendToClient(`|challstr|${challstr}`);
 
                 try {
@@ -121,7 +121,7 @@ export const test = () =>
             it("Should login with password", async function () {
                 server.username = username;
                 server.password = password;
-                const promise = bot.login({username, password, loginServer});
+                const promise = bot.login({username, password, loginUrl});
                 server.sendToClient(`|challstr|${challstr}`);
                 await promise;
 
@@ -142,7 +142,7 @@ export const test = () =>
             it("Should reject login with invalid password", async function () {
                 server.username = username;
                 server.password = password + "1";
-                const promise = bot.login({username, password, loginServer});
+                const promise = bot.login({username, password, loginUrl});
                 server.sendToClient(`|challstr|${challstr}`);
 
                 try {
