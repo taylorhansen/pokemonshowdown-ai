@@ -658,6 +658,8 @@ handlersImpl["|cant|"] = async function (ctx) {
     const moveName = moveStr && Protocol.parseEffect(moveStr, toIdName).name;
     const mon = ctx.state.getTeam(ident.player).active;
 
+    let canRevealMove = true;
+
     // Ability effect prevents the move from being used.
     if (
         (reason.type === "ability" || reason.name === "damp") &&
@@ -682,6 +684,14 @@ handlersImpl["|cant|"] = async function (ctx) {
                     .getTeam(ident.player === "p1" ? "p2" : "p1")
                     .active.moveset.reveal(moveName);
                 break;
+            case "nopp":
+                // Corner case when Baton Pass is an encored move, the
+                // recipient's volatile.lastMove is set to "batonpass" even if
+                // the recipient doesn't know that move, which can then cause
+                // this event to happen due to some weird gen4 interactions with
+                // encore effects.
+                canRevealMove = false;
+                break;
             case "truant":
                 // Note: Truant/recharge turns overlap but only truant event is
                 // displayed.
@@ -703,7 +713,7 @@ handlersImpl["|cant|"] = async function (ctx) {
         }
     }
 
-    if (moveName) {
+    if (moveName && canRevealMove) {
         mon.moveset.reveal(moveName);
     }
     mon.inactive();

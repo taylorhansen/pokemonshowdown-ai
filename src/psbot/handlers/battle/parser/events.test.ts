@@ -1428,6 +1428,25 @@ export const test = () =>
                 });
             });
 
+            describe("reason = nopp", function () {
+                it("Should not reveal move", async function () {
+                    const mon = sh.initActive("p1");
+                    expect(mon.moveset.get("encore")).to.be.null;
+
+                    await ph.handle({
+                        args: [
+                            "cant",
+                            toIdent("p1"),
+                            toEffectName("nopp"),
+                            toMoveName("encore"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.return();
+                    expect(mon.moveset.get("encore")).to.be.null;
+                });
+            });
+
             describe("reason = recharge", function () {
                 it("Should reset mustRecharge status", async function () {
                     const mon = sh.initActive("p1");
