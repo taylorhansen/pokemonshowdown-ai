@@ -77,20 +77,7 @@ const models = new ModelWorker(config.tf.gpu);
             evalOpponents,
             numThreads: config.train.game.numThreads,
             maxTurns: config.train.game.maxTurns,
-            // TODO: Move algorithm to config.
-            algorithm: {
-                type: "ppo",
-                variant: "clipped",
-                epsilon: 0.2,
-                advantage: {
-                    type: "generalized",
-                    gamma: 0.99,
-                    lambda: 0.9,
-                    standardize: true,
-                },
-                valueCoeff: 0.55,
-                entropyCoeff: 0.1,
-            },
+            algorithm: config.train.learn.algorithm,
             epochs: config.train.learn.epochs,
             numDecoderThreads: config.train.learn.numDecoderThreads,
             batchSize: config.train.learn.batchSize,

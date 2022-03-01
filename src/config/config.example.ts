@@ -30,6 +30,19 @@ export const config: Config = {
             numDecoderThreads: Math.ceil(numThreads / 2),
             batchSize: 16,
             shufflePrefetch: 16 * 128,
+            algorithm: {
+                type: "ppo",
+                variant: "clipped",
+                epsilon: 0.2,
+                advantage: {
+                    type: "generalized",
+                    gamma: 0.99,
+                    lambda: 0.9,
+                    standardize: true,
+                },
+                valueCoeff: 0.55,
+                entropyCoeff: 0.1,
+            },
         },
     },
 };

@@ -1,3 +1,5 @@
+import type {AlgorithmArgs} from "../train/learn";
+
 /** Config typings. */
 export interface Config {
     /** PsBot config. */
@@ -133,4 +135,6 @@ export interface LearnConfig {
     readonly batchSize: number;
     /** Buffer size for shuffling training examples. */
     readonly shufflePrefetch: number;
+    /** Learning algorithm config. */
+    readonly algorithm: AlgorithmArgs;
 }
