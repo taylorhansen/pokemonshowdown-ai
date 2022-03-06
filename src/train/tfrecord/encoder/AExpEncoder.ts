@@ -2,7 +2,7 @@ import {Transform, TransformCallback} from "stream";
 import * as tfrecord from "tfrecord";
 import {maskedCrc32c} from "tfrecord/lib/crc32c";
 import {AugmentedExperience} from "../../play/experience";
-import {footerBytes, headerBytes, lengthBytes} from "../helpers";
+import {footerBytes, headerBytes, lengthBytes} from "../constants";
 
 /**
  * Serializes AugmentedExperiences into TFRecord Example segments.
@@ -56,34 +56,41 @@ export class AExpEncoder extends Transform {
         encoding: BufferEncoding,
         callback: TransformCallback,
     ): void {
-        // Serialize Example.
-        const example = this.aexpToExample(aexp);
-        // When supported, the encoder should be using buffers automatically.
-        const record = tfrecord.Example.encode(example).finish();
-        if (!Buffer.isBuffer(record)) {
-            throw new Error("Example encoder didn't use Buffers");
+        try {
+            // Serialize Example.
+            const example = this.aexpToExample(aexp);
+            const record = tfrecord.Example.encode(example).finish();
+            if (!Buffer.isBuffer(record)) {
+                throw new Error("Example encoder didn't use Buffers");
+            }
+
+            // Compute length with header.
+            this.lengthAndCrc.setUint32(
+                0,
+                record.length,
+                true /*littleEndian*/,
+            );
+            this.lengthAndCrc.setUint32(
+                lengthBytes,
+                maskedCrc32c(this.lengthBuffer),
+                true /*littleEndian*/,
+            );
+            this.push(this.lengthAndCrcBuffer, "binary");
+
+            // Insert serialized Example.
+            this.push(record, "binary");
+
+            // Compute footer.
+            this.lengthAndCrc.setUint32(
+                0,
+                maskedCrc32c(record),
+                true /*littleEndian*/,
+            );
+            this.push(this.lengthAndCrcBuffer.slice(0, footerBytes), "binary");
+        } catch (e) {
+            callback(e as Error);
+            return;
         }
-
-        // Compute length with header.
-        this.lengthAndCrc.setUint32(0, record.length, true /*littleEndian*/);
-        this.lengthAndCrc.setUint32(
-            lengthBytes,
-            maskedCrc32c(this.lengthBuffer),
-            true /*littleEndian*/,
-        );
-        this.push(this.lengthAndCrcBuffer, "binary");
-
-        // Insert serialized Example.
-        this.push(record, "binary");
-
-        // Compute footer.
-        this.lengthAndCrc.setUint32(
-            0,
-            maskedCrc32c(record),
-            true /*littleEndian*/,
-        );
-        this.push(this.lengthAndCrcBuffer.slice(0, footerBytes), "binary");
-
         callback();
     }
 

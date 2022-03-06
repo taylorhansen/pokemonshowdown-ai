@@ -4,7 +4,7 @@ import * as tfrecord from "tfrecord";
 import {maskedCrc32c} from "tfrecord/lib/crc32c";
 import {modelInputNames} from "../../model/shapes";
 import {AugmentedExperience} from "../../play/experience";
-import {footerBytes, headerBytes, lengthBytes} from "../helpers";
+import {footerBytes, headerBytes, lengthBytes} from "../constants";
 
 /**
  * Deserializes TFRecord Example segments into AugmentedExperience objects.
@@ -75,13 +75,17 @@ export class AExpDecoder extends Transform {
         readableHighWaterMark?: number,
     ) {
         super({
+            defaultEncoding: "binary",
             decodeStrings: true,
             writableHighWaterMark,
             readableObjectMode: true,
             readableHighWaterMark,
         });
 
-        this.recordLoopPromise = this.recordLoop();
+        this.recordLoopPromise = this.recordLoop().catch(
+            // Propagate errors through the stream pipeline.
+            err => void this.destroy(err as Error),
+        );
     }
 
     public override _transform(
