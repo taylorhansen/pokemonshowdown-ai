@@ -96,14 +96,15 @@ export class AExpEncoder extends Transform {
 
     /** Compiles an AugmentedExperience into a TFRecord Example. */
     private aexpToExample(aexp: AugmentedExperience): tfrecord.Example {
+        // TODO: Verify field values?
         this.builder.setInteger("action", aexp.action);
         this.builder.setFloat("advantage", aexp.advantage);
-        this.builder.setFloats("probs", Array.from(aexp.probs));
+        this.builder.setBinary("probs", new Uint8Array(aexp.probs.buffer));
         this.builder.setFloat("returns", aexp.returns);
-        for (let i = 0; i < aexp.state.length; ++i) {
-            // TODO: Use TypedArrays to prevent copying via setBinaries.
-            this.builder.setFloats(`state/${i}`, Array.from(aexp.state[i]));
-        }
+        this.builder.setBinaries(
+            "state",
+            aexp.state.map(arr => new Uint8Array(arr.buffer)),
+        );
         this.builder.setFloat("value", aexp.value);
         return this.builder.releaseExample();
     }

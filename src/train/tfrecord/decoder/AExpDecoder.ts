@@ -2,7 +2,6 @@ import {Transform, TransformCallback} from "stream";
 import Long from "long";
 import * as tfrecord from "tfrecord";
 import {maskedCrc32c} from "tfrecord/lib/crc32c";
-import {modelInputNames} from "../../model/shapes";
 import {AugmentedExperience} from "../../play/experience";
 import {footerBytes, headerBytes, lengthBytes} from "../constants";
 
@@ -343,14 +342,17 @@ export class AExpDecoder extends Transform {
         if (!featureMap) {
             throw new Error("AExp Example has no features");
         }
+        // TODO: Verify field values?
         return {
             action: AExpDecoder.getUint32(featureMap, "action"),
             advantage: AExpDecoder.getFloat(featureMap, "advantage"),
-            probs: AExpDecoder.getFloats(featureMap, "probs"),
+            probs: new Float32Array(
+                AExpDecoder.getBytes(featureMap, "probs").buffer,
+            ),
             returns: AExpDecoder.getFloat(featureMap, "returns"),
             // TODO: Use TypedArrays to prevent copying via binaryList.
-            state: Array.from(modelInputNames, (_, i) =>
-                AExpDecoder.getFloats(featureMap, `state/${i}`),
+            state: AExpDecoder.getBytesList(featureMap, "state").map(
+                arr => new Float32Array(arr.buffer),
             ),
             value: AExpDecoder.getFloat(featureMap, "value"),
         };
@@ -390,14 +392,31 @@ export class AExpDecoder extends Transform {
         return value[0];
     }
 
-    private static getFloats(
+    private static getBytes(
         featureMap: {[k: string]: tfrecord.protos.IFeature},
         key: string,
-    ): Float32Array {
-        const value = featureMap[key]?.floatList?.value;
+    ): Uint8Array {
+        const value = featureMap[key]?.bytesList?.value;
         if (!value) {
-            throw new Error(`AExp Example must have floatList '${key}'`);
+            throw new Error(`AExp Example must have bytesList '${key}'`);
         }
-        return new Float32Array(value);
+        if (value.length !== 1) {
+            throw new Error(`bytesList '${key}' must have one value`);
+        }
+        const [arr] = value;
+        return Buffer.isBuffer(arr) ? new Uint8Array(arr) : arr;
+    }
+
+    private static getBytesList(
+        featureMap: {[k: string]: tfrecord.protos.IFeature},
+        key: string,
+    ): Uint8Array[] {
+        const value = featureMap[key]?.bytesList?.value;
+        if (!value) {
+            throw new Error(`AExp Example must have bytesList '${key}'`);
+        }
+        return value.map(arr =>
+            Buffer.isBuffer(arr) ? new Uint8Array(arr) : arr,
+        );
     }
 }
