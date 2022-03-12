@@ -1,11 +1,13 @@
 import {
     flattenedInputShapes,
     modelInputNames,
+    numTeams,
+    teamSize,
 } from "../../../../../train/model/shapes";
 import {alloc} from "../../../../../util/buf";
 import * as dex from "../../dex";
 import {ReadonlyBattleState} from "../../state/BattleState";
-import {ReadonlyTeam, Team} from "../../state/Team";
+import {map} from "./Encoder";
 import {
     definedAbilityEncoder,
     definedMovesetEncoder,
@@ -65,10 +67,11 @@ export function encodeState(
     }
     const us = state.getTeam(state.ourSide);
     const them = state.getTeam(state.ourSide === "p1" ? "p2" : "p1");
+    const teams = [us, them];
 
-    const [usPokemon, themPokemon] = [us, them].map(team =>
+    const teamPokemon = teams.map(team =>
         Array.from<unknown, PokemonArgs>(
-            {length: Team.maxSize},
+            {length: teamSize},
             (_, i) =>
                 // Treat fainted mons as nonexistent since they're permanently
                 // removed from the game.
@@ -90,58 +93,76 @@ export function encodeState(
             continue;
         }
 
-        let team: ReadonlyTeam;
-        let partialName = name;
-        if (name.startsWith("us/")) {
-            team = us;
-            partialName = name.substring("us/".length);
-        } else if (name.startsWith("them/")) {
-            team = them;
-            partialName = name.substring("them/".length);
+        let partialName: string;
+        if (name.startsWith("team/")) {
+            partialName = name.slice("team/".length);
         } else {
             throw new Error(`Unknown input name: ${name}`);
         }
 
         if (partialName === "status") {
-            teamStatusEncoder.encode(arr, team.status);
+            map(numTeams, teamStatusEncoder).encode(
+                arr,
+                teams.map(t => t.status),
+            );
             continue;
         }
 
         if (partialName.startsWith("active/")) {
             partialName = partialName.substring("active/".length);
-            const {active} = team;
+            const actives = teams.map(t => t.active);
             switch (partialName) {
                 case "volatile":
-                    volatileStatusEncoder.encode(arr, active.volatile);
+                    map(numTeams, volatileStatusEncoder).encode(
+                        arr,
+                        actives.map(p => p.volatile),
+                    );
                     break;
                 case "species":
-                    definedSpeciesEncoder.encode(arr, active.volatile.species);
+                    map(numTeams, definedSpeciesEncoder).encode(
+                        arr,
+                        actives.map(p => p.volatile.species),
+                    );
                     break;
                 case "types":
-                    definedTypesEncoder.encode(arr, active.volatile.types);
+                    map(numTeams, definedTypesEncoder).encode(
+                        arr,
+                        actives.map(p => p.volatile.types),
+                    );
                     break;
                 case "stats":
-                    // istanbul ignore next: Should never happen.
-                    if (!active.volatile.stats) {
-                        throw new Error(
-                            "VolatileStatus' stat table not initialized",
-                        );
-                    }
-                    definedStatTableEncoder.encode(arr, active.volatile.stats);
+                    map(numTeams, definedStatTableEncoder).encode(
+                        arr,
+                        actives.map(p => {
+                            // istanbul ignore next: Should never happen.
+                            if (!p.volatile.stats) {
+                                throw new Error(
+                                    "VolatileStatus' stat table not " +
+                                        "initialized",
+                                );
+                            }
+                            return p.volatile.stats;
+                        }),
+                    );
                     break;
                 case "ability":
-                    definedAbilityEncoder.encode(
+                    map(numTeams, definedAbilityEncoder).encode(
                         arr,
-                        active.volatile.ability
-                            ? [active.volatile.ability]
-                            : dex.pokemon[active.volatile.species].abilities,
+                        actives.map(p =>
+                            p.volatile.ability
+                                ? [p.volatile.ability]
+                                : dex.pokemon[p.volatile.species].abilities,
+                        ),
                     );
                     break;
                 case "moves":
-                    definedMovesetEncoder.encode(arr, {
-                        moveset: active.volatile.moveset,
-                        volatile: active.volatile,
-                    });
+                    map(numTeams, definedMovesetEncoder).encode(
+                        arr,
+                        actives.map(p => ({
+                            moveset: p.volatile.moveset,
+                            volatile: p.volatile,
+                        })),
+                    );
                     break;
                 default:
                     throw new Error(`Unknown input name: ${name}`);
@@ -150,31 +171,45 @@ export function encodeState(
         }
         if (partialName.startsWith("pokemon/")) {
             partialName = partialName.substring("pokemon/".length);
-            const pokemon = team === us ? usPokemon : themPokemon;
             switch (partialName) {
                 case "basic":
-                    pokemonBasicEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonBasicEncoder).encode(arr, teamPokemon);
                     break;
                 case "species":
-                    pokemonSpeciesEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonSpeciesEncoder).encode(
+                        arr,
+                        teamPokemon,
+                    );
                     break;
                 case "types":
-                    pokemonTypesEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonTypesEncoder).encode(arr, teamPokemon);
                     break;
                 case "stats":
-                    pokemonStatTableEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonStatTableEncoder).encode(
+                        arr,
+                        teamPokemon,
+                    );
                     break;
                 case "ability":
-                    pokemonAbilityEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonAbilityEncoder).encode(
+                        arr,
+                        teamPokemon,
+                    );
                     break;
                 case "item":
-                    pokemonItemEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonItemEncoder).encode(arr, teamPokemon);
                     break;
                 case "last_item":
-                    pokemonLastItemEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonLastItemEncoder).encode(
+                        arr,
+                        teamPokemon,
+                    );
                     break;
                 case "moves":
-                    pokemonMovesetEncoder.encode(arr, pokemon);
+                    map(numTeams, pokemonMovesetEncoder).encode(
+                        arr,
+                        teamPokemon,
+                    );
                     break;
                 default:
                     throw new Error(`Unknown input name: ${name}`);

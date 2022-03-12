@@ -10,31 +10,53 @@ export function createModel(): tf.LayersModel {
     const inputs: tf.SymbolicTensor[] = [];
     const outputs: tf.SymbolicTensor[] = [];
 
-    //#region Base layers for weight sharing.
+    //#region Inputs and global/local feature connections.
 
-    const teamStatusLayer = tf.layers.dense({
-        name: "model/team/status/dense",
-        units: 16,
-        activation: "tanh",
-        kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
-    });
+    const globalFeatures: tf.SymbolicTensor[] = [];
 
-    const volatileLayer = tf.layers.dense({
-        name: "model/team/active/volatile/dense",
-        units: 32,
-        activation: "tanh",
-        kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
-    });
+    //#region Room status.
 
-    const pokemonBasicLayer = tf.layers.dense({
-        name: "model/pokemon/basic/dense",
-        units: 8,
-        activation: "tanh",
-        kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
+    const inputRoom = tf.layers.input({
+        name: "model/input/room",
+        shape: [...modelInputShapesMap["room"]],
     });
+    inputs.push(inputRoom);
+    const roomFeatures = tf.layers
+        .dense({
+            name: "model/room/dense",
+            units: 8,
+            activation: "tanh",
+            kernelInitializer: "heNormal",
+            biasInitializer: "heNormal",
+        })
+        .apply(inputRoom) as tf.SymbolicTensor;
+    globalFeatures.push(roomFeatures);
+
+    //#endregion
+
+    //#region Team status.
+
+    const inputTeamStatus = tf.layers.input({
+        name: `model/input/team/status`,
+        shape: [...modelInputShapesMap["team/status"]],
+    });
+    inputs.push(inputTeamStatus);
+    const teamStatusFeatures = tf.layers
+        .dense({
+            name: "model/team/status/dense",
+            units: 16,
+            activation: "tanh",
+            kernelInitializer: "heNormal",
+            biasInitializer: "heNormal",
+        })
+        .apply(inputTeamStatus) as tf.SymbolicTensor;
+    globalFeatures.push(teamStatusFeatures);
+
+    //#endregion
+
+    //#region Team pokemon.
+
+    //#region Shared layers between active/bench features.
 
     const pokemonSpeciesLayer = tf.layers.dense({
         name: "model/team/pokemon/species/dense",
@@ -89,257 +111,221 @@ export function createModel(): tf.LayersModel {
         axis: -2,
     });
 
-    const pokemonConcatLayer = tf.layers.concatenate({
-        name: "model/team/pokemon/concat",
-        axis: -1,
-    });
+    //#endregion
 
-    const teamPokemonAggregateLayer = customLayers.mean({
-        name: "model/team/pokemon/mean",
-        axis: -2,
+    //#region Active pokemon's volatile status and override traits.
+
+    const activeVolatileInput = tf.layers.input({
+        name: `model/input/team/active/volatile`,
+        shape: [...modelInputShapesMap[`team/active/volatile`]],
     });
+    inputs.push(activeVolatileInput);
+    const activeVolatileFeatures = tf.layers
+        .dense({
+            name: "model/team/active/volatile/dense",
+            units: 32,
+            activation: "tanh",
+            kernelInitializer: "heNormal",
+            biasInitializer: "heNormal",
+        })
+        .apply(activeVolatileInput) as tf.SymbolicTensor;
+    globalFeatures.push(activeVolatileFeatures);
+
+    const activeSpeciesInput = tf.layers.input({
+        name: `model/input/team/active/species`,
+        shape: [...modelInputShapesMap[`team/active/species`]],
+    });
+    inputs.push(activeSpeciesInput);
+    const activeSpeciesFeatures = pokemonSpeciesLayer.apply(
+        activeSpeciesInput,
+    ) as tf.SymbolicTensor;
+    globalFeatures.push(activeSpeciesFeatures);
+
+    const activeTypesInput = tf.layers.input({
+        name: `model/input/team/active/types`,
+        shape: [...modelInputShapesMap[`team/active/types`]],
+    });
+    inputs.push(activeTypesInput);
+    const activeTypesFeatures = pokemonTypesLayer.apply(
+        activeTypesInput,
+    ) as tf.SymbolicTensor;
+    globalFeatures.push(activeTypesFeatures);
+
+    const activeStatsInput = tf.layers.input({
+        name: `model/input/team/active/stats`,
+        shape: [...modelInputShapesMap[`team/active/stats`]],
+    });
+    inputs.push(activeStatsInput);
+    const activeStatsFeatures = pokemonStatsLayer.apply(
+        activeStatsInput,
+    ) as tf.SymbolicTensor;
+    globalFeatures.push(activeStatsFeatures);
+
+    const activeAbilityInput = tf.layers.input({
+        name: `model/input/team/active/ability`,
+        shape: [...modelInputShapesMap[`team/active/ability`]],
+    });
+    inputs.push(activeAbilityInput);
+    const activeAbilityFeatures = pokemonAbilityLayer.apply(
+        activeAbilityInput,
+    ) as tf.SymbolicTensor;
+    globalFeatures.push(activeAbilityFeatures);
+
+    const activeMoveInput = tf.layers.input({
+        name: `model/input/team/active/moves`,
+        shape: [...modelInputShapesMap[`team/active/moves`]],
+    });
+    inputs.push(activeMoveInput);
+    const activeMoveFeatures = pokemonMoveLayer.apply(
+        activeMoveInput,
+    ) as tf.SymbolicTensor;
+
+    const activeMovesetAggregate = pokemonMovesetAggregateLayer.apply(
+        activeMoveFeatures,
+    ) as tf.SymbolicTensor;
+    globalFeatures.push(activeMovesetAggregate);
 
     //#endregion
 
-    //#region Inputs and global/local feature connections.
+    //#region Bench pokemon's statuses and traits.
 
-    const globalFeatures: tf.SymbolicTensor[] = [];
+    const pokemonFeaturesList: tf.SymbolicTensor[] = [];
 
-    //#region Room status.
+    //#region Inputs and basic individual features.
 
-    const inputRoom = tf.layers.input({
-        name: "model/input/room",
-        shape: [...modelInputShapesMap["room"]],
+    // Note: Each input is of shape [null, num_teams, team_size, x] where x is
+    // the encoder array size and the null stands for the batch size.
+    // Then, the Dense layers are applied onto each x input individually.
+
+    const basicInput = tf.layers.input({
+        name: `model/input/team/pokemon/basic`,
+        shape: [...modelInputShapesMap[`team/pokemon/basic`]],
     });
-    inputs.push(inputRoom);
-    const roomFeatures = tf.layers
+    inputs.push(basicInput);
+    const basicFeatures = tf.layers
         .dense({
-            name: "model/room/dense",
+            name: "model/pokemon/basic/dense",
             units: 8,
             activation: "tanh",
             kernelInitializer: "heNormal",
             biasInitializer: "heNormal",
         })
-        .apply(inputRoom) as tf.SymbolicTensor;
-    globalFeatures.push(roomFeatures);
+        .apply(basicInput) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(basicFeatures);
+
+    const speciesInput = tf.layers.input({
+        name: `model/input/team/pokemon/species`,
+        shape: [...modelInputShapesMap[`team/pokemon/species`]],
+    });
+    inputs.push(speciesInput);
+    const speciesFeatures = pokemonSpeciesLayer.apply(
+        speciesInput,
+    ) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(speciesFeatures);
+
+    const typesInput = tf.layers.input({
+        name: `model/input/team/pokemon/types`,
+        shape: [...modelInputShapesMap[`team/pokemon/types`]],
+    });
+    inputs.push(typesInput);
+    const typesFeatures = pokemonTypesLayer.apply(
+        typesInput,
+    ) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(typesFeatures);
+
+    const statsInput = tf.layers.input({
+        name: `model/input/team/pokemon/stats`,
+        shape: [...modelInputShapesMap[`team/pokemon/stats`]],
+    });
+    inputs.push(statsInput);
+    const statsFeatures = pokemonStatsLayer.apply(
+        statsInput,
+    ) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(statsFeatures);
+
+    const abilityInput = tf.layers.input({
+        name: `model/input/team/pokemon/ability`,
+        shape: [...modelInputShapesMap[`team/pokemon/ability`]],
+    });
+    inputs.push(abilityInput);
+    const abilityFeatures = pokemonAbilityLayer.apply(
+        abilityInput,
+    ) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(abilityFeatures);
+
+    const itemInput = tf.layers.input({
+        name: `model/input/team/pokemon/item`,
+        shape: [...modelInputShapesMap[`team/pokemon/item`]],
+    });
+    inputs.push(itemInput);
+    const itemFeatures = pokemonItemLayer.apply(itemInput) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(itemFeatures);
+
+    const lastItemInput = tf.layers.input({
+        name: `model/input/team/pokemon/last_item`,
+        shape: [...modelInputShapesMap[`team/pokemon/last_item`]],
+    });
+    inputs.push(lastItemInput);
+    const lastItemFeatures = pokemonItemLayer.apply(
+        lastItemInput,
+    ) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(lastItemFeatures);
+
+    const moveInput = tf.layers.input({
+        name: `model/input/team/pokemon/moves`,
+        shape: [...modelInputShapesMap[`team/pokemon/moves`]],
+    });
+    inputs.push(moveInput);
+    const moveFeatures = pokemonMoveLayer.apply(moveInput) as tf.SymbolicTensor;
+    const movesetAggregate = pokemonMovesetAggregateLayer.apply(
+        moveFeatures,
+    ) as tf.SymbolicTensor;
+    pokemonFeaturesList.push(movesetAggregate);
 
     //#endregion
 
-    let usMoveFeatures: tf.SymbolicTensor | undefined;
-    let usPokemonFeatures: tf.SymbolicTensor | undefined;
+    // Afterwards, each of the [null, num_teams, team_size, x] input
+    // features are concatenated into a single tensor of shape
+    // [null, num_teams, team_size, y].
+    const pokemonConcat = tf.layers
+        .concatenate({
+            name: "model/team/pokemon/concat",
+            axis: -1,
+        })
+        .apply(pokemonFeaturesList) as tf.SymbolicTensor;
 
-    // TODO: Add another dimension for the number of sides. Can use
-    // customLayers.slice() to get client features for choice evaluation.
-    for (const side of ["us", "them"]) {
-        //#region Team status.
+    // Here we element-wise average each of the pokemon features so that the
+    // resulting [null, num_teams, z] tensor can be added to the global feature
+    // set.
+    // TODO: Should we exclude the active pokemon's base traits?
+    const teamPokemonAggregate = customLayers
+        .mean({
+            name: "model/team/pokemon/mean",
+            axis: -2,
+        })
+        .apply(pokemonConcat) as tf.SymbolicTensor;
+    globalFeatures.push(teamPokemonAggregate);
 
-        const inputTeamStatus = tf.layers.input({
-            name: `model/input/${side}/status`,
-            shape: [...modelInputShapesMap[`${side}/status`]],
-        });
-        inputs.push(inputTeamStatus);
-        const teamStatusFeatures = teamStatusLayer.apply(
-            inputTeamStatus,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(teamStatusFeatures);
+    //#endregion
 
-        //#endregion
+    //#endregion
 
-        //#region Active pokemon's volatile status and override traits.
+    const globalFlattenLayer = tf.layers.flatten({
+        name: "model/global/flatten",
+    });
 
-        const activeVolatileInput = tf.layers.input({
-            name: `model/input/${side}/active/volatile`,
-            shape: [...modelInputShapesMap[`${side}/active/volatile`]],
-        });
-        inputs.push(activeVolatileInput);
-        const activeVolatileFeatures = volatileLayer.apply(
-            activeVolatileInput,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(activeVolatileFeatures);
-
-        const activeSpeciesInput = tf.layers.input({
-            name: `model/input/${side}/active/species`,
-            shape: [...modelInputShapesMap[`${side}/active/species`]],
-        });
-        inputs.push(activeSpeciesInput);
-        const activeSpeciesFeatures = pokemonSpeciesLayer.apply(
-            activeSpeciesInput,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(activeSpeciesFeatures);
-
-        const activeTypesInput = tf.layers.input({
-            name: `model/input/${side}/active/types`,
-            shape: [...modelInputShapesMap[`${side}/active/types`]],
-        });
-        inputs.push(activeTypesInput);
-        const activeTypesFeatures = pokemonTypesLayer.apply(
-            activeTypesInput,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(activeTypesFeatures);
-
-        const activeStatsInput = tf.layers.input({
-            name: `model/input/${side}/active/stats`,
-            shape: [...modelInputShapesMap[`${side}/active/stats`]],
-        });
-        inputs.push(activeStatsInput);
-        const activeStatsFeatures = pokemonStatsLayer.apply(
-            activeStatsInput,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(activeStatsFeatures);
-
-        const activeAbilityInput = tf.layers.input({
-            name: `model/input/${side}/active/ability`,
-            shape: [...modelInputShapesMap[`${side}/active/ability`]],
-        });
-        inputs.push(activeAbilityInput);
-        const activeAbilityFeatures = pokemonAbilityLayer.apply(
-            activeAbilityInput,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(activeAbilityFeatures);
-
-        const activeMoveInput = tf.layers.input({
-            name: `model/input/${side}/active/moves`,
-            shape: [...modelInputShapesMap[`${side}/active/moves`]],
-        });
-        inputs.push(activeMoveInput);
-        const activeMoveFeatures = pokemonMoveLayer.apply(
-            activeMoveInput,
-        ) as tf.SymbolicTensor;
-
-        // Save active move data for move choice evaluation at the output.
-        if (side === "us") {
-            usMoveFeatures = activeMoveFeatures;
-        }
-
-        const activeMovesetAggregate = pokemonMovesetAggregateLayer.apply(
-            activeMoveFeatures,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(activeMovesetAggregate);
-
-        //#endregion
-
-        //#region Bench pokemon's statuses and traits.
-
-        const pokemonFeaturesList: tf.SymbolicTensor[] = [];
-
-        //#region Inputs and basic individual features.
-
-        // Note: Each input is of shape [null, team_size, x] where x is the
-        // encoder array size and the null stands for the batch size.
-        // Then, the Dense layers are applied onto each x input individually.
-
-        const basicInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/basic`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/basic`]],
-        });
-        inputs.push(basicInput);
-        const basicFeatures = pokemonBasicLayer.apply(
-            basicInput,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(basicFeatures);
-
-        const speciesInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/species`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/species`]],
-        });
-        inputs.push(speciesInput);
-        const speciesFeatures = pokemonSpeciesLayer.apply(
-            speciesInput,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(speciesFeatures);
-
-        const typesInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/types`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/types`]],
-        });
-        inputs.push(typesInput);
-        const typesFeatures = pokemonTypesLayer.apply(
-            typesInput,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(typesFeatures);
-
-        const statsInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/stats`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/stats`]],
-        });
-        inputs.push(statsInput);
-        const statsFeatures = pokemonStatsLayer.apply(
-            statsInput,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(statsFeatures);
-
-        const abilityInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/ability`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/ability`]],
-        });
-        inputs.push(abilityInput);
-        const abilityFeatures = pokemonAbilityLayer.apply(
-            abilityInput,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(abilityFeatures);
-
-        const itemInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/item`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/item`]],
-        });
-        inputs.push(itemInput);
-        const itemFeatures = pokemonItemLayer.apply(
-            itemInput,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(itemFeatures);
-
-        const lastItemInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/last_item`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/last_item`]],
-        });
-        inputs.push(lastItemInput);
-        const lastItemFeatures = pokemonItemLayer.apply(
-            lastItemInput,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(lastItemFeatures);
-
-        const moveInput = tf.layers.input({
-            name: `model/input/${side}/pokemon/moves`,
-            shape: [...modelInputShapesMap[`${side}/pokemon/moves`]],
-        });
-        inputs.push(moveInput);
-        const moveFeatures = pokemonMoveLayer.apply(
-            moveInput,
-        ) as tf.SymbolicTensor;
-        const movesetAggregate = pokemonMovesetAggregateLayer.apply(
-            moveFeatures,
-        ) as tf.SymbolicTensor;
-        pokemonFeaturesList.push(movesetAggregate);
-
-        //#endregion
-
-        // Afterwards, each of the [null, team_size, x] input features are
-        // concatenated into a single [null, team_size, y] tensor.
-        const pokemonConcat = pokemonConcatLayer.apply(
-            pokemonFeaturesList,
-        ) as tf.SymbolicTensor;
-
-        // Save bench data for switch choice evaluation at the output.
-        if (side === "us") {
-            usPokemonFeatures = pokemonConcat;
-        }
-
-        // Here we element-wise average each of the pokemon features so that the
-        // resulting [null, z] tensor can be added to the global feature set.
-        const teamPokemonAggregate = teamPokemonAggregateLayer.apply(
-            pokemonConcat,
-        ) as tf.SymbolicTensor;
-        globalFeatures.push(teamPokemonAggregate);
-
-        //#endregion
-    }
+    const globalFeaturesFlattened = globalFeatures.map(st =>
+        st.rank === 2
+            ? st
+            : (globalFlattenLayer.apply(st) as tf.SymbolicTensor),
+    );
 
     const globalConcat = tf.layers
         .concatenate({
             name: "model/global/concat",
             axis: -1,
         })
-        .apply(globalFeatures) as tf.SymbolicTensor;
+        .apply(globalFeaturesFlattened) as tf.SymbolicTensor;
 
     //#endregion
 
@@ -351,11 +337,6 @@ export function createModel(): tf.LayersModel {
 
     //#region Move choices.
 
-    // Should never happen.
-    if (!usMoveFeatures) {
-        throw new Error("No us move features");
-    }
-
     // Consider both the global features as well as the move itself.
     const actionMoveGlobalRepeat = tf.layers
         .repeatVector({
@@ -363,6 +344,20 @@ export function createModel(): tf.LayersModel {
             n: Moveset.maxSize,
         })
         .apply(globalConcat) as tf.SymbolicTensor;
+    const usMoveFeaturesSlice = customLayers
+        .slice({
+            name: "model/action/move/local/slice",
+            begin: 0,
+            size: 1,
+        })
+        .apply(activeMoveFeatures) as tf.SymbolicTensor;
+    const usMoveFeatures = tf.layers
+        .reshape({
+            name: "model/action/move/local/reshape",
+            // Remove the extra team dimension added due to slice op.
+            targetShape: usMoveFeaturesSlice.shape.slice(2),
+        })
+        .apply(usMoveFeaturesSlice) as tf.SymbolicTensor;
     const actionMoveConcat = tf.layers
         .concatenate({
             name: "model/action/move/concat",
@@ -390,17 +385,21 @@ export function createModel(): tf.LayersModel {
 
     //#region Switch choices.
 
-    // Should never happen.
-    if (!usPokemonFeatures) {
-        throw new Error("No us pokemon features");
-    }
-    // Exclude active mon from usPokemonFeatures.
-    const actionSwitchBench = customLayers
+    // Extract bench features from our team except active mon.
+    const actionSwitchBenchSlice = customLayers
         .slice({
             name: "model/action/switch/bench/slice",
-            begin: 1,
+            begin: [0, 1],
+            size: 1,
         })
-        .apply(usPokemonFeatures) as tf.SymbolicTensor;
+        .apply(pokemonConcat) as tf.SymbolicTensor;
+    const actionSwitchBench = tf.layers
+        .reshape({
+            name: "model/action/switch/bench/reshape",
+            // Remove the extra team dimension added due to slice op.
+            targetShape: actionSwitchBenchSlice.shape.slice(2),
+        })
+        .apply(actionSwitchBenchSlice) as tf.SymbolicTensor;
 
     // Consider both the global features as well as the bench mon itself.
     const actionSwitchGlobalRepeat = tf.layers

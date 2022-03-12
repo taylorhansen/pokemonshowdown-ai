@@ -5,33 +5,39 @@ import * as encoders from "../../psbot/handlers/battle/ai/encoder/encoders";
 import {Moveset} from "../../psbot/handlers/battle/state/Moveset";
 import {Team} from "../../psbot/handlers/battle/state/Team";
 
+/** Number of sides to the game. */
+export const numTeams = 2;
+
+/** Number of pokemon on a team. */
+export const teamSize = Team.maxSize;
+
+/** Number of moves in a moveset. */
+export const numMoves = Moveset.maxSize;
+
 /**
  * Input shapes for the {@link createModel model}, without the batch dimension.
  */
 export const modelInputShapes: readonly (readonly number[])[] = [
     // Room.
     [encoders.roomStatusEncoder.size],
-    // Teams.
-    ...Array.from({length: 2}).flatMap(() => [
-        // Team status.
-        [encoders.teamStatusEncoder.size],
-        // Active traits/statuses.
-        [encoders.volatileStatusEncoder.size],
-        [encoders.definedSpeciesEncoder.size],
-        [encoders.definedTypesEncoder.size],
-        [encoders.definedStatTableEncoder.size],
-        [encoders.definedAbilityEncoder.size],
-        [Moveset.maxSize, encoders.moveSlotEncoder.size],
-        // Bench traits/statuses.
-        [Team.maxSize, encoders.basicEncoder.size],
-        [Team.maxSize, encoders.speciesEncoder.size],
-        [Team.maxSize, encoders.typesEncoder.size],
-        [Team.maxSize, encoders.statTableEncoder.size],
-        [Team.maxSize, encoders.abilityEncoder.size],
-        [Team.maxSize, encoders.itemEncoder.size],
-        [Team.maxSize, encoders.lastItemEncoder.size],
-        [Team.maxSize, Moveset.maxSize, encoders.moveSlotEncoder.size],
-    ]),
+    // Team status.
+    [numTeams, encoders.teamStatusEncoder.size],
+    // Active traits/statuses.
+    [numTeams, encoders.volatileStatusEncoder.size],
+    [numTeams, encoders.definedSpeciesEncoder.size],
+    [numTeams, encoders.definedTypesEncoder.size],
+    [numTeams, encoders.definedStatTableEncoder.size],
+    [numTeams, encoders.definedAbilityEncoder.size],
+    [numTeams, Moveset.maxSize, encoders.moveSlotEncoder.size],
+    // Bench traits/statuses.
+    [numTeams, teamSize, encoders.basicEncoder.size],
+    [numTeams, teamSize, encoders.speciesEncoder.size],
+    [numTeams, teamSize, encoders.typesEncoder.size],
+    [numTeams, teamSize, encoders.statTableEncoder.size],
+    [numTeams, teamSize, encoders.abilityEncoder.size],
+    [numTeams, teamSize, encoders.itemEncoder.size],
+    [numTeams, teamSize, encoders.lastItemEncoder.size],
+    [numTeams, teamSize, numMoves, encoders.moveSlotEncoder.size],
 ];
 
 /** Flattened version of {@link modelInputShapes}. */
@@ -46,25 +52,21 @@ export const flattenedInputShapes: readonly number[] = modelInputShapes.map(
  */
 export const modelInputNames: readonly string[] = [
     "room",
-    ...["us", "them"].flatMap(side =>
-        [
-            "status",
-            "active/volatile",
-            "active/species",
-            "active/types",
-            "active/stats",
-            "active/ability",
-            "active/moves",
-            "pokemon/basic",
-            "pokemon/species",
-            "pokemon/types",
-            "pokemon/stats",
-            "pokemon/ability",
-            "pokemon/item",
-            "pokemon/last_item",
-            "pokemon/moves",
-        ].map(name => `${side}/${name}`),
-    ),
+    "team/status",
+    "team/active/volatile",
+    "team/active/species",
+    "team/active/types",
+    "team/active/stats",
+    "team/active/ability",
+    "team/active/moves",
+    "team/pokemon/basic",
+    "team/pokemon/species",
+    "team/pokemon/types",
+    "team/pokemon/stats",
+    "team/pokemon/ability",
+    "team/pokemon/item",
+    "team/pokemon/last_item",
+    "team/pokemon/moves",
 ];
 
 /**
