@@ -76,7 +76,7 @@ export function concat<TState>(
                 if (nextByteOffset > maxByteOffset) {
                     throw new Error(
                         "concat() encoder array was too small for the given " +
-                            `encoders (${arr.byteLength} bytes vs at least` +
+                            `encoders (${arr.byteLength} bytes vs at least ` +
                             `${nextByteOffset - arr.byteOffset})`,
                     );
                 }
