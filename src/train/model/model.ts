@@ -37,7 +37,7 @@ export function createModel(): tf.LayersModel {
     //#region Team status.
 
     const inputTeamStatus = tf.layers.input({
-        name: `model/input/team/status`,
+        name: "model/input/team/status",
         shape: [...modelInputShapesMap["team/status"]],
     });
     inputs.push(inputTeamStatus);
@@ -116,8 +116,8 @@ export function createModel(): tf.LayersModel {
     //#region Active pokemon's volatile status and override traits.
 
     const activeVolatileInput = tf.layers.input({
-        name: `model/input/team/active/volatile`,
-        shape: [...modelInputShapesMap[`team/active/volatile`]],
+        name: "model/input/team/active/volatile",
+        shape: [...modelInputShapesMap["team/active/volatile"]],
     });
     inputs.push(activeVolatileInput);
     const activeVolatileFeatures = tf.layers
@@ -132,8 +132,8 @@ export function createModel(): tf.LayersModel {
     globalFeatures.push(activeVolatileFeatures);
 
     const activeSpeciesInput = tf.layers.input({
-        name: `model/input/team/active/species`,
-        shape: [...modelInputShapesMap[`team/active/species`]],
+        name: "model/input/team/active/species",
+        shape: [...modelInputShapesMap["team/active/species"]],
     });
     inputs.push(activeSpeciesInput);
     const activeSpeciesFeatures = pokemonSpeciesLayer.apply(
@@ -142,8 +142,8 @@ export function createModel(): tf.LayersModel {
     globalFeatures.push(activeSpeciesFeatures);
 
     const activeTypesInput = tf.layers.input({
-        name: `model/input/team/active/types`,
-        shape: [...modelInputShapesMap[`team/active/types`]],
+        name: "model/input/team/active/types",
+        shape: [...modelInputShapesMap["team/active/types"]],
     });
     inputs.push(activeTypesInput);
     const activeTypesFeatures = pokemonTypesLayer.apply(
@@ -152,8 +152,8 @@ export function createModel(): tf.LayersModel {
     globalFeatures.push(activeTypesFeatures);
 
     const activeStatsInput = tf.layers.input({
-        name: `model/input/team/active/stats`,
-        shape: [...modelInputShapesMap[`team/active/stats`]],
+        name: "model/input/team/active/stats",
+        shape: [...modelInputShapesMap["team/active/stats"]],
     });
     inputs.push(activeStatsInput);
     const activeStatsFeatures = pokemonStatsLayer.apply(
@@ -162,8 +162,8 @@ export function createModel(): tf.LayersModel {
     globalFeatures.push(activeStatsFeatures);
 
     const activeAbilityInput = tf.layers.input({
-        name: `model/input/team/active/ability`,
-        shape: [...modelInputShapesMap[`team/active/ability`]],
+        name: "model/input/team/active/ability",
+        shape: [...modelInputShapesMap["team/active/ability"]],
     });
     inputs.push(activeAbilityInput);
     const activeAbilityFeatures = pokemonAbilityLayer.apply(
@@ -172,8 +172,8 @@ export function createModel(): tf.LayersModel {
     globalFeatures.push(activeAbilityFeatures);
 
     const activeMoveInput = tf.layers.input({
-        name: `model/input/team/active/moves`,
-        shape: [...modelInputShapesMap[`team/active/moves`]],
+        name: "model/input/team/active/moves",
+        shape: [...modelInputShapesMap["team/active/moves"]],
     });
     inputs.push(activeMoveInput);
     const activeMoveFeatures = pokemonMoveLayer.apply(
@@ -198,8 +198,8 @@ export function createModel(): tf.LayersModel {
     // Then, the Dense layers are applied onto each x input individually.
 
     const basicInput = tf.layers.input({
-        name: `model/input/team/pokemon/basic`,
-        shape: [...modelInputShapesMap[`team/pokemon/basic`]],
+        name: "model/input/team/pokemon/basic",
+        shape: [...modelInputShapesMap["team/pokemon/basic"]],
     });
     inputs.push(basicInput);
     const basicFeatures = tf.layers
@@ -214,8 +214,8 @@ export function createModel(): tf.LayersModel {
     pokemonFeaturesList.push(basicFeatures);
 
     const speciesInput = tf.layers.input({
-        name: `model/input/team/pokemon/species`,
-        shape: [...modelInputShapesMap[`team/pokemon/species`]],
+        name: "model/input/team/pokemon/species",
+        shape: [...modelInputShapesMap["team/pokemon/species"]],
     });
     inputs.push(speciesInput);
     const speciesFeatures = pokemonSpeciesLayer.apply(
@@ -224,8 +224,8 @@ export function createModel(): tf.LayersModel {
     pokemonFeaturesList.push(speciesFeatures);
 
     const typesInput = tf.layers.input({
-        name: `model/input/team/pokemon/types`,
-        shape: [...modelInputShapesMap[`team/pokemon/types`]],
+        name: "model/input/team/pokemon/types",
+        shape: [...modelInputShapesMap["team/pokemon/types"]],
     });
     inputs.push(typesInput);
     const typesFeatures = pokemonTypesLayer.apply(
@@ -234,8 +234,8 @@ export function createModel(): tf.LayersModel {
     pokemonFeaturesList.push(typesFeatures);
 
     const statsInput = tf.layers.input({
-        name: `model/input/team/pokemon/stats`,
-        shape: [...modelInputShapesMap[`team/pokemon/stats`]],
+        name: "model/input/team/pokemon/stats",
+        shape: [...modelInputShapesMap["team/pokemon/stats"]],
     });
     inputs.push(statsInput);
     const statsFeatures = pokemonStatsLayer.apply(
@@ -244,8 +244,8 @@ export function createModel(): tf.LayersModel {
     pokemonFeaturesList.push(statsFeatures);
 
     const abilityInput = tf.layers.input({
-        name: `model/input/team/pokemon/ability`,
-        shape: [...modelInputShapesMap[`team/pokemon/ability`]],
+        name: "model/input/team/pokemon/ability",
+        shape: [...modelInputShapesMap["team/pokemon/ability"]],
     });
     inputs.push(abilityInput);
     const abilityFeatures = pokemonAbilityLayer.apply(
@@ -254,16 +254,16 @@ export function createModel(): tf.LayersModel {
     pokemonFeaturesList.push(abilityFeatures);
 
     const itemInput = tf.layers.input({
-        name: `model/input/team/pokemon/item`,
-        shape: [...modelInputShapesMap[`team/pokemon/item`]],
+        name: "model/input/team/pokemon/item",
+        shape: [...modelInputShapesMap["team/pokemon/item"]],
     });
     inputs.push(itemInput);
     const itemFeatures = pokemonItemLayer.apply(itemInput) as tf.SymbolicTensor;
     pokemonFeaturesList.push(itemFeatures);
 
     const lastItemInput = tf.layers.input({
-        name: `model/input/team/pokemon/last_item`,
-        shape: [...modelInputShapesMap[`team/pokemon/last_item`]],
+        name: "model/input/team/pokemon/last_item",
+        shape: [...modelInputShapesMap["team/pokemon/last_item"]],
     });
     inputs.push(lastItemInput);
     const lastItemFeatures = pokemonItemLayer.apply(
@@ -272,8 +272,8 @@ export function createModel(): tf.LayersModel {
     pokemonFeaturesList.push(lastItemFeatures);
 
     const moveInput = tf.layers.input({
-        name: `model/input/team/pokemon/moves`,
-        shape: [...modelInputShapesMap[`team/pokemon/moves`]],
+        name: "model/input/team/pokemon/moves",
+        shape: [...modelInputShapesMap["team/pokemon/moves"]],
     });
     inputs.push(moveInput);
     const moveFeatures = pokemonMoveLayer.apply(moveInput) as tf.SymbolicTensor;
