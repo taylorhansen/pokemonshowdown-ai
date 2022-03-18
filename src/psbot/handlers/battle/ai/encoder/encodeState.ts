@@ -44,6 +44,23 @@ export function allocEncodedState(mode?: "shared" | "unsafe"): Float32Array[] {
     return flattenedInputShapes.map(size => alloc(size, mode));
 }
 
+// Factored-out encoders for multiple encodeState() calls.
+const teamStatusEncoders = map(numTeams, teamStatusEncoder);
+const volatileStatusEncoders = map(numTeams, volatileStatusEncoder);
+const definedSpeciesEncoders = map(numTeams, definedSpeciesEncoder);
+const definedTypesEncoders = map(numTeams, definedTypesEncoder);
+const definedStatTableEncoders = map(numTeams, definedStatTableEncoder);
+const definedAbilityEncoders = map(numTeams, definedAbilityEncoder);
+const definedMovesetEncoders = map(numTeams, definedMovesetEncoder);
+const pokemonBasicEncoders = map(numTeams, pokemonBasicEncoder);
+const pokemonSpeciesEncoders = map(numTeams, pokemonSpeciesEncoder);
+const pokemonTypesEncoders = map(numTeams, pokemonTypesEncoder);
+const pokemonStatTableEncoders = map(numTeams, pokemonStatTableEncoder);
+const pokemonAbilityEncoders = map(numTeams, pokemonAbilityEncoder);
+const pokemonItemEncoders = map(numTeams, pokemonItemEncoder);
+const pokemonLastItemEncoders = map(numTeams, pokemonLastItemEncoder);
+const pokemonMovesetEncoders = map(numTeams, pokemonMovesetEncoder);
+
 /**
  * Encodes battle state data into a set of arrays suitable for feeding into the
  * model.
@@ -101,7 +118,7 @@ export function encodeState(
         }
 
         if (partialName === "status") {
-            map(numTeams, teamStatusEncoder).encode(
+            teamStatusEncoders.encode(
                 arr,
                 teams.map(t => t.status),
             );
@@ -113,25 +130,25 @@ export function encodeState(
             const actives = teams.map(t => t.active);
             switch (partialName) {
                 case "volatile":
-                    map(numTeams, volatileStatusEncoder).encode(
+                    volatileStatusEncoders.encode(
                         arr,
                         actives.map(p => p.volatile),
                     );
                     break;
                 case "species":
-                    map(numTeams, definedSpeciesEncoder).encode(
+                    definedSpeciesEncoders.encode(
                         arr,
                         actives.map(p => p.volatile.species),
                     );
                     break;
                 case "types":
-                    map(numTeams, definedTypesEncoder).encode(
+                    definedTypesEncoders.encode(
                         arr,
                         actives.map(p => p.volatile.types),
                     );
                     break;
                 case "stats":
-                    map(numTeams, definedStatTableEncoder).encode(
+                    definedStatTableEncoders.encode(
                         arr,
                         actives.map(p => {
                             // istanbul ignore next: Should never happen.
@@ -146,7 +163,7 @@ export function encodeState(
                     );
                     break;
                 case "ability":
-                    map(numTeams, definedAbilityEncoder).encode(
+                    definedAbilityEncoders.encode(
                         arr,
                         actives.map(p =>
                             p.volatile.ability
@@ -156,7 +173,7 @@ export function encodeState(
                     );
                     break;
                 case "moves":
-                    map(numTeams, definedMovesetEncoder).encode(
+                    definedMovesetEncoders.encode(
                         arr,
                         actives.map(p => ({
                             moveset: p.volatile.moveset,
@@ -173,43 +190,28 @@ export function encodeState(
             partialName = partialName.substring("pokemon/".length);
             switch (partialName) {
                 case "basic":
-                    map(numTeams, pokemonBasicEncoder).encode(arr, teamPokemon);
+                    pokemonBasicEncoders.encode(arr, teamPokemon);
                     break;
                 case "species":
-                    map(numTeams, pokemonSpeciesEncoder).encode(
-                        arr,
-                        teamPokemon,
-                    );
+                    pokemonSpeciesEncoders.encode(arr, teamPokemon);
                     break;
                 case "types":
-                    map(numTeams, pokemonTypesEncoder).encode(arr, teamPokemon);
+                    pokemonTypesEncoders.encode(arr, teamPokemon);
                     break;
                 case "stats":
-                    map(numTeams, pokemonStatTableEncoder).encode(
-                        arr,
-                        teamPokemon,
-                    );
+                    pokemonStatTableEncoders.encode(arr, teamPokemon);
                     break;
                 case "ability":
-                    map(numTeams, pokemonAbilityEncoder).encode(
-                        arr,
-                        teamPokemon,
-                    );
+                    pokemonAbilityEncoders.encode(arr, teamPokemon);
                     break;
                 case "item":
-                    map(numTeams, pokemonItemEncoder).encode(arr, teamPokemon);
+                    pokemonItemEncoders.encode(arr, teamPokemon);
                     break;
                 case "last_item":
-                    map(numTeams, pokemonLastItemEncoder).encode(
-                        arr,
-                        teamPokemon,
-                    );
+                    pokemonLastItemEncoders.encode(arr, teamPokemon);
                     break;
                 case "moves":
-                    map(numTeams, pokemonMovesetEncoder).encode(
-                        arr,
-                        teamPokemon,
-                    );
+                    pokemonMovesetEncoders.encode(arr, teamPokemon);
                     break;
                 default:
                     throw new Error(`Unknown input name: ${name}`);
