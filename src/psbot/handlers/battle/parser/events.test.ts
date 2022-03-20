@@ -2632,7 +2632,7 @@ export const test = () =>
 
                 for (const [effect, type] of [
                     ["bide", "move"],
-                    ["confusion"],
+                    ["confusion", undefined],
                     ["embargo", "move"],
                     ["healblock", "move"],
                     ["magnetrise", "move"],
