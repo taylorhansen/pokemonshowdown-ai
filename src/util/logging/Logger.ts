@@ -22,8 +22,8 @@ export class Logger {
     /**
      * Creates a Logger object.
      *
-     * @param debugStream Function for printing debug messages.
-     * @param errorStream Function for printing error messages.
+     * @param debugLog Function for printing debug messages.
+     * @param errorLog Function for printing error messages.
      * @param prefix Prefix added to each string.
      * @param postfix Postfix added to each string.
      */

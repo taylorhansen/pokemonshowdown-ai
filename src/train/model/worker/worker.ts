@@ -1,8 +1,9 @@
 /** @file Dedicated worker for TensorFlow model operations. */
 import {serialize} from "v8";
-import {parentPort} from "worker_threads";
+import {parentPort, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {BatchPredictConfig} from "../../../config/types";
+import {importTfn} from "../../../util/tfn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
 import {createModel} from "../model";
@@ -13,12 +14,17 @@ import {
     ModelSaveResult,
     ModelSubscribeResult,
     ModelUnloadResult,
+    ModelWorkerData,
 } from "./ModelProtocol";
 import {ModelRegistry} from "./ModelRegistry";
 
 if (!parentPort) {
     throw new Error("No parent port!");
 }
+
+// Make sure we're using the right TF backend.
+const {gpu} = workerData as ModelWorkerData;
+importTfn(gpu);
 
 /** Maps model uid to their registry objects. */
 const models = new Map<number, ModelRegistry>();
@@ -107,19 +113,15 @@ parentPort.on("message", function handle(msg: ModelMessage) {
         }
         case "learn":
             promise = getRegistry(msg.uid)
-                .learn(
-                    msg,
-                    data => {
-                        const result: ModelLearnResult = {
-                            type: "learn",
-                            rid,
-                            done: false,
-                            data,
-                        };
-                        parentPort!.postMessage(result);
-                    },
-                    msg.logPath,
-                )
+                .learn(msg, data => {
+                    const result: ModelLearnResult = {
+                        type: "learn",
+                        rid,
+                        done: false,
+                        data,
+                    };
+                    parentPort!.postMessage(result);
+                })
                 .then(function () {
                     // Send a final message to end the stream of updates.
                     const result: ModelLearnResult = {

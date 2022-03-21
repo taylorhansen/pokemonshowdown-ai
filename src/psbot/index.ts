@@ -1,4 +1,4 @@
-// istanbul ignore file: demo
+// istanbul ignore file: Demo.
 import * as path from "path";
 import {pathToFileURL} from "url";
 import * as tf from "@tensorflow/tfjs";
@@ -43,7 +43,7 @@ void (async function () {
     }
 
     const model = await modelPromise;
-    const agent = networkAgent(model, "deterministic");
+    const agent = networkAgent(model);
 
     bot.acceptChallenges(
         "gen4randombattle",

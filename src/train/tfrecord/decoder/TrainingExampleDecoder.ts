@@ -2,15 +2,15 @@ import {Transform, TransformCallback} from "stream";
 import Long from "long";
 import * as tfrecord from "tfrecord";
 import {maskedCrc32c} from "tfrecord/lib/crc32c";
-import {AugmentedExperience} from "../../play/experience";
+import {TrainingExample} from "../../play/experience";
 import {footerBytes, headerBytes, lengthBytes} from "../constants";
 
 /**
- * Deserializes TFRecord Example segments into AugmentedExperience objects.
+ * Deserializes TFRecord Example segments into {@link TrainingExample}s.
  *
  * This is intended to pipe directly from a `.tfrecord` file in binary mode.
  */
-export class AExpDecoder extends Transform {
+export class TrainingExampleDecoder extends Transform {
     /**
      * Event for when a chunk has been read from input and stored in
      * {@link nextChunk}. If {@link nextChunk} is still null after this event is
@@ -64,7 +64,7 @@ export class AExpDecoder extends Transform {
     );
 
     /**
-     * Creates an AExpDecoder stream.
+     * Creates an TrainingExampleDecoder stream.
      *
      * @param writableHighWaterMark High water mark on the write side.
      * @param readableHighWaterMark High water mark on the read side.
@@ -95,12 +95,12 @@ export class AExpDecoder extends Transform {
         if (!this.nextChunk) {
             // Register chunk.
             this.nextChunk = chunk;
-            this.emit(AExpDecoder.chunkRead);
+            this.emit(TrainingExampleDecoder.chunkRead);
             callback();
         } else {
             // Wait for the next chunk to be consumed.
             // Note: Order is still guaranteed here due to once() call order.
-            this.once(AExpDecoder.chunkConsumed, () =>
+            this.once(TrainingExampleDecoder.chunkConsumed, () =>
                 this._transform(chunk, encoding, callback),
             );
         }
@@ -108,8 +108,10 @@ export class AExpDecoder extends Transform {
 
     public override _flush(callback: (err?: Error | null) => void): void {
         // Wait for the remaining chunks to be consumed then try again.
-        if (this.listenerCount(AExpDecoder.chunkConsumed) > 0) {
-            this.once(AExpDecoder.chunkConsumed, () => this._flush(callback));
+        if (this.listenerCount(TrainingExampleDecoder.chunkConsumed) > 0) {
+            this.once(TrainingExampleDecoder.chunkConsumed, () =>
+                this._flush(callback),
+            );
             return;
         }
 
@@ -124,10 +126,9 @@ export class AExpDecoder extends Transform {
 
     /** Executes the record reader loop. */
     private async recordLoop(): Promise<void> {
-        let recordData: Buffer | null;
-        while ((recordData = await this.readRecord())) {
-            const example = tfrecord.Example.decode(recordData);
-            this.push(AExpDecoder.exampleToAExp(example));
+        let record: Buffer | null;
+        while ((record = await this.readRecord())) {
+            this.push(TrainingExampleDecoder.decodeTrainingExample(record));
         }
         this.push(null);
     }
@@ -210,19 +211,15 @@ export class AExpDecoder extends Transform {
         }
 
         // Extract view of record data.
-        const recordData = Buffer.from(
-            this.recordAndCrcBuffer.buffer,
-            0,
-            length,
-        );
+        const record = Buffer.from(this.recordAndCrcBuffer.buffer, 0, length);
 
         // Parse crc.
         const recordCrc = this.recordAndCrcView.getUint32(
             length,
             true /*littleEndian*/,
         );
-        expectedCrc = maskedCrc32c(recordData);
-        if (recordCrc !== maskedCrc32c(recordData)) {
+        expectedCrc = maskedCrc32c(record);
+        if (recordCrc !== maskedCrc32c(record)) {
             throw new Error(
                 "Incorrect record CRC32C footer. Expected " +
                     `${expectedCrc.toString(16)} but got ` +
@@ -230,7 +227,7 @@ export class AExpDecoder extends Transform {
             );
         }
 
-        return recordData;
+        return record;
     }
 
     /**
@@ -317,45 +314,52 @@ export class AExpDecoder extends Transform {
         if (!this.nextChunk) {
             await Promise.race([
                 this.flushPromise,
-                new Promise(res => this.once(AExpDecoder.chunkRead, res)),
+                new Promise(res =>
+                    this.once(TrainingExampleDecoder.chunkRead, res),
+                ),
             ]);
         }
 
         // Consume chunk.
         const chunk = this.nextChunk;
         this.nextChunk = null;
-        this.emit(AExpDecoder.chunkConsumed);
+        this.emit(TrainingExampleDecoder.chunkConsumed);
         return chunk;
     }
 
     /**
-     * Converts a tfrecord Example into an {@link AugmentedExperience}.
+     * Converts an encoded TFRecord Example into a {@link TrainingExample}.
      *
-     * @param example Example to decode.
-     * @returns An AugmentedExperience.
      * @throws Error if the Example is invalid for decoding.
      */
-    private static exampleToAExp(
-        example: tfrecord.Example,
-    ): AugmentedExperience {
+    private static decodeTrainingExample(record: Buffer): TrainingExample {
+        const example = tfrecord.Example.decode(record);
         const featureMap = example.features?.feature;
         if (!featureMap) {
-            throw new Error("AExp Example has no features");
+            throw new Error("TrainingExample Example has no features");
         }
+
         // TODO: Verify field values?
         return {
-            action: AExpDecoder.getUint32(featureMap, "action"),
-            advantage: AExpDecoder.getFloat(featureMap, "advantage"),
-            probs: new Float32Array(
-                AExpDecoder.getBytes(featureMap, "probs").buffer,
-            ),
-            returns: AExpDecoder.getFloat(featureMap, "returns"),
-            // TODO: Use TypedArrays to prevent copying via binaryList.
-            state: AExpDecoder.getBytesList(featureMap, "state").map(
+            state: TrainingExampleDecoder.getBytesList(featureMap, "state").map(
                 arr => new Float32Array(arr.buffer),
             ),
-            value: AExpDecoder.getFloat(featureMap, "value"),
+            action: TrainingExampleDecoder.getUint32(featureMap, "action"),
+            returns: TrainingExampleDecoder.getFloat(featureMap, "returns"),
         };
+    }
+
+    private static getBytesList(
+        featureMap: {[k: string]: tfrecord.protos.IFeature},
+        key: string,
+    ): Uint8Array[] {
+        const value = featureMap[key]?.bytesList?.value;
+        if (!value) {
+            throw new Error(`TrainingExample must have bytesList '${key}'`);
+        }
+        return value.map(arr =>
+            Buffer.isBuffer(arr) ? new Uint8Array(arr) : arr,
+        );
     }
 
     private static getUint32(
@@ -364,10 +368,12 @@ export class AExpDecoder extends Transform {
     ): number {
         const value = featureMap[key]?.int64List?.value;
         if (!value) {
-            throw new Error(`AExp Example must have int64List '${key}'`);
+            throw new Error(`TrainingExample must have int64List '${key}'`);
         }
         if (value.length !== 1) {
-            throw new Error(`int64List '${key}' must have one value`);
+            throw new Error(
+                `TrainingExample int64List '${key}' must have one value`,
+            );
         }
 
         const [v] = value;
@@ -383,40 +389,14 @@ export class AExpDecoder extends Transform {
     ): number {
         const value = featureMap[key]?.floatList?.value;
         if (!value) {
-            throw new Error(`AExp Example must have floatList '${key}'`);
+            throw new Error(`TrainingExample must have floatList '${key}'`);
         }
         if (value.length !== 1) {
-            throw new Error(`floatList '${key}' must have one value`);
+            throw new Error(
+                `TrainingExample floatList '${key}' must have one value`,
+            );
         }
 
         return value[0];
-    }
-
-    private static getBytes(
-        featureMap: {[k: string]: tfrecord.protos.IFeature},
-        key: string,
-    ): Uint8Array {
-        const value = featureMap[key]?.bytesList?.value;
-        if (!value) {
-            throw new Error(`AExp Example must have bytesList '${key}'`);
-        }
-        if (value.length !== 1) {
-            throw new Error(`bytesList '${key}' must have one value`);
-        }
-        const [arr] = value;
-        return Buffer.isBuffer(arr) ? new Uint8Array(arr) : arr;
-    }
-
-    private static getBytesList(
-        featureMap: {[k: string]: tfrecord.protos.IFeature},
-        key: string,
-    ): Uint8Array[] {
-        const value = featureMap[key]?.bytesList?.value;
-        if (!value) {
-            throw new Error(`AExp Example must have bytesList '${key}'`);
-        }
-        return value.map(arr =>
-            Buffer.isBuffer(arr) ? new Uint8Array(arr) : arr,
-        );
     }
 }

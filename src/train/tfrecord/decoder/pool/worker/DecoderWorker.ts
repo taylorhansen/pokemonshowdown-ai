@@ -1,5 +1,5 @@
 import {Worker} from "worker_threads";
-import {AugmentedExperience} from "../../../../play/experience";
+import {TrainingExample} from "../../../../play/experience";
 import {WorkerPort} from "../../../../port/WorkerPort";
 import {DecodeMessage, DecoderProtocol} from "./DecoderProtocol";
 
@@ -26,13 +26,13 @@ export class DecoderWorker {
     }
 
     /**
-     * Asks for the next AugmentedExperience in the given tfrecord file.
+     * Asks for the next TrainingExample in the given tfrecord file.
      *
      * Intended to be called multiple times with the same `path` until this
      * function returns `null`, in which case the worker has reached the end of
      * the file and the next call would restart from the beginning.
      */
-    public async decode(path: string): Promise<AugmentedExperience | null> {
+    public async decode(path: string): Promise<TrainingExample | null> {
         const msg: DecodeMessage = {
             type: "decode",
             rid: this.workerPort.nextRid(),
@@ -40,7 +40,7 @@ export class DecoderWorker {
         };
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"decode">(msg, [], result =>
-                result.type === "error" ? rej(result.err) : res(result.aexp),
+                result.type === "error" ? rej(result.err) : res(result.example),
             ),
         );
     }

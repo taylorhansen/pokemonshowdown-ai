@@ -1,7 +1,7 @@
 /** @file Defines the protocol typings for ModelWorkers. */
 import {MessagePort} from "worker_threads";
 import {BatchPredictConfig} from "../../../config/types";
-import {LearnConfig} from "../../learn";
+import {LearnArgsPartial} from "../../learn";
 import {PortMessageBase, PortResultBase} from "../../port/PortProtocol";
 import {WorkerProtocol} from "../../port/WorkerProtocol";
 
@@ -9,6 +9,8 @@ import {WorkerProtocol} from "../../port/WorkerProtocol";
 export interface ModelWorkerData {
     /** Whether to enable GPU support. */
     gpu?: boolean;
+    /** Path to store logs in. */
+    logPath?: string;
 }
 
 /** ModelWorker request protocol typings. */
@@ -66,12 +68,7 @@ export interface ModelLearnMessage
 }
 
 /** Config for the learning algorithm. */
-export interface ModelLearnConfig extends LearnConfig {
-    /**
-     * Path to the folder to store TensorBoard logs in. Omit to not store logs.
-     */
-    readonly logPath?: string;
-}
+export type ModelLearnConfig = LearnArgsPartial;
 
 /** Types of messages that the Model can send. */
 export type ModelMessage = ModelProtocol[ModelRequestType]["message"];

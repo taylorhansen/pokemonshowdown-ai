@@ -1,5 +1,3 @@
-import type {AlgorithmArgs} from "../train/learn";
-
 /** Config typings. */
 export interface Config {
     /** PsBot config. */
@@ -97,7 +95,10 @@ export interface BatchPredictConfig {
 export interface GameConfig {
     /** Number of games to play in parallel. */
     readonly numThreads: number;
-    /** Number of turns before a game is considered a tie. */
+    /**
+     * Maximum amount of turns until the game is considered a tie. Games can go
+     * on forever if this is not set and both players only decide to switch.
+     */
     readonly maxTurns: number;
 }
 
@@ -109,6 +110,40 @@ export interface GameConfig {
 export interface RolloutConfig {
     /** Number of games to play against self. */
     readonly numGames: number;
+    /** Exploration policy config. */
+    readonly policy: PolicyConfig;
+    /** Experience config. */
+    readonly experience: ExperienceConfig;
+}
+
+/**
+ * Configuration for the exploration policy during the rollout phase.
+ *
+ * @see {@link RolloutConfig}
+ */
+export interface PolicyConfig {
+    /**
+     * Initial value for the epsilon-greedy exploration policy. Specifies the
+     * proportion of actions to take randomly rather than consulting the model.
+     */
+    readonly exploration: number;
+    /**
+     * Exploration (epsilon) decay factor. Applied after each full episode of
+     * training.
+     */
+    readonly explorationDecay: number;
+    /** Minumum exploration (epsilon) value. */
+    readonly minExploration: number;
+}
+
+/**
+ * Configuration for generating experience from rollout games.
+ *
+ * @see {@link RolloutConfig}
+ */
+export interface ExperienceConfig {
+    /** Discount factor for future rewards. */
+    readonly rewardDecay: number;
 }
 
 /**
@@ -135,6 +170,6 @@ export interface LearnConfig {
     readonly batchSize: number;
     /** Buffer size for shuffling training examples. */
     readonly shufflePrefetch: number;
-    /** Learning algorithm config. */
-    readonly algorithm: AlgorithmArgs;
+    /** Optimizer learning rate. */
+    readonly learningRate: number;
 }

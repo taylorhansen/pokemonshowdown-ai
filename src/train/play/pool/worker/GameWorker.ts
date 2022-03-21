@@ -25,21 +25,22 @@ export class GameWorker {
 
     /** Queues a game for the worker. */
     public async playGame(args: GamePoolArgs): Promise<GamePoolResult> {
-        // Request neural network ports.
-        const agentsPromise = Promise.all(
-            args.agents.map(async config => ({
-                port: await args.models.subscribe(config.model),
-                exp: config.exp,
-            })),
-        ) as Promise<[GameAgentConfig, GameAgentConfig]>;
-
         const msg: GamePlay = {
             type: "play",
             rid: this.workerPort.nextRid(),
-            agents: await agentsPromise,
-            ...(args.maxTurns && {maxTurns: args.maxTurns}),
-            ...(args.logPath && {logPath: args.logPath}),
-            ...(args.rollout && {rollout: args.rollout}),
+            agents: await Promise.all(
+                args.agents.map(async agentConfig => ({
+                    // Resolve model ids into usable model ports.
+                    port: await args.models.subscribe(agentConfig.model),
+                    ...(agentConfig.exploration && {
+                        exploration: agentConfig.exploration,
+                    }),
+                    ...(agentConfig.emitExperience && {
+                        emitExperience: true,
+                    }),
+                })) as [Promise<GameAgentConfig>, Promise<GameAgentConfig>],
+            ),
+            play: args.play,
         };
 
         return await new Promise(res =>
@@ -51,7 +52,9 @@ export class GameWorker {
                     if (workerResult.type !== "error") {
                         result = {
                             id: args.id,
-                            numAExps: workerResult.numAExps,
+                            ...(workerResult.numExamples !== undefined && {
+                                numExamples: workerResult.numExamples,
+                            }),
                             winner: workerResult.winner,
                             // GamePort doesn't automatically deserialize errors
                             // outside of PortResultError (where type=error).
@@ -62,7 +65,6 @@ export class GameWorker {
                     } else {
                         result = {
                             id: args.id,
-                            numAExps: 0,
                             err: workerResult.err,
                         };
                     }

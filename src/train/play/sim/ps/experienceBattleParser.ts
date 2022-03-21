@@ -33,7 +33,7 @@ export function experienceBattleParser<
     callback: (exp: Experience) => void,
     username: string,
 ): BattleParser<ExperienceAgent, TArgs, TResult> {
-    return async function _experienceBattleParser(
+    return async function experienceBattleParserImpl(
         ctx: BattleParserContext<ExperienceAgent>,
         ...args: TArgs
     ): Promise<TResult> {

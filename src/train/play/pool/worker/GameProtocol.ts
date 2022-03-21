@@ -3,7 +3,7 @@ import {MessagePort} from "worker_threads";
 import {PortMessageBase, PortResultBase} from "../../../port/PortProtocol";
 import {WorkerProtocol} from "../../../port/WorkerProtocol";
 import {SimResult} from "../../sim/playGame";
-import {GameConfig} from "../GamePool";
+import {GamePoolAgentConfig, PlayArgs} from "../GamePool";
 
 /** Typings for the `workerData` object given to the GameWorker. */
 export interface GameWorkerData {
@@ -26,25 +26,17 @@ export type GameMessage = GameProtocol[GameRequestType]["message"];
 type GameMessageBase<T extends GameRequestType> = PortMessageBase<T>;
 
 /** Game request message format. */
-export interface GamePlay extends GameMessageBase<"play">, GameConfig {
+export interface GamePlay extends GameMessageBase<"play"> {
     /** Model ports that will play against each other. */
     readonly agents: [GameAgentConfig, GameAgentConfig];
-    /**
-     * Path to store experience objects, if any are configured to be emitted in
-     * the agent config. If unspecified, experience objects will be discarded.
-     */
-    readonly expPath?: string;
+    /** Args for starting the game. */
+    readonly play: PlayArgs;
 }
 
 /** Config for game worker agents. */
-export interface GameAgentConfig {
-    /**
-     * Port that uses the `model/ModelPort` protocol for interfacing with a
-     * model.
-     */
+export interface GameAgentConfig extends Omit<GamePoolAgentConfig, "model"> {
+    /** Port that uses the `ModelPort` protocol for interfacing with a model. */
     readonly port: MessagePort;
-    /** Whether to process Experiences emitted by the network. */
-    readonly exp: boolean;
 }
 
 /** Types of messages that the GamePool can receive. */
@@ -57,8 +49,8 @@ type GameResultBase<T extends GameRequestType> = PortResultBase<T>;
 export interface GamePlayResult
     extends GameResultBase<"play">,
         Omit<SimResult, "err"> {
-    /** Number of AugmentedExperience objects saved, if enabled. Otherwise 0. */
-    numAExps: number;
+    /** Number of TrainingExamples that were saved, if enabled. */
+    numExamples?: number;
     /**
      * If an exception was thrown during the game, store it here for logging
      * instead of propagating it through the pipeline. The exception here is

@@ -1,16 +1,16 @@
 import {Transform, TransformCallback} from "stream";
 import * as tfrecord from "tfrecord";
 import {maskedCrc32c} from "tfrecord/lib/crc32c";
-import {AugmentedExperience} from "../../play/experience";
+import {TrainingExample} from "../../play/experience";
 import {footerBytes, headerBytes, lengthBytes} from "../constants";
 
 /**
- * Serializes AugmentedExperiences into TFRecord Example segments.
+ * Serializes {@link TrainingExample}s into TFRecord Example segments.
  *
  * This is intended to pipe directly to a `.tfrecord` file in binary mode,
  * either appending (if the format is already valid) or overwriting.
  */
-export class AExpEncoder extends Transform {
+export class TrainingExampleEncoder extends Transform {
     /** TFRecord Example builder. */
     private readonly builder = tfrecord.createBuilder();
 
@@ -35,16 +35,16 @@ export class AExpEncoder extends Transform {
     private readonly lengthBuffer = Buffer.from(this.metadata, 0, lengthBytes);
 
     /**
-     * Creates an AExpEncoder stream.
+     * Creates a TrainingExampleEncoder stream.
      *
-     * @param maxExp High water mark for the AugmentedExperience buffer. If the
-     * buffer fills up past this point, the stream will apply backpressure.
+     * @param writableHighWaterMark High water mark for the output buffer. If
+     * the buffer fills up past this point, the stream will apply backpressure.
      */
-    public constructor(maxExp = 16) {
+    public constructor(writableHighWaterMark = 16) {
         super({
             encoding: "binary",
             writableObjectMode: true,
-            writableHighWaterMark: maxExp,
+            writableHighWaterMark,
         });
 
         // High-order bits of length segment should stay unset.
@@ -52,17 +52,13 @@ export class AExpEncoder extends Transform {
     }
 
     public override _transform(
-        aexp: AugmentedExperience,
+        te: TrainingExample,
         encoding: BufferEncoding,
         callback: TransformCallback,
     ): void {
         try {
             // Serialize Example.
-            const example = this.aexpToExample(aexp);
-            const record = tfrecord.Example.encode(example).finish();
-            if (!Buffer.isBuffer(record)) {
-                throw new Error("Example encoder didn't use Buffers");
-            }
+            const record = this.encodeTrainingExample(te);
 
             // Compute length with header.
             this.lengthAndCrc.setUint32(
@@ -94,18 +90,21 @@ export class AExpEncoder extends Transform {
         callback();
     }
 
-    /** Compiles an AugmentedExperience into a TFRecord Example. */
-    private aexpToExample(aexp: AugmentedExperience): tfrecord.Example {
+    /** Encodes a TrainingExample into TFRecord data. */
+    private encodeTrainingExample(te: TrainingExample): Buffer {
         // TODO: Verify field values?
-        this.builder.setInteger("action", aexp.action);
-        this.builder.setFloat("advantage", aexp.advantage);
-        this.builder.setBinary("probs", new Uint8Array(aexp.probs.buffer));
-        this.builder.setFloat("returns", aexp.returns);
         this.builder.setBinaries(
             "state",
-            aexp.state.map(arr => new Uint8Array(arr.buffer)),
+            te.state.map(arr => new Uint8Array(arr.buffer)),
         );
-        this.builder.setFloat("value", aexp.value);
-        return this.builder.releaseExample();
+        this.builder.setInteger("action", te.action);
+        this.builder.setFloat("returns", te.returns);
+        const example = this.builder.releaseExample();
+
+        const record = tfrecord.Example.encode(example).finish();
+        if (!Buffer.isBuffer(record)) {
+            throw new Error("Example encoder didn't use Buffers");
+        }
+        return record;
     }
 }

@@ -1,209 +1,79 @@
 import * as tf from "@tensorflow/tfjs";
+import {LearnConfig} from "../../config/types";
+import {shuffle} from "../../util/shuffle";
 import {ModelLearnData} from "../model/worker";
-import {AExpDecoderPool} from "../tfrecord/decoder";
-import {BatchedAExp, createAExpDataset} from "./dataset";
-import {loss, LossResult} from "./loss";
-import {shuffle} from "./shuffle";
+import {Metrics} from "../model/worker/Metrics";
+import {TrainingExampleDecoderPool} from "../tfrecord/decoder";
+import {BatchedExample, createTrainingDataset} from "./dataset";
+import {loss} from "./loss";
 
-/** Base type for AdvantageConfigs. */
-interface AdvantageConfigBase<T extends string> {
-    readonly type: T;
-    /** Discount factor for future rewards. */
-    readonly gamma: number;
-    /**
-     * Whether to standardize the advantage estimates (subtract by mean, divide
-     * by standard deviation). This generally leads to better stability during
-     * training by encouraging half of the performed actions and discouraging
-     * the other half.
-     */
-    readonly standardize?: boolean;
+/** Factored-out high level config from {@link LearnArgs}. */
+export interface LearnArgsPartial extends LearnConfig {
+    /** Name of the current training run, under which to store logs. */
+    readonly name: string;
+    /** Current episode iteration of the training run. 1-based. */
+    readonly step: number;
+    /** Path to the `.tfrecord` files storing the encoded TrainingExamples. */
+    readonly examplePaths: readonly string[];
+    /** Total number of TrainingExamples for logging. */
+    readonly numExamples: number;
 }
 
-/**
- * Estimate advantage using the REINFORCE algorithm, meaning only the discount
- * reward sums are used.
- */
-export type ReinforceConfig = AdvantageConfigBase<"reinforce">;
-
-/**
- * Estimate advantage using the actor-critic model (advantage actor critic, or
- * A2C), where the discount returns are subtracted by a baseline (i.e.
- * state-value in this case) rather than standardizing them like in REINFORCE.
- * This works under the definition of the Q-learning function
- * `Q(s,a) = V(s) + A(s,a)`.
- */
-export type A2cConfig = AdvantageConfigBase<"a2c">;
-
-/**
- * Generalized advantage estimation. Usually better at controlling bias and
- * variance.
- */
-export interface GaeConfig extends AdvantageConfigBase<"generalized"> {
-    /** Controls bias-variance tradeoff. Must be between 0 and 1 inclusive. */
-    readonly lambda: number;
-}
-
-/** Args object for advantage estimator. */
-export type AdvantageConfig = ReinforceConfig | A2cConfig | GaeConfig;
-
-/** Base class for AlgorithmArgs. */
-interface AlgorithmArgsBase<T extends string> {
-    type: T;
-    /** Type of advantage estimator to use. */
-    readonly advantage: AdvantageConfig;
-    /**
-     * If provided, fit the value function separately and weigh it by the
-     * provided value with respect to the actual policy gradient loss.
-     */
-    readonly valueCoeff?: number;
-    /**
-     * If provided, subtract an entropy bonus from the loss, weighing it by the
-     * provided value with respect to the actual policy gradient loss. This
-     * generally makes the network favor situations that give it multiple
-     * favorable options to promote adaptability and unpredictability.
-     */
-    readonly entropyCoeff?: number;
-}
-
-/** Vanilla policy gradient algorithm. */
-export type PgArgs = AlgorithmArgsBase<"pg">;
-
-/** Base interface for PPOVariantArgs. */
-interface PpoVariantBase<T extends string> {
-    /**
-     * Type of PPO variant to use.
-     *
-     * - `clipped` - Clipped probability ratio.
-     * - `klFixed` - Fixed coefficient for a KL-divergence penalty.
-     * - `klAdaptive` - Adaptive coefficient for a KL-divergence penalty.
-     *
-     * @see https://arxiv.org/pdf/1707.06347.pdf
-     */
-    readonly variant: T;
-}
-
-/** PPO variant that uses ratio clipping instead of. */
-interface PpoVariantClipped extends PpoVariantBase<"clipped"> {
-    /** Ratio clipping hyperparameter. */
-    readonly epsilon: number;
-}
-
-/** PPO variant that uses a fixed coefficient for a KL-divergence penalty. */
-interface PpoVariantKlFixed extends PpoVariantBase<"klFixed"> {
-    /** Penalty coefficient. */
-    readonly beta: number;
-}
-
-/**
- * PPO variant that uses an adaptive coefficient for a KL-divergence penalty.
- */
-interface PpoVariantKlAdaptive extends PpoVariantBase<"klAdaptive"> {
-    /**
-     * Target KL-divergence penalty. The penalty coefficient will adapt to
-     * produce this value after each learning step.
-     */
-    readonly klTarget: number;
-    /**
-     * Adaptive penalty coefficient. This will change for each learning step.
-     * Usually it's best to omit this argument (will assume 1 by default) since
-     * it usually adjusts to an optimal value quickly.
-     */
-    beta?: number;
-}
-
-/** Additional parameters for selecting a variant of PPO. */
-type PpoVariantArgs =
-    | PpoVariantClipped
-    | PpoVariantKlFixed
-    | PpoVariantKlAdaptive;
-
-/** Proximal policy optimization algorithm. */
-export type PpoArgs = AlgorithmArgsBase<"ppo"> & PpoVariantArgs;
-
-/** Arguments for customizing the learning algorithm. */
-export type AlgorithmArgs = PgArgs | PpoArgs;
-
-/** Data to train on. */
-export interface LearnConfig {
-    /** Path to the `.tfrecord` file storing the AugmentedExperiences. */
-    readonly aexpPaths: readonly string[];
-    /** Total number of AugmentedExperiences for logging. */
-    readonly numAExps: number;
-    /** Learning algorithm config. */
-    readonly algorithm: AlgorithmArgs;
-    /** Number of epochs to run training. */
-    readonly epochs: number;
-    /** Number of `.tfrecord` files to read in parallel. */
-    readonly numDecoderThreads: number;
-    /** Mini-batch size. */
-    readonly batchSize: number;
-    /** Prefetch buffer size for shuffling. */
-    readonly shufflePrefetch: number;
-}
-
-/** Args for the {@link learn learning} function. */
-export interface LearnArgs extends LearnConfig {
+/** Args for {@link learn}. */
+export interface LearnArgs extends LearnArgsPartial {
     /** Model to train. */
     readonly model: tf.LayersModel;
     /** Callback for tracking the training process. */
     readonly callback?: (data: ModelLearnData) => void;
-    /** Custom callbacks for training. */
-    trainCallback?: tf.CustomCallback;
 }
 
 /** Trains the network over a number of epochs. */
 export async function learn({
+    name,
+    step,
     model,
-    aexpPaths,
-    numAExps,
-    algorithm,
+    examplePaths,
+    numExamples,
     epochs,
     numDecoderThreads,
     batchSize,
     shufflePrefetch,
+    learningRate,
     callback,
-    trainCallback,
 }: LearnArgs): Promise<void> {
-    // Setup training callbacks for metrics logging.
-    const callbacks = new tf.CallbackList();
-    // TODO: Early stopping.
-    if (trainCallback) {
-        callbacks.append(trainCallback);
+    const metrics = Metrics.get(name);
+
+    // Log initial weights.
+    if (step === 1) {
+        metrics?.logWeights("weights", model, 0);
     }
 
     // Have to do this manually (instead of #compile()-ing the model and calling
-    // #fit()) since the loss function changes based on the advantage values.
-    // TODO: Tuning.
-    const optimizer = tf.train.adam(1e-5);
+    // #fit()) since the loss function changes based on the action and reward.
+    const optimizer = tf.train.sgd(learningRate);
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
 
-    const decoderPool = new AExpDecoderPool(numDecoderThreads);
+    const decoderPool = new TrainingExampleDecoderPool(numDecoderThreads);
 
-    callback?.({type: "start", numBatches: Math.ceil(numAExps / batchSize)});
-    await callbacks.onTrainBegin();
+    callback?.({type: "start", numBatches: Math.ceil(numExamples / batchSize)});
 
     try {
+        const epochLosses: tf.Scalar[] = [];
         for (let i = 0; i < epochs; ++i) {
-            const epochLogs: {[name: string]: tf.Scalar} = {};
-            await callbacks.onEpochBegin(i, epochLogs);
-
-            const metricsPerBatch: {
-                [name: string]: tf.Scalar[];
-                loss: tf.Scalar[];
-            } = {loss: []};
+            const batchLosses: tf.Scalar[] = [];
             let batchId = 0;
 
             // Note: We reload the dataset from disk on each epoch to conserve
             // memory.
-            await createAExpDataset(
+            await createTrainingDataset(
                 // Shuffle paths each time to reduce bias.
-                shuffle([...aexpPaths]),
+                shuffle([...examplePaths]),
                 decoderPool,
                 batchSize,
                 shufflePrefetch,
             )
                 // Training loop.
-                .mapAsync(async function (batch: BatchedAExp) {
+                .mapAsync(async function (batch: BatchedExample) {
                     // Convert object with integer keys back into array due to
                     // dataset batching process.
                     const batchState: tf.Tensor[] = [];
@@ -212,148 +82,62 @@ export async function learn({
                         batchState[index] = batch.state[index];
                     }
 
-                    const batchLogs: {[name: string]: tf.Scalar | number} = {
-                        batch: batchId,
-                        size: batchState[0].shape[0],
-                    };
-                    await callbacks.onBatchBegin(batchId, batchLogs);
-                    // Create loss function that records the metrics data.
-                    let kl: tf.Scalar | undefined;
-                    // Note: Internally this function is wrapped in a tf.tidy
-                    // context by the optimier.
-                    function f(): tf.Scalar {
-                        const result = loss({
-                            model,
-                            state: batchState,
-                            oldProbs: batch.probs,
-                            action: batch.action,
-                            returns: batch.returns,
-                            advantage: batch.advantage,
-                            algorithm,
-                        });
-
-                        for (const name in result) {
-                            if (!Object.hasOwnProperty.call(result, name)) {
-                                continue;
-                            }
-                            const metric = result[name as keyof LossResult];
-                            if (!metric) {
-                                continue;
-                            }
-
-                            // Record metrics for epoch average later
-                            if (
-                                !Object.hasOwnProperty.call(
-                                    metricsPerBatch,
-                                    name,
-                                )
-                            ) {
-                                metricsPerBatch[name] = [metric];
-                            } else {
-                                metricsPerBatch[name].push(metric);
-                            }
-
-                            // Record metrics for batch summary
-                            // If using tensorboard, requires updateFreq=batch.
-                            batchLogs[name] = tf.keep(metric.clone());
-
-                            // Record kl for adaptive penalty
-                            if (name === "kl") {
-                                kl = metric;
-                            }
-                        }
-                        return result.loss;
-                    }
-
-                    // Compute the gradients for this batch.
-                    // Don't dispose() the cost tensor since it's being used in
-                    // metricsPerBatch as well.
-                    const cost = optimizer.minimize(
-                        f,
+                    // Compute gradient step for this batch.
+                    const batchLoss = optimizer.minimize(
+                        () =>
+                            loss({
+                                model,
+                                state: batchState,
+                                action: batch.action,
+                                returns: batch.returns,
+                            }),
                         true /*returnCost*/,
                         variables,
                     )!;
+                    batchLosses.push(batchLoss);
 
-                    // Update adaptive kl penalty if applicable.
-                    if (
-                        algorithm.type === "ppo" &&
-                        algorithm.variant === "klAdaptive" &&
-                        kl
-                    ) {
-                        const klValue = await kl.array();
-                        if (algorithm.beta === undefined) {
-                            algorithm.beta = 1;
-                        }
-
-                        // Adapt penalty coefficient.
-                        const target = algorithm.klTarget;
-                        if (klValue < target / 1.5) {
-                            algorithm.beta /= 2;
-                        } else if (klValue > target * 1.5) {
-                            algorithm.beta *= 2;
-                        }
-
-                        // Record new coefficient value.
-                        if (
-                            !Object.hasOwnProperty.call(metricsPerBatch, "beta")
-                        ) {
-                            metricsPerBatch["beta"] = [
-                                tf.scalar(algorithm.beta),
-                            ];
-                        } else {
-                            metricsPerBatch["beta"].push(
-                                tf.scalar(algorithm.beta),
-                            );
-                        }
+                    if (callback) {
+                        const batchLossData = await batchLoss.array();
+                        callback({
+                            type: "batch",
+                            epoch: i + 1,
+                            batch: batchId,
+                            loss: batchLossData,
+                        });
                     }
 
-                    await Promise.all([
-                        callbacks.onBatchEnd(batchId, batchLogs),
-                        ...(callback
-                            ? [
-                                  cost.array().then(costData =>
-                                      callback({
-                                          type: "batch",
-                                          epoch: i + 1,
-                                          batch: batchId,
-                                          loss: costData,
-                                      }),
-                                  ),
-                              ]
-                            : []),
-                    ]);
-                    tf.dispose([batchLogs, batch]);
-
+                    tf.dispose(batch);
                     ++batchId;
                 })
                 .forEachAsync(() => {});
 
-            // Average all batch metrics.
-            for (const name in metricsPerBatch) {
-                if (!Object.hasOwnProperty.call(metricsPerBatch, name)) {
-                    continue;
-                }
-                epochLogs[name] = tf.tidy(() =>
-                    tf.mean(tf.stack(metricsPerBatch[name])).asScalar(),
-                );
-            }
+            const epochLoss = tf.tidy(() =>
+                tf.mean(tf.stack(batchLosses)).asScalar(),
+            );
+            tf.dispose(batchLosses);
+            epochLosses.push(epochLoss);
 
-            await Promise.all([
-                callbacks.onEpochEnd(i, epochLogs),
-                callback &&
-                    epochLogs["loss"].array().then(lossData =>
-                        callback({
-                            type: "epoch",
-                            epoch: i + 1,
-                            loss: lossData,
-                        }),
-                    ),
-            ]);
-            tf.dispose([metricsPerBatch, epochLogs]);
+            if (callback) {
+                const epochLossData = await epochLoss.array();
+                callback({
+                    type: "epoch",
+                    epoch: i + 1,
+                    loss: epochLossData,
+                });
+            }
         }
+
+        const avgEpochLoss = tf.tidy(() =>
+            tf.mean(tf.stack(epochLosses)).asScalar(),
+        );
+        tf.dispose(epochLosses);
+        metrics?.scalar("avg_epoch_loss", avgEpochLoss, step);
+        tf.dispose(avgEpochLoss);
+
+        metrics?.logWeights("weights", model, step);
     } finally {
-        await callbacks.onTrainEnd();
         await decoderPool.close();
         optimizer.dispose();
+        Metrics.flush();
     }
 }

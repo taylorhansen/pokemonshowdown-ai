@@ -5,11 +5,9 @@ import {
     allocEncodedState,
     encodeState,
 } from "../../../psbot/handlers/battle/ai/encoder";
-import {
-    policyAgent,
-    PolicyType,
-} from "../../../psbot/handlers/battle/ai/policyAgent";
+import {maxAgent} from "../../../psbot/handlers/battle/ai/maxAgent";
 import {WrappedError} from "../../../util/errors/WrappedError";
+import {shuffle} from "../../../util/shuffle";
 import {
     ExperienceAgent,
     ExperienceAgentData,
@@ -71,27 +69,40 @@ export class ModelPort {
     }
 
     /**
-     * Creates a BattleAgent from this port.
+     * Creates a BattleAgent from this port that
+     * {@link ExperienceAgent returns} data used for building Experience objs.
      *
-     * @param policy Action selection method.
-     * @see {@link policyAgent}
+     * @param exploration Exploration factor, or the proportion of actions to
+     * take randomly rather than using the model.
      */
-    public getAgent(policy: PolicyType): ExperienceAgent {
+    public getAgent(exploration?: number): ExperienceAgent {
         let data: ExperienceAgentData | null = null;
 
-        const innerAgent = policyAgent(async state => {
+        const innerAgent = maxAgent(async state => {
             const stateData = allocEncodedState("shared");
             encodeState(stateData, state);
             ModelPort.verifyInput(stateData);
 
             const result = await this.predict(stateData);
-            ModelPort.verifyOutput(result.probs, result.value);
+            ModelPort.verifyOutput(result.output);
 
-            data = {...result, state: stateData};
-            return result.probs;
-        }, policy);
+            data = {state: stateData};
+            return result.output;
+        });
 
         return async function portAgent(state, choices, logger) {
+            if (exploration && Math.random() < exploration) {
+                logger?.debug("Exploring");
+                shuffle(choices);
+
+                // Still encode the state so we can log it as an Experience obj.
+                const stateData = allocEncodedState();
+                encodeState(stateData, state);
+                ModelPort.verifyInput(stateData);
+                return {state: stateData};
+            }
+
+            logger?.debug("Exploiting");
             await innerAgent(state, choices, logger);
             if (!data) {
                 throw new Error(
@@ -129,28 +140,15 @@ export class ModelPort {
         }
     }
 
-    /**
-     * Makes sure that the output doesn't contain invalid values, i.e. `NaN`s or
-     * highly concentrated softmax outputs which tend to mess with the
-     * {@link policyAgent}'s weighted shuffle algorithm.
-     */
-    private static verifyOutput(action: Float32Array, value: number): void {
-        for (let i = 0; i < action.length; ++i) {
-            if (isNaN(action[i])) {
+    /** Makes sure that the output doesn't contain invalid values. */
+    private static verifyOutput(output: Float32Array): void {
+        for (let i = 0; i < output.length; ++i) {
+            if (isNaN(output[i])) {
                 throw new Error(
                     `Model output contains NaN for action ${i} ` +
-                        `(${intToChoice[i]}) at index ${i}`,
+                        `(${intToChoice[i]})`,
                 );
             }
-            if (action[i] < 1e-4) {
-                throw new Error(
-                    `Model output contains an invalid value ${action[i]} for ` +
-                        `action ${i} (${intToChoice[i]}) at index ${i}`,
-                );
-            }
-        }
-        if (isNaN(value)) {
-            throw new Error("Model output contains NaN for value");
         }
     }
 

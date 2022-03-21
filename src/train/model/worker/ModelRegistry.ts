@@ -1,13 +1,11 @@
 import {EventEmitter} from "stream";
 import {serialize} from "v8";
-import {MessageChannel, MessagePort, workerData} from "worker_threads";
+import {MessageChannel, MessagePort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {BatchPredictConfig} from "../../../config/types";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
-import {ensureDir} from "../../../util/paths/ensureDir";
-import {importTfn} from "../../../util/tfn";
-import {learn, LearnConfig} from "../../learn";
+import {learn, LearnArgsPartial} from "../../learn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {modelInputShapes, verifyModel} from "../shapes";
 import {
@@ -15,11 +13,8 @@ import {
     PredictResult,
     PredictWorkerResult,
 } from "./ModelPortProtocol";
-import {ModelWorkerData, ModelLearnData} from "./ModelProtocol";
+import {ModelLearnData} from "./ModelProtocol";
 import {setTimeoutNs} from "./nanosecond";
-
-const {gpu} = workerData as ModelWorkerData;
-const tfn = importTfn(gpu);
 
 /** State+callback entry for a {@link ModelRegistry}'s batch queue. */
 interface BatchEntry {
@@ -60,14 +55,14 @@ export class ModelRegistry {
     private inUse: Promise<unknown>;
 
     /**
-     * Creates a NetworkRegistry.
+     * Creates a ModelRegistry.
      *
      * @param model Neural network object.
-     * @param batchOptions Options for batching predict requests.
+     * @param config Configuration for batching predict requests.
      */
     public constructor(
         model: tf.LayersModel,
-        private readonly batchConfig: BatchPredictConfig,
+        private readonly config: BatchPredictConfig,
     ) {
         try {
             verifyModel(model);
@@ -102,7 +97,6 @@ export class ModelRegistry {
     /**
      * Indicates that a game worker is subscribing to a model.
      *
-     * @param uid ID of the model.
      * @returns A port for queueing predictions that the game worker will use.
      */
     public subscribe(): MessagePort {
@@ -119,7 +113,7 @@ export class ModelRegistry {
                             done: true,
                             ...prediction,
                         };
-                        port1.postMessage(result, [result.probs.buffer]);
+                        port1.postMessage(result, [result.output.buffer]);
                     })
                     .catch(err => {
                         const result: RawPortResultError = {
@@ -141,43 +135,17 @@ export class ModelRegistry {
      *
      * @param config Learning config.
      * @param callback Callback for tracking the training process.
-     * @param logPath Path to the folder to store TensorBoard logs in. Omit to
-     * not store logs.
      */
     public async learn(
-        config: LearnConfig,
+        config: LearnArgsPartial,
         callback?: (data: ModelLearnData) => void,
-        logPath?: string,
     ): Promise<void> {
-        let trainCallback: tf.CustomCallback | undefined;
-        this.inUse = Promise.allSettled([
-            this.inUse,
-            ...(logPath
-                ? [
-                      ensureDir(logPath).then(
-                          // Note: Can change updateFreq to batch to track epoch
-                          // progress, but will make the learning algorithm
-                          // slower.
-                          () =>
-                              tfn.node.tensorBoard(logPath, {
-                                  updateFreq: "epoch",
-                              }),
-                      ),
-                  ]
-                : []),
-        ]).then(([, p]) =>
-            p.status === "fulfilled"
-                ? (trainCallback = p.value)
-                : Promise.reject(p.reason),
-        );
-
         this.inUse = this.inUse.then(
             async () =>
                 await learn({
-                    model: this.model,
                     ...config,
+                    model: this.model,
                     ...(callback && {callback}),
-                    ...(trainCallback && {trainCallback}),
                 }),
         );
         await this.inUse;
@@ -196,7 +164,7 @@ export class ModelRegistry {
      * executed.
      */
     private checkPredictBatch(): void {
-        if (this.nextBatch.length >= this.batchConfig.maxSize) {
+        if (this.nextBatch.length >= this.config.maxSize) {
             // Full batch.
             this.batchEvents.emit(batchExecute);
             return;
@@ -211,10 +179,7 @@ export class ModelRegistry {
         let didTimeout = false;
         this.timeoutPromise = new Promise<boolean>(
             res =>
-                (this.cancelTimer = setTimeoutNs(
-                    res,
-                    this.batchConfig.timeoutNs,
-                )),
+                (this.cancelTimer = setTimeoutNs(res, this.config.timeoutNs)),
         )
             .then(canceled => void (didTimeout = !canceled))
             .finally(() => {
@@ -257,35 +222,28 @@ export class ModelRegistry {
             batchStates.map(row => row[colIndex]),
         );
 
-        const [batchedProbs, batchedValues] = tf.tidy(() => {
+        const batchedOutputs = tf.tidy(() => {
             const batchInput = modelInputShapes.map((shape, i) =>
                 tf.stack(batchStatesT[i]).reshape([batch.length, ...shape]),
             );
 
-            const [batchProbs, batchValues] = this.model.predictOnBatch(
+            const batchOutput = this.model.predictOnBatch(
                 batchInput,
-            ) as tf.Tensor[];
-            return [
-                batchProbs
-                    .as2D(batch.length, intToChoice.length)
-                    .unstack<tf.Tensor1D>(),
-                batchValues.as1D(),
-            ];
+            ) as tf.Tensor;
+            return batchOutput
+                .as2D(batch.length, intToChoice.length)
+                .unstack<tf.Tensor1D>();
         });
 
         // Unpack and distribute batch entries.
 
-        const [probsData, valueData] = await Promise.all([
-            Promise.all(
-                batchedProbs.map(async t => (await t.data()) as Float32Array),
-            ),
-            batchedValues.data() as Promise<Float32Array>,
-        ]);
-        batchedProbs.forEach(t => t.dispose());
-        batchedValues.dispose();
+        const outputData = await Promise.all(
+            batchedOutputs.map(async t => (await t.data()) as Float32Array),
+        );
+        batchedOutputs.forEach(t => t.dispose());
 
         for (let i = 0; i < batch.length; ++i) {
-            batch[i].res({probs: probsData[i], value: valueData[i]});
+            batch[i].res({output: outputData[i]});
         }
     }
 }

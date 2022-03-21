@@ -29,9 +29,13 @@ export class ModelWorker {
      * Creates a ModelWorker.
      *
      * @param gpu Whether to enable GPU support. Default `false`.
+     * @param logPath Path to store logs in.
      */
-    public constructor(gpu = false) {
-        const workerData: ModelWorkerData = {gpu};
+    public constructor(gpu = false, logPath?: string) {
+        const workerData: ModelWorkerData = {
+            ...(gpu && {gpu: true}),
+            ...(logPath && {logPath}),
+        };
         this.workerPort = new WorkerPort(
             new Worker(workerScriptPath, {workerData}),
         );
@@ -92,7 +96,6 @@ export class ModelWorker {
      * Deregisters and disposes a neural network.
      *
      * @param uid ID of the model to dispose.
-     * @param saveUrl If provided, save the neural network to the given url.
      */
     public async unload(uid: number): Promise<void> {
         const msg: ModelUnloadMessage = {

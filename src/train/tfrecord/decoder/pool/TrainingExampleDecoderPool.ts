@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as stream from "stream";
-import {AugmentedExperience} from "../../../play/experience";
+import {TrainingExample} from "../../../play/experience";
 import {ThreadPool} from "../../../pool";
 import {DecoderProtocol, DecoderWorkerData} from "./worker/DecoderProtocol";
 import {DecoderWorker} from "./worker/DecoderWorker";
@@ -9,7 +9,7 @@ import {DecoderWorker} from "./worker/DecoderWorker";
 const workerScriptPath = path.resolve(__dirname, "worker", "worker.js");
 
 /** Thread pool for decoding multiple `.tfrecord` files in parallel. */
-export class AExpDecoderPool {
+export class TrainingExampleDecoderPool {
     /** Number of threads in the thread pool. */
     public get numThreads(): number {
         return this.pool.numThreads;
@@ -24,7 +24,7 @@ export class AExpDecoderPool {
     >;
 
     /**
-     * Creates an AExpDecoderPool.
+     * Creates a TrainingExampleDecoderPool.
      *
      * @param numThreads Number of workers to create.
      */
@@ -42,29 +42,29 @@ export class AExpDecoderPool {
      *
      * @param files Files to decode. Workers are assigned to files one-by-one in
      * the order specified.
-     * @param highWaterMark High water mark buffer limit for AugmentedExperience
-     * objs. Defaults to the number of threads.
-     * @yields Decoded AugmentedExperience objs. Order may be nondeterministic
+     * @param highWaterMark High water mark buffer limit for TrainingExamples.
+     * Defaults to the number of threads.
+     * @yields Decoded {@link TrainingExample}s. Order may be nondeterministic
      * due to worker scheduling.
      */
     public async *decode(
         files: readonly string[],
         highWaterMark = this.numThreads,
-    ): AsyncGenerator<AugmentedExperience, void> {
-        // Setup main aexp stream.
+    ): AsyncGenerator<TrainingExample, void> {
+        // Setup main TrainingExample stream.
         // Unique event for this call that indicates that the threads should
-        // push some more aexps to the stream.
-        const readAExp = Symbol("readAExp");
-        const aexpInput = new stream.Readable({
+        // push some more TrainingExamples to the stream.
+        const readExample = Symbol("readExample");
+        const exampleInput = new stream.Readable({
             objectMode: true,
             highWaterMark,
             read() {
-                this.emit(readAExp);
+                this.emit(readExample);
             },
         });
         // Note: Backpressure can cause listeners to build up, but they should
         // always stay under the number of threads.
-        aexpInput.setMaxListeners(this.numThreads);
+        exampleInput.setMaxListeners(this.numThreads);
 
         // Setup path generator.
         // This lets each thread take the next unprocessed file without multiple
@@ -91,14 +91,14 @@ export class AExpDecoderPool {
                             if (done) {
                                 break;
                             }
-                            // Extract all aexps from the file and push to the
-                            // aexpInput stream.
-                            let aexp: AugmentedExperience | null;
-                            while (!done && (aexp = await port.decode(file))) {
+                            // Extract all TrainingExamples from the file and
+                            // push them to the exampleInput stream.
+                            let te: TrainingExample | null;
+                            while (!done && (te = await port.decode(file))) {
                                 // Respect backpressure.
-                                if (!aexpInput.push(aexp)) {
+                                if (!exampleInput.push(te)) {
                                     await new Promise(res =>
-                                        aexpInput.once(readAExp, res),
+                                        exampleInput.once(readExample, res),
                                     );
                                 }
                             }
@@ -110,20 +110,20 @@ export class AExpDecoderPool {
             );
         }
 
-        // End the aexpInput stream once each file has been fully consumed.
+        // End the exampleInput stream once each file has been fully consumed.
         const allDone = Promise.all(threadPromises).finally(() => {
             done = true;
-            aexpInput.push(null);
+            exampleInput.push(null);
             // Make sure thread promises update.
-            aexpInput.emit(readAExp);
+            exampleInput.emit(readExample);
         });
         // Suppress uncaught errors until we can await the promise at the end.
         // TODO: If all promises reject, then the generator loop would hang.
         allDone.catch(() => {});
 
         // Generator loop.
-        for await (const aexp of aexpInput) {
-            yield aexp;
+        for await (const te of exampleInput) {
+            yield te;
         }
 
         // Force errors to propagate, if any.

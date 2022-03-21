@@ -25,9 +25,9 @@ export function createModel(): tf.LayersModel {
         .dense({
             name: "model/room/dense",
             units: 8,
-            activation: "tanh",
+            activation: "relu",
             kernelInitializer: "heNormal",
-            biasInitializer: "heNormal",
+            biasInitializer: "zeros",
         })
         .apply(inputRoom) as tf.SymbolicTensor;
     globalFeatures.push(roomFeatures);
@@ -45,9 +45,9 @@ export function createModel(): tf.LayersModel {
         .dense({
             name: "model/team/status/dense",
             units: 16,
-            activation: "tanh",
+            activation: "relu",
             kernelInitializer: "heNormal",
-            biasInitializer: "heNormal",
+            biasInitializer: "zeros",
         })
         .apply(inputTeamStatus) as tf.SymbolicTensor;
     globalFeatures.push(teamStatusFeatures);
@@ -61,49 +61,49 @@ export function createModel(): tf.LayersModel {
     const pokemonSpeciesLayer = tf.layers.dense({
         name: "model/team/pokemon/species/dense",
         units: 64,
-        activation: "tanh",
+        activation: "relu",
         kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
+        biasInitializer: "zeros",
     });
 
     const pokemonTypesLayer = tf.layers.dense({
         name: "model/team/pokemon/types/dense",
         units: 32,
-        activation: "tanh",
+        activation: "relu",
         kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
+        biasInitializer: "zeros",
     });
 
     const pokemonStatsLayer = tf.layers.dense({
         name: "model/team/pokemon/stats/dense",
         units: 32,
-        activation: "tanh",
+        activation: "relu",
         kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
+        biasInitializer: "zeros",
     });
 
     const pokemonAbilityLayer = tf.layers.dense({
         name: "model/team/pokemon/ability/dense",
         units: 32,
-        activation: "tanh",
+        activation: "relu",
         kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
+        biasInitializer: "zeros",
     });
 
     const pokemonItemLayer = tf.layers.dense({
         name: "model/team/pokemon/item/dense",
         units: 32,
-        activation: "tanh",
+        activation: "relu",
         kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
+        biasInitializer: "zeros",
     });
 
     const pokemonMoveLayer = tf.layers.dense({
         name: "model/team/pokemon/moveset/move/dense",
         units: 32,
-        activation: "tanh",
+        activation: "relu",
         kernelInitializer: "heNormal",
-        biasInitializer: "heNormal",
+        biasInitializer: "zeros",
     });
 
     const pokemonMovesetAggregateLayer = customLayers.mean({
@@ -124,9 +124,9 @@ export function createModel(): tf.LayersModel {
         .dense({
             name: "model/team/active/volatile/dense",
             units: 32,
-            activation: "tanh",
+            activation: "relu",
             kernelInitializer: "heNormal",
-            biasInitializer: "heNormal",
+            biasInitializer: "zeros",
         })
         .apply(activeVolatileInput) as tf.SymbolicTensor;
     globalFeatures.push(activeVolatileFeatures);
@@ -206,9 +206,9 @@ export function createModel(): tf.LayersModel {
         .dense({
             name: "model/pokemon/basic/dense",
             units: 8,
-            activation: "tanh",
+            activation: "relu",
             kernelInitializer: "heNormal",
-            biasInitializer: "heNormal",
+            biasInitializer: "zeros",
         })
         .apply(basicInput) as tf.SymbolicTensor;
     pokemonFeaturesList.push(basicFeatures);
@@ -294,9 +294,8 @@ export function createModel(): tf.LayersModel {
         })
         .apply(pokemonFeaturesList) as tf.SymbolicTensor;
 
-    // Here we element-wise average each of the pokemon features so that the
-    // resulting [null, num_teams, z] tensor can be added to the global feature
-    // set.
+    // Here we element-wise average each of the pokemon features to remove
+    // dependency on order.
     // TODO: Should we exclude the active pokemon's base traits?
     const teamPokemonAggregate = customLayers
         .mean({
@@ -313,7 +312,6 @@ export function createModel(): tf.LayersModel {
     const globalFlattenLayer = tf.layers.flatten({
         name: "model/global/flatten",
     });
-
     const globalFeaturesFlattened = globalFeatures.map(st =>
         st.rank === 2
             ? st
@@ -326,24 +324,25 @@ export function createModel(): tf.LayersModel {
             axis: -1,
         })
         .apply(globalFeaturesFlattened) as tf.SymbolicTensor;
+    const globalEncoding = tf.layers
+        .dense({
+            name: "model/global/dense",
+            units: 64,
+            activation: "relu",
+            kernelInitializer: "heNormal",
+            biasInitializer: "zeros",
+        })
+        .apply(globalConcat) as tf.SymbolicTensor;
 
     //#endregion
 
-    //#region Outputs.
-
-    //#region Action probabilities.
+    //#region Output Q-values.
 
     const actionFeatures: tf.SymbolicTensor[] = [];
 
     //#region Move choices.
 
-    // Consider both the global features as well as the move itself.
-    const actionMoveGlobalRepeat = tf.layers
-        .repeatVector({
-            name: "model/action/move/global/repeat",
-            n: Moveset.maxSize,
-        })
-        .apply(globalConcat) as tf.SymbolicTensor;
+    // Extract move features from our side.
     const usMoveFeaturesSlice = customLayers
         .slice({
             name: "model/action/move/local/slice",
@@ -351,26 +350,35 @@ export function createModel(): tf.LayersModel {
             size: 1,
         })
         .apply(activeMoveFeatures) as tf.SymbolicTensor;
+    // Also remove the extra team dimension due to slice op.
     const usMoveFeatures = tf.layers
         .reshape({
             name: "model/action/move/local/reshape",
-            // Remove the extra team dimension added due to slice op.
             targetShape: usMoveFeaturesSlice.shape.slice(2),
         })
         .apply(usMoveFeaturesSlice) as tf.SymbolicTensor;
+
+    // Consider both the global features as well as the move itself.
+    const actionMoveGlobalRepeat = tf.layers
+        .repeatVector({
+            name: "model/action/move/global/repeat",
+            n: Moveset.maxSize,
+        })
+        .apply(globalEncoding) as tf.SymbolicTensor;
     const actionMoveConcat = tf.layers
         .concatenate({
             name: "model/action/move/concat",
             axis: -1,
         })
         .apply([actionMoveGlobalRepeat, usMoveFeatures]) as tf.SymbolicTensor;
+
     const actionMove = tf.layers
         .dense({
             name: "model/action/move/dense",
             units: 1,
             activation: "linear",
-            kernelInitializer: "heNormal",
-            biasInitializer: "heNormal",
+            kernelInitializer: "glorotNormal",
+            biasInitializer: "zeros",
         })
         .apply(actionMoveConcat) as tf.SymbolicTensor;
     const actionMoves = tf.layers
@@ -393,10 +401,10 @@ export function createModel(): tf.LayersModel {
             size: 1,
         })
         .apply(pokemonConcat) as tf.SymbolicTensor;
+    // Also remove the extra team dimension due to slice op.
     const actionSwitchBench = tf.layers
         .reshape({
             name: "model/action/switch/bench/reshape",
-            // Remove the extra team dimension added due to slice op.
             targetShape: actionSwitchBenchSlice.shape.slice(2),
         })
         .apply(actionSwitchBenchSlice) as tf.SymbolicTensor;
@@ -407,7 +415,7 @@ export function createModel(): tf.LayersModel {
             name: "model/action/switch/global/repeat",
             n: Team.maxSize - 1,
         })
-        .apply(globalConcat) as tf.SymbolicTensor;
+        .apply(globalEncoding) as tf.SymbolicTensor;
     const actionSwitchConcat = tf.layers
         .concatenate({
             name: "model/action/switch/concat",
@@ -417,13 +425,14 @@ export function createModel(): tf.LayersModel {
             actionSwitchGlobalRepeat,
             actionSwitchBench,
         ]) as tf.SymbolicTensor;
+
     const actionSwitch = tf.layers
         .dense({
             name: "model/action/switch/dense",
             units: 1,
             activation: "linear",
             kernelInitializer: "heNormal",
-            biasInitializer: "heNormal",
+            biasInitializer: "zeros",
         })
         .apply(actionSwitchConcat) as tf.SymbolicTensor;
     const actionSwitches = tf.layers
@@ -436,38 +445,13 @@ export function createModel(): tf.LayersModel {
 
     //#endregion
 
-    const actionConcat = tf.layers
+    const outputActionConcat = tf.layers
         .concatenate({
-            name: "model/action/concat",
-            axis: -1,
-        })
-        .apply(actionFeatures) as tf.SymbolicTensor;
-    const actionOutput = tf.layers
-        .softmax({
             name: "model/output/action",
             axis: -1,
         })
-        .apply(actionConcat) as tf.SymbolicTensor;
-    outputs.push(actionOutput);
-
-    //#endregion
-
-    //#region State value.
-
-    const valueOutput = tf.layers
-        .dense({
-            name: "model/output/value",
-            units: 1,
-            // Note: Total reward is between [-1, 1], so value function should
-            // be bounded by it via tanh activation.
-            activation: "tanh",
-            kernelInitializer: "heNormal",
-            biasInitializer: "heNormal",
-        })
-        .apply(globalConcat) as tf.SymbolicTensor;
-    outputs.push(valueOutput);
-
-    //#endregion
+        .apply(actionFeatures) as tf.SymbolicTensor;
+    outputs.push(outputActionConcat);
 
     //#endregion
 

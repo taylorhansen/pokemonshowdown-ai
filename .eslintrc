@@ -61,8 +61,8 @@
       {
         "selector": "default",
         "filter": {
-          // Weather names, abbreviated AugmentedExperience.
-          "regex": "^(SunnyDay)|(RainDance)|(Sandstorm)|(Hail)|(.*AExp.*)$",
+          // Weather names.
+          "regex": "^SunnyDay|RainDance|Sandstorm|Hail$",
           "match": false
         },
         "format": ["strictCamelCase"],
@@ -76,11 +76,6 @@
       },
       {
         "selector": "typeLike",
-        "filter": {
-          // Abbreviated AugmentedExperience.
-          "regex": "^.*AExp.*$",
-          "match": false
-        },
         "format": ["StrictPascalCase"]
       }
     ],

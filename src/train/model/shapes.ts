@@ -80,29 +80,16 @@ export const modelInputShapesMap: {
 );
 
 /**
- * Output shapes for the {@link createModel model}, with the batch dimension.
+ * Output shape for the {@link createModel model}, with the batch dimension.
  */
-export const modelOutputShapes: readonly Readonly<tf.Shape>[] = [
-    // Action.
-    [intToChoice.length],
-    // Value.
-    [1],
-].map((shape: tf.Shape) => {
-    // Add batch dimension.
-    shape.unshift(null);
-    return shape;
-});
+export const modelOutputShape: Readonly<tf.Shape> = [null, intToChoice.length];
 
-/**
- * Output names for the {@link createModel model}.
- *
- * Same length as {@link modelOutputShapes}.
- */
-export const modelOutputNames: readonly string[] = ["action", "value"];
+/** Output name for the {@link createModel model}. */
+export const modelOutputName = "action";
 
 /**
  * Verifies that the model is compatible with the input/output shapes as
- * specified by {@link modelInputShapes} and {@link modelOutputShapes}.
+ * specified by {@link modelInputShapes} and {@link modelOutputShape}.
  *
  * The model created by {@link createModel} is guaranteed to satisfy this check.
  *
@@ -150,34 +137,15 @@ function validateInput(input: tf.SymbolicTensor | tf.SymbolicTensor[]): void {
 
 /** Ensures that the model output shape is valid. */
 function validateOutput(output: tf.SymbolicTensor | tf.SymbolicTensor[]): void {
-    if (!Array.isArray(output)) {
-        throw new Error("Model output is not an array");
+    if (Array.isArray(output)) {
+        throw new Error("Model output must not be an array");
     }
-    if (output.length !== modelOutputShapes.length) {
-        throw new Error(
-            `Expected ${modelOutputShapes.length} outputs but found ` +
-                `${output.length}`,
-        );
-    }
-    for (let i = 0; i < modelOutputShapes.length; ++i) {
-        const {shape} = output[i];
-        const expectedShape = modelOutputShapes[i];
-        let invalid: boolean | undefined;
-        if (shape.length !== expectedShape.length) {
-            invalid = true;
-        } else {
-            for (let j = 0; j < expectedShape.length; ++j) {
-                if (shape[j] !== expectedShape[j]) {
-                    invalid = true;
-                    break;
-                }
-            }
-        }
-        if (invalid) {
+    for (let i = 0; i < modelOutputShape.length; ++i) {
+        if (output.shape[i] !== modelOutputShape[i]) {
             throw new Error(
-                `Expected output ${i} (${modelOutputNames[i]}) to have shape ` +
-                    `${JSON.stringify(expectedShape)} but found ` +
-                    `${JSON.stringify(shape)}`,
+                `Expected output (${modelOutputName}) to have shape ` +
+                    `${JSON.stringify(modelOutputShape)} but found ` +
+                    `${JSON.stringify(output.shape)}`,
             );
         }
     }

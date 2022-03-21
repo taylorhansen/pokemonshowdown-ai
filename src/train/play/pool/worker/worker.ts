@@ -5,8 +5,8 @@ import {parentPort, workerData} from "worker_threads";
 import {ModelPort} from "../../../model/worker";
 import {RawPortResultError} from "../../../port/PortProtocol";
 import {WorkerClosed} from "../../../port/WorkerProtocol";
-import {AExpEncoder} from "../../../tfrecord/encoder";
-import {AugmentedExperience} from "../../experience/AugmentedExperience";
+import {TrainingExampleEncoder} from "../../../tfrecord/encoder";
+import {TrainingExample} from "../../experience/TrainingExample";
 import {playGame, SimArgsAgent} from "../../sim/playGame";
 import {
     GameWorkerData,
@@ -25,7 +25,7 @@ const inputStream = new stream.Readable({objectMode: true, read() {}});
 
 // Setup game stream.
 
-async function processMessage(msg: GamePlay): Promise<AugmentedExperience[]> {
+async function processMessage(msg: GamePlay): Promise<TrainingExample[]> {
     const modelPorts: ModelPort[] = [];
 
     // Should never throw since playGame wraps any caught errors, but just in
@@ -34,13 +34,20 @@ async function processMessage(msg: GamePlay): Promise<AugmentedExperience[]> {
         const agents = msg.agents.map<SimArgsAgent>(config => {
             const modelPort = new ModelPort(config.port);
             modelPorts.push(modelPort);
-            return {agent: modelPort.getAgent("stochastic"), exp: config.exp};
+            return {
+                agent: modelPort.getAgent(config.exploration),
+                emitExperience: !!config.emitExperience,
+            };
         }) as [SimArgsAgent, SimArgsAgent];
 
         // Simulate the game.
         const gameResult = await playGame(
-            {agents, maxTurns: msg.maxTurns, logPath: msg.logPath},
-            msg.rollout,
+            {
+                agents,
+                ...(msg.play.maxTurns && {maxTurns: msg.play.maxTurns}),
+                ...(msg.play.logPath && {logPath: msg.play.logPath}),
+            },
+            msg.play.experienceConfig,
         );
 
         // Send the result back to the main thread.
@@ -48,7 +55,7 @@ async function processMessage(msg: GamePlay): Promise<AugmentedExperience[]> {
             type: "play",
             rid: msg.rid,
             done: true,
-            numAExps: gameResult.experiences.length,
+            numExamples: gameResult.examples.length,
             winner: gameResult.winner,
             ...(gameResult.err && {err: serialize(gameResult.err)}),
         };
@@ -58,7 +65,7 @@ async function processMessage(msg: GamePlay): Promise<AugmentedExperience[]> {
             result.err ? [result.err.buffer] : undefined,
         );
 
-        return gameResult.experiences;
+        return gameResult.examples;
     } finally {
         // Make sure all ports are closed at the end.
         await Promise.all(modelPorts.map(p => p.close()));
@@ -78,9 +85,9 @@ const gameStream = new stream.Transform({
         const p = lastGamePromise;
         lastGamePromise = (async () => {
             await p;
-            let aexps: AugmentedExperience[];
+            let examples: TrainingExample[];
             try {
-                aexps = await processMessage(msg);
+                examples = await processMessage(msg);
             } catch (e) {
                 // Transport error object to main thread for logging.
                 const result: RawPortResultError = {
@@ -90,10 +97,10 @@ const gameStream = new stream.Transform({
                     err: serialize(e),
                 };
                 parentPort!.postMessage(result, [result.err.buffer]);
-                aexps = [];
+                examples = [];
             }
-            for (const aexp of aexps) {
-                this.push(aexp);
+            for (const example of examples) {
+                this.push(example);
             }
             callback();
         })();
@@ -106,7 +113,7 @@ let expStream: [stream.Transform, stream.Writable] | [] = [];
 const {expPath} = workerData as GameWorkerData;
 if (expPath) {
     expStream = [
-        new AExpEncoder(),
+        new TrainingExampleEncoder(),
         // Use append option to keep from overwriting any previous tfrecords
         // TODO: If an errored worker gets replaced, what can guarantee that the
         // tfrecord file is still valid?

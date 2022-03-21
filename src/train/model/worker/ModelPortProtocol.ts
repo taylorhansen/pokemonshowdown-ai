@@ -29,8 +29,6 @@ export interface PredictWorkerResult
 
 /** Result from a prediction. */
 export interface PredictResult {
-    /** Action probabilities. */
-    probs: Float32Array;
-    /** State-value prediction. */
-    value: number;
+    /** Action output. */
+    output: Float32Array;
 }

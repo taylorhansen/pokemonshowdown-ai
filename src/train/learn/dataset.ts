@@ -1,49 +1,45 @@
 import * as tf from "@tensorflow/tfjs";
 import {encodedStateToTensors} from "../../psbot/handlers/battle/ai/networkAgent";
-import {AugmentedExperience} from "../play/experience/AugmentedExperience";
-import {AExpDecoderPool} from "../tfrecord/decoder";
+import {TrainingExample} from "../play/experience/TrainingExample";
+import {TrainingExampleDecoderPool} from "../tfrecord/decoder";
 
 /**
- * {@link AugmentedExperience} with numbers/arrays replaced with
- * {@link tf.Tensor tensors}.
+ * {@link TrainingExample} with values converted to {@link tf.Tensor tensors}.
  */
-export type TensorAExp = {
-    [T in keyof AugmentedExperience]: AugmentedExperience[T] extends number
+export type TensorExample = {
+    [T in keyof TrainingExample]: TrainingExample[T] extends number
         ? tf.Scalar
-        : AugmentedExperience[T] extends Float32Array
+        : TrainingExample[T] extends Float32Array
         ? tf.Tensor1D
-        : AugmentedExperience[T] extends Float32Array[]
+        : TrainingExample[T] extends Float32Array[]
         ? {[index: number]: tf.Tensor}
         : never;
 };
 
 /**
- * Batched {@link AugmentedExperience} stacked {@link tf.Tensor tensors}.
+ * Batched {@link TrainingExample} stacked {@link tf.Tensor tensors}.
  *
- * Essentially a list of {@link TensorAExp TensorAExps} but with each
- * corresponding field turned into a stacked tensor.
+ * Essentially a list of {@link TensorExample}s but with values converted to
+ * stacked tensors.
  */
-export type BatchedAExp = {
-    [T in keyof AugmentedExperience]: AugmentedExperience[T] extends number
+export type BatchedExample = {
+    [T in keyof TrainingExample]: TrainingExample[T] extends number
         ? tf.Tensor1D
-        : AugmentedExperience[T] extends Float32Array
+        : TrainingExample[T] extends Float32Array
         ? tf.Tensor2D
-        : AugmentedExperience[T] extends Float32Array[]
+        : TrainingExample[T] extends Float32Array[]
         ? {[index: number]: tf.Tensor}
         : never;
 };
 
-/** Converts AugmentedExperience fields to tensors suitable for batching. */
-function aexpToTensor(aexp: AugmentedExperience): TensorAExp {
+/** Converts TrainingExample fields to tensors suitable for batching. */
+function exampleToTensor(example: TrainingExample): TensorExample {
     return {
-        probs: tf.tensor1d(aexp.probs, "float32"),
-        value: tf.scalar(aexp.value, "float32"),
         // Convert array into an object with integer keys in order to prevent
         // the array itself from being batched, just the contained tensors.
-        state: {...encodedStateToTensors(aexp.state)},
-        action: tf.scalar(aexp.action, "int32"),
-        returns: tf.scalar(aexp.returns, "float32"),
-        advantage: tf.scalar(aexp.advantage, "float32"),
+        state: {...encodedStateToTensors(example.state)},
+        action: tf.scalar(example.action, "int32"),
+        returns: tf.scalar(example.returns, "float32"),
     };
 }
 
@@ -52,39 +48,39 @@ function aexpToTensor(aexp: AugmentedExperience): TensorAExp {
  * {@link tf.data.Dataset Dataset}, parsing each file in parallel and shuffling
  * according to the prefetch buffer.
  *
- * @param aexpPaths Array of paths to the `.tfrecord` files holding the
- * AugmentedExperiences. Fed into the `decoderPool` in order.
+ * @param examplePaths Array of paths to the `.tfrecord` files holding the
+ * TrainingExamples. Fed into the `decoderPool` in order.
  * @param decoderPool Object used to read `.tfrecord` files.
- * @param batchSize AugmentedExperience batch size.
+ * @param batchSize TrainingExample batch size.
  * @param prefetch Amount to buffer for prefetching/shuffling.
- * @returns A TensorFlow Dataset that contains batched AugmentedExperience
+ * @returns A TensorFlow Dataset that contains batched TrainingExample
  * objects.
  */
-export function createAExpDataset(
-    aexpPaths: readonly string[],
-    decoderPool: AExpDecoderPool,
+export function createTrainingDataset(
+    examplePaths: readonly string[],
+    decoderPool: TrainingExampleDecoderPool,
     batchSize: number,
     prefetch: number,
-): tf.data.Dataset<BatchedAExp> {
+): tf.data.Dataset<BatchedExample> {
     return (
         tf.data
-            .generator<TensorAExp>(
+            .generator<TensorExample>(
                 // Note: This still works with async generators even though the
                 // typings don't explicitly support it.
                 async function* () {
                     const gen = decoderPool.decode(
-                        aexpPaths,
+                        examplePaths,
                         prefetch /*highWaterMark*/,
                     );
-                    for await (const aexp of gen) {
-                        yield aexpToTensor(aexp);
+                    for await (const example of gen) {
+                        yield exampleToTensor(example);
                     }
-                } as unknown as () => Generator<TensorAExp>,
+                } as unknown as () => Generator<TensorExample>,
             )
             .prefetch(prefetch)
             .shuffle(prefetch)
-            // After the batch operation, each entry of a generated AExp will
-            // contain stacked tensors according to the batch size.
-            .batch(batchSize) as tf.data.Dataset<BatchedAExp>
+            // After the batch operation, each entry will contain stacked
+            // tensors according to the batch size.
+            .batch(batchSize) as tf.data.Dataset<BatchedExample>
     );
 }

@@ -1,8 +1,7 @@
 import {BattleAgent} from "../../../psbot/handlers/battle/agent";
-import {PredictResult} from "../../model/worker/ModelPortProtocol";
 
 /** BattleAgent decision data. */
-export interface ExperienceAgentData extends PredictResult {
+export interface ExperienceAgentData {
     /** State in which the action was taken. Flattened array data. */
     state: Float32Array[];
 }

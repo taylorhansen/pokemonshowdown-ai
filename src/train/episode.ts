@@ -1,94 +1,115 @@
 import {join} from "path";
 import ProgressBar from "progress";
 import * as tmp from "tmp-promise";
+import {ExperienceConfig, GameConfig, LearnConfig} from "../config/types";
 import {Logger} from "../util/logging/Logger";
-import {AlgorithmArgs} from "./learn";
 import {ModelWorker} from "./model/worker";
 import {Opponent, playGames} from "./play";
 
 /** Args for {@link episode}. */
 export interface EpisodeArgs {
+    /** Name of the current training run, under which to store logs. */
+    readonly name: string;
+    /** Current episode iteration of the training run. */
+    readonly step: number;
     /** Used to request model ports for the game workers. */
     readonly models: ModelWorker;
     /** ID of the model to train. */
     readonly model: number;
+    /** Proportion of actions to take randomly during the rollout phase. */
+    readonly exploration: number;
+    /** Configuration for generating experience from rollout games. */
+    readonly experienceConfig: ExperienceConfig;
     /** Opponent data for training the model. */
     readonly trainOpponents: readonly Opponent[];
     /** Opponent data for evaluating the model. */
     readonly evalOpponents: readonly Opponent[];
-    /** Number of games to play in parallel. */
-    readonly numThreads: number;
-    /** Number of turns before a game is considered a tie. */
-    readonly maxTurns: number;
-    /** Learning algorithm config. */
-    readonly algorithm: AlgorithmArgs;
-    /** Number of epochs to run training. */
-    readonly epochs: number;
-    /** Number of experience file decoders to run in parallel. */
-    readonly numDecoderThreads: number;
-    /** Mini-batch size. */
-    readonly batchSize: number;
-    /** Prefetch buffer size for shuffling during training. */
-    readonly shufflePrefetch: number;
+    /** Configuration for setting up rollout/eval games. */
+    readonly gameConfig: GameConfig;
+    /** Configuration for the learning process. */
+    readonly learnConfig: LearnConfig;
     /** Logger object. */
     readonly logger: Logger;
     /** Path to the folder to store episode logs in. Omit to not store logs. */
     readonly logPath?: string;
 }
 
+interface EpisodeContext {
+    readonly expFiles: tmp.FileResult[];
+    cleanupPromise?: Promise<unknown>;
+}
+
 /** Runs a training episode. */
-export async function episode({
-    models,
-    model,
-    trainOpponents,
-    evalOpponents,
-    numThreads,
-    maxTurns,
-    algorithm,
-    epochs,
-    numDecoderThreads,
-    batchSize,
-    shufflePrefetch,
-    logger,
-    logPath,
-}: EpisodeArgs): Promise<void> {
+export async function episode(args: EpisodeArgs): Promise<void> {
+    const context: EpisodeContext = {
+        expFiles: [],
+    };
+
+    try {
+        await episodeImpl(context, args);
+    } finally {
+        context.cleanupPromise ??= Promise.all(
+            context.expFiles.map(async f => await f.cleanup()),
+        );
+        await context.cleanupPromise;
+    }
+}
+
+async function episodeImpl(
+    context: EpisodeContext,
+    {
+        name,
+        step,
+        models,
+        model,
+        exploration,
+        experienceConfig,
+        trainOpponents,
+        evalOpponents,
+        gameConfig,
+        learnConfig,
+        logger,
+        logPath,
+    }: EpisodeArgs,
+): Promise<void> {
     // Play some games semi-randomly, building batches of Experience for each
     // game.
-    logger.debug("Collecting training data via policy rollout");
-
-    const expFiles: tmp.FileResult[] = [];
-    async function getExpPath(): Promise<string> {
-        const expFile = await tmp.file({template: "psai-aexp-XXXXXX.tfrecord"});
-        expFiles.push(expFile);
-        return expFile.path;
-    }
-
-    const numAExps = await playGames({
+    const rolloutLog = logger.addPrefix("Rollout: ");
+    rolloutLog.debug(
+        "Collecting training data via policy rollout " +
+            `(exploration factor = ${Math.round(exploration * 100)}%)`,
+    );
+    const numExamples = await playGames({
         models,
-        agentConfig: {model, exp: true},
+        agentConfig: {model, exploration, emitExperience: true},
         opponents: trainOpponents,
-        numThreads,
-        maxTurns,
-        logger: logger.addPrefix("Rollout: "),
+        gameConfig,
+        logger: rolloutLog,
         ...(logPath && {logPath: join(logPath, "rollout")}),
-        rollout: algorithm.advantage,
-        getExpPath,
+        experienceConfig,
+        async getExpPath(): Promise<string> {
+            const expFile = await tmp.file({
+                template: "psai-example-XXXXXX.tfrecord",
+            });
+            context.expFiles.push(expFile);
+            return expFile.path;
+        },
     });
-
     // Summary statement after rollout games.
     const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
-    logger.debug(
-        `Played ${numGames} games total, yielding ${numAExps} experiences ` +
-            `(avg ${(numAExps / numGames).toFixed(2)} per game)`,
+    rolloutLog.debug(
+        `Played ${numGames} games total, yielding ${numExamples} experiences ` +
+            `(avg ${(numExamples / numGames).toFixed(2)} per game)`,
     );
 
-    if (numAExps <= 0) {
-        logger.error("No experience to train over");
+    // Train over the experience gained from each game.
+    const learnLog = logger.addPrefix("Learn: ");
+    learnLog.debug("Training over experience");
+    if (numExamples <= 0) {
+        learnLog.error("No experience to train over");
         return;
     }
 
-    // Train over the experience gained from each game.
-    logger.debug("Training over experience");
     let progress: ProgressBar | undefined;
     let numBatches: number | undefined;
     function startProgress() {
@@ -96,7 +117,7 @@ export async function episode({
             throw new Error("numBatches not initialized");
         }
         const prefixWidth =
-            logger.prefix.length +
+            learnLog.prefix.length +
             "Batch /: ".length +
             2 * Math.ceil(Math.log10(numBatches));
         const postFixWidth = " loss=-0.00000000".length;
@@ -107,7 +128,7 @@ export async function episode({
             postFixWidth -
             padding;
         progress = new ProgressBar(
-            `${logger.prefix}Batch :current/:total: :bar loss=:loss`,
+            `${learnLog.prefix}Batch :current/:total: :bar loss=:loss`,
             {
                 total: numBatches,
                 head: ">",
@@ -120,16 +141,13 @@ export async function episode({
     await models.learn(
         model,
         {
-            aexpPaths: expFiles.map(f => f.path),
-            numAExps,
-            algorithm,
-            epochs,
-            numDecoderThreads,
-            batchSize,
-            shufflePrefetch,
-            logPath,
+            ...learnConfig,
+            name,
+            step,
+            examplePaths: context.expFiles.map(f => f.path),
+            numExamples,
         },
-        function (data) {
+        function onStep(data) {
             switch (data.type) {
                 case "start":
                     ({numBatches} = data);
@@ -139,13 +157,13 @@ export async function episode({
                 case "epoch":
                     // Ending summary statement for the current epoch.
                     progress?.terminate();
-                    logger.debug(
-                        `Epoch ${data.epoch}/${epochs}: Avg loss = ` +
-                            `${data.loss}`,
+                    learnLog.debug(
+                        `Epoch ${data.epoch}/${learnConfig.epochs}: ` +
+                            `Avg loss = ${data.loss}`,
                     );
 
                     // Restart progress bar for the next epoch.
-                    if (data.epoch < epochs) {
+                    if (data.epoch < learnConfig.epochs) {
                         startProgress();
                     }
                     break;
@@ -159,19 +177,21 @@ export async function episode({
         },
     );
     progress?.terminate();
-    const cleanupPromises = expFiles.map(async f => await f.cleanup());
+    context.cleanupPromise = Promise.all(
+        context.expFiles.map(async f => await f.cleanup()),
+    );
 
     // Evaluation games.
-    logger.debug("Evaluating new network against benchmarks");
-    const evalPromise = playGames({
+    // TODO: Make a decision as to whether to accept the updated model based on
+    // these results.
+    const evalLog = logger.addPrefix("Eval: ");
+    evalLog.debug("Evaluating new network against benchmarks");
+    await playGames({
         models,
-        agentConfig: {model, exp: false},
+        agentConfig: {model},
         opponents: evalOpponents,
-        numThreads,
-        maxTurns,
-        logger: logger.addPrefix("Eval: "),
+        gameConfig,
+        logger: evalLog,
         ...(logPath && {logPath: join(logPath, "eval")}),
     });
-
-    await Promise.all([evalPromise, ...cleanupPromises]);
 }

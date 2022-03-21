@@ -1,12 +1,15 @@
-/** Worker thread script for the AExpDecoderPool, managed by a DecoderPort. */
+/**
+ * @file Worker thread script for the TrainingExampleDecoderPool, managed by a
+ * DecoderPort.
+ */
 import * as fs from "fs";
 import * as stream from "stream";
 import {serialize} from "v8";
 import {parentPort} from "worker_threads";
-import {AugmentedExperience} from "../../../../play/experience";
+import {TrainingExample} from "../../../../play/experience";
 import {RawPortResultError} from "../../../../port/PortProtocol";
 import {WorkerClosed} from "../../../../port/WorkerProtocol";
-import {AExpDecoder} from "../../AExpDecoder";
+import {TrainingExampleDecoder} from "../../TrainingExampleDecoder";
 import {DecodeResult, DecoderMessage} from "./DecoderProtocol";
 
 if (!parentPort) {
@@ -15,8 +18,8 @@ if (!parentPort) {
 
 /** Manages a decoder instance. */
 interface DecoderRegistry {
-    /** AugmentedExperience generator. */
-    readonly gen: AsyncGenerator<AugmentedExperience, null>;
+    /** TrainingExample generator. */
+    readonly gen: AsyncGenerator<TrainingExample, null>;
     /** Promise that's currently using the generator. */
     inUse: Promise<void>;
 }
@@ -46,9 +49,9 @@ parentPort.on("message", (msg: DecoderMessage) => {
     if (!decoders.has(msg.path)) {
         // Setup decoder stream pipeline.
         const fileStream = fs.createReadStream(msg.path);
-        const decoderStream = new AExpDecoder(
+        const decoderStream = new TrainingExampleDecoder(
             512 * 1024 /*read 512kb*/,
-            4 /*emit aexps*/,
+            4 /*emit TrainingExamples*/,
         );
 
         const pipelinePromise = stream.promises.pipeline(
@@ -56,14 +59,12 @@ parentPort.on("message", (msg: DecoderMessage) => {
             decoderStream,
         );
 
-        // Use an async generator IIFE to emit AugmentedExperiences.
-        const gen = (async function* (): AsyncGenerator<
-            AugmentedExperience,
-            null
-        > {
-            // Continuously read aexps from decoder unless signaled to stop.
-            for await (const aexp of decoderStream) {
-                if (yield aexp as AugmentedExperience) {
+        // Use an async generator IIFE to emit TrainingExamples.
+        const gen = (async function* (): AsyncGenerator<TrainingExample, null> {
+            // Continuously read TrainingExamples from decoder unless signaled
+            // to stop.
+            for await (const example of decoderStream) {
+                if (yield example as TrainingExample) {
                     break;
                 }
             }
@@ -85,20 +86,18 @@ parentPort.on("message", (msg: DecoderMessage) => {
     const decoder = decoders.get(msg.path)!;
 
     decoder.inUse = decoder.inUse
-        .then(async function nextAExp() {
-            // Get the next aexp (or null if file exhausted).
-            const aexp = (await decoder.gen.next()).value;
+        .then(async function nextExample() {
+            // Get the next TrainingExample (or null if file exhausted).
+            const example = (await decoder.gen.next()).value;
             const result: DecodeResult = {
                 type: "decode",
                 rid: msg.rid,
                 done: true,
-                aexp,
+                example,
             };
             parentPort!.postMessage(
                 result,
-                aexp
-                    ? [aexp.probs.buffer, ...aexp.state.map(a => a.buffer)]
-                    : undefined,
+                example ? example.state.map(a => a.buffer) : undefined,
             );
         })
         .catch((err: Error) => {

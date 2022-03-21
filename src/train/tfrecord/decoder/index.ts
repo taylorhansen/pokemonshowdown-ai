@@ -1,2 +1,2 @@
-export {AExpDecoder} from "./AExpDecoder";
-export {AExpDecoderPool} from "./pool/AExpDecoderPool";
+export * from "./TrainingExampleDecoder";
+export * from "./pool/TrainingExampleDecoderPool";

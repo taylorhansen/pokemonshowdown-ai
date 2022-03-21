@@ -1,12 +1,12 @@
+import {ExperienceConfig} from "../../../config/types";
 import {BattleAgent} from "../../../psbot/handlers/battle/agent";
 import {BattleParser} from "../../../psbot/handlers/battle/parser/BattleParser";
 import {main} from "../../../psbot/handlers/battle/parser/main";
-import {AdvantageConfig} from "../../learn";
 import {
-    AugmentedExperience,
-    augmentExperiences,
+    createTrainingExamples,
     Experience,
     ExperienceAgent,
+    TrainingExample,
 } from "../experience";
 import {experienceBattleParser, PlayerOptions, startPsBattle} from "./ps";
 
@@ -18,7 +18,7 @@ interface SimArgsAgentBase<TAgent extends BattleAgent, TExp extends boolean> {
      * Whether the {@link agent} emits ExperienceAgentData that should be used
      * to generate {@link Experience} objects.
      */
-    exp: TExp;
+    emitExperience: TExp;
 }
 
 /**
@@ -58,26 +58,26 @@ export interface SimResult {
 
 /** Result of a game after it has been completed and processed by the worker. */
 export interface PlayGameResult extends SimResult {
-    /** Processed Experience objects. */
-    experiences: AugmentedExperience[];
+    /** Processed Experience objects suitable for learning. */
+    examples: TrainingExample[];
 }
 
 /**
  * Plays a single game and processes the results.
  *
- * @param simName Name of the simulator to use.
  * @param args Arguments for the simulator.
- * @param rollout Config for processing {@link Experience}s if any BattleAgents
- * are configured to emit them. If omitted, the Experiences will be ignored.
+ * @param expConfig Config for processing {@link Experience}s (if any
+ * BattleAgents are configured to emit them) into {@link TrainingExample}s
+ * suitable for learning. If omitted, the Experiences will instead be discarded.
  */
 export async function playGame(
     args: SimArgs,
-    rollout?: AdvantageConfig,
+    expConfig?: ExperienceConfig,
 ): Promise<PlayGameResult> {
     // Detect battle agents that want to generate Experience objects.
     const experiences: Experience[][] = [];
     const [p1, p2] = args.agents.map<PlayerOptions>(function (agentArgs, i) {
-        if (!agentArgs.exp) {
+        if (!agentArgs.emitExperience) {
             return {agent: agentArgs.agent};
         }
 
@@ -87,12 +87,13 @@ export async function playGame(
         experiences[i] = exps;
         return {
             agent: agentArgs.agent,
-            parser: rollout
+            parser: agentArgs.emitExperience
                 ? (experienceBattleParser(
                       main,
                       exp => exps.push(exp),
-                      // Note: startPSBattle uses raw SideID as username.
-                      `p${i + 1}`,
+                      // Note: startPSBattle() uses raw SideID as username so
+                      // this arg must match.
+                      `p${i + 1}` /*username*/,
                   ) as BattleParser<BattleAgent, [], void>)
                 : main,
         };
@@ -105,18 +106,18 @@ export async function playGame(
         logPath: args.logPath,
     });
 
-    const aexps: AugmentedExperience[] = [];
-    if (rollout && !err) {
+    const examples: TrainingExample[] = [];
+    if (expConfig && !err) {
         // Process experiences as long as the game wasn't errored.
         for (const batch of experiences) {
-            aexps.push(...augmentExperiences(batch, rollout));
+            examples.push(...createTrainingExamples(batch, expConfig));
         }
     }
 
     return {
-        experiences: aexps,
         // Pass winner id as an index corresponding to agents/experiences.
         ...(winner && {winner: winner === "p1" ? 0 : 1}),
         ...(err && {err}),
+        examples,
     };
 }
