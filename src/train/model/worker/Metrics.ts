@@ -47,15 +47,18 @@ export class Metrics {
         Metrics.ensureWriter().scalar(`${this.name}/${name}`, value, step);
     }
 
-    /** Logs the weights of a model for visualization via histograms. */
-    public logWeights(name: string, model: tf.LayersModel, step: number) {
-        const writer = Metrics.ensureWriter();
-        for (const weights of model.weights) {
-            writer.histogram(
-                `${this.name}/${name}/${weights.name}`,
-                weights.read(),
-                step,
-            );
-        }
+    /** Writes a histogram summary of the data. */
+    public histogram(
+        name: string,
+        data: tf.Tensor,
+        step: number,
+        buckets?: number,
+    ) {
+        Metrics.ensureWriter().histogram(
+            `${this.name}/${name}`,
+            data,
+            step,
+            buckets,
+        );
     }
 }

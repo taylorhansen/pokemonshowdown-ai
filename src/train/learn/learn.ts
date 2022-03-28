@@ -43,25 +43,31 @@ export async function learn({
 }: LearnArgs): Promise<void> {
     const metrics = Metrics.get(name);
 
-    // Log initial weights.
-    if (step === 1) {
-        metrics?.logWeights("weights", model, 0);
-    }
-
     // Have to do this manually (instead of #compile()-ing the model and calling
     // #fit()) since the loss function changes based on the action and reward.
     const optimizer = tf.train.sgd(learningRate);
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
+
+    // Log initial weights.
+    if (step === 1) {
+        for (const weights of variables) {
+            metrics?.histogram(`${weights.name}/weights`, weights, 0);
+        }
+    }
 
     const decoderPool = new TrainingExampleDecoderPool(numDecoderThreads);
 
     callback?.({type: "start", numBatches: Math.ceil(numExamples / batchSize)});
 
     try {
-        const epochLosses: tf.Scalar[] = [];
+        let stepLoss = tf.scalar(0);
+        const stepGrads: tf.NamedTensorMap = {};
+
         for (let i = 0; i < epochs; ++i) {
-            const batchLosses: tf.Scalar[] = [];
             let batchId = 0;
+
+            let epochLoss = tf.scalar(0);
+            const epochGrads: tf.NamedTensorMap = {};
 
             // Note: We reload the dataset from disk on each epoch to conserve
             // memory.
@@ -73,7 +79,7 @@ export async function learn({
                 shufflePrefetch,
             )
                 // Training loop.
-                .mapAsync(async function (batch: BatchedExample) {
+                .mapAsync(async function learnBatch(batch: BatchedExample) {
                     // Convert object with integer keys back into array due to
                     // dataset batching process.
                     const batchState: tf.Tensor[] = [];
@@ -83,58 +89,94 @@ export async function learn({
                     }
 
                     // Compute gradient step for this batch.
-                    const batchLoss = optimizer.minimize(
-                        () =>
-                            loss({
-                                model,
-                                state: batchState,
-                                action: batch.action,
-                                returns: batch.returns,
-                            }),
-                        true /*returnCost*/,
-                        variables,
-                    )!;
-                    batchLosses.push(batchLoss);
+                    const {value: batchLoss, grads: batchGrads} =
+                        optimizer.computeGradients(
+                            () =>
+                                loss({
+                                    model,
+                                    state: batchState,
+                                    action: batch.action,
+                                    returns: batch.returns,
+                                }),
+                            variables,
+                        );
+                    tf.dispose(batch);
+                    optimizer.applyGradients(batchGrads);
 
-                    if (callback) {
-                        const batchLossData = await batchLoss.array();
-                        callback({
-                            type: "batch",
-                            epoch: i + 1,
-                            batch: batchId,
-                            loss: batchLossData,
-                        });
+                    const oldEpochLoss = epochLoss;
+                    epochLoss = epochLoss.add(batchLoss);
+                    tf.dispose(oldEpochLoss);
+
+                    callback?.({
+                        type: "batch",
+                        epoch: i + 1,
+                        batch: batchId,
+                        loss: await batchLoss.array(),
+                    });
+                    tf.dispose(batchLoss);
+
+                    for (const key of Object.keys(batchGrads)) {
+                        const grad = batchGrads[key];
+                        if (epochGrads[key]) {
+                            const oldEpochGrad = epochGrads[key];
+                            epochGrads[key] = oldEpochGrad.add(grad);
+                            tf.dispose([oldEpochGrad, grad]);
+                        } else {
+                            epochGrads[key] = grad;
+                        }
                     }
 
-                    tf.dispose(batch);
                     ++batchId;
                 })
                 .forEachAsync(() => {});
 
-            const epochLoss = tf.tidy(() =>
-                tf.mean(tf.stack(batchLosses)).asScalar(),
-            );
-            tf.dispose(batchLosses);
-            epochLosses.push(epochLoss);
+            const oldEpochLoss = epochLoss;
+            epochLoss = tf.div(epochLoss, batchId);
+            tf.dispose(oldEpochLoss);
 
-            if (callback) {
-                const epochLossData = await epochLoss.array();
-                callback({
-                    type: "epoch",
-                    epoch: i + 1,
-                    loss: epochLossData,
-                });
+            const oldStepLoss = stepLoss;
+            stepLoss = stepLoss.add(epochLoss);
+            tf.dispose(oldStepLoss);
+
+            callback?.({
+                type: "epoch",
+                epoch: i + 1,
+                loss: await epochLoss.array(),
+            });
+            tf.dispose(epochLoss);
+
+            for (const key of Object.keys(epochGrads)) {
+                const oldEpochGrad = epochGrads[key];
+                const grad = oldEpochGrad.div(batchId);
+                tf.dispose(oldEpochGrad);
+
+                if (stepGrads[key]) {
+                    const oldStepGrad = stepGrads[key];
+                    stepGrads[key] = oldStepGrad.add(grad);
+                    tf.dispose([oldStepGrad, grad]);
+                } else {
+                    stepGrads[key] = grad;
+                }
             }
         }
 
-        const avgEpochLoss = tf.tidy(() =>
-            tf.mean(tf.stack(epochLosses)).asScalar(),
-        );
-        tf.dispose(epochLosses);
-        metrics?.scalar("avg_epoch_loss", avgEpochLoss, step);
-        tf.dispose(avgEpochLoss);
+        const oldStepLoss = stepLoss;
+        stepLoss = tf.div(stepLoss, epochs);
+        tf.dispose(oldStepLoss);
+        metrics?.scalar("loss", stepLoss, step);
+        tf.dispose(stepLoss);
 
-        metrics?.logWeights("weights", model, step);
+        for (const key of Object.keys(stepGrads)) {
+            const oldStepGrad = stepGrads[key];
+            stepGrads[key] = oldStepGrad.div(epochs);
+            tf.dispose(oldStepGrad);
+            metrics?.histogram(`${key}/grads`, stepGrads[key], step);
+            tf.dispose(stepGrads[key]);
+        }
+
+        for (const weights of variables) {
+            metrics?.histogram(`${weights.name}/weights`, weights, step);
+        }
     } finally {
         await decoderPool.close();
         optimizer.dispose();
