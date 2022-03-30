@@ -141,7 +141,7 @@ export const hpEncoder: Encoder<ReadonlyHp> = augment(
 export const unknownHpEncoder: Encoder<null> = fillEncoder(1 /*full hp*/, 1);
 
 /** Encoder for a nonexistent Hp object. */
-export const emptyHpEncoder: Encoder<undefined> = fillEncoder(-1, 1);
+export const emptyHpEncoder: Encoder<undefined> = zeroEncoder(1);
 
 /** Encoder for a defined MajorStatusCounter. */
 export const definedMajorStatusCounterEncoder: Encoder<ReadonlyMajorStatusCounter> =
@@ -192,7 +192,7 @@ export const unknownBasicEncoder: Encoder<null> = concat(
 
 /** Encoder for a nonexistent Pokemon's basic traits/statuses. */
 export const emptyBasicEncoder: Encoder<undefined> = concat(
-    fillEncoder(-1, 4), // Gender + happiness.
+    zeroEncoder(4), // Gender + happiness.
     emptyHpEncoder,
     emptyMajorStatusCounterEncoder,
 );
@@ -313,8 +313,7 @@ export const unknownSpeciesEncoder: Encoder<null> = fillEncoder(
 );
 
 /** Encoder for a nonexistent Pokemon's species. */
-export const emptySpeciesEncoder: Encoder<undefined> = fillEncoder(
-    -1,
+export const emptySpeciesEncoder: Encoder<undefined> = zeroEncoder(
     dex.pokemonKeys.length,
 );
 
@@ -363,8 +362,7 @@ export const unknownTypesEncoder: Encoder<null> = fillEncoder(
 );
 
 /** Encoder for a nonexistent Pokemon's types. */
-export const emptyTypesEncoder: Encoder<undefined> = fillEncoder(
-    -1,
+export const emptyTypesEncoder: Encoder<undefined> = zeroEncoder(
     filteredTypes.length,
 );
 
@@ -423,8 +421,7 @@ export const unknownStatRangeEncoder: Encoder<null> =
     fillEncoder(0.5, definedStatRangeEncoder.size);
 
 /** Encoder for a nonexistent StatRange. */
-export const emptyStatRangeEncoder: Encoder<undefined> = fillEncoder(
-    -1,
+export const emptyStatRangeEncoder: Encoder<undefined> = zeroEncoder(
     definedStatRangeEncoder.size,
 );
 
@@ -453,8 +450,7 @@ export const unknownStatTableEncoder: Encoder<null> = concat(
 /** Encoder for a nonexistent StatTable. */
 export const emptyStatTableEncoder: Encoder<undefined> = concat(
     ...Array.from(dex.statKeys, () => emptyStatRangeEncoder),
-    fillEncoder(-1, 1), // No level.
-    zeroEncoder(dex.hpTypeKeys.length), // No hp type possibilities.
+    zeroEncoder(1 + dex.hpTypeKeys.length), // No level + hp type possibilities.
 );
 
 /** Encoder for a StatTable. */
@@ -487,8 +483,7 @@ export const unknownAbilityEncoder: Encoder<null> = fillEncoder(
 );
 
 /** Encoder for a nonexistent Pokemon's ability. */
-export const emptyAbilityEncoder: Encoder<undefined> = fillEncoder(
-    -1,
+export const emptyAbilityEncoder: Encoder<undefined> = zeroEncoder(
     dex.abilityKeys.length,
 );
 

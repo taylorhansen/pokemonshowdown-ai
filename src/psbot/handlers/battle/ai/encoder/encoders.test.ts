@@ -263,7 +263,7 @@ export const test = () =>
                 name: "Nonexistent",
                 encoder: encoders.emptyHpEncoder,
                 init: () => undefined,
-                values: new Float32Array([-1]),
+                values: new Float32Array([0]),
             },
         );
 
@@ -413,7 +413,7 @@ export const test = () =>
                 name: "Nonexistent",
                 encoder: encoders.emptyStatRangeEncoder,
                 init: () => undefined,
-                values: new Float32Array([-1, -1, -1]),
+                values: new Float32Array([0, 0, 0]),
             },
         );
 
