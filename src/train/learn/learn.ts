@@ -55,6 +55,11 @@ export async function learn({
         }
     }
 
+    // Used for logging inputs.
+    const denseLayers = model.layers.filter(
+        layer => layer.getClassName() === "Dense",
+    );
+
     const decoderPool = new TrainingExampleDecoderPool(numDecoderThreads);
 
     callback?.({type: "start", numBatches: Math.ceil(numExamples / batchSize)});
@@ -62,12 +67,34 @@ export async function learn({
     try {
         let stepLoss = tf.scalar(0);
         const stepGrads: tf.NamedTensorMap = {};
+        const stepLayerInputs: tf.NamedTensorMap = {};
 
         for (let i = 0; i < epochs; ++i) {
             let batchId = 0;
 
             let epochLoss = tf.scalar(0);
             const epochGrads: tf.NamedTensorMap = {};
+            const epochLayerInputs: tf.NamedTensorMap = {};
+
+            for (const layer of denseLayers) {
+                // Note: Call hook already wrapped in tf.tidy().
+                layer.setCallHook(function learnCallHook(inputs) {
+                    let input = Array.isArray(inputs) ? inputs[0] : inputs;
+
+                    // Average along all axes except last one.
+                    input = input
+                        .mean(input.shape.map((_, j) => j).slice(0, -1))
+                        .flatten();
+
+                    if (epochLayerInputs[layer.name]) {
+                        epochLayerInputs[layer.name] = tf.keep(
+                            epochLayerInputs[layer.name].add(input),
+                        );
+                    } else {
+                        epochLayerInputs[layer.name] = tf.keep(input);
+                    }
+                });
+            }
 
             // Note: We reload the dataset from disk on each epoch to conserve
             // memory.
@@ -158,6 +185,20 @@ export async function learn({
                     stepGrads[key] = grad;
                 }
             }
+
+            for (const key of Object.keys(epochLayerInputs)) {
+                const oldEpochLayerInput = epochLayerInputs[key];
+                const input = oldEpochLayerInput.div(batchId);
+                tf.dispose(oldEpochLayerInput);
+
+                if (stepLayerInputs[key]) {
+                    const oldStepLayerInput = stepLayerInputs[key];
+                    stepLayerInputs[key] = oldStepLayerInput.add(input);
+                    tf.dispose([oldStepLayerInput, input]);
+                } else {
+                    stepLayerInputs[key] = input;
+                }
+            }
         }
 
         const oldStepLoss = stepLoss;
@@ -174,6 +215,14 @@ export async function learn({
             tf.dispose(stepGrads[key]);
         }
 
+        for (const key of Object.keys(stepLayerInputs)) {
+            const oldStepLayerInput = stepLayerInputs[key];
+            stepLayerInputs[key] = oldStepLayerInput.div(epochs);
+            tf.dispose(oldStepLayerInput);
+            metrics?.histogram(`${key}/input`, stepLayerInputs[key], step);
+            tf.dispose(stepLayerInputs[key]);
+        }
+
         for (const weights of variables) {
             metrics?.histogram(`${weights.name}/weights`, weights, step);
         }
@@ -181,5 +230,9 @@ export async function learn({
         await decoderPool.close();
         optimizer.dispose();
         Metrics.flush();
+
+        for (const layer of denseLayers) {
+            layer.clearCallHook();
+        }
     }
 }
