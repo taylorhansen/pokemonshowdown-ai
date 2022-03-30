@@ -431,7 +431,7 @@ export function createModel(): tf.LayersModel {
             name: "model/action/switch/dense",
             units: 1,
             activation: "linear",
-            kernelInitializer: "heNormal",
+            kernelInitializer: "glorotNormal",
             biasInitializer: "zeros",
         })
         .apply(actionSwitchConcat) as tf.SymbolicTensor;
