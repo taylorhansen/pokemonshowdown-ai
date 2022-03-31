@@ -8,6 +8,7 @@ import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
 import {createModel} from "../model";
 import {
+    ModelCopyResult,
     ModelLearnResult,
     ModelLoadResult,
     ModelMessage,
@@ -132,6 +133,12 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                     parentPort!.postMessage(result);
                 });
             break;
+        case "copy": {
+            getRegistry(msg.uidFrom).copyTo(getRegistry(msg.uidTo));
+            const result: ModelCopyResult = {type: "copy", rid, done: true};
+            parentPort!.postMessage(result);
+            break;
+        }
         case "close": {
             promise = Promise.all(
                 Array.from(

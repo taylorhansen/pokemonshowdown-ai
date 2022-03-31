@@ -49,7 +49,7 @@ export interface PathsConfig {
  */
 export interface TensorflowConfig {
     /** Whether to use the GPU. */
-    readonly gpu?: boolean;
+    readonly gpu: boolean;
 }
 
 /**
@@ -70,6 +70,13 @@ export interface TrainConfig {
     readonly eval: EvalConfig;
     /** Learning config. */
     readonly learn: LearnConfig;
+    /**
+     * Whether to save each previous version of the model separately after each
+     * training step.
+     *
+     * Not recommended if running on limited disk space.
+     */
+    readonly savePreviousVersions: boolean;
 }
 
 /**

@@ -34,4 +34,5 @@ void (async function () {
     } finally {
         await models.close();
     }
+    logger.debug("Done");
 })();

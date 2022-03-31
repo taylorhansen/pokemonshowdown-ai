@@ -41,5 +41,6 @@ export const config: Config = {
             shufflePrefetch: 16 * 128,
             learningRate: 0.001,
         },
+        savePreviousVersions: true,
     },
 };

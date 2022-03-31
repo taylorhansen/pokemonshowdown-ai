@@ -15,21 +15,24 @@ export interface ModelWorkerData {
 
 /** ModelWorker request protocol typings. */
 export interface ModelProtocol
-    extends WorkerProtocol<"load" | "save" | "unload" | "subscribe" | "learn"> {
+    extends WorkerProtocol<
+        "load" | "save" | "unload" | "subscribe" | "learn" | "copy"
+    > {
     load: {message: ModelLoadMessage; result: ModelLoadResult};
     save: {message: ModelSaveMessage; result: ModelSaveResult};
     unload: {message: ModelUnloadMessage; result: ModelUnloadResult};
     subscribe: {message: ModelSubscribeMessage; result: ModelSubscribeResult};
     learn: {message: ModelLearnMessage; result: ModelLearnResult};
+    copy: {message: ModelCopyMessage; result: ModelCopyResult};
 }
 
-/** The types of requests that can be made to the network processor. */
+/** The types of requests that can be made to the model worker. */
 export type ModelRequestType = keyof ModelProtocol;
 
 /** Base interface for ModelThread messages. */
 type ModelMessageBase<T extends ModelRequestType> = PortMessageBase<T>;
 
-/** Loads a neural network and registers it for the worker. */
+/** Loads a model and registers it for the worker. */
 export interface ModelLoadMessage
     extends ModelMessageBase<"load">,
         BatchPredictConfig {
@@ -37,7 +40,7 @@ export interface ModelLoadMessage
     readonly url?: string;
 }
 
-/** Saves a neural network to a given URL. */
+/** Saves a model to a given URL. */
 export interface ModelSaveMessage extends ModelMessageBase<"save"> {
     /** ID of the model to save. */
     readonly uid: number;
@@ -51,11 +54,9 @@ export interface ModelUnloadMessage extends ModelMessageBase<"unload"> {
     readonly uid: number;
 }
 
-/**
- * Requests a game worker port from a registered neural network.
- */
+/** Requests a game worker port from a registered model. */
 export interface ModelSubscribeMessage extends ModelMessageBase<"subscribe"> {
-    /** ID of the neural network. */
+    /** ID of the model. */
     readonly uid: number;
 }
 
@@ -63,12 +64,20 @@ export interface ModelSubscribeMessage extends ModelMessageBase<"subscribe"> {
 export interface ModelLearnMessage
     extends ModelMessageBase<"learn">,
         ModelLearnConfig {
-    /** ID of the neural network. */
+    /** ID of the model. */
     readonly uid: number;
 }
 
 /** Config for the learning algorithm. */
 export type ModelLearnConfig = LearnArgsPartial;
+
+/** Copies weights from one model to another. */
+export interface ModelCopyMessage extends ModelMessageBase<"copy"> {
+    /** ID of the model to copy weights from. */
+    readonly uidFrom: number;
+    /** ID of the model to copy weights to. */
+    readonly uidTo: number;
+}
 
 /** Types of messages that the Model can send. */
 export type ModelMessage = ModelProtocol[ModelRequestType]["message"];
@@ -76,19 +85,19 @@ export type ModelMessage = ModelProtocol[ModelRequestType]["message"];
 /** Base interface for Model message results. */
 type ModelResultBase<T extends ModelRequestType> = PortResultBase<T>;
 
-/** Result of loading and registering a network. */
+/** Result of loading and registering a model. */
 export interface ModelLoadResult extends ModelResultBase<"load"> {
     /** Unique identifier for the model that was registered. */
     uid: number;
 }
 
-/** Result of saving a network. */
+/** Result of saving a model. */
 export interface ModelSaveResult extends ModelResultBase<"save"> {
     /** @override */
     done: true;
 }
 
-/** Result of deleting a network. */
+/** Result of deleting a model. */
 export interface ModelUnloadResult extends ModelResultBase<"unload"> {
     /** @override */
     done: true;
@@ -98,7 +107,7 @@ export interface ModelUnloadResult extends ModelResultBase<"unload"> {
 export interface ModelSubscribeResult extends ModelResultBase<"subscribe"> {
     /** @override */
     done: true;
-    /** Port for requesting predictions from a neural network. */
+    /** Port for requesting predictions from a model. */
     port: MessagePort;
 }
 
@@ -145,5 +154,11 @@ export interface ModelLearnResult extends ModelResultBase<"learn"> {
     data?: ModelLearnData;
 }
 
-/** The types of results that can be given to the network processor. */
+/** The types of results that can be given to the model worker. */
 export type ModelResult = ModelProtocol[ModelRequestType]["result"];
+
+/** Result of copying a model. */
+export interface ModelCopyResult extends ModelResultBase<"copy"> {
+    /** @override */
+    done: true;
+}

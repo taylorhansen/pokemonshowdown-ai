@@ -151,6 +151,11 @@ export class ModelRegistry {
         await this.inUse;
     }
 
+    /** Copies the weights of the current model to the given model. */
+    public copyTo(other: ModelRegistry): void {
+        other.model.setWeights(this.model.getWeights());
+    }
+
     /** Queues a prediction for the neural network. */
     private async predict(msg: PredictMessage): Promise<PredictResult> {
         return await new Promise(res => {

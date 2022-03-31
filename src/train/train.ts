@@ -40,26 +40,26 @@ export async function train({
         logger.debug("Creating default model instead");
         model = await models.load(config.train.batchPredict);
 
-        logger.debug("Saving");
+        logger.debug("Saving new model as latest");
         await ensureDir(config.paths.latestModel);
         await models.save(model, latestModelUrl);
     }
 
-    // Save a copy of the original model for evaluating the trained model later.
-    logger.debug("Saving copy of original for reference");
-    const originalModel = await models.load(config.train.batchPredict, loadUrl);
+    logger.debug("Creating copy of original for later evaluation");
+    const previousModel = await models.load(config.train.batchPredict, loadUrl);
+    logger.debug("Saving copy as original");
     const originalModelFolder = path.join(config.paths.models, "original");
-    await models.save(originalModel, pathToFileURL(originalModelFolder).href);
+    await models.save(previousModel, pathToFileURL(originalModelFolder).href);
 
-    const evalOpponents: Opponent[] = [
+    const evalOpponents: readonly Opponent[] = [
         {
             name: "random",
             agentConfig: {exploit: {type: "random"}},
             numGames: config.train.eval.numGames,
         },
         {
-            name: "original",
-            agentConfig: {exploit: {type: "model", model: originalModel}},
+            name: "previous",
+            agentConfig: {exploit: {type: "model", model: previousModel}},
             numGames: config.train.eval.numGames,
         },
     ];
@@ -99,42 +99,22 @@ export async function train({
             logPath: path.join(config.paths.logs, `episode-${i + 1}`),
         });
 
-        // Save the model for evaluation at the end of the next episode.
-        episodeLog.debug("Saving");
-        const episodeFolderName = `episode-${i + 1}`;
-        const episodeModelFolder = path.join(
-            config.paths.models,
-            episodeFolderName,
-        );
-        await models.save(model, pathToFileURL(episodeModelFolder).href);
-
-        // Re-load it so we have a copy.
-        const modelCopy = await models.load(
-            config.train.batchPredict,
-            pathToFileURL(path.join(episodeModelFolder, "model.json")).href,
-        );
-        evalOpponents.push({
-            name: episodeFolderName,
-            agentConfig: {exploit: {type: "model", model: modelCopy}},
-            numGames: config.train.eval.numGames,
-        });
-
-        // Update epsilon-greedy policy.
-        exploration = Math.max(exploration * explorationDecay, minExploration);
-    }
-
-    logger.debug("Saving latest model");
-    await models.save(model, latestModelUrl);
-
-    // Unload all the models as cleanup.
-    const promises = [models.unload(model)];
-    for (const opponent of evalOpponents) {
-        if (
-            opponent.agentConfig.exploit.type === "model" &&
-            opponent.agentConfig.exploit.model !== model
-        ) {
-            promises.push(models.unload(opponent.agentConfig.exploit.model));
+        if (config.train.savePreviousVersions) {
+            const episodeFolderName = `episode-${i + 1}`;
+            episodeLog.debug(`Saving updated model as ${episodeFolderName}`);
+            const episodeModelFolder = path.join(
+                config.paths.models,
+                episodeFolderName,
+            );
+            await models.save(model, pathToFileURL(episodeModelFolder).href);
         }
+
+        episodeLog.debug("Saving updated model as latest");
+        await models.save(model, latestModelUrl);
+
+        exploration = Math.max(exploration * explorationDecay, minExploration);
+        await models.copy(model, previousModel);
     }
-    await Promise.all(promises);
+
+    await Promise.all([models.unload(model), models.unload(previousModel)]);
 }

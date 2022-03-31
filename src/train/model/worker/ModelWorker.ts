@@ -3,6 +3,7 @@ import {MessagePort, Worker} from "worker_threads";
 import {BatchPredictConfig} from "../../../config/types";
 import {WorkerPort} from "../../port/WorkerPort";
 import {
+    ModelCopyMessage,
     ModelLearnConfig,
     ModelLearnData,
     ModelLearnMessage,
@@ -166,6 +167,27 @@ export class ModelWorker {
                     }
                 }
             }),
+        );
+    }
+
+    /**
+     * Copies the weights from one model to another.
+     *
+     * @param uidFrom ID of the model to copy weights from.
+     * @param uidTo ID of the model to copy weights to.
+     */
+    public async copy(uidFrom: number, uidTo: number): Promise<void> {
+        const msg: ModelCopyMessage = {
+            type: "copy",
+            rid: this.workerPort.nextRid(),
+            uidFrom,
+            uidTo,
+        };
+
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"copy">(msg, [], result =>
+                result.type === "error" ? rej(result.err) : res(),
+            ),
         );
     }
 }
