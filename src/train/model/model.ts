@@ -191,11 +191,18 @@ export function createModel(): tf.LayersModel {
 
     const pokemonFeaturesList: tf.SymbolicTensor[] = [];
 
+    const aliveInput = tf.layers.input({
+        name: "model/input/team/pokemon/alive",
+        shape: [...modelInputShapesMap["team/pokemon/alive"]],
+    });
+    inputs.push(aliveInput);
+
     //#region Inputs and basic individual features.
 
-    // Note: Each input is of shape [null, num_teams, team_size, x] where x is
-    // the encoder array size and the null stands for the batch size.
-    // Then, the Dense layers are applied onto each x input individually.
+    // Note: Each input is of shape [batch, num_teams, team_size, encoder_size].
+    // Then, the Dense layers are applied onto each encoder input individually
+    // before applying the alive mask and team aggregation layer.
+    // TODO: Factor out components into functions.
 
     const basicInput = tf.layers.input({
         name: "model/input/team/pokemon/basic",
@@ -284,25 +291,30 @@ export function createModel(): tf.LayersModel {
 
     //#endregion
 
-    // Afterwards, each of the [null, num_teams, team_size, x] input
-    // features are concatenated into a single tensor of shape
-    // [null, num_teams, team_size, y].
-    const pokemonConcat = tf.layers
+    // Afterwards, each of the [batch, num_teams, team_size, x] input features
+    // are concatenated into a single tensor of shape
+    // [batch, num_teams, team_size, y].
+    const pokemonFeatures = tf.layers
         .concatenate({
             name: "model/team/pokemon/concat",
             axis: -1,
         })
         .apply(pokemonFeaturesList) as tf.SymbolicTensor;
 
+    // Mask out features of pokemon that are not alive or nonexistent.
+    const pokemonFeaturesMasked = customLayers
+        .mask({name: "model/team/pokemon/alive_masked"})
+        .apply([pokemonFeatures, aliveInput]) as tf.SymbolicTensor;
+
     // Here we element-wise average each of the pokemon features to remove
-    // dependency on order.
+    // dependency on order, so we get a shape [batch, num_teams, y] tensor.
     // TODO: Should we exclude the active pokemon's base traits?
     const teamPokemonAggregate = customLayers
         .mean({
             name: "model/team/pokemon/mean",
             axis: -2,
         })
-        .apply(pokemonConcat) as tf.SymbolicTensor;
+        .apply(pokemonFeaturesMasked) as tf.SymbolicTensor;
     globalFeatures.push(teamPokemonAggregate);
 
     //#endregion
@@ -400,7 +412,7 @@ export function createModel(): tf.LayersModel {
             begin: [0, 1],
             size: 1,
         })
-        .apply(pokemonConcat) as tf.SymbolicTensor;
+        .apply(pokemonFeaturesMasked) as tf.SymbolicTensor;
     // Also remove the extra team dimension due to slice op.
     const actionSwitchBench = tf.layers
         .reshape({

@@ -127,6 +127,30 @@ export const teamStatusEncoder: Encoder<ReadonlyTeamStatus> = concat(
 /** Team pokemon args. */
 export type PokemonArgs = ReadonlyPokemon | null | undefined;
 
+//#region Alive boolean.
+
+/** Encodes whether each pokemon is alive. */
+export const pokemonAliveEncoder: Encoder<PokemonArgs[]> = {
+    encode(data, args) {
+        checkLength(data, this.size);
+        checkLength(args, this.size);
+
+        for (let i = 0; i < this.size; ++i) {
+            const arg = args[i];
+            if (arg === undefined) {
+                data[i] = 0;
+            } else if (arg === null) {
+                data[i] = 1;
+            } else {
+                data[i] = arg.hp.current > 0 ? 1 : 0;
+            }
+        }
+    },
+    size: Team.maxSize,
+};
+
+//#endregion
+
 //#region Basic Pokemon traits/statuses.
 
 /** Encoder for an Hp object. */

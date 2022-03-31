@@ -1,2 +1,3 @@
-export {mean, MeanArgs} from "./mean";
-export {slice, SliceArgs} from "./slice";
+export * from "./mask";
+export * from "./mean";
+export * from "./slice";

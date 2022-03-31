@@ -1,6 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-
-type LayerArgs = NonNullable<ConstructorParameters<typeof tf.layers.Layer>[0]>;
+import {LayerArgs} from "./LayerArgs";
 
 /** Args for {@link mean}. */
 export interface MeanArgs extends LayerArgs {

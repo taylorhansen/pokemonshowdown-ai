@@ -15,6 +15,7 @@ import {
     definedStatTableEncoder,
     definedTypesEncoder,
     pokemonAbilityEncoder,
+    pokemonAliveEncoder,
     PokemonArgs,
     pokemonBasicEncoder,
     pokemonItemEncoder,
@@ -52,6 +53,7 @@ const definedTypesEncoders = map(numTeams, definedTypesEncoder);
 const definedStatTableEncoders = map(numTeams, definedStatTableEncoder);
 const definedAbilityEncoders = map(numTeams, definedAbilityEncoder);
 const definedMovesetEncoders = map(numTeams, definedMovesetEncoder);
+const pokemonAliveEncoders = map(numTeams, pokemonAliveEncoder);
 const pokemonBasicEncoders = map(numTeams, pokemonBasicEncoder);
 const pokemonSpeciesEncoders = map(numTeams, pokemonSpeciesEncoder);
 const pokemonTypesEncoders = map(numTeams, pokemonTypesEncoder);
@@ -189,6 +191,9 @@ export function encodeState(
         if (partialName.startsWith("pokemon/")) {
             partialName = partialName.substring("pokemon/".length);
             switch (partialName) {
+                case "alive":
+                    pokemonAliveEncoders.encode(arr, teamPokemon);
+                    break;
                 case "basic":
                     pokemonBasicEncoders.encode(arr, teamPokemon);
                     break;

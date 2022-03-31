@@ -30,6 +30,7 @@ export const modelInputShapes: readonly (readonly number[])[] = [
     [numTeams, encoders.definedAbilityEncoder.size],
     [numTeams, Moveset.maxSize, encoders.moveSlotEncoder.size],
     // Bench traits/statuses.
+    [numTeams, teamSize, 1],
     [numTeams, teamSize, encoders.basicEncoder.size],
     [numTeams, teamSize, encoders.speciesEncoder.size],
     [numTeams, teamSize, encoders.typesEncoder.size],
@@ -59,6 +60,7 @@ export const modelInputNames: readonly string[] = [
     "team/active/stats",
     "team/active/ability",
     "team/active/moves",
+    "team/pokemon/alive",
     "team/pokemon/basic",
     "team/pokemon/species",
     "team/pokemon/types",
