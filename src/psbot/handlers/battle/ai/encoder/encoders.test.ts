@@ -235,6 +235,20 @@ export const test = () =>
             init: () => new TeamStatus(),
         });
 
+        testEncoder("aliveEncoder", {
+            name: "Fully Initialized",
+            encoder: encoders.pokemonAliveEncoder,
+            init() {
+                const mon1 = new Pokemon("magikarp");
+                mon1.hp.set(100, 100);
+                const mon2 = new Pokemon("ditto");
+                mon2.hp.set(0);
+
+                return [mon1, mon2, null, null, undefined, undefined];
+            },
+            values: new Float32Array([1, 0, 1, 1, 0, 0]),
+        });
+
         testEncoder(
             "Hp",
             {
