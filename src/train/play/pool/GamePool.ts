@@ -3,21 +3,27 @@ import {ExperienceConfig} from "../../../config/types";
 import {ModelWorker} from "../../model/worker";
 import {ThreadPool} from "../../pool";
 import {SimResult} from "../sim/playGame";
-import {GameProtocol, GameWorkerData} from "./worker/GameProtocol";
+import {
+    GameAgentConfig,
+    GameProtocol,
+    GameWorkerData,
+} from "./worker/GameProtocol";
 import {GameWorker} from "./worker/GameWorker";
 
-/** Config for {@link GamePool.addGame} agents. */
-export interface GamePoolAgentConfig {
-    /** Model id from the ModelWorker. */
-    readonly model: number;
-    /**
-     * Exploration factor. Proportion of actions to take randomly rather than
-     * consulting the model.
-     */
-    readonly exploration?: number;
-    /** Whether to emit Experience objs after each decision. */
-    readonly emitExperience?: true;
+/** Args for {@link GamePool.addGame}. */
+export interface GamePoolArgs {
+    /** Unique identifier for logging. */
+    readonly id: number;
+    /** Config for the models that will play against each other. */
+    readonly agents: readonly [GamePoolAgentConfig, GamePoolAgentConfig];
+    /** Used to request model ports for the game workers. */
+    readonly models: ModelWorker;
+    /** Args for starting the game. */
+    readonly play: PlayArgs;
 }
+
+/** Config for {@link GamePool.addGame} agents. */
+export type GamePoolAgentConfig = GameAgentConfig<false /*TWithModelPort*/>;
 
 /** Args for starting a game. */
 export interface PlayArgs {
@@ -33,18 +39,6 @@ export interface PlayArgs {
      * omitted, experience is discarded.
      */
     readonly experienceConfig?: ExperienceConfig;
-}
-
-/** Args for {@link GamePool.addGame}. */
-export interface GamePoolArgs {
-    /** Unique identifier for logging. */
-    readonly id: number;
-    /** Config for the models that will play against each other. */
-    readonly agents: readonly [GamePoolAgentConfig, GamePoolAgentConfig];
-    /** Used to request model ports for the game workers. */
-    readonly models: ModelWorker;
-    /** Args for starting the game. */
-    readonly play: PlayArgs;
 }
 
 /** {@link GamePool} stream output type. */
@@ -108,8 +102,7 @@ export class GamePool {
             callback?.();
             return await port.playGame(args);
         } catch (e) {
-            const result: GamePoolResult = {id: args.id, err: e as Error};
-            return result;
+            return {id: args.id, err: e as Error};
         } finally {
             this.pool.givePort(port);
         }

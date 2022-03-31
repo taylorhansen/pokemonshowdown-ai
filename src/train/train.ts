@@ -53,8 +53,13 @@ export async function train({
 
     const evalOpponents: Opponent[] = [
         {
+            name: "random",
+            agentConfig: {exploit: {type: "random"}},
+            numGames: config.train.eval.numGames,
+        },
+        {
             name: "original",
-            agentConfig: {model: originalModel},
+            agentConfig: {exploit: {type: "model", model: originalModel}},
             numGames: config.train.eval.numGames,
         },
     ];
@@ -80,8 +85,8 @@ export async function train({
                 {
                     name: "self",
                     agentConfig: {
-                        model,
-                        exploration,
+                        exploit: {type: "model", model},
+                        explore: {factor: exploration},
                         emitExperience: true,
                     },
                     numGames: config.train.rollout.numGames,
@@ -110,24 +115,26 @@ export async function train({
         );
         evalOpponents.push({
             name: episodeFolderName,
-            agentConfig: {model: modelCopy},
+            agentConfig: {exploit: {type: "model", model: modelCopy}},
             numGames: config.train.eval.numGames,
         });
 
-        // Update epsilon.
+        // Update epsilon-greedy policy.
         exploration = Math.max(exploration * explorationDecay, minExploration);
     }
 
     logger.debug("Saving latest model");
     await models.save(model, latestModelUrl);
 
-    // Unload all the models and then the ModelWorker itself.
+    // Unload all the models as cleanup.
     const promises = [models.unload(model)];
     for (const opponent of evalOpponents) {
-        if (opponent.agentConfig.model === model) {
-            continue;
+        if (
+            opponent.agentConfig.exploit.type === "model" &&
+            opponent.agentConfig.exploit.model !== model
+        ) {
+            promises.push(models.unload(opponent.agentConfig.exploit.model));
         }
-        promises.push(models.unload(opponent.agentConfig.model));
     }
     await Promise.all(promises);
 }

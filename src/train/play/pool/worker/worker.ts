@@ -14,6 +14,7 @@ import {
     GamePlay,
     GamePlayResult,
 } from "./GameProtocol";
+import {randomAgent, randomExpAgent} from "./randomAgent";
 
 if (!parentPort) {
     throw new Error("No parent port!");
@@ -32,12 +33,28 @@ async function processMessage(msg: GamePlay): Promise<TrainingExample[]> {
     // case it does, the caller should be able to handle it.
     try {
         const agents = msg.agents.map<SimArgsAgent>(config => {
-            const modelPort = new ModelPort(config.port);
-            modelPorts.push(modelPort);
-            return {
-                agent: modelPort.getAgent(config.exploration),
-                emitExperience: !!config.emitExperience,
-            };
+            switch (config.exploit.type) {
+                case "model": {
+                    const modelPort = new ModelPort(config.exploit.port);
+                    modelPorts.push(modelPort);
+                    return {
+                        agent: modelPort.getAgent(config.explore?.factor),
+                        emitExperience: !!config.emitExperience,
+                    };
+                }
+                case "random":
+                    return config.emitExperience
+                        ? {agent: randomExpAgent, emitExperience: true}
+                        : {agent: randomAgent, emitExperience: false};
+                default: {
+                    const unsupported: unknown = config.exploit;
+                    throw new Error(
+                        `Unknown exploit type: ${
+                            (unsupported as {type: string}).type
+                        }`,
+                    );
+                }
+            }
         }) as [SimArgsAgent, SimArgsAgent];
 
         // Simulate the game.

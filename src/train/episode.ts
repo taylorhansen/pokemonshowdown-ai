@@ -81,7 +81,11 @@ async function episodeImpl(
     );
     const numExamples = await playGames({
         models,
-        agentConfig: {model, exploration, emitExperience: true},
+        agentConfig: {
+            exploit: {type: "model", model},
+            explore: {factor: exploration},
+            emitExperience: true,
+        },
         opponents: trainOpponents,
         gameConfig,
         logger: rolloutLog,
@@ -188,7 +192,7 @@ async function episodeImpl(
     evalLog.debug("Evaluating new network against benchmarks");
     await playGames({
         models,
-        agentConfig: {model},
+        agentConfig: {exploit: {type: "model", model}},
         opponents: evalOpponents,
         gameConfig,
         logger: evalLog,

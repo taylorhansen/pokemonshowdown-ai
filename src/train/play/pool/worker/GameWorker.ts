@@ -30,10 +30,18 @@ export class GameWorker {
             rid: this.workerPort.nextRid(),
             agents: await Promise.all(
                 args.agents.map(async agentConfig => ({
-                    // Resolve model ids into usable model ports.
-                    port: await args.models.subscribe(agentConfig.model),
-                    ...(agentConfig.exploration && {
-                        exploration: agentConfig.exploration,
+                    exploit:
+                        agentConfig.exploit.type === "model"
+                            ? {
+                                  type: "model",
+                                  // Resolve model ids into usable model ports.
+                                  port: await args.models.subscribe(
+                                      agentConfig.exploit.model,
+                                  ),
+                              }
+                            : agentConfig.exploit,
+                    ...(agentConfig.explore && {
+                        explore: agentConfig.explore,
                     }),
                     ...(agentConfig.emitExperience && {
                         emitExperience: true,
@@ -46,7 +54,11 @@ export class GameWorker {
         return await new Promise(res =>
             this.workerPort.postMessage<"play">(
                 msg,
-                msg.agents.map(config => config.port),
+                msg.agents.flatMap(config =>
+                    config.exploit.type === "model"
+                        ? [config.exploit.port]
+                        : [],
+                ),
                 workerResult => {
                     let result: GamePoolResult;
                     if (workerResult.type !== "error") {

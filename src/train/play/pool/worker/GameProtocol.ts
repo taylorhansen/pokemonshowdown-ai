@@ -3,7 +3,7 @@ import {MessagePort} from "worker_threads";
 import {PortMessageBase, PortResultBase} from "../../../port/PortProtocol";
 import {WorkerProtocol} from "../../../port/WorkerProtocol";
 import {SimResult} from "../../sim/playGame";
-import {GamePoolAgentConfig, PlayArgs} from "../GamePool";
+import {PlayArgs} from "../GamePool";
 
 /** Typings for the `workerData` object given to the GameWorker. */
 export interface GameWorkerData {
@@ -34,9 +34,51 @@ export interface GamePlay extends GameMessageBase<"play"> {
 }
 
 /** Config for game worker agents. */
-export interface GameAgentConfig extends Omit<GamePoolAgentConfig, "model"> {
-    /** Port that uses the `ModelPort` protocol for interfacing with a model. */
-    readonly port: MessagePort;
+export interface GameAgentConfig<TWithModelPort extends boolean = true> {
+    /** Exploitation policy. */
+    readonly exploit: AgentExploitConfig<TWithModelPort>;
+    /** Exploration policy. */
+    readonly explore?: AgentExploreConfig;
+    /** Whether to emit Experience objs after each decision. */
+    readonly emitExperience?: true;
+}
+
+interface AgentExploitConfigBase<T extends string> {
+    readonly type: T;
+}
+
+/** Exploit using a neural network model. */
+export type ModelAgentExploitConfig<TWithModelPort extends boolean = true> =
+    AgentExploitConfigBase<"model"> &
+        (TWithModelPort extends true
+            ? {
+                  /**
+                   * Port that uses the `ModelPort` protocol for interfacing
+                   * with a model.
+                   */
+                  readonly port: MessagePort;
+              }
+            : // Used in top-level before assigning a unique port for the game.
+              {
+                  /** Model id from the {@link ModelWorker}. */
+                  readonly model: number;
+              });
+
+/** Exploit using a random agent. */
+export type RandomAgentExploitConfig = AgentExploitConfigBase<"random">;
+
+/** Config describing how the agent should behave when exploiting reward. */
+export type AgentExploitConfig<TWithModelPort extends boolean = true> =
+    | ModelAgentExploitConfig<TWithModelPort>
+    | RandomAgentExploitConfig;
+
+/** Config for agent exploration. */
+export interface AgentExploreConfig {
+    /**
+     * Exploration factor. Proportion of actions to take randomly rather than
+     * consulting the model.
+     */
+    readonly factor?: number;
 }
 
 /** Types of messages that the GamePool can receive. */

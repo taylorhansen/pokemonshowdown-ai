@@ -7,11 +7,11 @@ import {
 } from "../../../psbot/handlers/battle/ai/encoder";
 import {maxAgent} from "../../../psbot/handlers/battle/ai/maxAgent";
 import {WrappedError} from "../../../util/errors/WrappedError";
-import {shuffle} from "../../../util/shuffle";
 import {
     ExperienceAgent,
     ExperienceAgentData,
 } from "../../play/experience/Experience";
+import {randomExpAgent} from "../../play/pool/worker/randomAgent";
 import {AsyncPort, ProtocolResultRaw} from "../../port/AsyncPort";
 import {modelInputNames} from "../shapes";
 import {
@@ -93,13 +93,7 @@ export class ModelPort {
         return async function portAgent(state, choices, logger) {
             if (exploration && Math.random() < exploration) {
                 logger?.debug("Exploring");
-                shuffle(choices);
-
-                // Still encode the state so we can log it as an Experience obj.
-                const stateData = allocEncodedState();
-                encodeState(stateData, state);
-                ModelPort.verifyInput(stateData);
-                return {state: stateData};
+                return await randomExpAgent(state, choices);
             }
 
             logger?.debug("Exploiting");
@@ -119,7 +113,7 @@ export class ModelPort {
      * Makes sure that the input doesn't contain invalid values, i.e. `NaN`s or
      * values outside the range `[-1, 1]`.
      */
-    private static verifyInput(data: Float32Array[]): void {
+    public static verifyInput(data: Float32Array[]): void {
         for (let i = 0; i < data.length; ++i) {
             const arr = data[i];
             for (let j = 0; j < arr.length; ++j) {
@@ -141,7 +135,7 @@ export class ModelPort {
     }
 
     /** Makes sure that the output doesn't contain invalid values. */
-    private static verifyOutput(output: Float32Array): void {
+    public static verifyOutput(output: Float32Array): void {
         for (let i = 0; i < output.length; ++i) {
             if (isNaN(output[i])) {
                 throw new Error(
