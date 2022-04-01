@@ -8,6 +8,7 @@ import {
     ModelLearnData,
     ModelLearnMessage,
     ModelLoadMessage,
+    ModelLogWltMessage,
     ModelProtocol,
     ModelSaveMessage,
     ModelSubscribeMessage,
@@ -186,6 +187,39 @@ export class ModelWorker {
 
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"copy">(msg, [], result =>
+                result.type === "error" ? rej(result.err) : res(),
+            ),
+        );
+    }
+
+    /**
+     * Logs win/loss/tie metrics to Tensorboard.
+     *
+     * @param name Name of the current training run, under which to store logs.
+     * @param step Current episode iteration of the training run.
+     * @param opponent Name of the opponent.
+     */
+    public async logWlt(
+        name: string,
+        step: number,
+        opponent: string,
+        wins: number,
+        losses: number,
+        ties: number,
+    ): Promise<void> {
+        const msg: ModelLogWltMessage = {
+            type: "logWlt",
+            rid: this.workerPort.nextRid(),
+            name,
+            step,
+            opponent,
+            wins,
+            losses,
+            ties,
+        };
+
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"logWlt">(msg, [], result =>
                 result.type === "error" ? rej(result.err) : res(),
             ),
         );

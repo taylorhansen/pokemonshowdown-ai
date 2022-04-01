@@ -26,6 +26,10 @@ export interface Opponent {
 
 /** Args for {@link playGames}. */
 export interface PlayGamesArgs {
+    /** Name of the current training run, under which to store logs. */
+    readonly name: string;
+    /** Current episode iteration of the training run. */
+    readonly step: number;
     /** Used to request model ports for the game workers. */
     readonly models: ModelWorker;
     /** Config for the BattleAgent that will participate in each game. */
@@ -49,6 +53,8 @@ export interface PlayGamesArgs {
      * specified, any experiences will be discarded.
      */
     readonly getExpPath?: () => Promise<string>;
+    /** Whether to log win/loss/tie metrics to Tensorboard. */
+    readonly logWlt?: boolean;
 }
 
 /**
@@ -57,6 +63,8 @@ export interface PlayGamesArgs {
  * @returns The number of TrainingExamples that were generated, if any.
  */
 export async function playGames({
+    name,
+    step,
     models,
     agentConfig,
     opponents,
@@ -65,6 +73,7 @@ export async function playGames({
     logPath,
     experienceConfig,
     getExpPath,
+    logWlt,
 }: PlayGamesArgs): Promise<number> {
     let numExamples = 0;
     for (const opponent of opponents) {
@@ -165,6 +174,10 @@ export async function playGames({
 
         progress.terminate();
         innerLog.debug(`Record: ${wins}-${losses}-${ties}`);
+
+        if (logWlt) {
+            await models.logWlt(name, step, opponent.name, wins, losses, ties);
+        }
     }
 
     return numExamples;

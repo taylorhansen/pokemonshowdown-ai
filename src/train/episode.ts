@@ -80,6 +80,8 @@ async function episodeImpl(
             `(exploration factor = ${Math.round(exploration * 100)}%)`,
     );
     const numExamples = await playGames({
+        name,
+        step,
         models,
         agentConfig: {
             exploit: {type: "model", model},
@@ -191,11 +193,14 @@ async function episodeImpl(
     const evalLog = logger.addPrefix("Eval: ");
     evalLog.debug("Evaluating new network against benchmarks");
     await playGames({
+        name,
+        step,
         models,
         agentConfig: {exploit: {type: "model", model}},
         opponents: evalOpponents,
         gameConfig,
         logger: evalLog,
         ...(logPath && {logPath: join(logPath, "eval")}),
+        logWlt: true,
     });
 }

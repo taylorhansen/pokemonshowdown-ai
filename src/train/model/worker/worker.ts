@@ -7,10 +7,13 @@ import {importTfn} from "../../../util/tfn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
 import {createModel} from "../model";
+import {Metrics} from "./Metrics";
 import {
     ModelCopyResult,
     ModelLearnResult,
     ModelLoadResult,
+    ModelLogWltMessage,
+    ModelLogWltResult,
     ModelMessage,
     ModelSaveResult,
     ModelSubscribeResult,
@@ -139,6 +142,12 @@ parentPort.on("message", function handle(msg: ModelMessage) {
             parentPort!.postMessage(result);
             break;
         }
+        case "logWlt": {
+            logWlt(msg);
+            const result: ModelLogWltResult = {type: "logWlt", rid, done: true};
+            parentPort!.postMessage(result);
+            break;
+        }
         case "close": {
             promise = Promise.all(
                 Array.from(
@@ -166,3 +175,29 @@ parentPort.on("message", function handle(msg: ModelMessage) {
     // Promise should resolve on its own.
     void promise;
 });
+
+/** Logs win/loss/tie metrics to Tensorboard. */
+function logWlt(msg: ModelLogWltMessage): void {
+    const metrics = Metrics.get(msg.name);
+    if (!metrics) {
+        return;
+    }
+
+    const total = msg.wins + msg.losses + msg.ties;
+    metrics.scalar(
+        `eval/vs_${msg.opponent}/win_ratio`,
+        msg.wins / total,
+        msg.step,
+    );
+    metrics.scalar(
+        `eval/vs_${msg.opponent}/loss_ratio`,
+        msg.losses / total,
+        msg.step,
+    );
+    metrics.scalar(
+        `eval/vs_${msg.opponent}/tie_ratio`,
+        msg.ties / total,
+        msg.step,
+    );
+    Metrics.flush();
+}

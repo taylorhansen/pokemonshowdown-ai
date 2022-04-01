@@ -16,7 +16,7 @@ export interface ModelWorkerData {
 /** ModelWorker request protocol typings. */
 export interface ModelProtocol
     extends WorkerProtocol<
-        "load" | "save" | "unload" | "subscribe" | "learn" | "copy"
+        "load" | "save" | "unload" | "subscribe" | "learn" | "copy" | "logWlt"
     > {
     load: {message: ModelLoadMessage; result: ModelLoadResult};
     save: {message: ModelSaveMessage; result: ModelSaveResult};
@@ -24,6 +24,7 @@ export interface ModelProtocol
     subscribe: {message: ModelSubscribeMessage; result: ModelSubscribeResult};
     learn: {message: ModelLearnMessage; result: ModelLearnResult};
     copy: {message: ModelCopyMessage; result: ModelCopyResult};
+    logWlt: {message: ModelLogWltMessage; result: ModelLogWltResult};
 }
 
 /** The types of requests that can be made to the model worker. */
@@ -77,6 +78,19 @@ export interface ModelCopyMessage extends ModelMessageBase<"copy"> {
     readonly uidFrom: number;
     /** ID of the model to copy weights to. */
     readonly uidTo: number;
+}
+
+/** Logs win/loss/tie metrics to Tensorboard. */
+export interface ModelLogWltMessage extends ModelMessageBase<"logWlt"> {
+    /** Name of the current training run, under which to store logs. */
+    readonly name: string;
+    /** Current episode iteration of the training run. */
+    readonly step: number;
+    /** Name of the opponent. */
+    readonly opponent: string;
+    readonly wins: number;
+    readonly losses: number;
+    readonly ties: number;
 }
 
 /** Types of messages that the Model can send. */
@@ -159,6 +173,12 @@ export type ModelResult = ModelProtocol[ModelRequestType]["result"];
 
 /** Result of copying a model. */
 export interface ModelCopyResult extends ModelResultBase<"copy"> {
+    /** @override */
+    done: true;
+}
+
+/** Result of logging win/loss/tie metrics. */
+export interface ModelLogWltResult extends ModelResultBase<"logWlt"> {
     /** @override */
     done: true;
 }

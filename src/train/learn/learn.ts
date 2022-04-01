@@ -51,7 +51,7 @@ export async function learn({
     // Log initial weights.
     if (step === 1) {
         for (const weights of variables) {
-            metrics?.histogram(`${weights.name}/weights`, weights, 0);
+            metrics?.histogram(`learn/${weights.name}/weights`, weights, 0);
         }
     }
 
@@ -204,14 +204,14 @@ export async function learn({
         const oldStepLoss = stepLoss;
         stepLoss = tf.div(stepLoss, epochs);
         tf.dispose(oldStepLoss);
-        metrics?.scalar("loss", stepLoss, step);
+        metrics?.scalar("learn/loss", stepLoss, step);
         tf.dispose(stepLoss);
 
         for (const key of Object.keys(stepGrads)) {
             const oldStepGrad = stepGrads[key];
             stepGrads[key] = oldStepGrad.div(epochs);
             tf.dispose(oldStepGrad);
-            metrics?.histogram(`${key}/grads`, stepGrads[key], step);
+            metrics?.histogram(`learn/${key}/grads`, stepGrads[key], step);
             tf.dispose(stepGrads[key]);
         }
 
@@ -219,12 +219,16 @@ export async function learn({
             const oldStepLayerInput = stepLayerInputs[key];
             stepLayerInputs[key] = oldStepLayerInput.div(epochs);
             tf.dispose(oldStepLayerInput);
-            metrics?.histogram(`${key}/input`, stepLayerInputs[key], step);
+            metrics?.histogram(
+                `learn/${key}/input`,
+                stepLayerInputs[key],
+                step,
+            );
             tf.dispose(stepLayerInputs[key]);
         }
 
         for (const weights of variables) {
-            metrics?.histogram(`${weights.name}/weights`, weights, step);
+            metrics?.histogram(`learn/${weights.name}/weights`, weights, step);
         }
     } finally {
         await decoderPool.close();
