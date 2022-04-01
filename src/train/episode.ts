@@ -14,8 +14,8 @@ export interface EpisodeArgs {
     readonly step: number;
     /** Used to request model ports for the game workers. */
     readonly models: ModelWorker;
-    /** ID of the model to train. */
-    readonly model: number;
+    /** Name of the model to train. */
+    readonly model: string;
     /** Proportion of actions to take randomly during the rollout phase. */
     readonly exploration: number;
     /** Configuration for generating experience from rollout games. */

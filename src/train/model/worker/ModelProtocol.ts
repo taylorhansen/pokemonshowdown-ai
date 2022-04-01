@@ -34,39 +34,41 @@ export type ModelRequestType = keyof ModelProtocol;
 type ModelMessageBase<T extends ModelRequestType> = PortMessageBase<T>;
 
 /** Loads a model and registers it for the worker. */
-export interface ModelLoadMessage
-    extends ModelMessageBase<"load">,
-        BatchPredictConfig {
+export interface ModelLoadMessage extends ModelMessageBase<"load"> {
+    /** Name by which to refer to the model. */
+    readonly name: string;
+    /** Config for batch predict worker. */
+    readonly predict: BatchPredictConfig;
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
 }
 
 /** Saves a model to a given URL. */
 export interface ModelSaveMessage extends ModelMessageBase<"save"> {
-    /** ID of the model to save. */
-    readonly uid: number;
+    /** Name of the model to save. */
+    readonly model: string;
     /** URL to the model folder to save to. */
     readonly url: string;
 }
 
 /** Disposes a model from the worker. */
 export interface ModelUnloadMessage extends ModelMessageBase<"unload"> {
-    /** ID of the model to dispose. */
-    readonly uid: number;
+    /** Name of the model to dispose. */
+    readonly model: string;
 }
 
 /** Requests a game worker port from a registered model. */
 export interface ModelSubscribeMessage extends ModelMessageBase<"subscribe"> {
-    /** ID of the model. */
-    readonly uid: number;
+    /** Name of the model. */
+    readonly model: string;
 }
 
 /** Queues a learning episode. */
-export interface ModelLearnMessage
-    extends ModelMessageBase<"learn">,
-        ModelLearnConfig {
-    /** ID of the model. */
-    readonly uid: number;
+export interface ModelLearnMessage extends ModelMessageBase<"learn"> {
+    /** Name of the model. */
+    readonly model: string;
+    /** Config for the learning algorithm. */
+    readonly config: ModelLearnConfig;
 }
 
 /** Config for the learning algorithm. */
@@ -74,10 +76,10 @@ export type ModelLearnConfig = LearnArgsPartial;
 
 /** Copies weights from one model to another. */
 export interface ModelCopyMessage extends ModelMessageBase<"copy"> {
-    /** ID of the model to copy weights from. */
-    readonly uidFrom: number;
-    /** ID of the model to copy weights to. */
-    readonly uidTo: number;
+    /** Name of the model to copy weights from. */
+    readonly from: string;
+    /** Name of the model to copy weights to. */
+    readonly to: string;
 }
 
 /** Logs win/loss/tie metrics to Tensorboard. */
@@ -101,8 +103,8 @@ type ModelResultBase<T extends ModelRequestType> = PortResultBase<T>;
 
 /** Result of loading and registering a model. */
 export interface ModelLoadResult extends ModelResultBase<"load"> {
-    /** Unique identifier for the model that was registered. */
-    uid: number;
+    /** Name under which the model was registered. */
+    name: string;
 }
 
 /** Result of saving a model. */

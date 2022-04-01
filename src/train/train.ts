@@ -27,18 +27,18 @@ export async function train({
     logger,
 }: TrainArgs): Promise<void> {
     // Create or load neural network.
-    let model: number;
+    let model: string;
     const latestModelUrl = pathToFileURL(config.paths.latestModel).href;
     const loadUrl = pathToFileURL(
         path.join(config.paths.latestModel, "model.json"),
     ).href;
     logger.debug("Loading latest model: " + config.paths.latestModel);
     try {
-        model = await models.load(config.train.batchPredict, loadUrl);
+        model = await models.load("model", config.train.batchPredict, loadUrl);
     } catch (e) {
         logger.error(`Error opening model: ${e}`);
         logger.debug("Creating default model instead");
-        model = await models.load(config.train.batchPredict);
+        model = await models.load("model", config.train.batchPredict);
 
         logger.debug("Saving new model as latest");
         await ensureDir(config.paths.latestModel);
@@ -46,7 +46,11 @@ export async function train({
     }
 
     logger.debug("Creating copy of original for later evaluation");
-    const previousModel = await models.load(config.train.batchPredict, loadUrl);
+    const previousModel = await models.load(
+        "model_prev",
+        config.train.batchPredict,
+        loadUrl,
+    );
     logger.debug("Saving copy as original");
     const originalModelFolder = path.join(config.paths.models, "original");
     await models.save(previousModel, pathToFileURL(originalModelFolder).href);

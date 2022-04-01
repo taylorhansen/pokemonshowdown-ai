@@ -30,21 +30,18 @@ if (!parentPort) {
 const {gpu} = workerData as ModelWorkerData;
 importTfn(gpu);
 
-/** Maps model uid to their registry objects. */
-const models = new Map<number, ModelRegistry>();
-
-/** Counter for model uids. */
-let uidCounter = 0;
+/** Maps model name to their registry objects. */
+const models = new Map<string, ModelRegistry>();
 
 /**
- * Searches for a model registry with the specified uid.
+ * Searches for a model registry with the specified name.
  *
  * @throws Error if model not found.
  */
-function getRegistry(uid: number): ModelRegistry {
-    const registry = models.get(uid);
+function getRegistry(model: string): ModelRegistry {
+    const registry = models.get(model);
     if (!registry) {
-        throw new Error(`No such model with uid ${uid}`);
+        throw new Error(`No such model registered under name '${model}'`);
     }
     return registry;
 }
@@ -52,15 +49,16 @@ function getRegistry(uid: number): ModelRegistry {
 /** Registers a recently loaded model. */
 function load(
     rid: number,
+    name: string,
     model: tf.LayersModel,
     batchConfig: BatchPredictConfig,
 ) {
-    models.set(uidCounter, new ModelRegistry(model, batchConfig));
+    models.set(name, new ModelRegistry(model, batchConfig));
     const result: ModelLoadResult = {
         type: "load",
         rid,
         done: true,
-        uid: uidCounter++,
+        name,
     };
     parentPort!.postMessage(result);
 }
@@ -72,15 +70,15 @@ parentPort.on("message", function handle(msg: ModelMessage) {
         case "load":
             // Note: Downcasting msg to BatchPredictOptions.
             if (!msg.url) {
-                load(rid, createModel(), msg);
+                load(rid, msg.name, createModel(msg.name), msg.predict);
             } else {
                 promise = tf
                     .loadLayersModel(msg.url)
-                    .then(m => load(rid, m, msg));
+                    .then(m => load(rid, msg.name, m, msg.predict));
             }
             break;
         case "save":
-            promise = getRegistry(msg.uid)
+            promise = getRegistry(msg.model)
                 .save(msg.url)
                 .then(function () {
                     const result: ModelSaveResult = {
@@ -92,10 +90,10 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                 });
             break;
         case "unload":
-            promise = getRegistry(msg.uid)
+            promise = getRegistry(msg.model)
                 .unload()
                 .then(function () {
-                    models.delete(msg.uid);
+                    models.delete(msg.model);
                     const result: ModelUnloadResult = {
                         type: "unload",
                         rid,
@@ -105,7 +103,7 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                 });
             break;
         case "subscribe": {
-            const port = getRegistry(msg.uid).subscribe();
+            const port = getRegistry(msg.model).subscribe();
             const result: ModelSubscribeResult = {
                 type: "subscribe",
                 rid,
@@ -116,8 +114,8 @@ parentPort.on("message", function handle(msg: ModelMessage) {
             break;
         }
         case "learn":
-            promise = getRegistry(msg.uid)
-                .learn(msg, data => {
+            promise = getRegistry(msg.model)
+                .learn(msg.config, data => {
                     const result: ModelLearnResult = {
                         type: "learn",
                         rid,
@@ -137,7 +135,7 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                 });
             break;
         case "copy": {
-            getRegistry(msg.uidFrom).copyTo(getRegistry(msg.uidTo));
+            getRegistry(msg.from).copyTo(getRegistry(msg.to));
             const result: ModelCopyResult = {type: "copy", rid, done: true};
             parentPort!.postMessage(result);
             break;

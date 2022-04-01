@@ -60,8 +60,8 @@ export type ModelAgentExploitConfig<TWithModelPort extends boolean = true> =
               }
             : // Used in top-level before assigning a unique port for the game.
               {
-                  /** Model id from the {@link ModelWorker}. */
-                  readonly model: number;
+                  /** Model name from the {@link ModelWorker}. */
+                  readonly model: string;
               });
 
 /** Exploit using a random agent. */

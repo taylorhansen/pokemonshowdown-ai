@@ -51,24 +51,27 @@ export class ModelWorker {
     /**
      * Loads and registers a neural network.
      *
+     * @param name Name by which to refer to the model.
      * @param batchConfig Options for batching predict requests.
      * @param url URL to load from. If omitted, creates a default model.
-     * @returns A unique identifier for further requests involving this network.
+     * @returns The registered name of the model.
      */
     public async load(
+        name: string,
         batchConfig: BatchPredictConfig,
         url?: string,
-    ): Promise<number> {
+    ): Promise<string> {
         const msg: ModelLoadMessage = {
             type: "load",
             rid: this.workerPort.nextRid(),
-            ...batchConfig,
+            name,
+            predict: batchConfig,
             ...(url && {url}),
         };
 
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"load">(msg, [], result =>
-                result.type === "error" ? rej(result.err) : res(result.uid),
+                result.type === "error" ? rej(result.err) : res(result.name),
             ),
         );
     }
@@ -76,14 +79,14 @@ export class ModelWorker {
     /**
      * Saves a neural network to disk.
      *
-     * @param uid ID of the model to save.
+     * @param model Name of the model to save.
      * @param url URL to save to.
      */
-    public async save(uid: number, url: string): Promise<void> {
+    public async save(model: string, url: string): Promise<void> {
         const msg: ModelSaveMessage = {
             type: "save",
             rid: this.workerPort.nextRid(),
-            uid,
+            model,
             url,
         };
 
@@ -95,15 +98,15 @@ export class ModelWorker {
     }
 
     /**
-     * Deregisters and disposes a neural network.
+     * Deregisters and disposes a model.
      *
-     * @param uid ID of the model to dispose.
+     * @param model Name of the model to dispose.
      */
-    public async unload(uid: number): Promise<void> {
+    public async unload(model: string): Promise<void> {
         const msg: ModelUnloadMessage = {
             type: "unload",
             rid: this.workerPort.nextRid(),
-            uid,
+            model,
         };
 
         return await new Promise((res, rej) =>
@@ -117,15 +120,15 @@ export class ModelWorker {
      * Requests a unique access port from a neural network. Closing the port
      * will remove this link.
      *
-     * @param uid ID of the model.
+     * @param model Name of the model.
      * @returns A MessagePort that implements the ModelPort protocol.
      * @see ModelPort
      */
-    public async subscribe(uid: number): Promise<MessagePort> {
+    public async subscribe(model: string): Promise<MessagePort> {
         const msg: ModelSubscribeMessage = {
             type: "subscribe",
             rid: this.workerPort.nextRid(),
-            uid,
+            model,
         };
 
         return await new Promise((res, rej) =>
@@ -138,21 +141,21 @@ export class ModelWorker {
     /**
      * Queues a learning episode for the model.
      *
-     * @param uid ID of the model.
+     * @param model Name of the model.
      * @param config Learning config.
      * @param callback Callback after each batch and epoch during the learning
      * step.
      */
     public async learn(
-        uid: number,
+        model: string,
         config: ModelLearnConfig,
         callback?: (data: ModelLearnData) => void,
     ): Promise<void> {
         const msg: ModelLearnMessage = {
             type: "learn",
             rid: this.workerPort.nextRid(),
-            uid,
-            ...config,
+            model,
+            config,
         };
 
         return await new Promise((res, rej) =>
@@ -174,15 +177,15 @@ export class ModelWorker {
     /**
      * Copies the weights from one model to another.
      *
-     * @param uidFrom ID of the model to copy weights from.
-     * @param uidTo ID of the model to copy weights to.
+     * @param from Name of the model to copy weights from.
+     * @param to Name of the model to copy weights to.
      */
-    public async copy(uidFrom: number, uidTo: number): Promise<void> {
+    public async copy(from: string, to: string): Promise<void> {
         const msg: ModelCopyMessage = {
             type: "copy",
             rid: this.workerPort.nextRid(),
-            uidFrom,
-            uidTo,
+            from,
+            to,
         };
 
         return await new Promise((res, rej) =>
