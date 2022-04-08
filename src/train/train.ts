@@ -1,11 +1,13 @@
 import * as path from "path";
 import {pathToFileURL} from "url";
 import {Config} from "../config/types";
+import {hash} from "../util/hash";
 import {Logger} from "../util/logging/Logger";
 import {ensureDir} from "../util/paths/ensureDir";
-import {episode} from "./episode";
+import {episode, EpisodeSeedRandomArgs} from "./episode";
 import {ModelWorker} from "./model/worker";
 import {Opponent} from "./play";
+import {AgentExploreConfig} from "./play/pool/worker/GameProtocol";
 
 /** Args for {@link train}. */
 export interface TrainArgs {
@@ -17,6 +19,22 @@ export interface TrainArgs {
     readonly models: ModelWorker;
     /** Logger object used to provide console output. */
     readonly logger: Logger;
+    /** Configure random number generators. */
+    readonly seeds?: SeedConfig;
+}
+
+/** Configuration for random number generators. */
+export interface SeedConfig {
+    /** Seed for model creation. */
+    readonly model?: string;
+    /** Seed for generating the battle sim PRNGs. */
+    readonly battle?: string;
+    /** Seed for generating the random team PRNGs. */
+    readonly team?: string;
+    /** Seed for random exploration in epsilon-greedy policy. */
+    readonly explore?: string;
+    /** Seed for shuffling training examples during the learning step. */
+    readonly learn?: string;
 }
 
 /** Executes the training procedure with the given config. */
@@ -25,6 +43,7 @@ export async function train({
     config,
     models,
     logger,
+    seeds,
 }: TrainArgs): Promise<void> {
     // Create or load neural network.
     let model: string;
@@ -38,7 +57,12 @@ export async function train({
     } catch (e) {
         logger.error(`Error opening model: ${e}`);
         logger.debug("Creating default model instead");
-        model = await models.load("model", config.train.batchPredict);
+        model = await models.load(
+            "model",
+            config.train.batchPredict,
+            undefined /*url*/,
+            seeds?.model,
+        );
 
         logger.debug("Saving new model as latest");
         await ensureDir(config.paths.latestModel);
@@ -68,8 +92,17 @@ export async function train({
         },
     ];
 
-    let {exploration} = config.train.rollout.policy;
+    let explore: AgentExploreConfig = {
+        factor: config.train.rollout.policy.exploration,
+    };
     const {explorationDecay, minExploration} = config.train.rollout.policy;
+
+    const seed: EpisodeSeedRandomArgs | undefined = seeds && {
+        ...(seeds.battle && {battle: createSeedGenerator(seeds.battle)}),
+        ...(seeds.team && {team: createSeedGenerator(seeds.team)}),
+        ...(seeds.explore && {explore: createSeedGenerator(seeds.explore)}),
+        ...(seeds.learn && {learn: createSeedGenerator(seeds.learn)}),
+    };
 
     // Train network.
     for (let i = 0; i < config.train.numEpisodes; ++i) {
@@ -82,7 +115,7 @@ export async function train({
             step: i + 1,
             models,
             model,
-            exploration,
+            explore,
             experienceConfig: config.train.rollout.experience,
             // TODO: Include ancestor opponents to avoid strategy collapse.
             trainOpponents: [
@@ -90,7 +123,7 @@ export async function train({
                     name: "self",
                     agentConfig: {
                         exploit: {type: "model", model},
-                        explore: {factor: exploration},
+                        explore,
                         emitExperience: true,
                     },
                     numGames: config.train.rollout.numGames,
@@ -101,6 +134,7 @@ export async function train({
             learnConfig: config.train.learn,
             logger: episodeLog,
             logPath: path.join(config.paths.logs, `episode-${i + 1}`),
+            ...(seed && {seed}),
         });
 
         if (config.train.savePreviousVersions) {
@@ -116,9 +150,16 @@ export async function train({
         episodeLog.debug("Saving updated model as latest");
         await models.save(model, latestModelUrl);
 
-        exploration = Math.max(exploration * explorationDecay, minExploration);
+        explore = {
+            factor: Math.max(explore.factor * explorationDecay, minExploration),
+        };
         await models.copy(model, previousModel);
     }
 
     await Promise.all([models.unload(model), models.unload(previousModel)]);
+}
+
+function createSeedGenerator(seed: string): () => string {
+    let i = 0;
+    return () => hash(seed + String(i++));
 }

@@ -5,6 +5,7 @@ import {ExperienceConfig, GameConfig, LearnConfig} from "../config/types";
 import {Logger} from "../util/logging/Logger";
 import {ModelWorker} from "./model/worker";
 import {Opponent, playGames} from "./play";
+import {AgentExploreConfig} from "./play/pool/worker/GameProtocol";
 
 /** Args for {@link episode}. */
 export interface EpisodeArgs {
@@ -16,8 +17,8 @@ export interface EpisodeArgs {
     readonly models: ModelWorker;
     /** Name of the model to train. */
     readonly model: string;
-    /** Proportion of actions to take randomly during the rollout phase. */
-    readonly exploration: number;
+    /** Exploration policy for the rollout phase. */
+    readonly explore: AgentExploreConfig;
     /** Configuration for generating experience from rollout games. */
     readonly experienceConfig: ExperienceConfig;
     /** Opponent data for training the model. */
@@ -32,6 +33,22 @@ export interface EpisodeArgs {
     readonly logger: Logger;
     /** Path to the folder to store episode logs in. Omit to not store logs. */
     readonly logPath?: string;
+    /** Random seed generators. */
+    readonly seed?: EpisodeSeedRandomArgs;
+}
+
+/** Random seed generators used by the training algorithm. */
+export interface EpisodeSeedRandomArgs {
+    /** Random seed generator for the battle PRNGs. */
+    readonly battle?: () => string;
+    /** Random seed generator for the random team PRNGs. */
+    readonly team?: () => string;
+    /** Random seed generator for the random exploration policy. */
+    readonly explore?: () => string;
+    /**
+     * Random seed generator for learning algorithm's training example shuffler.
+     */
+    readonly learn?: () => string;
 }
 
 interface EpisodeContext {
@@ -62,7 +79,7 @@ async function episodeImpl(
         step,
         models,
         model,
-        exploration,
+        explore,
         experienceConfig,
         trainOpponents,
         evalOpponents,
@@ -70,6 +87,7 @@ async function episodeImpl(
         learnConfig,
         logger,
         logPath,
+        seed,
     }: EpisodeArgs,
 ): Promise<void> {
     // Play some games semi-randomly, building batches of Experience for each
@@ -77,7 +95,7 @@ async function episodeImpl(
     const rolloutLog = logger.addPrefix("Rollout: ");
     rolloutLog.debug(
         "Collecting training data via policy rollout " +
-            `(exploration factor = ${Math.round(exploration * 100)}%)`,
+            `(exploration factor = ${Math.round(explore.factor * 100)}%)`,
     );
     const numExamples = await playGames({
         name,
@@ -85,7 +103,7 @@ async function episodeImpl(
         models,
         agentConfig: {
             exploit: {type: "model", model},
-            explore: {factor: exploration},
+            explore,
             emitExperience: true,
         },
         opponents: trainOpponents,
@@ -100,6 +118,7 @@ async function episodeImpl(
             context.expFiles.push(expFile);
             return expFile.path;
         },
+        ...(seed && {seed}),
     });
     // Summary statement after rollout games.
     const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
@@ -152,6 +171,7 @@ async function episodeImpl(
             step,
             examplePaths: context.expFiles.map(f => f.path),
             numExamples,
+            ...(seed?.learn && {seed: seed.learn()}),
         },
         function onStep(data) {
             switch (data.type) {
@@ -202,5 +222,6 @@ async function episodeImpl(
         logger: evalLog,
         ...(logPath && {logPath: join(logPath, "eval")}),
         logWlt: true,
+        ...(seed && {seed}),
     });
 }

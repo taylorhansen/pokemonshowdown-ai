@@ -70,7 +70,12 @@ parentPort.on("message", function handle(msg: ModelMessage) {
         case "load":
             // Note: Downcasting msg to BatchPredictOptions.
             if (!msg.url) {
-                load(rid, msg.name, createModel(msg.name), msg.predict);
+                load(
+                    rid,
+                    msg.name,
+                    createModel(msg.name, msg.seed),
+                    msg.predict,
+                );
             } else {
                 promise = tf
                     .loadLayersModel(msg.url)

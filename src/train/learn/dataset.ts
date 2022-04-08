@@ -53,6 +53,7 @@ function exampleToTensor(example: TrainingExample): TensorExample {
  * @param decoderPool Object used to read `.tfrecord` files.
  * @param batchSize TrainingExample batch size.
  * @param prefetch Amount to buffer for prefetching/shuffling.
+ * @param seed Seed for shuffling training examples.
  * @returns A TensorFlow Dataset that contains batched TrainingExample
  * objects.
  */
@@ -61,6 +62,7 @@ export function createTrainingDataset(
     decoderPool: TrainingExampleDecoderPool,
     batchSize: number,
     prefetch: number,
+    seed?: string,
 ): tf.data.Dataset<BatchedExample> {
     return (
         tf.data
@@ -78,7 +80,7 @@ export function createTrainingDataset(
                 } as unknown as () => Generator<TensorExample>,
             )
             .prefetch(prefetch)
-            .shuffle(prefetch)
+            .shuffle(prefetch, seed)
             // After the batch operation, each entry will contain stacked
             // tensors according to the batch size.
             .batch(batchSize) as tf.data.Dataset<BatchedExample>

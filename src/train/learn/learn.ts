@@ -1,5 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
+import seedrandom from "seedrandom";
 import {LearnConfig} from "../../config/types";
+import {hash} from "../../util/hash";
 import {shuffle} from "../../util/shuffle";
 import {ModelLearnData} from "../model/worker";
 import {Metrics} from "../model/worker/Metrics";
@@ -17,6 +19,8 @@ export interface LearnArgsPartial extends LearnConfig {
     readonly examplePaths: readonly string[];
     /** Total number of TrainingExamples for logging. */
     readonly numExamples: number;
+    /** Seed for shuffling training examples. */
+    readonly seed?: string;
 }
 
 /** Args for {@link learn}. */
@@ -40,8 +44,15 @@ export async function learn({
     shufflePrefetch,
     learningRate,
     callback,
+    seed,
 }: LearnArgs): Promise<void> {
     const metrics = Metrics.get(name);
+
+    let seedCounter = 0;
+    const seedRandom = seed
+        ? () => hash(seed + String(seedCounter++))
+        : undefined;
+    const shuffleRandom = seedRandom && seedrandom.alea(seedRandom());
 
     // Have to do this manually (instead of #compile()-ing the model and calling
     // #fit()) since the loss function changes based on the action and reward.
@@ -100,10 +111,11 @@ export async function learn({
             // memory.
             await createTrainingDataset(
                 // Shuffle paths each time to reduce bias.
-                shuffle([...examplePaths]),
+                shuffle([...examplePaths], shuffleRandom),
                 decoderPool,
                 batchSize,
                 shufflePrefetch,
+                seedRandom?.() /*seed*/,
             )
                 // Training loop.
                 .mapAsync(async function learnBatch(batch: BatchedExample) {

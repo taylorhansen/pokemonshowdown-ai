@@ -1,5 +1,6 @@
 import * as util from "util";
 import {MessagePort} from "worker_threads";
+import seedrandom from "seedrandom";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {
     allocEncodedState,
@@ -11,6 +12,7 @@ import {
     ExperienceAgent,
     ExperienceAgentData,
 } from "../../play/experience/Experience";
+import {AgentExploreConfig} from "../../play/pool/worker/GameProtocol";
 import {randomExpAgent} from "../../play/pool/worker/randomAgent";
 import {AsyncPort, ProtocolResultRaw} from "../../port/AsyncPort";
 import {modelInputNames} from "../shapes";
@@ -72,10 +74,13 @@ export class ModelPort {
      * Creates a BattleAgent from this port that
      * {@link ExperienceAgent returns} data used for building Experience objs.
      *
-     * @param exploration Exploration factor, or the proportion of actions to
-     * take randomly rather than using the model.
+     * @param explore Exploration policy config.
      */
-    public getAgent(exploration?: number): ExperienceAgent {
+    public getAgent(explore?: AgentExploreConfig): ExperienceAgent {
+        const random = explore?.seed
+            ? seedrandom.alea(explore.seed)
+            : Math.random;
+
         let data: ExperienceAgentData | null = null;
 
         const innerAgent = maxAgent(async state => {
@@ -91,9 +96,9 @@ export class ModelPort {
         });
 
         return async function portAgent(state, choices, logger) {
-            if (exploration && Math.random() < exploration) {
+            if (explore && random() < explore.factor) {
                 logger?.debug("Exploring");
-                return await randomExpAgent(state, choices);
+                return await randomExpAgent(state, choices, random);
             }
 
             logger?.debug("Exploiting");

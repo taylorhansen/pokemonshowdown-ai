@@ -76,6 +76,7 @@
     "long": "^5.2.0",
     "node-fetch": "^2.6.7",
     "progress": "^2.0.3",
+    "seedrandom": "^3.0.5",
     "tfrecord": "^0.2.0",
     "tiny-typed-emitter": "^2.1.0",
     "tmp-promise": "^3.0.3",

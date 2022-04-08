@@ -1,37 +1,45 @@
 import * as tf from "@tensorflow/tfjs";
+import seedrandom from "seedrandom";
 import {Moveset} from "../../psbot/handlers/battle/state/Moveset";
 import {Team} from "../../psbot/handlers/battle/state/Team";
 import * as customLayers from "./custom_layers";
 import {modelInputShapesMap, verifyModel} from "./shapes";
 
-// TODO: Control random weight/bias initializers for reproducibility.
-/** Creates a default model for training. */
-export function createModel(name: string): tf.LayersModel {
+/**
+ * Creates a default model for training.
+ *
+ * @param name Name of the model.
+ * @param seed Seed for the random number generater to use for kernel
+ * initializers.
+ */
+export function createModel(name: string, seed?: string): tf.LayersModel {
+    const random = seed ? seedrandom.alea(seed) : null;
+
     const inputs: tf.SymbolicTensor[] = [];
 
     //#region Inputs and local feature connections.
 
     const globalFeatures: tf.SymbolicTensor[] = [];
 
-    const roomStatus = inputRoomStatus(name);
+    const roomStatus = inputRoomStatus(name, random?.());
     inputs.push(roomStatus.input);
     globalFeatures.push(roomStatus.features);
 
-    const teamStatus = inputTeamStatus(name);
+    const teamStatus = inputTeamStatus(name, random?.());
     inputs.push(teamStatus.input);
     globalFeatures.push(teamStatus.features);
 
     //#region Team pokemon.
 
-    const species = inputSpecies(name);
-    const types = inputTypes(name);
-    const stats = inputStats(name);
-    const ability = inputAbility(name);
-    const moveset = inputMoveset(name);
+    const species = inputSpecies(name, random?.());
+    const types = inputTypes(name, random?.());
+    const stats = inputStats(name, random?.());
+    const ability = inputAbility(name, random?.());
+    const moveset = inputMoveset(name, random?.());
 
     //#region Active pokemon's volatile status and override traits.
 
-    const activeVolatile = inputActiveVolatile(name);
+    const activeVolatile = inputActiveVolatile(name, random?.());
     inputs.push(activeVolatile.input);
     globalFeatures.push(activeVolatile.features);
 
@@ -61,7 +69,7 @@ export function createModel(name: string): tf.LayersModel {
 
     //#region Inputs and basic individual features.
 
-    const benchBasic = inputBenchBasic(name);
+    const benchBasic = inputBenchBasic(name, random?.());
     inputs.push(benchBasic.input);
     pokemonFeaturesList.push(benchBasic.features);
 
@@ -77,7 +85,7 @@ export function createModel(name: string): tf.LayersModel {
     inputs.push(ability.bench.input);
     pokemonFeaturesList.push(ability.bench.features);
 
-    const item = inputItem(name);
+    const item = inputItem(name, random?.());
     inputs.push(...item.inputs);
     pokemonFeaturesList.push(...item.features);
 
@@ -103,7 +111,11 @@ export function createModel(name: string): tf.LayersModel {
 
     //#region Global feature connections.
 
-    const globalEncoding = aggregateGlobalFeatures(name, globalFeatures);
+    const globalEncoding = aggregateGlobalFeatures(
+        name,
+        globalFeatures,
+        random?.(),
+    );
 
     //#endregion
 
@@ -113,12 +125,14 @@ export function createModel(name: string): tf.LayersModel {
         name,
         moveset.active.individualFeatures,
         globalEncoding,
+        random?.(),
     );
 
     const actionSwitch = modelActionSwitch(
         name,
         pokemonFeatures,
         globalEncoding,
+        random?.(),
     );
 
     const outputAction = aggregateActionOutput(name, [
@@ -143,7 +157,7 @@ interface InputFeatures {
     features: tf.SymbolicTensor;
 }
 
-function inputRoomStatus(name: string): InputFeatures {
+function inputRoomStatus(name: string, seed?: number): InputFeatures {
     const roomStatusInput = tf.layers.input({
         name: `${name}/input/room`,
         shape: [...modelInputShapesMap["room"]],
@@ -153,14 +167,14 @@ function inputRoomStatus(name: string): InputFeatures {
             name: `${name}/room/dense`,
             units: 8,
             activation: "relu",
-            kernelInitializer: "heNormal",
+            kernelInitializer: tf.initializers.heNormal({seed}),
             biasInitializer: "zeros",
         })
         .apply(roomStatusInput) as tf.SymbolicTensor;
     return {input: roomStatusInput, features: roomStatusFeatures};
 }
 
-function inputTeamStatus(name: string): InputFeatures {
+function inputTeamStatus(name: string, seed?: number): InputFeatures {
     const teamStatusInput = tf.layers.input({
         name: `${name}/input/team/status`,
         shape: [...modelInputShapesMap["team/status"]],
@@ -170,14 +184,14 @@ function inputTeamStatus(name: string): InputFeatures {
             name: `${name}/team/status/dense`,
             units: 16,
             activation: "relu",
-            kernelInitializer: "heNormal",
+            kernelInitializer: tf.initializers.heNormal({seed}),
             biasInitializer: "zeros",
         })
         .apply(teamStatusInput) as tf.SymbolicTensor;
     return {input: teamStatusInput, features: teamStatusFeatures};
 }
 
-function inputActiveVolatile(name: string): InputFeatures {
+function inputActiveVolatile(name: string, seed?: number): InputFeatures {
     const activeVolatileInput = tf.layers.input({
         name: `${name}/input/team/active/volatile`,
         shape: [...modelInputShapesMap["team/active/volatile"]],
@@ -187,7 +201,7 @@ function inputActiveVolatile(name: string): InputFeatures {
             name: `${name}/team/active/volatile/dense`,
             units: 32,
             activation: "relu",
-            kernelInitializer: "heNormal",
+            kernelInitializer: tf.initializers.heNormal({seed}),
             biasInitializer: "zeros",
         })
         .apply(activeVolatileInput) as tf.SymbolicTensor;
@@ -202,7 +216,7 @@ function inputBenchAlive(name: string): tf.SymbolicTensor {
     return benchAliveInput;
 }
 
-function inputBenchBasic(name: string): InputFeatures {
+function inputBenchBasic(name: string, seed?: number): InputFeatures {
     const benchBasicInput = tf.layers.input({
         name: `${name}/input/team/pokemon/basic`,
         shape: [...modelInputShapesMap["team/pokemon/basic"]],
@@ -212,7 +226,7 @@ function inputBenchBasic(name: string): InputFeatures {
             name: `${name}/pokemon/basic/dense`,
             units: 8,
             activation: "relu",
-            kernelInitializer: "heNormal",
+            kernelInitializer: tf.initializers.heNormal({seed}),
             biasInitializer: "zeros",
         })
         .apply(benchBasicInput) as tf.SymbolicTensor;
@@ -222,12 +236,12 @@ function inputBenchBasic(name: string): InputFeatures {
 /** Input features for both active and bench pokemon, using shared weights. */
 type TeamInputFeatures = Record<"active" | "bench", InputFeatures>;
 
-function inputSpecies(name: string): TeamInputFeatures {
+function inputSpecies(name: string, seed?: number): TeamInputFeatures {
     const pokemonSpeciesLayer = tf.layers.dense({
         name: `${name}/team/pokemon/species/dense`,
         units: 64,
         activation: "relu",
-        kernelInitializer: "heNormal",
+        kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
     });
 
@@ -253,12 +267,12 @@ function inputSpecies(name: string): TeamInputFeatures {
     };
 }
 
-function inputTypes(name: string): TeamInputFeatures {
+function inputTypes(name: string, seed?: number): TeamInputFeatures {
     const pokemonTypesLayer = tf.layers.dense({
         name: `${name}/team/pokemon/types/dense`,
         units: 32,
         activation: "relu",
-        kernelInitializer: "heNormal",
+        kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
     });
 
@@ -284,12 +298,12 @@ function inputTypes(name: string): TeamInputFeatures {
     };
 }
 
-function inputStats(name: string): TeamInputFeatures {
+function inputStats(name: string, seed?: number): TeamInputFeatures {
     const pokemonStatsLayer = tf.layers.dense({
         name: `${name}/team/pokemon/stats/dense`,
         units: 32,
         activation: "relu",
-        kernelInitializer: "heNormal",
+        kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
     });
 
@@ -315,12 +329,12 @@ function inputStats(name: string): TeamInputFeatures {
     };
 }
 
-function inputAbility(name: string): TeamInputFeatures {
+function inputAbility(name: string, seed?: number): TeamInputFeatures {
     const pokemonAbilityLayer = tf.layers.dense({
         name: `${name}/team/pokemon/ability/dense`,
         units: 32,
         activation: "relu",
-        kernelInitializer: "heNormal",
+        kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
     });
 
@@ -352,12 +366,12 @@ interface MovesetInputFeatures {
     bench: InputFeatures;
 }
 
-function inputMoveset(name: string): MovesetInputFeatures {
+function inputMoveset(name: string, seed?: number): MovesetInputFeatures {
     const pokemonMoveLayer = tf.layers.dense({
         name: `${name}/team/pokemon/moveset/move/dense`,
         units: 32,
         activation: "relu",
-        kernelInitializer: "heNormal",
+        kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
     });
     const pokemonMovesetAggregateLayer = customLayers.mean({
@@ -403,12 +417,12 @@ interface InputFeaturesList {
     features: tf.SymbolicTensor[];
 }
 
-function inputItem(name: string): InputFeaturesList {
+function inputItem(name: string, seed?: number): InputFeaturesList {
     const pokemonItemLayer = tf.layers.dense({
         name: `${name}/team/pokemon/item/dense`,
         units: 32,
         activation: "relu",
-        kernelInitializer: "heNormal",
+        kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
     });
 
@@ -476,6 +490,7 @@ function aggregateTeamPokemonFeatures(
 function aggregateGlobalFeatures(
     name: string,
     globalFeatures: tf.SymbolicTensor[],
+    seed?: number,
 ): tf.SymbolicTensor {
     const globalFlattenLayer = tf.layers.flatten({
         name: `${name}/global/flatten`,
@@ -497,7 +512,7 @@ function aggregateGlobalFeatures(
             name: `${name}/global/dense`,
             units: 64,
             activation: "relu",
-            kernelInitializer: "heNormal",
+            kernelInitializer: tf.initializers.heNormal({seed}),
             biasInitializer: "zeros",
         })
         .apply(globalConcat) as tf.SymbolicTensor;
@@ -508,6 +523,7 @@ function modelActionMove(
     name: string,
     activeMoveFeatures: tf.SymbolicTensor,
     globalEncoding: tf.SymbolicTensor,
+    seed?: number,
 ): tf.SymbolicTensor {
     // Extract move features from our side.
     const usMoveFeaturesSlice = customLayers
@@ -545,7 +561,7 @@ function modelActionMove(
             name: `${name}/action/move/dense`,
             units: 1,
             activation: "linear",
-            kernelInitializer: "glorotNormal",
+            kernelInitializer: tf.initializers.glorotNormal({seed}),
             biasInitializer: "zeros",
         })
         .apply(actionMoveConcat) as tf.SymbolicTensor;
@@ -562,6 +578,7 @@ function modelActionSwitch(
     name: string,
     pokemonFeatures: tf.SymbolicTensor,
     globalEncoding: tf.SymbolicTensor,
+    seed?: number,
 ): tf.SymbolicTensor {
     // Extract bench features from our team except active mon.
     const actionSwitchBenchSlice = customLayers
@@ -602,7 +619,7 @@ function modelActionSwitch(
             name: `${name}/action/switch/dense`,
             units: 1,
             activation: "linear",
-            kernelInitializer: "glorotNormal",
+            kernelInitializer: tf.initializers.glorotNormal({seed}),
             biasInitializer: "zeros",
         })
         .apply(actionSwitchConcat) as tf.SymbolicTensor;

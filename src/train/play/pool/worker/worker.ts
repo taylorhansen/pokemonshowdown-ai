@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as stream from "stream";
 import {serialize} from "v8";
 import {parentPort, workerData} from "worker_threads";
+import seedrandom from "seedrandom";
 import {ModelPort} from "../../../model/worker";
 import {RawPortResultError} from "../../../port/PortProtocol";
 import {WorkerClosed} from "../../../port/WorkerProtocol";
@@ -38,14 +39,37 @@ async function processMessage(msg: GamePlay): Promise<TrainingExample[]> {
                     const modelPort = new ModelPort(config.exploit.port);
                     modelPorts.push(modelPort);
                     return {
-                        agent: modelPort.getAgent(config.explore?.factor),
+                        agent: modelPort.getAgent(config.explore),
                         emitExperience: !!config.emitExperience,
+                        ...(config.seed && {seed: config.seed}),
                     };
                 }
-                case "random":
+                case "random": {
+                    const agentRandom = config.exploit.seed
+                        ? seedrandom.alea(config.exploit.seed)
+                        : undefined;
                     return config.emitExperience
-                        ? {agent: randomExpAgent, emitExperience: true}
-                        : {agent: randomAgent, emitExperience: false};
+                        ? ({
+                              agent: async (state, choices) =>
+                                  await randomExpAgent(
+                                      state,
+                                      choices,
+                                      agentRandom,
+                                  ),
+                              emitExperience: true,
+                              ...(config.seed && {seed: config.seed}),
+                          } as SimArgsAgent)
+                        : ({
+                              agent: async (state, choices) =>
+                                  await randomAgent(
+                                      state,
+                                      choices,
+                                      agentRandom,
+                                  ),
+                              emitExperience: false,
+                              ...(config.seed && {seed: config.seed}),
+                          } as SimArgsAgent);
+                }
                 default: {
                     const unsupported: unknown = config.exploit;
                     throw new Error(
@@ -63,6 +87,7 @@ async function processMessage(msg: GamePlay): Promise<TrainingExample[]> {
                 agents,
                 ...(msg.play.maxTurns && {maxTurns: msg.play.maxTurns}),
                 ...(msg.play.logPath && {logPath: msg.play.logPath}),
+                ...(msg.play.seed && {seed: msg.play.seed}),
             },
             msg.play.experienceConfig,
         );

@@ -40,12 +40,9 @@ export class GameWorker {
                                   ),
                               }
                             : agentConfig.exploit,
-                    ...(agentConfig.explore && {
-                        explore: agentConfig.explore,
-                    }),
-                    ...(agentConfig.emitExperience && {
-                        emitExperience: true,
-                    }),
+                    ...(agentConfig.explore && {explore: agentConfig.explore}),
+                    ...(agentConfig.emitExperience && {emitExperience: true}),
+                    ...(agentConfig.seed && {seed: agentConfig.seed}),
                 })) as [Promise<GameAgentConfig>, Promise<GameAgentConfig>],
             ),
             play: args.play,

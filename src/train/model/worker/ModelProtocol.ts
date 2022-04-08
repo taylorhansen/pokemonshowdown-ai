@@ -41,6 +41,11 @@ export interface ModelLoadMessage extends ModelMessageBase<"load"> {
     readonly predict: BatchPredictConfig;
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
+    /**
+     * Seed for the random number generator when initializing the model. Only
+     * applicable if {@link url} is omitted.
+     */
+    readonly seed?: string;
 }
 
 /** Saves a model to a given URL. */

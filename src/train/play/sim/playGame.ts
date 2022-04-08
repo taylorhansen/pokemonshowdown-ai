@@ -1,3 +1,4 @@
+import {PRNGSeed} from "@pkmn/sim";
 import {ExperienceConfig} from "../../../config/types";
 import {BattleAgent} from "../../../psbot/handlers/battle/agent";
 import {BattleParser} from "../../../psbot/handlers/battle/parser/BattleParser";
@@ -13,12 +14,14 @@ import {experienceBattleParser, PlayerOptions, startPsBattle} from "./ps";
 /** Base interface for {@link SimArgsAgent}. */
 interface SimArgsAgentBase<TAgent extends BattleAgent, TExp extends boolean> {
     /** BattleAgent function. */
-    agent: TAgent;
+    readonly agent: TAgent;
     /**
      * Whether the {@link agent} emits ExperienceAgentData that should be used
      * to generate {@link Experience} objects.
      */
-    emitExperience: TExp;
+    readonly emitExperience: TExp;
+    /** Seed for generating the random team. */
+    readonly seed?: PRNGSeed;
 }
 
 /**
@@ -43,6 +46,8 @@ export interface SimArgs {
     readonly maxTurns?: number;
     /** Path to the file to store logs in. */
     readonly logPath?: string;
+    /** Seed for the battle PRNG. */
+    readonly seed?: PRNGSeed;
 }
 
 /** Base simulator result type. */
@@ -96,14 +101,16 @@ export async function playGame(
                       `p${i + 1}` /*username*/,
                   ) as BattleParser<BattleAgent, [], void>)
                 : main,
+            ...(agentArgs.seed && {seed: agentArgs.seed}),
         };
     });
 
     // Play the game.
     const {winner, err} = await startPsBattle({
         players: {p1, p2},
-        maxTurns: args.maxTurns,
-        logPath: args.logPath,
+        ...(args.maxTurns && {maxTurns: args.maxTurns}),
+        ...(args.logPath && {logPath: args.logPath}),
+        ...(args.seed && {seed: args.seed}),
     });
 
     const examples: TrainingExample[] = [];

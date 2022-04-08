@@ -54,12 +54,15 @@ export class ModelWorker {
      * @param name Name by which to refer to the model.
      * @param batchConfig Options for batching predict requests.
      * @param url URL to load from. If omitted, creates a default model.
+     * @param seed Seed for the random number generator when initializing the
+     * model. Only applicable if `url` is omitted.
      * @returns The registered name of the model.
      */
     public async load(
         name: string,
         batchConfig: BatchPredictConfig,
         url?: string,
+        seed?: string,
     ): Promise<string> {
         const msg: ModelLoadMessage = {
             type: "load",
@@ -67,6 +70,7 @@ export class ModelWorker {
             name,
             predict: batchConfig,
             ...(url && {url}),
+            ...(seed && {seed}),
         };
 
         return await new Promise((res, rej) =>

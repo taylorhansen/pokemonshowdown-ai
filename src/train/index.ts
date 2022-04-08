@@ -25,7 +25,19 @@ const models = new ModelWorker(
 
 void (async function () {
     try {
-        await train({name: "train", config, models, logger});
+        await train({
+            name: "train",
+            config,
+            models,
+            logger,
+            seeds: {
+                model: "abc",
+                battle: "def",
+                team: "ghi",
+                explore: "jkl",
+                learn: "mno",
+            },
+        });
     } catch (e) {
         logger.error(
             "Training script threw an error: " +
@@ -33,6 +45,6 @@ void (async function () {
         );
     } finally {
         await models.close();
+        logger.debug("Done");
     }
-    logger.debug("Done");
 })();

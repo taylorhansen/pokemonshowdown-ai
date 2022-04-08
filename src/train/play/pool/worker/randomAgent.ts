@@ -12,8 +12,9 @@ import {ExperienceAgentData} from "../../experience";
 export async function randomAgent(
     state: ReadonlyBattleState,
     choices: Choice[],
+    random?: () => number,
 ): Promise<void> {
-    shuffle(choices);
+    shuffle(choices, random);
     return await Promise.resolve();
 }
 
@@ -21,8 +22,9 @@ export async function randomAgent(
 export async function randomExpAgent(
     state: ReadonlyBattleState,
     choices: Choice[],
+    random?: () => number,
 ): Promise<ExperienceAgentData> {
-    await randomAgent(state, choices);
+    await randomAgent(state, choices, random);
 
     const data = allocEncodedState();
     encodeState(data, state);

@@ -1,5 +1,6 @@
 /** @file Defines the protocol typings for GameWorkers. */
 import {MessagePort} from "worker_threads";
+import {PRNGSeed} from "@pkmn/sim";
 import {PortMessageBase, PortResultBase} from "../../../port/PortProtocol";
 import {WorkerProtocol} from "../../../port/WorkerProtocol";
 import {SimResult} from "../../sim/playGame";
@@ -41,6 +42,8 @@ export interface GameAgentConfig<TWithModelPort extends boolean = true> {
     readonly explore?: AgentExploreConfig;
     /** Whether to emit Experience objs after each decision. */
     readonly emitExperience?: true;
+    /** Seed used to generate the random team. */
+    readonly seed?: PRNGSeed;
 }
 
 interface AgentExploitConfigBase<T extends string> {
@@ -65,7 +68,11 @@ export type ModelAgentExploitConfig<TWithModelPort extends boolean = true> =
               });
 
 /** Exploit using a random agent. */
-export type RandomAgentExploitConfig = AgentExploitConfigBase<"random">;
+export interface RandomAgentExploitConfig
+    extends AgentExploitConfigBase<"random"> {
+    /** Seed for choosing random actions. */
+    readonly seed?: string;
+}
 
 /** Config describing how the agent should behave when exploiting reward. */
 export type AgentExploitConfig<TWithModelPort extends boolean = true> =
@@ -78,7 +85,9 @@ export interface AgentExploreConfig {
      * Exploration factor. Proportion of actions to take randomly rather than
      * consulting the model.
      */
-    readonly factor?: number;
+    readonly factor: number;
+    /** Seed for the random number generator. */
+    readonly seed?: string;
 }
 
 /** Types of messages that the GamePool can receive. */

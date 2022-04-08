@@ -1,6 +1,8 @@
 import * as path from "path";
 import * as stream from "stream";
+import {PRNGSeed} from "@pkmn/sim";
 import ProgressBar from "progress";
+import seedrandom from "seedrandom";
 import {ExperienceConfig, GameConfig} from "../../config/types";
 import {LogFunc, Logger} from "../../util/logging/Logger";
 import {ModelWorker} from "../model/worker";
@@ -55,6 +57,18 @@ export interface PlayGamesArgs {
     readonly getExpPath?: () => Promise<string>;
     /** Whether to log win/loss/tie metrics to Tensorboard. */
     readonly logWlt?: boolean;
+    /** Random seed generators. */
+    readonly seed?: PlayGamesSeedRandomArgs;
+}
+
+/** Random number generators used by the game and policy. */
+export interface PlayGamesSeedRandomArgs {
+    /** Random seed generator for the battle PRNGs. */
+    readonly battle?: () => string;
+    /** Random seed generator for the random team PRNGs. */
+    readonly team?: () => string;
+    /** Random seed generator for the random exploration policy. */
+    readonly explore?: () => string;
 }
 
 /**
@@ -74,10 +88,17 @@ export async function playGames({
     experienceConfig,
     getExpPath,
     logWlt,
+    seed,
 }: PlayGamesArgs): Promise<number> {
+    const battleRandom = seed?.battle
+        ? seedrandom.alea(seed.battle())
+        : undefined;
+    const teamRandom = seed?.team ? seedrandom.alea(seed.team()) : undefined;
+
     let numExamples = 0;
     for (const opponent of opponents) {
         const innerLog = logger.addPrefix(`Versus ${opponent.name}: `);
+
         const totalGames = opponent.numGames;
         const prefixWidth = innerLog.prefix.length;
         const postfixWidth =
@@ -112,13 +133,25 @@ export async function playGames({
                         path.join(logPath, `${opponent.name}/game-${i + 1}`);
                     const args: GamePoolArgs = {
                         id: i + 1,
-                        agents: [agentConfig, opponent.agentConfig],
+                        agents: [
+                            generateSeeds(
+                                agentConfig,
+                                seed?.explore,
+                                teamRandom,
+                            ),
+                            generateSeeds(
+                                opponent.agentConfig,
+                                seed?.explore,
+                                teamRandom,
+                            ),
+                        ],
                         models,
                         play: {
                             ...(maxTurns !== undefined && {maxTurns}),
                             ...(gameLogPath !== undefined && {
                                 logPath: gameLogPath,
                             }),
+                            seed: generatePrngSeed(battleRandom),
                             experienceConfig,
                         },
                     };
@@ -181,4 +214,32 @@ export async function playGames({
     }
 
     return numExamples;
+}
+
+/** Makes sure random team and exploration seeds are different between games. */
+function generateSeeds(
+    config: GamePoolAgentConfig,
+    exploreSeedRandom?: () => string,
+    teamRandom?: () => number,
+): GamePoolAgentConfig {
+    return {
+        ...config,
+        exploit:
+            config.exploit.type === "random" && exploreSeedRandom
+                ? {type: "random", seed: exploreSeedRandom()}
+                : config.exploit,
+        ...(config.explore &&
+            exploreSeedRandom && {
+                explore: {...config.explore, seed: exploreSeedRandom()},
+            }),
+        seed: generatePrngSeed(teamRandom),
+    };
+}
+
+/** Same as `PRNG.generateSeed()` but with controled random. */
+function generatePrngSeed(random = Math.random): PRNGSeed {
+    // 64-bit big-endian [high -> low] integer, where each element is 16 bits.
+    return Array.from({length: 4}, () =>
+        Math.floor(random() * 0x10000),
+    ) as PRNGSeed;
 }

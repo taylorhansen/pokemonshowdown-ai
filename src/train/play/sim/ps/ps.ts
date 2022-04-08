@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as stream from "stream";
 import {TeamGenerators} from "@pkmn/randoms";
-import {BattleStreams, Teams} from "@pkmn/sim";
+import {BattleStreams, PRNGSeed, Teams} from "@pkmn/sim";
 import {SideID} from "@pkmn/types";
 import * as tmp from "tmp-promise";
 import {Sender} from "../../../../psbot/PsBot";
@@ -31,6 +31,8 @@ export interface PlayerOptions {
     readonly agent: BattleAgent;
     /** Override BattleParser if needed. */
     readonly parser?: BattleParser<BattleAgent, [], void>;
+    /** Seed for generating the random team. */
+    readonly seed?: PRNGSeed;
 }
 
 /** Options for {@link startPsBattle}.  */
@@ -46,8 +48,8 @@ export interface GameOptions {
     readonly maxTurns?: number;
     /** Path to the file to store game logs in. Optional. */
     readonly logPath?: string;
-    /** Prefix for logs. Default `"Battle: "`. */
-    readonly logPrefix?: string;
+    /** Seed to use for the battle PRNG. */
+    readonly seed?: PRNGSeed;
 }
 
 /** Result from playing a PS game. */
@@ -74,16 +76,17 @@ export async function startPsBattle(
 
     // Setup logger.
     const logFunc: LogFunc = msg => file.write(msg);
-    const logger = new Logger(
-        logFunc,
-        logFunc,
-        options.logPrefix ?? "Battle: ",
-    );
+    const logger = new Logger(logFunc, logFunc, "Battle: ");
 
     // Start simulating a battle.
     const battleStream = new BattleStreams.BattleStream({keepAlive: false});
     const streams = BattleStreams.getPlayerStreams(battleStream);
-    void streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
+    void streams.omniscient.write(
+        `>start ${JSON.stringify({
+            formatid: "gen4randombattle",
+            ...(options.seed && {seed: options.seed}),
+        })}`,
+    );
 
     const gamePromises: Promise<void>[] = [];
 
@@ -217,7 +220,14 @@ export async function startPsBattle(
             })(),
         );
 
-        void streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
+        void streams.omniscient.write(
+            `>player ${id} ${JSON.stringify({
+                name: id,
+                ...(options.players[id].seed && {
+                    seed: options.players[id].seed,
+                }),
+            })}`,
+        );
     }
 
     // Capture the first game error so we can notify the main thread.
