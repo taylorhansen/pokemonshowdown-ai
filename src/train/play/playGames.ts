@@ -32,6 +32,8 @@ export interface PlayGamesArgs {
     readonly name: string;
     /** Current episode iteration of the training run. */
     readonly step: number;
+    /** Name of the current stage within the episode. */
+    readonly stage: string;
     /** Used to request model ports for the game workers. */
     readonly models: ModelWorker;
     /** Config for the BattleAgent that will participate in each game. */
@@ -55,8 +57,6 @@ export interface PlayGamesArgs {
      * specified, any experiences will be discarded.
      */
     readonly getExpPath?: () => Promise<string>;
-    /** Whether to log win/loss/tie metrics to Tensorboard. */
-    readonly logWlt?: boolean;
     /** Random seed generators. */
     readonly seed?: PlayGamesSeedRandomArgs;
 }
@@ -79,6 +79,7 @@ export interface PlayGamesSeedRandomArgs {
 export async function playGames({
     name,
     step,
+    stage,
     models,
     agentConfig,
     opponents,
@@ -87,7 +88,6 @@ export async function playGames({
     logPath,
     experienceConfig,
     getExpPath,
-    logWlt,
     seed,
 }: PlayGamesArgs): Promise<number> {
     const battleRandom = seed?.battle
@@ -207,16 +207,14 @@ export async function playGames({
         progress.terminate();
         innerLog.debug(`Record: ${wins}-${losses}-${ties}`);
 
-        if (logWlt) {
-            await models.log(name, step, {
-                [`eval/vs_${opponent.name}/win_ratio`]:
-                    wins / opponent.numGames,
-                [`eval/vs_${opponent.name}/loss_ratio`]:
-                    losses / opponent.numGames,
-                [`eval/vs_${opponent.name}/tie_ratio`]:
-                    ties / opponent.numGames,
-            });
-        }
+        await models.log(name, step, {
+            [`${stage}/vs_${opponent.name}/win_ratio`]:
+                wins / opponent.numGames,
+            [`${stage}/vs_${opponent.name}/loss_ratio`]:
+                losses / opponent.numGames,
+            [`${stage}/vs_${opponent.name}/tie_ratio`]:
+                ties / opponent.numGames,
+        });
     }
 
     return numExamples;

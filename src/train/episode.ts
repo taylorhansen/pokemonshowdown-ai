@@ -100,6 +100,7 @@ async function episodeImpl(
     const numExamples = await playGames({
         name,
         step,
+        stage: "rollout",
         models,
         agentConfig: {
             exploit: {type: "model", model},
@@ -215,13 +216,13 @@ async function episodeImpl(
     await playGames({
         name,
         step,
+        stage: "eval",
         models,
         agentConfig: {exploit: {type: "model", model}},
         opponents: evalOpponents,
         gameConfig,
         logger: evalLog,
         ...(logPath && {logPath: join(logPath, "eval")}),
-        logWlt: true,
         ...(seed && {seed}),
     });
 }
