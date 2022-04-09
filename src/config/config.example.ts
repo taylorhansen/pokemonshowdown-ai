@@ -3,6 +3,8 @@ import * as path from "path";
 import {Config} from "./types";
 
 const modelsPath = path.join(__dirname, "../../models/");
+// Note: Multithreaded training can introduce nondeterminism that can't be
+// easily reproduced. Set numThreads to 1 to disable multithreading.
 const numThreads = os.cpus().length;
 
 /** Top-level config. Should only be accessed by the top-level. */
