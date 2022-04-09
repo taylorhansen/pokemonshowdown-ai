@@ -98,9 +98,11 @@ export async function learn({
                         .flatten();
 
                     if (epochLayerInputs[layer.name]) {
+                        const oldInput = epochLayerInputs[layer.name];
                         epochLayerInputs[layer.name] = tf.keep(
                             epochLayerInputs[layer.name].add(input),
                         );
+                        tf.dispose(oldInput);
                     } else {
                         epochLayerInputs[layer.name] = tf.keep(input);
                     }
