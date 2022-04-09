@@ -12,8 +12,8 @@ import {
     ModelCopyResult,
     ModelLearnResult,
     ModelLoadResult,
-    ModelLogWltMessage,
-    ModelLogWltResult,
+    ModelLogMessage,
+    ModelLogResult,
     ModelMessage,
     ModelSaveResult,
     ModelSubscribeResult,
@@ -145,9 +145,9 @@ parentPort.on("message", function handle(msg: ModelMessage) {
             parentPort!.postMessage(result);
             break;
         }
-        case "logWlt": {
-            logWlt(msg);
-            const result: ModelLogWltResult = {type: "logWlt", rid, done: true};
+        case "log": {
+            logMetrics(msg);
+            const result: ModelLogResult = {type: "log", rid, done: true};
             parentPort!.postMessage(result);
             break;
         }
@@ -162,6 +162,16 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                 const result: WorkerClosed = {type: "close", rid, done: true};
                 parentPort!.postMessage(result);
             });
+            break;
+        }
+        default: {
+            const unsupported: never = msg;
+            promise = Promise.reject(
+                new Error(
+                    "Unsupported message type: " +
+                        (unsupported as {type: string}).type,
+                ),
+            );
         }
     }
 
@@ -179,28 +189,17 @@ parentPort.on("message", function handle(msg: ModelMessage) {
     void promise;
 });
 
-/** Logs win/loss/tie metrics to Tensorboard. */
-function logWlt(msg: ModelLogWltMessage): void {
+/** Logs metrics to Tensorboard. */
+function logMetrics(msg: ModelLogMessage): void {
     const metrics = Metrics.get(msg.name);
     if (!metrics) {
         return;
     }
-
-    const total = msg.wins + msg.losses + msg.ties;
-    metrics.scalar(
-        `eval/vs_${msg.opponent}/win_ratio`,
-        msg.wins / total,
-        msg.step,
-    );
-    metrics.scalar(
-        `eval/vs_${msg.opponent}/loss_ratio`,
-        msg.losses / total,
-        msg.step,
-    );
-    metrics.scalar(
-        `eval/vs_${msg.opponent}/tie_ratio`,
-        msg.ties / total,
-        msg.step,
-    );
+    for (const key in msg.logs) {
+        if (!Object.hasOwnProperty.call(msg.logs, key)) {
+            continue;
+        }
+        metrics.scalar(key, msg.logs[key], msg.step);
+    }
     Metrics.flush();
 }

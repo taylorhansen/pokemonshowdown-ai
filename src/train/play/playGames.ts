@@ -99,10 +99,9 @@ export async function playGames({
     for (const opponent of opponents) {
         const innerLog = logger.addPrefix(`Versus ${opponent.name}: `);
 
-        const totalGames = opponent.numGames;
         const prefixWidth = innerLog.prefix.length;
         const postfixWidth =
-            " wlt=--".length + 3 * Math.ceil(Math.log10(totalGames));
+            " wlt=--".length + 3 * Math.ceil(Math.log10(opponent.numGames));
         const padding = 2;
         const barWidth =
             (process.stderr.columns || 80) -
@@ -110,7 +109,7 @@ export async function playGames({
             postfixWidth -
             padding;
         const progress = new ProgressBar(`${innerLog.prefix}:bar wlt=:wlt`, {
-            total: totalGames,
+            total: opponent.numGames,
             head: ">",
             clear: true,
             width: barWidth,
@@ -209,7 +208,14 @@ export async function playGames({
         innerLog.debug(`Record: ${wins}-${losses}-${ties}`);
 
         if (logWlt) {
-            await models.logWlt(name, step, opponent.name, wins, losses, ties);
+            await models.log(name, step, {
+                [`eval/vs_${opponent.name}/win_ratio`]:
+                    wins / opponent.numGames,
+                [`eval/vs_${opponent.name}/loss_ratio`]:
+                    losses / opponent.numGames,
+                [`eval/vs_${opponent.name}/tie_ratio`]:
+                    ties / opponent.numGames,
+            });
         }
     }
 

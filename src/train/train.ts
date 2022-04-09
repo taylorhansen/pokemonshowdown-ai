@@ -105,14 +105,18 @@ export async function train({
     };
 
     // Train network.
-    for (let i = 0; i < config.train.numEpisodes; ++i) {
+    for (let step = 1; step <= config.train.numEpisodes; ++step) {
         const episodeLog = logger.addPrefix(
-            `Episode(${i + 1}/${config.train.numEpisodes}): `,
+            `Episode(${step}/${config.train.numEpisodes}): `,
         );
 
-        await episode({
+        const logPromise = models.log(name, step, {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            "rollout/exploration": explore.factor,
+        });
+        const episodePromise = episode({
             name,
-            step: i + 1,
+            step,
             models,
             model,
             explore,
@@ -133,12 +137,13 @@ export async function train({
             gameConfig: config.train.game,
             learnConfig: config.train.learn,
             logger: episodeLog,
-            logPath: path.join(config.paths.logs, `episode-${i + 1}`),
+            logPath: path.join(config.paths.logs, `episode-${step}`),
             ...(seed && {seed}),
         });
+        await Promise.all([logPromise, episodePromise]);
 
         if (config.train.savePreviousVersions) {
-            const episodeFolderName = `episode-${i + 1}`;
+            const episodeFolderName = `episode-${step}`;
             episodeLog.debug(`Saving updated model as ${episodeFolderName}`);
             const episodeModelFolder = path.join(
                 config.paths.models,

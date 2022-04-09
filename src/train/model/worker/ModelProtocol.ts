@@ -16,7 +16,7 @@ export interface ModelWorkerData {
 /** ModelWorker request protocol typings. */
 export interface ModelProtocol
     extends WorkerProtocol<
-        "load" | "save" | "unload" | "subscribe" | "learn" | "copy" | "logWlt"
+        "load" | "save" | "unload" | "subscribe" | "learn" | "copy" | "log"
     > {
     load: {message: ModelLoadMessage; result: ModelLoadResult};
     save: {message: ModelSaveMessage; result: ModelSaveResult};
@@ -24,7 +24,7 @@ export interface ModelProtocol
     subscribe: {message: ModelSubscribeMessage; result: ModelSubscribeResult};
     learn: {message: ModelLearnMessage; result: ModelLearnResult};
     copy: {message: ModelCopyMessage; result: ModelCopyResult};
-    logWlt: {message: ModelLogWltMessage; result: ModelLogWltResult};
+    log: {message: ModelLogMessage; result: ModelLogResult};
 }
 
 /** The types of requests that can be made to the model worker. */
@@ -87,17 +87,14 @@ export interface ModelCopyMessage extends ModelMessageBase<"copy"> {
     readonly to: string;
 }
 
-/** Logs win/loss/tie metrics to Tensorboard. */
-export interface ModelLogWltMessage extends ModelMessageBase<"logWlt"> {
+/** Logs metrics to Tensorboard. */
+export interface ModelLogMessage extends ModelMessageBase<"log"> {
     /** Name of the current training run, under which to store logs. */
     readonly name: string;
     /** Current episode iteration of the training run. */
     readonly step: number;
-    /** Name of the opponent. */
-    readonly opponent: string;
-    readonly wins: number;
-    readonly losses: number;
-    readonly ties: number;
+    /** Dictionary of metrics to log. */
+    readonly logs: {readonly [key: string]: number};
 }
 
 /** Types of messages that the Model can send. */
@@ -184,8 +181,8 @@ export interface ModelCopyResult extends ModelResultBase<"copy"> {
     done: true;
 }
 
-/** Result of logging win/loss/tie metrics. */
-export interface ModelLogWltResult extends ModelResultBase<"logWlt"> {
+/** Result of logging metrics. */
+export interface ModelLogResult extends ModelResultBase<"log"> {
     /** @override */
     done: true;
 }
