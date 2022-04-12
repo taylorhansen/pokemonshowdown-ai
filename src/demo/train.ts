@@ -1,11 +1,11 @@
-/** @file Sets up a training session for the neural network. */
+/** @file Sets up a training session for the model. */
 import * as path from "path";
 import {setGracefulCleanup} from "tmp-promise";
 import {config} from "../config";
+import {ModelWorker} from "../train/model/worker";
+import {GamePool} from "../train/play/pool";
+import {train} from "../train/train";
 import {Logger} from "../util/logging/Logger";
-import {ModelWorker} from "./model/worker";
-import {GamePool} from "./play/pool";
-import {train} from "./train";
 
 // Used for debugging.
 Error.stackTraceLimit = Infinity;

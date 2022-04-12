@@ -3,11 +3,11 @@ import * as path from "path";
 import {pathToFileURL} from "url";
 import * as tf from "@tensorflow/tfjs";
 import {config} from "../config";
+import {PsBot} from "../psbot/PsBot";
+import * as handlers from "../psbot/handlers";
+import {networkAgent} from "../psbot/handlers/battle/ai/networkAgent";
 import {Logger} from "../util/logging/Logger";
 import {importTfn} from "../util/tfn";
-import {PsBot} from "./PsBot";
-import * as handlers from "./handlers";
-import {networkAgent} from "./handlers/battle/ai/networkAgent";
 // Make sure custom layers can be deserialized.
 import "../train/model/custom_layers";
 
