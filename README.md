@@ -15,7 +15,7 @@ This project has three parts:
 -   Neural network [management](/src/psbot/handlers/battle/ai) and
     [training](/src/train) scripts.
 
-## Compiling/running
+## Build Instructions
 
 ```sh
 # Download the repository.
@@ -23,22 +23,46 @@ git clone https://github.com/taylorhansen/pokemonshowdown-ai
 cd pokemonshowdown-ai
 npm install
 
-# Setup config, edit if needed.
+# Setup config, edit as desired.
 cp src/config/config.example.ts src/config/config.ts
 
 # Compile the project.
 npm run build
+```
 
-# Lint and run tests.
+## Testing
+
+```sh
+# Run formatter.
+npm run format
+
+# Run linter.
+npm run lint
+
+# Run tests with coverage.
 npm test
+```
 
-# Train a neural network through self-play.
-# WARNING: Requires a powerful computer, may take several hours.
+## Training
+
+```sh
 npm run train
+```
 
-# Connect to the server specified in config.ts and start accepting challenges.
+Trains the neural network through self-play. This requires a powerful computer,
+and may take several hours depending on how it's
+[configured](/src/config/config.example.ts).
+
+## Running
+
+```sh
 npm run psbot
 ```
+
+Connects to the PS server specified in the
+[config](/src/config/config.example.ts) and starts accepting battle challenges
+in the `gen4randombattle` format, which is the format that this project is using
+for now.
 
 ## License
 
