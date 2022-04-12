@@ -53,6 +53,15 @@ Trains the neural network through self-play. This requires a powerful computer,
 and may take several hours depending on how it's
 [configured](/src/config/config.example.ts).
 
+The training script saves logs to `./logs/` and checkpoints to `./models/` (can
+be changed by config). Some logs such as loss, gradients, evaluation scores,
+etc. can be viewed with Tensorboard.
+
+```sh
+pip install tensorboard
+tensorboard --logdir logs/tensorboard
+```
+
 ## Running
 
 ```sh
