@@ -6,12 +6,6 @@ import {WorkerProtocol} from "../../../port/WorkerProtocol";
 import {SimResult} from "../../sim/playGame";
 import {PlayArgs} from "../GamePool";
 
-/** Typings for the `workerData` object given to the GameWorker. */
-export interface GameWorkerData {
-    /** Path to store experience files as tfrecords. */
-    expPath?: string;
-}
-
 /** GameWorker request protocol typings. */
 export interface GameProtocol extends WorkerProtocol<"play"> {
     play: {message: GamePlay; result: GamePlayResult};

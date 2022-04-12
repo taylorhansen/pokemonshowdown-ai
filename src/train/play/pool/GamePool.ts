@@ -4,14 +4,10 @@ import {ExperienceConfig} from "../../../config/types";
 import {ModelWorker} from "../../model/worker";
 import {ThreadPool} from "../../pool";
 import {SimResult} from "../sim/playGame";
-import {
-    GameAgentConfig,
-    GameProtocol,
-    GameWorkerData,
-} from "./worker/GameProtocol";
+import {GameAgentConfig, GameProtocol} from "./worker/GameProtocol";
 import {GameWorker} from "./worker/GameWorker";
 
-/** Args for {@link GamePool.addGame}. */
+/** Args for {@link GamePool.add}. */
 export interface GamePoolArgs {
     /** Unique identifier for logging. */
     readonly id: number;
@@ -23,7 +19,7 @@ export interface GamePoolArgs {
     readonly play: PlayArgs;
 }
 
-/** Config for {@link GamePool.addGame} agents. */
+/** Config for {@link GamePool.add} agents. */
 export type GamePoolAgentConfig = GameAgentConfig<false /*TWithModelPort*/>;
 
 /** Args for starting a game. */
@@ -42,6 +38,8 @@ export interface PlayArgs {
      * omitted, experience is discarded.
      */
     readonly experienceConfig?: ExperienceConfig;
+    /** Path to store Experiences for this game, or discard if omitted. */
+    readonly expPath?: string;
 }
 
 /** {@link GamePool} stream output type. */
@@ -66,23 +64,20 @@ export class GamePool {
     private readonly pool: ThreadPool<
         GameWorker,
         GameProtocol,
-        keyof GameProtocol,
-        GameWorkerData
+        keyof GameProtocol
     >;
 
     /**
      * Creates a GamePool.
      *
      * @param numThreads Number of workers to create.
-     * @param getExpPath Optional getter function for experience files. Called
-     * once per worker.
      */
-    public constructor(numThreads: number, getExpPath?: () => Promise<string>) {
+    public constructor(numThreads: number) {
         this.pool = new ThreadPool(
             numThreads,
             workerScriptPath,
             GameWorker,
-            async () => ({expPath: await getExpPath?.()}) /*workerData*/,
+            () => undefined /*workerData*/,
         );
     }
 
@@ -94,7 +89,7 @@ export class GamePool {
      * @returns A Promise to get the results of the game. Also returns any
      * errors.
      */
-    public async addGame(
+    public async add(
         args: GamePoolArgs,
         callback?: () => void,
     ): Promise<GamePoolResult> {

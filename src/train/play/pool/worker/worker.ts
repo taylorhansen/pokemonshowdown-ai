@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as stream from "stream";
 import {serialize} from "v8";
-import {parentPort, workerData} from "worker_threads";
+import {parentPort} from "worker_threads";
 import seedrandom from "seedrandom";
 import {ModelPort} from "../../../model/worker";
 import {RawPortResultError} from "../../../port/PortProtocol";
@@ -9,12 +9,7 @@ import {WorkerClosed} from "../../../port/WorkerProtocol";
 import {TrainingExampleEncoder} from "../../../tfrecord/encoder";
 import {TrainingExample} from "../../experience/TrainingExample";
 import {playGame, SimArgsAgent} from "../../sim/playGame";
-import {
-    GameWorkerData,
-    GameMessage,
-    GamePlay,
-    GamePlayResult,
-} from "./GameProtocol";
+import {GameMessage, GamePlay, GamePlayResult} from "./GameProtocol";
 import {randomAgent, randomExpAgent} from "./randomAgent";
 
 if (!parentPort) {
@@ -141,27 +136,41 @@ const gameStream = new stream.Transform({
                 parentPort!.postMessage(result, [result.err.buffer]);
                 examples = [];
             }
-            for (const example of examples) {
-                this.push(example);
+            if (msg.play.expPath) {
+                this.push({examples, path: msg.play.expPath});
             }
             callback();
         })();
     },
 });
 
-// Setup experience stream if configured for it.
+// Setup experience stream for when game is configured for it.
 
-let expStream: [stream.Transform, stream.Writable] | [] = [];
-const {expPath} = workerData as GameWorkerData;
-if (expPath) {
-    expStream = [
-        new TrainingExampleEncoder(),
-        // Use append option to keep from overwriting any previous tfrecords
-        // TODO: If an errored worker gets replaced, what can guarantee that the
-        // tfrecord file is still valid?
-        fs.createWriteStream(expPath, {encoding: "binary", flags: "a"}),
-    ];
-}
+const expStream = new stream.Writable({
+    objectMode: true,
+    highWaterMark: 4,
+    write(
+        data: {examples: TrainingExample[]; path: string},
+        encoding: BufferEncoding,
+        callback: (error?: Error | null) => void,
+    ): void {
+        if (data.examples.length <= 0) {
+            callback();
+            return;
+        }
+        stream.promises
+            .pipeline(
+                data.examples,
+                new TrainingExampleEncoder(),
+                fs.createWriteStream(data.path, {
+                    encoding: "binary",
+                    flags: "w",
+                }),
+            )
+            .then(() => callback())
+            .catch(callback);
+    },
+});
 
 // Setup pipeline.
 // Any errors that escape from the pipeline are propagated through the worker.
@@ -170,7 +179,7 @@ if (expPath) {
 let pipelinePromise = stream.promises.pipeline(
     inputStream,
     gameStream,
-    ...expStream,
+    expStream,
 );
 
 parentPort.on("message", function handleMessage(msg: GameMessage) {

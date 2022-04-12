@@ -7,6 +7,7 @@ import {ensureDir} from "../util/paths/ensureDir";
 import {episode, EpisodeSeedRandomArgs} from "./episode";
 import {ModelWorker} from "./model/worker";
 import {Opponent} from "./play";
+import {GamePool} from "./play/pool";
 import {AgentExploreConfig} from "./play/pool/worker/GameProtocol";
 
 /** Args for {@link train}. */
@@ -17,6 +18,8 @@ export interface TrainArgs {
     readonly config: Config;
     /** Object used to manage TensorFlow model ops. */
     readonly models: ModelWorker;
+    /** Object used to manage parallel games. */
+    readonly games: GamePool;
     /** Logger object used to provide console output. */
     readonly logger: Logger;
     /** Configure random number generators. */
@@ -42,6 +45,7 @@ export async function train({
     name,
     config,
     models,
+    games,
     logger,
     seeds,
 }: TrainArgs): Promise<void> {
@@ -118,6 +122,7 @@ export async function train({
             name,
             step,
             models,
+            games,
             model,
             explore,
             experienceConfig: config.train.rollout.experience,

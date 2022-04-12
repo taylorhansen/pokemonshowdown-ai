@@ -32,11 +32,14 @@ export class ModelWorker {
      *
      * @param gpu Whether to enable GPU support. Default `false`.
      * @param logPath Path to store logs in.
+     * @param numDecoderThreads Number of threads to use for decoding
+     * TrainingExamples during training. Default 1.
      */
-    public constructor(gpu = false, logPath?: string) {
+    public constructor(gpu = false, logPath?: string, numDecoderThreads = 1) {
         const workerData: ModelWorkerData = {
             ...(gpu && {gpu: true}),
             ...(logPath && {logPath}),
+            numDecoderThreads,
         };
         this.workerPort = new WorkerPort(
             new Worker(workerScriptPath, {workerData}),

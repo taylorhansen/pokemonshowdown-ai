@@ -36,6 +36,8 @@ export interface PlayGamesArgs {
     readonly stage: string;
     /** Used to request model ports for the game workers. */
     readonly models: ModelWorker;
+    /** Used to play parallel games. */
+    readonly games: GamePool;
     /** Config for the BattleAgent that will participate in each game. */
     readonly agentConfig: GamePoolAgentConfig;
     /** Opponents to play against. */
@@ -81,9 +83,10 @@ export async function playGames({
     step,
     stage,
     models,
+    games,
     agentConfig,
     opponents,
-    gameConfig: {numThreads, maxTurns},
+    gameConfig: {maxTurns},
     logger,
     logPath,
     experienceConfig,
@@ -125,7 +128,7 @@ export async function playGames({
 
         // Iterator-like stream for piping GamePoolArgs to the GamePool stream.
         const poolArgs = stream.Readable.from(
-            (function* generateArgs() {
+            (async function* generateGamePoolArgs() {
                 for (let i = 0; i < opponent.numGames; ++i) {
                     const gameLogPath =
                         logPath &&
@@ -152,6 +155,7 @@ export async function playGames({
                             }),
                             seed: generatePrngSeed(battleRandom),
                             experienceConfig,
+                            expPath: await getExpPath?.(),
                         },
                     };
                     yield args;
@@ -192,17 +196,11 @@ export async function playGames({
             },
         });
 
-        // TODO: Move pool outside loop for reuse?
-        const pool = new GamePool(numThreads, getExpPath);
-        try {
-            await stream.promises.pipeline(
-                poolArgs,
-                new GamePoolStream(pool),
-                processResults,
-            );
-        } finally {
-            await pool.close();
-        }
+        await stream.promises.pipeline(
+            poolArgs,
+            new GamePoolStream(games),
+            processResults,
+        );
 
         progress.terminate();
         innerLog.debug(`Record: ${wins}-${losses}-${ties}`);

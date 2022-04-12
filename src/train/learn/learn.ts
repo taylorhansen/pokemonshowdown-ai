@@ -1,16 +1,35 @@
+import {workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import seedrandom from "seedrandom";
 import {LearnConfig} from "../../config/types";
 import {hash} from "../../util/hash";
 import {shuffle} from "../../util/shuffle";
-import {ModelLearnData} from "../model/worker";
+import {ModelLearnData, ModelWorkerData} from "../model/worker";
 import {Metrics} from "../model/worker/Metrics";
 import {TrainingExampleDecoderPool} from "../tfrecord/decoder";
 import {BatchedExample, createTrainingDataset} from "./dataset";
 import {loss} from "./loss";
 
+const {numDecoderThreads} = workerData as ModelWorkerData;
+
+/**
+ * Manages a thread pool for decoding multiple TrainingExample `.tfrecord` files
+ * in parallel.
+ */
+const decoderPool = new TrainingExampleDecoderPool(numDecoderThreads);
+
+/**
+ * Closes the TrainingExample decoder pool.
+ *
+ * Must be called when the worker is shutting down.
+ */
+export async function closeDecoderPool() {
+    await decoderPool.close();
+}
+
 /** Factored-out high level config from {@link LearnArgs}. */
-export interface LearnArgsPartial extends LearnConfig {
+export interface LearnArgsPartial
+    extends Omit<LearnConfig, "numDecoderThreads"> {
     /** Name of the current training run, under which to store logs. */
     readonly name: string;
     /** Current episode iteration of the training run. 1-based. */
@@ -39,7 +58,6 @@ export async function learn({
     examplePaths,
     numExamples,
     epochs,
-    numDecoderThreads,
     batchSize,
     shufflePrefetch,
     learningRate,
@@ -70,8 +88,6 @@ export async function learn({
     const denseLayers = model.layers.filter(
         layer => layer.getClassName() === "Dense",
     );
-
-    const decoderPool = new TrainingExampleDecoderPool(numDecoderThreads);
 
     callback?.({type: "start", numBatches: Math.ceil(numExamples / batchSize)});
 
@@ -245,7 +261,6 @@ export async function learn({
             metrics?.histogram(`learn/${weights.name}/weights`, weights, step);
         }
     } finally {
-        await decoderPool.close();
         optimizer.dispose();
         Metrics.flush();
 

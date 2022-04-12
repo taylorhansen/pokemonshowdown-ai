@@ -5,6 +5,7 @@ import {ExperienceConfig, GameConfig, LearnConfig} from "../config/types";
 import {Logger} from "../util/logging/Logger";
 import {ModelWorker} from "./model/worker";
 import {Opponent, playGames} from "./play";
+import {GamePool} from "./play/pool";
 import {AgentExploreConfig} from "./play/pool/worker/GameProtocol";
 
 /** Args for {@link episode}. */
@@ -15,6 +16,8 @@ export interface EpisodeArgs {
     readonly step: number;
     /** Used to request model ports for the game workers. */
     readonly models: ModelWorker;
+    /** Used to play parallel games. */
+    readonly games: GamePool;
     /** Name of the model to train. */
     readonly model: string;
     /** Exploration policy for the rollout phase. */
@@ -78,6 +81,7 @@ async function episodeImpl(
         name,
         step,
         models,
+        games,
         model,
         explore,
         experienceConfig,
@@ -102,6 +106,7 @@ async function episodeImpl(
         step,
         stage: "rollout",
         models,
+        games,
         agentConfig: {
             exploit: {type: "model", model},
             explore,
@@ -218,6 +223,7 @@ async function episodeImpl(
         step,
         stage: "eval",
         models,
+        games,
         agentConfig: {exploit: {type: "model", model}},
         opponents: evalOpponents,
         gameConfig,

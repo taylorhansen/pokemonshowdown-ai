@@ -11,6 +11,10 @@ export interface ModelWorkerData {
     gpu?: boolean;
     /** Path to store logs in. */
     logPath?: string;
+    /**
+     * Number of threads to use for decoding TrainingExamples during training.
+     */
+    numDecoderThreads: number;
 }
 
 /** ModelWorker request protocol typings. */

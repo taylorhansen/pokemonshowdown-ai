@@ -4,6 +4,7 @@ import {parentPort, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {BatchPredictConfig} from "../../../config/types";
 import {importTfn} from "../../../util/tfn";
+import {closeDecoderPool} from "../../learn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
 import {createModel} from "../model";
@@ -152,13 +153,14 @@ parentPort.on("message", function handle(msg: ModelMessage) {
             break;
         }
         case "close": {
-            promise = Promise.all(
-                Array.from(
+            promise = Promise.all([
+                ...Array.from(
                     models,
                     async ([uid, registry]) =>
                         await registry.unload().then(() => models.delete(uid)),
                 ),
-            ).then(() => {
+                closeDecoderPool(),
+            ]).then(() => {
                 const result: WorkerClosed = {type: "close", rid, done: true};
                 parentPort!.postMessage(result);
             });

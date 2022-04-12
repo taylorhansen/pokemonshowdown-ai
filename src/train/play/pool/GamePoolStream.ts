@@ -4,7 +4,7 @@ import {GamePool, GamePoolArgs} from "./GamePool";
 /**
  * Pipes game configs through a thread pool to generate game results.
  *
- * Wraps {@link GamePool.addGame} into a Transform stream. Results order may be
+ * Wraps {@link GamePool.add} into a Transform stream. Results order may be
  * nondeterministic due to worker scheduling.
  */
 export class GamePoolStream extends Transform {
@@ -14,8 +14,8 @@ export class GamePoolStream extends Transform {
     /**
      * Creates a GamePoolStream.
      *
-     * @param pool GamePool to wrap. For now, each GamePoolStream should be
-     * constructed with its own GamePool.
+     * @param pool GamePool to wrap. This object should own `pool` until it gets
+     * destroyed.
      */
     public constructor(private readonly pool: GamePool) {
         super({objectMode: true, highWaterMark: pool.numThreads});
@@ -30,11 +30,10 @@ export class GamePoolStream extends Transform {
         // has been assigned.
         const gamePromise = (async () => {
             try {
-                this.push(await this.pool.addGame(args, callback));
+                this.push(await this.pool.add(args, callback));
             } catch (err) {
-                // Generally addGame() should swallow/wrap errors, but if
-                // anything happens outside of that then the stream should
-                // crash.
+                // Generally add() should swallow/wrap errors, but if anything
+                // happens outside of that then the stream should crash.
                 this.emit("error", err);
             }
         })();
