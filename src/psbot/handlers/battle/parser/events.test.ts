@@ -2400,7 +2400,7 @@ export const test = () =>
                             args: [
                                 "-start",
                                 toIdent("p1"),
-                                toEffectName("typechange"),
+                                "typechange",
                                 toTypes("dark", "rock"),
                             ],
                             kwArgs: {},
@@ -2425,7 +2425,7 @@ export const test = () =>
                             args: [
                                 "-start",
                                 toIdent("p1"),
-                                toEffectName("typechange"),
+                                "typechange",
                                 toTypes("dragon", "ghost", "psychic"),
                             ],
                             kwArgs: {},
@@ -2450,7 +2450,7 @@ export const test = () =>
                             args: [
                                 "-start",
                                 toIdent("p1"),
-                                toEffectName("typechange"),
+                                "typechange",
                                 toTypes("psychic"),
                             ],
                             kwArgs: {},
@@ -2472,12 +2472,7 @@ export const test = () =>
                         ]);
 
                         await ph.handle({
-                            args: [
-                                "-start",
-                                toIdent("p1"),
-                                toEffectName("typechange"),
-                                toTypes(),
-                            ],
+                            args: ["-start", toIdent("p1"), "typechange"],
                             kwArgs: {},
                         });
                         await ph.return();
@@ -2535,7 +2530,7 @@ export const test = () =>
                             args: [
                                 "-start",
                                 toIdent("p1"),
-                                toEffectName("typechange"),
+                                "typechange",
                                 toTypes("water"),
                             ],
                             kwArgs: {
@@ -2562,7 +2557,6 @@ export const test = () =>
                                 "-start",
                                 toIdent("p1"),
                                 toEffectName("attract", "move"),
-                                toTypes("water"),
                             ],
                             kwArgs: {
                                 from: toEffectName("cutecharm", "ability"),

@@ -1,6 +1,7 @@
 // TODO: Make this into a proper enum?
 /** Maps a choice name to its id number. */
 export const choiceIds = {
+    /* eslint-disable @typescript-eslint/naming-convention */
     "move 1": 0,
     "move 2": 1,
     "move 3": 2,
@@ -10,6 +11,7 @@ export const choiceIds = {
     "switch 4": 6,
     "switch 5": 7,
     "switch 6": 8,
+    /* eslint-enable @typescript-eslint/naming-convention */
 } as const;
 
 /** The types of choices that can be made by the user. */

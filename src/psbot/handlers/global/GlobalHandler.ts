@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {Args, Protocol} from "@pkmn/protocol";
 import {Event} from "../../parser";
 import {RoomHandler} from "../RoomHandler";
@@ -105,3 +106,5 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler {
         void args;
     }
 }
+
+/* eslint-enable @typescript-eslint/naming-convention */

@@ -305,6 +305,7 @@ const allowedBattleArgs: {
         | boolean
         | ((event: Event<T>) => boolean);
 } = {
+    /* eslint-disable @typescript-eslint/naming-convention */
     // Protocol.BattleInitArgName
     "|player|": true,
     "|teamsize|": true,
@@ -401,4 +402,5 @@ const allowedBattleArgs: {
     "|-anim|": false,
     "|-ohko|": true,
     "|-candynamax|": true,
+    /* eslint-enable @typescript-eslint/naming-convention */
 };

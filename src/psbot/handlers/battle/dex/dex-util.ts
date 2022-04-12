@@ -22,6 +22,7 @@ export const types = {
     rock: 14,
     steel: 15,
     water: 16,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     "???": 17,
 } as const;
 /** Sorted array of all {@link Type} names. */
