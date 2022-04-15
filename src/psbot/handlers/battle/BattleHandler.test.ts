@@ -1,6 +1,8 @@
 import {Protocol} from "@pkmn/protocol";
 import {expect} from "chai";
 import "mocha";
+import {Logger} from "../../../util/logging/Logger";
+import {Verbose} from "../../../util/logging/Verbose";
 import {BattleHandler} from "./BattleHandler";
 import {Choice} from "./agent";
 import {consume, verify} from "./parser/parsing";
@@ -61,6 +63,7 @@ export const test = () =>
                     expect(msg).to.equal("|/choose move 2");
                     return true;
                 },
+                logger: new Logger(Logger.null, Verbose.None),
             });
 
             // Turn 1.
@@ -159,6 +162,7 @@ export const test = () =>
                     ++senderState;
                     return true;
                 },
+                logger: new Logger(Logger.null, Verbose.None),
             });
 
             // Turn 1.
@@ -275,6 +279,7 @@ export const test = () =>
                     ++senderState;
                     return true;
                 },
+                logger: new Logger(Logger.null, Verbose.None),
             });
 
             // Turn 1.

@@ -111,9 +111,9 @@ handlersImpl["|request|"] = async function (ctx) {
     const [, json] = event.args;
     const req = Protocol.parseRequest(json);
     ctx.logger.debug(
-        `Request ${req.requestType}${ctx.state.started ? "" : " (init)"}: ` +
-            JSON.stringify(req),
+        `Request ${req.requestType}${ctx.state.started ? "" : " (init)"}`,
     );
+    ctx.logger.debug(JSON.stringify(req));
 
     switch (req.requestType) {
         case "team":
@@ -296,7 +296,7 @@ async function decide(
     };
 
     const choices = getChoices(req);
-    ctx.logger.debug(`Choices: [${choices.join(", ")}]`);
+    ctx.logger.info(`Choices: [${choices.join(", ")}]`);
 
     // istanbul ignore if: Should never happen.
     if (choices.length <= 0) {
@@ -314,7 +314,7 @@ async function decide(
         await evaluateChoices(ctx, choices);
     }
 
-    ctx.logger.debug(`Choice '${choices[0]}' was accepted`);
+    ctx.logger.info(`Choice '${choices[0]}' was accepted`);
 }
 function getChoices(req: Protocol.Request): Choice[] {
     const result: Choice[] = [];
@@ -439,7 +439,7 @@ handlersImpl["|upkeep|"] = async function (ctx) {
 };
 handlersImpl["|turn|"] = async function (ctx) {
     const event = await verify(ctx, "|turn|");
-    ctx.logger.debug(`Turn ${event.args[1]}`);
+    ctx.logger.info(`Turn ${event.args[1]}`);
     await consume(ctx);
 };
 // Note: Win/tie are handled by the top-level main.ts parser to end the game.

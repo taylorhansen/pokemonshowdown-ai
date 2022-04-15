@@ -24,6 +24,8 @@ export interface TrainArgs {
     readonly logger: Logger;
     /** Configure random number generators. */
     readonly seeds?: SeedConfig;
+    /** Whether to show progress bars. */
+    readonly progress?: boolean;
 }
 
 /** Configuration for random number generators. */
@@ -48,6 +50,7 @@ export async function train({
     games,
     logger,
     seeds,
+    progress,
 }: TrainArgs): Promise<void> {
     // Create or load neural network.
     let model: string;
@@ -55,12 +58,12 @@ export async function train({
     const loadUrl = pathToFileURL(
         path.join(config.paths.latestModel, "model.json"),
     ).href;
-    logger.debug("Loading latest model: " + config.paths.latestModel);
+    logger.info("Loading latest model: " + config.paths.latestModel);
     try {
         model = await models.load("model", config.train.batchPredict, loadUrl);
     } catch (e) {
         logger.error(`Error opening model: ${e}`);
-        logger.debug("Creating default model instead");
+        logger.info("Creating default model instead");
         model = await models.load(
             "model",
             config.train.batchPredict,
@@ -68,7 +71,7 @@ export async function train({
             seeds?.model,
         );
 
-        logger.debug("Saving new model as latest");
+        logger.info("Saving new model as latest");
         await ensureDir(config.paths.latestModel);
         await models.save(model, latestModelUrl);
     }
@@ -111,7 +114,9 @@ export async function train({
     // Train network.
     for (let step = 1; step <= config.train.numEpisodes; ++step) {
         const episodeLog = logger.addPrefix(
-            `Episode(${step}/${config.train.numEpisodes}): `,
+            `Episode(${step.toPrecision(
+                Math.ceil(Math.log10(config.train.numEpisodes)),
+            )}/${config.train.numEpisodes}): `,
         );
 
         const logPromise = models.log(name, step, {
@@ -144,6 +149,7 @@ export async function train({
             logger: episodeLog,
             logPath: path.join(config.paths.logs, `episode-${step}`),
             ...(seed && {seed}),
+            progress,
         });
         await Promise.all([logPromise, episodePromise]);
 

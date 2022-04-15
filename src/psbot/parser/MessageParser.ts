@@ -23,7 +23,7 @@ export class MessageParser extends Transform {
         callback: TransformCallback,
     ): void {
         try {
-            this.logger?.debug(`Received:\n${chunk}`);
+            this.logger?.info(`Received:\n${chunk}`);
             const rooms = new Set<Protocol.RoomID>();
             for (const msg of Protocol.parse(chunk) as Generator<RoomEvent>) {
                 this.push(msg);

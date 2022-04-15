@@ -32,8 +32,8 @@ export interface BattleHandlerArgs<TAgent extends BattleAgent = BattleAgent> {
     readonly agent: TAgent;
     /** Used for sending messages to the assigned server room. */
     readonly sender: Sender;
-    /** Logger object. Default stderr. */
-    readonly logger?: Logger;
+    /** Logger object. */
+    readonly logger: Logger;
 }
 
 /**
@@ -91,7 +91,7 @@ export class BattleHandler<TAgent extends BattleAgent = BattleAgent>
         stateCtor = BattleState,
         agent,
         sender,
-        logger = Logger.stderr,
+        logger,
     }: BattleHandlerArgs<TAgent>) {
         this.sender = sender;
         this.logger = logger;
@@ -99,6 +99,7 @@ export class BattleHandler<TAgent extends BattleAgent = BattleAgent>
         const choiceSender: ChoiceSender = async choice =>
             await new Promise<SenderResult>(res => {
                 this.choiceSenderRes = res;
+                this.logger.info(`Sending choice: ${choice}`);
                 if (!this.sender(`|/choose ${choice}`)) {
                     this.logger.debug("Can't send Choice, force accept");
                     res(false);

@@ -61,6 +61,8 @@ export interface PlayGamesArgs {
     readonly getExpPath?: () => Promise<string>;
     /** Random seed generators. */
     readonly seed?: PlayGamesSeedRandomArgs;
+    /** Whether to show progress bars. */
+    readonly progress?: boolean;
 }
 
 /** Random number generators used by the game and policy. */
@@ -92,6 +94,7 @@ export async function playGames({
     experienceConfig,
     getExpPath,
     seed,
+    progress,
 }: PlayGamesArgs): Promise<number> {
     const battleRandom = seed?.battle
         ? seedrandom.alea(seed.battle())
@@ -102,29 +105,39 @@ export async function playGames({
     for (const opponent of opponents) {
         const innerLog = logger.addPrefix(`Versus ${opponent.name}: `);
 
-        const prefixWidth = innerLog.prefix.length;
-        const postfixWidth =
-            " wlt=--".length + 3 * Math.ceil(Math.log10(opponent.numGames));
-        const padding = 2;
-        const barWidth =
-            (process.stderr.columns || 80) -
-            prefixWidth -
-            postfixWidth -
-            padding;
-        const progress = new ProgressBar(`${innerLog.prefix}:bar wlt=:wlt`, {
-            total: opponent.numGames,
-            head: ">",
-            clear: true,
-            width: barWidth,
-        });
-        progress.render({wlt: "0-0-0"});
-        const progressLogFunc: LogFunc = msg => progress.interrupt(msg);
-        const progressLog = new Logger(
-            progressLogFunc,
-            progressLogFunc,
-            innerLog.prefix,
-            innerLog.postfix,
-        );
+        let progressBar: ProgressBar | undefined;
+        let progressLog: Logger;
+        if (progress) {
+            const prefixWidth = innerLog.prefix.length;
+            const postfixWidth =
+                " wlt=--".length + 3 * Math.ceil(Math.log10(opponent.numGames));
+            const padding = 2;
+            const barWidth =
+                (process.stderr.columns || 80) -
+                prefixWidth -
+                postfixWidth -
+                padding;
+            progressBar = new ProgressBar(`${innerLog.prefix}:bar wlt=:wlt`, {
+                total: opponent.numGames,
+                head: ">",
+                clear: true,
+                width: barWidth,
+            });
+            progressBar.render({wlt: "0-0-0"});
+
+            const progressLogFunc: LogFunc = msg => progressBar!.interrupt(msg);
+            progressLog = new Logger(
+                progressLogFunc,
+                innerLog.verbose,
+                innerLog.prefix,
+                // Remove extra newline.
+                innerLog.postfix.endsWith("\n")
+                    ? innerLog.postfix.slice(0, -1)
+                    : innerLog.postfix,
+            );
+        } else {
+            progressLog = innerLog;
+        }
 
         // Iterator-like stream for piping GamePoolArgs to the GamePool stream.
         const poolArgs = stream.Readable.from(
@@ -190,7 +203,7 @@ export async function playGames({
                     ++ties;
                 }
 
-                progress.tick({wlt: `${wins}-${losses}-${ties}`});
+                progressBar?.tick({wlt: `${wins}-${losses}-${ties}`});
 
                 callback();
             },
@@ -202,8 +215,8 @@ export async function playGames({
             processResults,
         );
 
-        progress.terminate();
-        innerLog.debug(`Record: ${wins}-${losses}-${ties}`);
+        progressBar?.terminate();
+        innerLog.info(`Record: ${wins}-${losses}-${ties}`);
 
         await models.log(name, step, {
             [`${stage}/vs_${opponent.name}/win_ratio`]:

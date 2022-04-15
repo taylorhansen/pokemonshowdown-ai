@@ -6,6 +6,7 @@ import {ModelWorker} from "../train/model/worker";
 import {GamePool} from "../train/play/pool";
 import {train} from "../train/train";
 import {Logger} from "../util/logging/Logger";
+import {Verbose} from "../util/logging/Verbose";
 
 // Used for debugging.
 Error.stackTraceLimit = Infinity;
@@ -30,8 +31,10 @@ void (async function () {
     /** Manages a thread pool for playing multiple parallel games. */
     const games = new GamePool(config.train.game.numThreads);
 
+    /** Logging verbosity level. Set to Debug for more logs. */
+    const verbose = Verbose.Info;
     /** Main Logger object. */
-    const logger = Logger.stderr.addPrefix("Train: ");
+    const logger = new Logger(Logger.stderr, verbose, "Train: ");
 
     try {
         await train({
@@ -47,6 +50,7 @@ void (async function () {
                 explore: "jkl",
                 learn: "mno",
             },
+            progress: true,
         });
     } catch (e) {
         logger.error(
@@ -56,6 +60,6 @@ void (async function () {
     } finally {
         await games.close();
         await models.close();
-        logger.debug("Done");
+        logger.info("Done");
     }
 })();

@@ -2,6 +2,7 @@ import {expect} from "chai";
 import "mocha";
 import {IUtf8Message} from "websocket";
 import {Logger} from "../util/logging/Logger";
+import {Verbose} from "../util/logging/Verbose";
 import {FakeRoomHandler} from "./FakeRoomHandler.test";
 import {MockPsServer} from "./MockPsServer.test";
 import {PsBot} from "./PsBot";
@@ -25,7 +26,7 @@ export const test = () =>
         });
 
         beforeEach("Initialize and connect PsBot", async function () {
-            bot = new PsBot(Logger.null);
+            bot = new PsBot(new Logger(Logger.null, Verbose.None));
             await bot.connect(websocketRoute);
             expect(server.isConnected).to.be.true;
         });

@@ -46,7 +46,7 @@ export function experienceBattleParser<
             }
             // Collect data to emit an experience.
             const action = choiceIds[lastChoice];
-            ctx.logger.debug(`Emitting experience, reward=${reward}`);
+            ctx.logger.info(`Emitting experience, reward=${reward}`);
             callback({...expAgentData, action, reward});
             // Reset collected data for the next decision.
             expAgentData = null;

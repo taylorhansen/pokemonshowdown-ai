@@ -38,6 +38,8 @@ export interface EpisodeArgs {
     readonly logPath?: string;
     /** Random seed generators. */
     readonly seed?: EpisodeSeedRandomArgs;
+    /** Whether to show progress bars. */
+    readonly progress?: boolean;
 }
 
 /** Random seed generators used by the training algorithm. */
@@ -92,12 +94,13 @@ async function episodeImpl(
         logger,
         logPath,
         seed,
+        progress,
     }: EpisodeArgs,
 ): Promise<void> {
     // Play some games semi-randomly, building batches of Experience for each
     // game.
     const rolloutLog = logger.addPrefix("Rollout: ");
-    rolloutLog.debug(
+    rolloutLog.info(
         "Collecting training data via policy rollout " +
             `(exploration factor = ${Math.round(explore.factor * 100)}%)`,
     );
@@ -125,6 +128,7 @@ async function episodeImpl(
             return expFile.path;
         },
         ...(seed && {seed}),
+        progress,
     });
     // Summary statement after rollout games.
     const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
@@ -135,13 +139,13 @@ async function episodeImpl(
 
     // Train over the experience gained from each game.
     const learnLog = logger.addPrefix("Learn: ");
-    learnLog.debug("Training over experience");
+    learnLog.info("Training over experience");
     if (numExamples <= 0) {
         learnLog.error("No experience to train over");
         return;
     }
 
-    let progress: ProgressBar | undefined;
+    let progressBar: ProgressBar | undefined;
     let numBatches: number | undefined;
     function startProgress() {
         if (!numBatches) {
@@ -158,7 +162,7 @@ async function episodeImpl(
             prefixWidth -
             postFixWidth -
             padding;
-        progress = new ProgressBar(
+        progressBar = new ProgressBar(
             `${learnLog.prefix}Batch :current/:total: :bar loss=:loss`,
             {
                 total: numBatches,
@@ -167,7 +171,7 @@ async function episodeImpl(
                 width: barWidth,
             },
         );
-        progress.render({loss: "n/a"});
+        progressBar.render({loss: "n/a"});
     }
     await models.learn(
         model,
@@ -182,17 +186,21 @@ async function episodeImpl(
         function onStep(data) {
             switch (data.type) {
                 case "start":
-                    ({numBatches} = data);
-                    startProgress();
+                    if (progress) {
+                        ({numBatches} = data);
+                        startProgress();
+                    }
                     break;
-
                 case "epoch":
                     // Ending summary statement for the current epoch.
-                    progress?.terminate();
-                    learnLog.debug(
-                        `Epoch ${data.epoch}/${learnConfig.epochs}: ` +
-                            `Avg loss = ${data.loss}`,
-                    );
+                    progressBar?.terminate();
+                    learnLog
+                        .addPrefix(
+                            `Epoch(${data.epoch.toPrecision(
+                                Math.ceil(Math.log10(learnConfig.epochs)),
+                            )}/${learnConfig.epochs}): `,
+                        )
+                        .info(`Loss = ${data.loss}`);
 
                     // Restart progress bar for the next epoch.
                     if (data.epoch < learnConfig.epochs) {
@@ -200,7 +208,7 @@ async function episodeImpl(
                     }
                     break;
                 case "batch":
-                    progress?.tick({
+                    progressBar?.tick({
                         batch: data.batch + 1,
                         loss: data.loss.toFixed(8),
                     });
@@ -208,7 +216,7 @@ async function episodeImpl(
             }
         },
     );
-    progress?.terminate();
+    progressBar?.terminate();
     context.cleanupPromise = Promise.all(
         context.expFiles.map(async f => await f.cleanup()),
     );
@@ -217,7 +225,7 @@ async function episodeImpl(
     // TODO: Make a decision as to whether to accept the updated model based on
     // these results.
     const evalLog = logger.addPrefix("Eval: ");
-    evalLog.debug("Evaluating new network against benchmarks");
+    evalLog.info("Evaluating new network against benchmarks");
     await playGames({
         name,
         step,
@@ -230,5 +238,6 @@ async function episodeImpl(
         logger: evalLog,
         ...(logPath && {logPath: join(logPath, "eval")}),
         ...(seed && {seed}),
+        progress,
     });
 }

@@ -75,7 +75,7 @@
         "prefix": ["T"]
       },
       {
-        "selector": "typeLike",
+        "selector": ["typeLike", "enumMember"],
         "format": ["StrictPascalCase"]
       }
     ],

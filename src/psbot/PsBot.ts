@@ -73,7 +73,7 @@ export class PsBot {
      *
      * @param logger Used to log debug info.
      */
-    public constructor(private readonly logger = Logger.stderr) {
+    public constructor(private readonly logger: Logger) {
         this.connected = new Promise<void>(
             (res, rej) =>
                 (this.connectedRes = err => {
@@ -106,7 +106,7 @@ export class PsBot {
      */
     public acceptChallenges(format: string, f: HandlerFactory): void {
         this.formats.set(format, f);
-        this.logger.debug(`Registered format '${format}'`);
+        this.logger.info(`Registered format '${format}'`);
     }
 
     /**
@@ -143,13 +143,11 @@ export class PsBot {
     public async login(options: LoginOptions): Promise<void> {
         if (this.loggedIn) {
             // TODO: Add logout functionality?
-            this.logger.error("Already logged in");
+            this.logger.debug("Cannot login: Already logged in");
             return;
         }
 
-        this.logger.debug(
-            `Configured to login under username '${options.username}'`,
-        );
+        this.logger.info(`Logging in under username '${options.username}'`);
 
         const challstr = await this.globalHandler.challstr;
 
@@ -258,12 +256,12 @@ export class PsBot {
     }
 
     private respondToChallenge(user: string, format: string): void {
-        this.logger.debug(`Received challenge from ${user}: ${format}`);
+        this.logger.info(`Received challenge from ${user}: ${format}`);
         if (this.formats.has(format)) {
             this.addResponses("", `|/accept ${user}`);
         } else {
-            this.logger.debug("Unknown format");
-            this.logger.debug(
+            this.logger.info(`Format '${format}' is unknown`);
+            this.logger.info(
                 "Supported formats: " + [...this.formats.keys()].join(", "),
             );
             this.addResponses("", `|/reject ${user}`);
@@ -298,36 +296,37 @@ export class PsBot {
         if (!handler) {
             // First msg when joining a battle room must be an |init|battle
             // event.
-            if (args[0] === "init" && args[1] === "battle") {
-                // Battle room name format: battle-<format>-<id>
-                const [, format] = roomid.split("-");
-                const f = this.formats.get(format);
-                if (f) {
-                    if (!this.username) {
-                        this.logger.error(
-                            `Could not join battle room '${roomid}': ` +
-                                "Username not initialized",
-                        );
-                        return;
-                    }
-                    const sender: Sender = (...responses: string[]) =>
-                        this.addResponses(roomid, ...responses);
-
-                    handler = f(roomid, this.username, sender);
-                    this.addHandler(roomid, handler);
-                } else {
-                    this.logger.error(
-                        `Could not join battle room '${roomid}': ` +
-                            `Format '${format}' not supported`,
-                    );
-                    return;
-                }
-            } else {
+            if (args[0] !== "init" || args[1] !== "battle") {
                 this.logger.error(
                     `Could not join chat room '${roomid}': No handlers found`,
                 );
                 return;
             }
+
+            // Battle room name format: battle-<format>-<id>
+            const [, format] = roomid.split("-");
+            const f = this.formats.get(format);
+            if (!f) {
+                this.logger.error(
+                    `Could not join battle room '${roomid}': ` +
+                        `Format '${format}' not supported`,
+                );
+                return;
+            }
+
+            if (!this.username) {
+                this.logger.error(
+                    `Could not join battle room '${roomid}': ` +
+                        "Username not initialized",
+                );
+                return;
+            }
+
+            const sender: Sender = (...responses: string[]) =>
+                this.addResponses(roomid, ...responses);
+
+            handler = f(roomid, this.username, sender);
+            this.addHandler(roomid, handler);
         }
 
         // Dispatch special "halt" event or regular event from MessageParser.

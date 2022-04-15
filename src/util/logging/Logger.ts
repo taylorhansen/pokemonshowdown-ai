@@ -1,35 +1,32 @@
+import {Verbose, verboseName} from "./Verbose";
+
 /** Function type used by the Logger. */
 export type LogFunc = (msg: string) => void;
 
-/** Prints debug/error messages with hierarchical prefix capabilities. */
+/**
+ * Prints log messages.
+ *
+ * Includes verbosity level and prefix/postfix hierarchy.
+ */
 export class Logger {
-    /** Default logger. */
-    public static readonly default = new Logger();
-    /** Default stdout logger. */
-    public static readonly stdout = new Logger(undefined, msg =>
-        process.stdout.write(msg),
-    );
+    /** Stdout log function. */
+    public static readonly stdout: LogFunc = msg => process.stdout.write(msg);
     /** Default stderr logger. */
-    public static readonly stderr = new Logger(msg =>
-        process.stdout.write(msg),
-    );
-    /** Logger that doesn't write to anything. */
-    public static readonly null = new Logger(
-        () => {},
-        () => {},
-    );
+    public static readonly stderr: LogFunc = msg => process.stdout.write(msg);
+    /** Logger function that doesn't write to anything. */
+    public static readonly null: LogFunc = () => {};
 
     /**
      * Creates a Logger object.
      *
-     * @param debugLog Function for printing debug messages.
-     * @param errorLog Function for printing error messages.
-     * @param prefix Prefix added to each string.
-     * @param postfix Postfix added to each string.
+     * @param logFunc Function for printing logs. Default stderr.
+     * @param verbose Max verbosity level. Default highest.
+     * @param prefix Prefix added to each log message.
+     * @param postfix Postfix added to each log message.
      */
     public constructor(
-        public readonly debugLog: LogFunc = msg => process.stdout.write(msg),
-        public readonly errorLog: LogFunc = msg => process.stderr.write(msg),
+        public readonly logFunc: LogFunc = Logger.stderr,
+        public readonly verbose = Verbose.Debug,
         public readonly prefix = "",
         public readonly postfix = "\n",
     ) {}
@@ -37,8 +34,8 @@ export class Logger {
     /** Creates a new Logger with a prefix appended to the current one. */
     public addPrefix(prefix: string): Logger {
         return new Logger(
-            this.debugLog,
-            this.errorLog,
+            this.logFunc,
+            this.verbose,
             this.prefix + prefix,
             this.postfix,
         );
@@ -47,30 +44,34 @@ export class Logger {
     /** Creates a new Logger with a postfix prepended to the current one. */
     public addPostfix(postfix: string): Logger {
         return new Logger(
-            this.debugLog,
-            this.errorLog,
+            this.logFunc,
+            this.verbose,
             this.prefix,
             postfix + this.postfix,
         );
     }
 
-    /** Creates a new Logger with a different debug printer. */
-    public pipeDebug(debugLog: LogFunc): Logger {
-        return new Logger(debugLog, this.errorLog, this.prefix, this.postfix);
-    }
-
-    /** Creates a new Logger with a different error printer. */
-    public pipeError(errorLog: LogFunc): Logger {
-        return new Logger(this.debugLog, errorLog, this.prefix, this.postfix);
-    }
-
-    /** Writes a normal debug message. */
-    public debug(message: string): void {
-        this.debugLog(`${this.prefix}debug: ${message}${this.postfix}`);
-    }
-
     /** Writes an error message. */
     public error(message: string): void {
-        this.errorLog(`${this.prefix}error: ${message}${this.postfix}`);
+        this.log(Verbose.Error, message);
+    }
+
+    /** Writes an informational log message. */
+    public info(message: string): void {
+        this.log(Verbose.Info, message);
+    }
+
+    /** Writes a developer debug message. */
+    public debug(message: string): void {
+        this.log(Verbose.Debug, message);
+    }
+
+    /** Writes a log message using the given verbosity level. */
+    public log(verbose: Verbose, message: string): void {
+        if (this.verbose < verbose) {
+            return;
+        }
+        const name = verboseName(verbose);
+        this.logFunc(`${this.prefix}${name}: ${message}${this.postfix}`);
     }
 }

@@ -7,6 +7,7 @@ import {PsBot} from "../psbot/PsBot";
 import * as handlers from "../psbot/handlers";
 import {networkAgent} from "../psbot/handlers/battle/ai/networkAgent";
 import {Logger} from "../util/logging/Logger";
+import {Verbose} from "../util/logging/Verbose";
 import {importTfn} from "../util/tfn";
 // Make sure custom layers can be deserialized.
 import "../train/model/custom_layers";
@@ -19,7 +20,7 @@ const modelPromise = tf.loadLayersModel(
     pathToFileURL(path.join(config.paths.latestModel, "model.json")).href,
 );
 
-const logger = Logger.stderr;
+const logger = new Logger(Logger.stderr, Verbose.Info);
 
 void (async function () {
     const bot = new PsBot(logger.addPrefix("PSBot: "));

@@ -1,5 +1,7 @@
+/** @file Test helper for parsers. */
 import {expect} from "chai";
 import {Logger} from "../../../../util/logging/Logger";
+import {Verbose} from "../../../../util/logging/Verbose";
 import {BattleAgent, Choice} from "../agent";
 import {BattleState} from "../state";
 import {ChoiceSender, SenderResult} from "./BattleParser";
@@ -7,7 +9,11 @@ import {StateHelpers} from "./StateHelpers.test";
 import {BattleIterator} from "./iterators";
 import {StartBattleParserArgs} from "./parsing";
 
-/** Initial context data required to start up the battle parser. */
+/**
+ * Initial context data required to start up the battle parser.
+ *
+ * Modifying fields here will reflect on the contents of {@link startArgs}.
+ */
 export interface InitialContext extends StartBattleParserArgs {
     /** Initial args for starting the BattleParser. */
     readonly startArgs: StartBattleParserArgs;
@@ -57,9 +63,8 @@ export function createInitialContext(): InitialContext {
         await Promise.reject(
             new Error("BattleAgent expected to not be called"),
         );
-    // Suppress logs.
     // TODO: Should logs be tested?
-    const defaultLogger = Logger.null;
+    const defaultLogger = new Logger(Logger.null, Verbose.None);
     const defaultSender = async () =>
         await Promise.reject(
             new Error("ChoiceSender expected to not be called"),
@@ -70,10 +75,7 @@ export function createInitialContext(): InitialContext {
             // Use an additional level of indirection so that agent/sender can
             // be overridden by test code.
             agent: async (s, choices) => await ictx.agent(s, choices),
-            logger: new Logger(
-                msg => ictx.logger.debug(msg),
-                msg => ictx.logger.error(msg),
-            ),
+            logger: new Logger(msg => ictx.logger.logFunc(msg), Verbose.Info),
             sender: async choices => await ictx.sender(choices),
             getState,
         },

@@ -16,6 +16,7 @@ import {
     RoomEvent,
 } from "../../../../psbot/parser";
 import {LogFunc, Logger} from "../../../../util/logging/Logger";
+import {Verbose} from "../../../../util/logging/Verbose";
 import {ensureDir} from "../../../../util/paths/ensureDir";
 import {SimResult} from "../playGame";
 
@@ -76,7 +77,7 @@ export async function startPsBattle(
 
     // Setup logger.
     const logFunc: LogFunc = msg => file.write(msg);
-    const logger = new Logger(logFunc, logFunc, "Battle: ");
+    const logger = new Logger(logFunc, Verbose.Info, "Battle: ");
 
     // Start simulating a battle.
     const battleStream = new BattleStreams.BattleStream({keepAlive: false});
@@ -102,11 +103,10 @@ export async function startPsBattle(
                 // Format: |/choose <choice>
                 if (arg.startsWith("|/choose ")) {
                     const choice = arg.substring("|/choose ".length);
-                    innerLog.debug(`Sending choice '${choice}'`);
                     if (!battleStream.atEOF) {
                         void streams[id].write(choice);
                     } else {
-                        innerLog.error("Can't send: At end of stream");
+                        innerLog.error("Can't send choice: At end of stream");
                         return false;
                     }
                 }
@@ -129,7 +129,7 @@ export async function startPsBattle(
                                 options.maxTurns &&
                                 Number(event.args[1]) >= options.maxTurns
                             ) {
-                                innerLog.debug("Max turns reached, force tie");
+                                innerLog.info("Max turns reached, force tie");
                                 void streams.omniscient.write(">forcetie");
                             }
                         } else if (event.args[0] === "win") {
@@ -184,7 +184,7 @@ export async function startPsBattle(
                     logError(innerLog, battleStream, (loopErr = e as Error));
                     throwLog(logPath);
                 } finally {
-                    innerLog.debug("Finishing");
+                    innerLog.info("Finishing");
                     try {
                         if (loopErr) {
                             await handler.forceFinish();
@@ -240,14 +240,14 @@ export async function startPsBattle(
 
     // Should probably never happen, but not a big deal if it does.
     if (!battleStream.atEOF) {
-        logger.debug("Killing battle stream");
+        logger.info("Destroying battle stream");
         battleStream.destroy();
     }
 
     // Make sure the game completely ends so that the logs are complete.
     // Note: Subsequent errors are swallowed since they've already been logged
     // and we already captured one via Promise.all() to notify the main thread.
-    logger.debug("Settling");
+    logger.info("Settling");
     await Promise.allSettled(gamePromises);
 
     // Close the log file and return.
@@ -264,7 +264,7 @@ function logError(
     if (err) {
         logger.error(err.stack ?? err.toString());
     }
-    logger.debug("Error encountered, force tie and discard game");
+    logger.info("Error encountered, force tie and discard game");
     void battleStream.write(">forcetie");
     if (!battleStream.atEOF) {
         battleStream.destroy();
