@@ -18,7 +18,6 @@ export const config: Config = {
     },
     paths: {
         models: modelsPath,
-        latestModel: path.join(modelsPath, "latest/"),
         logs: path.join(__dirname, "../../logs/"),
     },
     tf: {gpu: false},

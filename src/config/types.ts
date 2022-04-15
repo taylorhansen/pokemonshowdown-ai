@@ -36,8 +36,6 @@ export interface PsBotConfig {
 export interface PathsConfig {
     /** Path to the directory containing the models. */
     readonly models: string;
-    /** Path to the directory containing the latest model. */
-    readonly latestModel: string;
     /** Path to the directory containing the logs. */
     readonly logs: string;
 }

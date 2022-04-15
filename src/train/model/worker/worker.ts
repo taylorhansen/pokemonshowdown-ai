@@ -10,6 +10,7 @@ import {WorkerClosed} from "../../port/WorkerProtocol";
 import {createModel} from "../model";
 import {Metrics} from "./Metrics";
 import {
+    ModelCloneResult,
     ModelCopyResult,
     ModelLearnResult,
     ModelLoadResult,
@@ -82,6 +83,25 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                     .loadLayersModel(msg.url)
                     .then(m => load(rid, msg.name, m, msg.predict));
             }
+            break;
+        case "clone":
+            promise = getRegistry(msg.model)
+                .clone()
+                .then(reg => {
+                    if (models.has(msg.name)) {
+                        throw new Error(
+                            `Model with name '${msg.name}' already exists`,
+                        );
+                    }
+                    models.set(msg.name, reg);
+                    const result: ModelCloneResult = {
+                        type: "clone",
+                        rid,
+                        done: true,
+                        name: msg.name,
+                    };
+                    parentPort!.postMessage(result);
+                });
             break;
         case "save":
             promise = getRegistry(msg.model)

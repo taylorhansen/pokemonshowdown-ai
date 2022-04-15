@@ -197,7 +197,10 @@ async function episodeImpl(
                     learnLog
                         .addPrefix(
                             `Epoch(${data.epoch.toPrecision(
-                                Math.ceil(Math.log10(learnConfig.epochs)),
+                                Math.max(
+                                    1,
+                                    Math.ceil(Math.log10(learnConfig.epochs)),
+                                ),
                             )}/${learnConfig.epochs}): `,
                         )
                         .info(`Loss = ${data.loss}`);

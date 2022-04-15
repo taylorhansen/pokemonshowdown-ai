@@ -51,6 +51,8 @@ void (async function () {
                 learn: "mno",
             },
             progress: true,
+            // Uncomment to repeat training from the latest model.
+            // resume: "latest",
         });
     } catch (e) {
         logger.error(

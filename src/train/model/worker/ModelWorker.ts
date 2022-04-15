@@ -3,6 +3,7 @@ import {MessagePort, Worker} from "worker_threads";
 import {BatchPredictConfig} from "../../../config/types";
 import {WorkerPort} from "../../port/WorkerPort";
 import {
+    ModelCloneMessage,
     ModelCopyMessage,
     ModelLearnConfig,
     ModelLearnData,
@@ -78,6 +79,28 @@ export class ModelWorker {
 
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"load">(msg, [], result =>
+                result.type === "error" ? rej(result.err) : res(result.name),
+            ),
+        );
+    }
+
+    /**
+     * Clones a model.
+     *
+     * @param model Name of the model to clone.
+     * @param name Name of the new model.
+     * @returns The registered name of the new model.
+     */
+    public async clone(model: string, name: string): Promise<string> {
+        const msg: ModelCloneMessage = {
+            type: "clone",
+            rid: this.workerPort.nextRid(),
+            model,
+            name,
+        };
+
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"clone">(msg, [], result =>
                 result.type === "error" ? rej(result.err) : res(result.name),
             ),
         );

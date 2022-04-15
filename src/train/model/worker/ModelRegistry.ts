@@ -79,6 +79,23 @@ export class ModelRegistry {
         this.inUse = Promise.resolve();
     }
 
+    /** Clones the current model into a new registry with the same config. */
+    public async clone(): Promise<ModelRegistry> {
+        const modelArtifact = new Promise<tf.io.ModelArtifacts>(
+            res =>
+                void this.model.save({
+                    save: async _modelArtifact => {
+                        res(_modelArtifact);
+                        return await Promise.resolve({} as tf.io.SaveResult);
+                    },
+                }),
+        );
+        const clonedModel = await tf.loadLayersModel({
+            load: async () => await Promise.resolve(modelArtifact),
+        });
+        return new ModelRegistry(clonedModel, this.config);
+    }
+
     /** Saves the neural network to the given url. */
     public async save(url: string): Promise<void> {
         await this.inUse;

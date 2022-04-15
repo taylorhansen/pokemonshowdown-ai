@@ -26,6 +26,12 @@ export interface TrainArgs {
     readonly seeds?: SeedConfig;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
+    /**
+     * Relative path from the models folder (specified in {@link Config.paths}),
+     * from which a model will be loaded to resume training instead of creating
+     * a default model.
+     */
+    readonly resume?: string;
 }
 
 /** Configuration for random number generators. */
@@ -51,19 +57,41 @@ export async function train({
     logger,
     seeds,
     progress,
+    resume,
 }: TrainArgs): Promise<void> {
+    const latestModelPath = path.join(config.paths.models, "latest");
+    const latestModelUrl = pathToFileURL(latestModelPath).href;
+
     // Create or load neural network.
     let model: string;
-    const latestModelUrl = pathToFileURL(config.paths.latestModel).href;
-    const loadUrl = pathToFileURL(
-        path.join(config.paths.latestModel, "model.json"),
-    ).href;
-    logger.info("Loading latest model: " + config.paths.latestModel);
-    try {
-        model = await models.load("model", config.train.batchPredict, loadUrl);
-    } catch (e) {
-        logger.error(`Error opening model: ${e}`);
-        logger.info("Creating default model instead");
+    if (resume) {
+        const resumeFolder = path.join(config.paths.models, resume || "");
+        const resumeLoadUrl = pathToFileURL(
+            path.join(resumeFolder, "model.json"),
+        ).href;
+        logger.info("Loading model: " + resumeFolder);
+        try {
+            model = await models.load(
+                "model",
+                config.train.batchPredict,
+                resumeLoadUrl,
+            );
+        } catch (e) {
+            logger.error(`Error opening model: ${e}`);
+            logger.info("Creating default model instead");
+            model = await models.load(
+                "model",
+                config.train.batchPredict,
+                undefined /*url*/,
+                seeds?.model,
+            );
+
+            logger.info("Saving new model as latest");
+            await ensureDir(latestModelPath);
+            await models.save(model, latestModelUrl);
+        }
+    } else {
+        logger.info("Creating default model");
         model = await models.load(
             "model",
             config.train.batchPredict,
@@ -72,16 +100,12 @@ export async function train({
         );
 
         logger.info("Saving new model as latest");
-        await ensureDir(config.paths.latestModel);
+        await ensureDir(latestModelPath);
         await models.save(model, latestModelUrl);
     }
 
     logger.debug("Creating copy of original for later evaluation");
-    const previousModel = await models.load(
-        "model_prev",
-        config.train.batchPredict,
-        loadUrl,
-    );
+    const previousModel = await models.clone(model, "model_prev");
     logger.debug("Saving copy as original");
     const originalModelFolder = path.join(config.paths.models, "original");
     await models.save(previousModel, pathToFileURL(originalModelFolder).href);
@@ -115,7 +139,7 @@ export async function train({
     for (let step = 1; step <= config.train.numEpisodes; ++step) {
         const episodeLog = logger.addPrefix(
             `Episode(${step.toPrecision(
-                Math.ceil(Math.log10(config.train.numEpisodes)),
+                Math.max(1, Math.ceil(Math.log10(config.train.numEpisodes))),
             )}/${config.train.numEpisodes}): `,
         );
 

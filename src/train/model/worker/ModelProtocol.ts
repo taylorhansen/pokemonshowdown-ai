@@ -20,9 +20,17 @@ export interface ModelWorkerData {
 /** ModelWorker request protocol typings. */
 export interface ModelProtocol
     extends WorkerProtocol<
-        "load" | "save" | "unload" | "subscribe" | "learn" | "copy" | "log"
+        | "load"
+        | "clone"
+        | "save"
+        | "unload"
+        | "subscribe"
+        | "learn"
+        | "copy"
+        | "log"
     > {
     load: {message: ModelLoadMessage; result: ModelLoadResult};
+    clone: {message: ModelCloneMessage; result: ModelCloneResult};
     save: {message: ModelSaveMessage; result: ModelSaveResult};
     unload: {message: ModelUnloadMessage; result: ModelUnloadResult};
     subscribe: {message: ModelSubscribeMessage; result: ModelSubscribeResult};
@@ -50,6 +58,14 @@ export interface ModelLoadMessage extends ModelMessageBase<"load"> {
      * applicable if {@link url} is omitted.
      */
     readonly seed?: string;
+}
+
+/** Clones a model. */
+export interface ModelCloneMessage extends ModelMessageBase<"clone"> {
+    /** Name of the model to clone. */
+    readonly model: string;
+    /** Name by which to refer to the cloned model. */
+    readonly name: string;
 }
 
 /** Saves a model to a given URL. */
@@ -110,6 +126,12 @@ type ModelResultBase<T extends ModelRequestType> = PortResultBase<T>;
 /** Result of loading and registering a model. */
 export interface ModelLoadResult extends ModelResultBase<"load"> {
     /** Name under which the model was registered. */
+    name: string;
+}
+
+/** Result of cloning a model. */
+export interface ModelCloneResult extends ModelResultBase<"clone"> {
+    /** Name under which the cloned model was registered. */
     name: string;
 }
 
