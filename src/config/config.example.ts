@@ -1,5 +1,6 @@
 import * as os from "os";
 import * as path from "path";
+import {Verbose} from "../util/logging/Verbose";
 import {Config} from "./types";
 
 const modelsPath = path.join(__dirname, "../../models/");
@@ -19,6 +20,7 @@ export const config: Config = {
         // "ws://sim.smogon.com:8000/" or "wss://sim.smogon.com/" to connect to
         // the official PS server.
         websocketRoute: "ws://localhost:8000/",
+        verbose: Verbose.Info,
     },
     paths: {
         models: modelsPath,
@@ -51,5 +53,6 @@ export const config: Config = {
             learningRate: 0.001,
         },
         savePreviousVersions: true,
+        verbose: Verbose.Info,
     },
 };

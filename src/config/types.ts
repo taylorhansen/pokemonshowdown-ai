@@ -1,3 +1,5 @@
+import {Verbose} from "../util/logging/Verbose";
+
 /** Config typings. */
 export interface Config {
     /** PsBot config. */
@@ -26,6 +28,8 @@ export interface PsBotConfig {
     readonly loginUrl: string;
     /** Websocket route to the PS server used for actual play. */
     readonly websocketRoute: string;
+    /** Verbosity level for logging. Default highest. */
+    readonly verbose?: Verbose;
 }
 
 /**
@@ -75,6 +79,8 @@ export interface TrainConfig {
      * Not recommended if running on limited disk space.
      */
     readonly savePreviousVersions: boolean;
+    /** Verbosity level for logging. Default highest. */
+    readonly verbose?: Verbose;
 }
 
 /**

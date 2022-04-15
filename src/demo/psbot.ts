@@ -20,7 +20,7 @@ const modelPromise = tf.loadLayersModel(
     pathToFileURL(path.join(config.paths.models, "latest/model.json")).href,
 );
 
-const logger = new Logger(Logger.stderr, Verbose.Info);
+const logger = new Logger(Logger.stderr, config.psbot.verbose ?? Verbose.Debug);
 
 void (async function () {
     const bot = new PsBot(logger.addPrefix("PSBot: "));

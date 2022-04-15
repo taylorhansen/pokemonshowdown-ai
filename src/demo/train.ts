@@ -34,10 +34,12 @@ void (async function () {
         config.train.game.highWaterMark,
     );
 
-    /** Logging verbosity level. Set to Debug for more logs. */
-    const verbose = Verbose.Debug;
     /** Main Logger object. */
-    const logger = new Logger(Logger.stderr, verbose, "Train: ");
+    const logger = new Logger(
+        Logger.stderr,
+        config.train.verbose ?? Verbose.Debug,
+        "Train: ",
+    );
 
     try {
         await train({
