@@ -221,7 +221,7 @@ async function episodeImpl(
                     progressBar?.terminate();
                     learnLog
                         .addPrefix(
-                            `Epoch(${data.epoch.toPrecision(
+                            `Epoch(${String(data.epoch).padStart(
                                 Math.max(
                                     1,
                                     Math.ceil(Math.log10(learnConfig.epochs)),

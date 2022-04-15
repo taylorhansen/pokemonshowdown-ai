@@ -138,7 +138,7 @@ export async function train({
     // Train network.
     for (let step = 1; step <= config.train.numEpisodes; ++step) {
         const episodeLog = logger.addPrefix(
-            `Episode(${step.toPrecision(
+            `Episode(${String(step).padStart(
                 Math.max(1, Math.ceil(Math.log10(config.train.numEpisodes))),
             )}/${config.train.numEpisodes}): `,
         );
