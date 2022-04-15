@@ -91,9 +91,6 @@ export function experienceBattleParser<
         );
 
         // Emit final experience at the end of the game.
-        // FIXME: In startPSBattle(), forcing a tie after reaching maxTurns will
-        // cause an extra Experience to be emitted between the last decision and
-        // the |tie event.
         emitExperience();
         return result;
     };
