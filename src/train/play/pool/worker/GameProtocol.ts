@@ -6,6 +6,15 @@ import {WorkerProtocol} from "../../../port/WorkerProtocol";
 import {SimResult} from "../../sim/playGame";
 import {PlayArgs} from "../GamePool";
 
+/** Typings for the `workerData` object given to the game worker. */
+export interface GameWorkerData {
+    /**
+     * Soft cap on how many game results can be kept in memory before writing to
+     * disk.
+     */
+    highWaterMark?: number;
+}
+
 /** GameWorker request protocol typings. */
 export interface GameProtocol extends WorkerProtocol<"play"> {
     play: {message: GamePlay; result: GamePlayResult};

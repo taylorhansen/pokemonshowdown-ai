@@ -105,6 +105,11 @@ export interface GameConfig {
      * on forever if this is not set and both players only decide to switch.
      */
     readonly maxTurns: number;
+    /**
+     * Soft cap on how many game results each worker can keep in memory before
+     * writing them to disk.
+     */
+    readonly highWaterMark?: number;
 }
 
 /**

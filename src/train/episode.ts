@@ -1,8 +1,10 @@
+import * as fs from "fs";
 import {join} from "path";
 import ProgressBar from "progress";
 import * as tmp from "tmp-promise";
 import {ExperienceConfig, GameConfig, LearnConfig} from "../config/types";
 import {Logger} from "../util/logging/Logger";
+import {Verbose} from "../util/logging/Verbose";
 import {ModelWorker} from "./model/worker";
 import {Opponent, playGames} from "./play";
 import {GamePool} from "./play/pool";
@@ -131,11 +133,34 @@ async function episodeImpl(
         progress,
     });
     // Summary statement after rollout games.
-    const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
-    rolloutLog.debug(
-        `Played ${numGames} games total, yielding ${numExamples} experiences ` +
-            `(avg ${(numExamples / numGames).toFixed(2)} per game)`,
-    );
+    if (rolloutLog.verbose >= Verbose.Debug) {
+        const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
+        const avgExpPerGame = numExamples / numGames;
+        rolloutLog.debug(
+            `Played ${numGames} games total, yielding ${numExamples} ` +
+                `experiences (avg ${avgExpPerGame.toFixed(2)} per game)`,
+        );
+
+        const totalSizeBytes = (
+            await Promise.all(
+                context.expFiles.map(
+                    async file => (await fs.promises.stat(file.path)).size,
+                ),
+            )
+        ).reduce((a, b) => a + b, 0);
+
+        const totalSizeMiB = totalSizeBytes / 1024 / 1024;
+        rolloutLog.debug(
+            `Total game experience file size: ` +
+                `${totalSizeMiB.toFixed(2)} MiB`,
+        );
+
+        const avgSizeMiB = totalSizeMiB / numGames;
+        rolloutLog.debug(
+            "Average game experience file size: " +
+                `${avgSizeMiB.toFixed(2)} MiB `,
+        );
+    }
 
     // Train over the experience gained from each game.
     const learnLog = logger.addPrefix("Learn: ");

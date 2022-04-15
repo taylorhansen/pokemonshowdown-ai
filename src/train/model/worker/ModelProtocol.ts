@@ -5,7 +5,7 @@ import {LearnArgsPartial} from "../../learn";
 import {PortMessageBase, PortResultBase} from "../../port/PortProtocol";
 import {WorkerProtocol} from "../../port/WorkerProtocol";
 
-/** Typings for the `workerData` object given to the ModelWorker. */
+/** Typings for the `workerData` object given to the model worker. */
 export interface ModelWorkerData {
     /** Whether to enable GPU support. */
     gpu?: boolean;

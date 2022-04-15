@@ -29,10 +29,13 @@ void (async function () {
     await models.log("start", 0, {});
 
     /** Manages a thread pool for playing multiple parallel games. */
-    const games = new GamePool(config.train.game.numThreads);
+    const games = new GamePool(
+        config.train.game.numThreads,
+        config.train.game.highWaterMark,
+    );
 
     /** Logging verbosity level. Set to Debug for more logs. */
-    const verbose = Verbose.Info;
+    const verbose = Verbose.Debug;
     /** Main Logger object. */
     const logger = new Logger(Logger.stderr, verbose, "Train: ");
 

@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as stream from "stream";
 import {serialize} from "v8";
-import {parentPort} from "worker_threads";
+import {parentPort, workerData} from "worker_threads";
 import seedrandom from "seedrandom";
 import {ModelPort} from "../../../model/worker";
 import {RawPortResultError} from "../../../port/PortProtocol";
@@ -9,8 +9,15 @@ import {WorkerClosed} from "../../../port/WorkerProtocol";
 import {TrainingExampleEncoder} from "../../../tfrecord/encoder";
 import {TrainingExample} from "../../experience/TrainingExample";
 import {playGame, SimArgsAgent} from "../../sim/playGame";
-import {GameMessage, GamePlay, GamePlayResult} from "./GameProtocol";
+import {
+    GameMessage,
+    GamePlay,
+    GamePlayResult,
+    GameWorkerData,
+} from "./GameProtocol";
 import {randomAgent, randomExpAgent} from "./randomAgent";
+
+const gameWorkerData = workerData as GameWorkerData;
 
 if (!parentPort) {
     throw new Error("No parent port!");
@@ -112,7 +119,7 @@ async function processMessage(msg: GamePlay): Promise<TrainingExample[]> {
 let lastGamePromise = Promise.resolve();
 const gameStream = new stream.Transform({
     objectMode: true,
-    readableHighWaterMark: 64,
+    highWaterMark: 1,
     transform(
         msg: GamePlay,
         encoding: BufferEncoding,
@@ -148,7 +155,7 @@ const gameStream = new stream.Transform({
 
 const expStream = new stream.Writable({
     objectMode: true,
-    highWaterMark: 4,
+    highWaterMark: gameWorkerData.highWaterMark ?? 4,
     write(
         data: {examples: TrainingExample[]; path: string},
         encoding: BufferEncoding,
@@ -185,6 +192,8 @@ let pipelinePromise = stream.promises.pipeline(
 parentPort.on("message", function handleMessage(msg: GameMessage) {
     switch (msg.type) {
         case "play":
+            // Note: Due to stream backpressure, this may not be immediately
+            // processed.
             inputStream.push(msg);
             break;
         case "close":

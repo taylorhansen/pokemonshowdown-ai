@@ -37,7 +37,7 @@ export class TrainingExampleEncoder extends Transform {
     /**
      * Creates a TrainingExampleEncoder stream.
      *
-     * @param writableHighWaterMark High water mark for the output buffer. If
+     * @param writableHighWaterMark High water mark for the input buffer. If
      * the buffer fills up past this point, the stream will apply backpressure.
      */
     public constructor(writableHighWaterMark = 16) {

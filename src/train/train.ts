@@ -86,7 +86,7 @@ export async function train({
                 seeds?.model,
             );
 
-            logger.info("Saving new model as latest");
+            logger.debug("Saving new model as latest");
             await ensureDir(latestModelPath);
             await models.save(model, latestModelUrl);
         }
@@ -99,7 +99,7 @@ export async function train({
             seeds?.model,
         );
 
-        logger.info("Saving new model as latest");
+        logger.debug("Saving new model as latest");
         await ensureDir(latestModelPath);
         await models.save(model, latestModelUrl);
     }

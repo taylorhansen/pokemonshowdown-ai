@@ -7,7 +7,11 @@ const modelsPath = path.join(__dirname, "../../models/");
 // easily reproduced. Set numThreads to 1 to disable multithreading.
 const numThreads = os.cpus().length;
 
-/** Top-level config. Should only be accessed by the top-level. */
+/**
+ * Top-level config. Should only be accessed by the top-level.
+ *
+ * @see {@link Config} for documentation.
+ */
 export const config: Config = {
     psbot: {
         loginUrl: "https://play.pokemonshowdown.com/",
@@ -24,7 +28,11 @@ export const config: Config = {
     train: {
         numEpisodes: 4,
         batchPredict: {maxSize: numThreads * 2, timeoutNs: 50000n /*50us*/},
-        game: {numThreads, maxTurns: 100},
+        game: {
+            numThreads,
+            maxTurns: 100,
+            highWaterMark: 4,
+        },
         rollout: {
             numGames: 128,
             policy: {

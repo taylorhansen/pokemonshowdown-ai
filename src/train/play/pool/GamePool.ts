@@ -4,7 +4,11 @@ import {ExperienceConfig} from "../../../config/types";
 import {ModelWorker} from "../../model/worker";
 import {ThreadPool} from "../../pool";
 import {SimResult} from "../sim/playGame";
-import {GameAgentConfig, GameProtocol} from "./worker/GameProtocol";
+import {
+    GameAgentConfig,
+    GameProtocol,
+    GameWorkerData,
+} from "./worker/GameProtocol";
 import {GameWorker} from "./worker/GameWorker";
 
 /** Args for {@link GamePool.add}. */
@@ -64,20 +68,25 @@ export class GamePool {
     private readonly pool: ThreadPool<
         GameWorker,
         GameProtocol,
-        keyof GameProtocol
+        keyof GameProtocol,
+        GameWorkerData
     >;
 
     /**
      * Creates a GamePool.
      *
      * @param numThreads Number of workers to create.
+     * @param highWaterMark Soft cap on how many game results each worker can
+     * keep in memory before writing them to disk.
      */
-    public constructor(numThreads: number) {
+    public constructor(numThreads: number, highWaterMark?: number) {
         this.pool = new ThreadPool(
             numThreads,
             workerScriptPath,
             GameWorker,
-            () => undefined /*workerData*/,
+            () => ({
+                ...(highWaterMark !== undefined && {highWaterMark}),
+            }) /*workerData*/,
         );
     }
 
