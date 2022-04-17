@@ -135,6 +135,8 @@ export async function train({
         ...(seeds.learn && {learn: createSeedGenerator(seeds.learn)}),
     };
 
+    const retry = async () => await models.copy(previousModel, model);
+
     // Train network.
     for (let step = 1; step <= config.train.numEpisodes; ++step) {
         const episodeLog = logger.addPrefix(
@@ -170,10 +172,12 @@ export async function train({
             evalOpponents,
             gameConfig: config.train.game,
             learnConfig: config.train.learn,
+            ...(config.train.eval.test && {evalConfig: config.train.eval.test}),
             logger: episodeLog,
             logPath: path.join(config.paths.logs, `episode-${step}`),
             ...(seed && {seed}),
             progress,
+            retry,
         });
         await Promise.all([logPromise, episodePromise]);
 

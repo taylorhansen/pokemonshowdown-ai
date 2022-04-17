@@ -75,6 +75,30 @@ export interface PlayGamesSeedRandomArgs {
     readonly explore?: () => string;
 }
 
+/** Result from {@link playGames}. */
+export interface PlayGamesResult {
+    /** The number of TrainingExamples that were generated, if any. */
+    numExamples: number;
+    /** Results from playing against each opponent. */
+    opponents: OpponentResult[];
+}
+
+/**
+ * Result from playing against an opponent.
+ *
+ * @see {@link PlayGamesResult}
+ */
+export interface OpponentResult {
+    /** Name of the opponent that the agent played against. */
+    name: string;
+    /** Number of wins. */
+    wins: number;
+    /** Number of losses. */
+    losses: number;
+    /** Number of draws. */
+    ties: number;
+}
+
 /**
  * Manages the playing of multiple games in parallel.
  *
@@ -95,13 +119,14 @@ export async function playGames({
     getExpPath,
     seed,
     progress,
-}: PlayGamesArgs): Promise<number> {
+}: PlayGamesArgs): Promise<PlayGamesResult> {
     const battleRandom = seed?.battle
         ? seedrandom.alea(seed.battle())
         : undefined;
     const teamRandom = seed?.team ? seedrandom.alea(seed.team()) : undefined;
 
     let numExamples = 0;
+    const opponentResults: OpponentResult[] = [];
     for (const opponent of opponents) {
         const innerLog = logger.addPrefix(`Versus ${opponent.name}: `);
 
@@ -216,8 +241,9 @@ export async function playGames({
         );
 
         progressBar?.terminate();
-        innerLog.info(`Record: ${wins}-${losses}-${ties}`);
 
+        innerLog.info(`Record: ${wins}-${losses}-${ties}`);
+        opponentResults.push({name: opponent.name, wins, losses, ties});
         await models.log(name, step, {
             [`${stage}/vs_${opponent.name}/win_ratio`]:
                 wins / opponent.numGames,
@@ -228,7 +254,7 @@ export async function playGames({
         });
     }
 
-    return numExamples;
+    return {numExamples, opponents: opponentResults};
 }
 
 /** Makes sure random team and exploration seeds are different between games. */

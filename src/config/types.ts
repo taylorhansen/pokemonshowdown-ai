@@ -170,6 +170,28 @@ export interface ExperienceConfig {
 export interface EvalConfig {
     /** Number of games to play against each ancestor. */
     readonly numGames: number;
+    /** Statistical test config. */
+    readonly test?: EvalTestConfig;
+}
+
+/**
+ * Configuration for the statistical test used during evaluation.
+ *
+ * @see {@link EvalConfig}
+ */
+export interface EvalTestConfig {
+    /**
+     * Name of the eval opponent(s) to test the updated model against. The model
+     * must be proven to be better than each opponent in order to be accepted.
+     */
+    readonly against: string | string[];
+    /**
+     * Minimum ratio of wins to total games in order to accept the updated
+     * model.
+     */
+    readonly minScore: number;
+    /** Whether to count ties as wins in the test. */
+    readonly includeTies?: boolean;
 }
 
 /**

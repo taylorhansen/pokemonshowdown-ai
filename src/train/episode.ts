@@ -2,11 +2,16 @@ import * as fs from "fs";
 import {join} from "path";
 import ProgressBar from "progress";
 import * as tmp from "tmp-promise";
-import {ExperienceConfig, GameConfig, LearnConfig} from "../config/types";
+import {
+    EvalTestConfig,
+    ExperienceConfig,
+    GameConfig,
+    LearnConfig,
+} from "../config/types";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
 import {ModelWorker} from "./model/worker";
-import {Opponent, playGames} from "./play";
+import {Opponent, OpponentResult, playGames} from "./play";
 import {GamePool} from "./play/pool";
 import {AgentExploreConfig} from "./play/pool/worker/GameProtocol";
 
@@ -34,6 +39,8 @@ export interface EpisodeArgs {
     readonly gameConfig: GameConfig;
     /** Configuration for the learning process. */
     readonly learnConfig: LearnConfig;
+    /** Configuration for testing the evaluation step results. */
+    readonly evalConfig?: EvalTestConfig;
     /** Logger object. */
     readonly logger: Logger;
     /** Path to the folder to store episode logs in. Omit to not store logs. */
@@ -42,6 +49,8 @@ export interface EpisodeArgs {
     readonly seed?: EpisodeSeedRandomArgs;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
+    /** Function to rollback the model to what it was pre-`episode()`. */
+    readonly retry: () => Promise<void>;
 }
 
 /** Random seed generators used by the training algorithm. */
@@ -58,25 +67,54 @@ export interface EpisodeSeedRandomArgs {
     readonly learn?: () => string;
 }
 
+/** Result from running a training {@link episode}. */
+export interface EpisodeResult {
+    /** Final model loss after training. */
+    loss?: number;
+    /** Evaluation results for each opponent. */
+    eval: OpponentResult[];
+}
+
 interface EpisodeContext {
     readonly expFiles: tmp.FileResult[];
     cleanupPromise?: Promise<unknown>;
 }
 
 /** Runs a training episode. */
-export async function episode(args: EpisodeArgs): Promise<void> {
-    const context: EpisodeContext = {
-        expFiles: [],
-    };
+export async function episode(args: EpisodeArgs): Promise<EpisodeResult> {
+    let numRetries = 0;
+    let result: EpisodeResult | undefined;
+    do {
+        if (result) {
+            // Note: When retrying, all logs for this step are overwritten.
+            ++numRetries;
+            args.logger
+                .addPrefix("Eval: ")
+                .info(`Model did not improve, retrying (${numRetries})`);
+            await args.retry();
+        }
+        const p = args.models.log(`${args.name}/num_retries`, args.step, {
+            numRetries,
+        });
 
-    try {
-        await episodeImpl(context, args);
-    } finally {
-        context.cleanupPromise ??= Promise.all(
-            context.expFiles.map(async f => await f.cleanup()),
-        );
-        await context.cleanupPromise;
-    }
+        const context: EpisodeContext = {expFiles: []};
+        try {
+            result = await episodeImpl(context, args);
+        } finally {
+            context.cleanupPromise ??= Promise.all(
+                context.expFiles.map(async f => await f.cleanup()),
+            );
+            await Promise.all([context.cleanupPromise, p]);
+        }
+    } while (
+        args.evalConfig &&
+        !testEval(
+            result.eval,
+            args.evalConfig,
+            args.logger.addPrefix("Eval: Test: "),
+        )
+    );
+    return result;
 }
 
 async function episodeImpl(
@@ -98,7 +136,7 @@ async function episodeImpl(
         seed,
         progress,
     }: EpisodeArgs,
-): Promise<void> {
+): Promise<EpisodeResult> {
     // Play some games semi-randomly, building batches of Experience for each
     // game.
     const rolloutLog = logger.addPrefix("Rollout: ");
@@ -106,7 +144,7 @@ async function episodeImpl(
         "Collecting training data via policy rollout " +
             `(exploration factor = ${Math.round(explore.factor * 100)}%)`,
     );
-    const numExamples = await playGames({
+    const {numExamples} = await playGames({
         name,
         step,
         stage: "rollout",
@@ -167,9 +205,10 @@ async function episodeImpl(
     learnLog.info("Training over experience");
     if (numExamples <= 0) {
         learnLog.error("No experience to train over");
-        return;
+        return {eval: []};
     }
 
+    let finalLoss: number | undefined;
     let progressBar: ProgressBar | undefined;
     let numBatches: number | undefined;
     function startProgress() {
@@ -217,6 +256,8 @@ async function episodeImpl(
                     }
                     break;
                 case "epoch":
+                    finalLoss = data.loss;
+
                     // Ending summary statement for the current epoch.
                     progressBar?.terminate();
                     learnLog
@@ -250,11 +291,9 @@ async function episodeImpl(
     );
 
     // Evaluation games.
-    // TODO: Make a decision as to whether to accept the updated model based on
-    // these results.
     const evalLog = logger.addPrefix("Eval: ");
     evalLog.info("Evaluating new network against benchmarks");
-    await playGames({
+    const evalResults = await playGames({
         name,
         step,
         stage: "eval",
@@ -268,4 +307,70 @@ async function episodeImpl(
         ...(seed && {seed}),
         progress,
     });
+
+    return {
+        ...(finalLoss !== undefined && {loss: finalLoss}),
+        eval: evalResults.opponents,
+    };
+}
+
+/**
+ * Runs a statistical test on the evaluation results to see if the model is
+ * improving.
+ *
+ * @param evalResults Evaluation results.
+ * @param testConfig Configuration for the statistical test.
+ * @param logger Logger object.
+ * @returns `true` if the model likely improved, `false` otherwise.
+ */
+function testEval(
+    evalResults: readonly Readonly<OpponentResult>[],
+    testConfig: EvalTestConfig,
+    logger: Logger,
+): boolean {
+    logger.debug("Running a statistical test to see if the model is improving");
+
+    let {against} = testConfig;
+    if (!Array.isArray(against)) {
+        against = [against];
+    }
+    if (against.length <= 0) {
+        logger.error("No opponents to test against");
+        logger.debug("Assuming the model is improving for now");
+        return true;
+    }
+    const vs = evalResults.filter(opp => against.includes(opp.name));
+    if (vs.length <= 0) {
+        logger.error(
+            `Could not find opponents [${against.join(", ")}] in eval results`,
+        );
+        logger.info("Assuming the model is improving for now");
+        return true;
+    }
+
+    logger.debug(`Min score: ${testConfig.minScore}`);
+
+    let conclusion = true;
+    for (const opp of vs) {
+        const vsLogger = logger.addPrefix(`Versus ${opp.name}: `);
+
+        const total = opp.wins + opp.losses + opp.ties;
+        const successes = testConfig.includeTies
+            ? opp.wins + opp.ties
+            : opp.wins;
+        const score = successes / total;
+        vsLogger.debug(
+            `Score: ${successes} / ${total} = ${score.toFixed(2)} ` +
+                `(counting wins${
+                    testConfig.includeTies ? " and ties" : " only"
+                })`,
+        );
+
+        conclusion &&= score >= testConfig.minScore;
+    }
+
+    logger.debug(
+        `Conclusion: ${conclusion ? "Accept" : "Reject"} updated model`,
+    );
+    return conclusion;
 }

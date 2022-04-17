@@ -29,7 +29,10 @@ export const config: Config = {
     tf: {gpu: false},
     train: {
         numEpisodes: 4,
-        batchPredict: {maxSize: numThreads * 2, timeoutNs: 50000n /*50us*/},
+        batchPredict: {
+            maxSize: numThreads * 2,
+            timeoutNs: 50000n /*50us*/,
+        },
         game: {
             numThreads,
             maxTurns: 100,
@@ -44,7 +47,15 @@ export const config: Config = {
             },
             experience: {rewardDecay: 0.99},
         },
-        eval: {numGames: 32},
+        eval: {
+            // Note: Make sure numGames is high enough to reduce noise.
+            numGames: 64,
+            test: {
+                against: ["random", "previous"],
+                minScore: 0.55,
+                includeTies: true,
+            },
+        },
         learn: {
             epochs: 4,
             numDecoderThreads: Math.ceil(numThreads / 2),
