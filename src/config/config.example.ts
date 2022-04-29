@@ -5,7 +5,8 @@ import {Config} from "./types";
 
 const modelsPath = path.join(__dirname, "../../models/");
 // Note: Multithreaded training can introduce nondeterminism that can't be
-// easily reproduced. Set numThreads to 1 to disable multithreading.
+// easily reproduced. Setting numThreads to 1 and specifying the random seeds in
+// the training script should make the program fully deterministic.
 const numThreads = os.cpus().length;
 
 /**
