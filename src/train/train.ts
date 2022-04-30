@@ -4,9 +4,9 @@ import {Config} from "../config/types";
 import {hash} from "../util/hash";
 import {Logger} from "../util/logging/Logger";
 import {ensureDir} from "../util/paths/ensureDir";
-import {episode, EpisodeSeedRandomArgs} from "./episode";
+import {episode, EpisodeSeedRandomArgs} from "./episode/episode";
 import {ModelWorker} from "./model/worker";
-import {Opponent} from "./play";
+import {Opponent, OpponentResult} from "./play";
 import {GamePool} from "./play/pool";
 import {AgentExploreConfig} from "./play/pool/worker/GameProtocol";
 
@@ -48,7 +48,23 @@ export interface SeedConfig {
     readonly learn?: string;
 }
 
-/** Executes the training procedure with the given config. */
+/** Result from {@link train}. */
+export interface TrainResult {
+    /**
+     * Final model loss after training, or `undefined` if an error was
+     * encountered.
+     */
+    loss?: number;
+    /** Final evaluation game results vs a random opponent. */
+    randomOpponentResult: OpponentResult;
+}
+
+/**
+ * Executes the training procedure with the given config.
+ *
+ * @returns The final model loss and the final benchmark results against a
+ * random opponent.
+ */
 export async function train({
     name,
     config,
@@ -58,7 +74,7 @@ export async function train({
     seeds,
     progress,
     resume,
-}: TrainArgs): Promise<void> {
+}: TrainArgs): Promise<TrainResult> {
     const latestModelPath = path.join(config.paths.models, "latest");
     const latestModelUrl = pathToFileURL(latestModelPath).href;
 
@@ -135,9 +151,7 @@ export async function train({
         ...(seeds.learn && {learn: createSeedGenerator(seeds.learn)}),
     };
 
-    const retry = async () => await models.copy(previousModel, model);
-
-    // Train network.
+    let latestResults: TrainResult | undefined;
     for (let step = 1; step <= config.train.numEpisodes; ++step) {
         const episodeLog = logger.addPrefix(
             `Episode(${String(step).padStart(
@@ -145,41 +159,59 @@ export async function train({
             )}/${config.train.numEpisodes}): `,
         );
 
-        const logPromise = models.log(name, step, {
+        await models.log(name, step, {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             "rollout/exploration": explore.factor,
         });
-        const episodePromise = episode({
-            name,
-            step,
-            models,
-            games,
-            model,
-            explore,
-            experienceConfig: config.train.rollout.experience,
-            // TODO: Include ancestor opponents to avoid strategy collapse.
-            trainOpponents: [
-                {
-                    name: "self",
-                    agentConfig: {
-                        exploit: {type: "model", model},
-                        explore,
-                        emitExperience: true,
+
+        let numRetries = 0;
+        let loss: number | undefined;
+        let evalResults: OpponentResult[] | undefined;
+        while (true) {
+            await models.log(`${name}/num_retries`, step, {numRetries});
+
+            const episodeResult = await episode({
+                name,
+                step,
+                models,
+                games,
+                model,
+                explore,
+                experienceConfig: config.train.rollout.experience,
+                // TODO: Include ancestor opponents to avoid strategy collapse.
+                trainOpponents: [
+                    {
+                        name: "self",
+                        agentConfig: {
+                            exploit: {type: "model", model},
+                            explore,
+                            emitExperience: true,
+                        },
+                        numGames: config.train.rollout.numGames,
                     },
-                    numGames: config.train.rollout.numGames,
-                },
-            ],
-            evalOpponents,
-            gameConfig: config.train.game,
-            learnConfig: config.train.learn,
-            ...(config.train.eval.test && {evalConfig: config.train.eval.test}),
-            logger: episodeLog,
-            logPath: path.join(config.paths.logs, `episode-${step}`),
-            ...(seed && {seed}),
-            progress,
-            retry,
-        });
-        await Promise.all([logPromise, episodePromise]);
+                ],
+                evalOpponents,
+                gameConfig: config.train.game,
+                learnConfig: config.train.learn,
+                ...(config.train.eval.test && {
+                    evalConfig: config.train.eval.test,
+                }),
+                logger: episodeLog,
+                logPath: path.join(config.paths.logs, `episode-${step}`),
+                ...(seed && {seed}),
+                progress,
+            });
+            ({loss, evalResults} = episodeResult);
+
+            if (episodeResult.didImprove) {
+                break;
+            }
+
+            // Note: When retrying, all logs for this step are overwritten.
+            ++numRetries;
+            episodeLog.info(`Model did not improve, retrying (${numRetries})`);
+            await models.copy(previousModel /*from*/, model /*to*/);
+        }
 
         if (config.train.savePreviousVersions) {
             const episodeFolderName = `episode-${step}`;
@@ -197,10 +229,27 @@ export async function train({
         explore = {
             factor: Math.max(explore.factor * explorationDecay, minExploration),
         };
-        await models.copy(model, previousModel);
+        await models.copy(model /*from*/, previousModel /*to*/);
+
+        const randomOpponentResult = evalResults?.find(
+            result => result.name === "random",
+        );
+        if (!randomOpponentResult) {
+            throw new Error("Missing random opponent result");
+        }
+
+        latestResults = {
+            ...(loss !== undefined && {loss}),
+            randomOpponentResult,
+        };
     }
 
     await Promise.all([models.unload(model), models.unload(previousModel)]);
+
+    if (!latestResults) {
+        throw new Error("Missing training results");
+    }
+    return latestResults;
 }
 
 function createSeedGenerator(seed: string): () => string {
