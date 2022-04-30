@@ -168,7 +168,8 @@ export async function train({
         let loss: number | undefined;
         let evalResults: OpponentResult[] | undefined;
         while (true) {
-            await models.log(`${name}/num_retries`, step, {numRetries});
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            await models.log(name, step, {num_retries: numRetries});
 
             const episodeResult = await episode({
                 name,
