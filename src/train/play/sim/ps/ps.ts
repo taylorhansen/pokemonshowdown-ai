@@ -231,9 +231,8 @@ export async function startPsBattle(
         void streams.omniscient.write(
             `>player ${id} ${JSON.stringify(playerOptions)}`,
         );
-        logger.debug(
-            `Setting up player ${id} with options: ` +
-                `${JSON.stringify(playerOptions)}`,
+        innerLog.debug(
+            `Setting up player with options: ${JSON.stringify(playerOptions)}`,
         );
     }
 
