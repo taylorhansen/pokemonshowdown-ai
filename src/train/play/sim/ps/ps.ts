@@ -82,11 +82,13 @@ export async function startPsBattle(
     // Start simulating a battle.
     const battleStream = new BattleStreams.BattleStream({keepAlive: false});
     const streams = BattleStreams.getPlayerStreams(battleStream);
-    void streams.omniscient.write(
-        `>start ${JSON.stringify({
-            formatid: "gen4randombattle",
-            ...(options.seed && {seed: options.seed}),
-        })}`,
+    const startOptions = {
+        formatid: "gen4randombattle",
+        ...(options.seed && {seed: options.seed}),
+    };
+    void streams.omniscient.write(`>start ${JSON.stringify(startOptions)}`);
+    logger.debug(
+        `Starting battle with options: ${JSON.stringify(startOptions)}`,
     );
 
     const gamePromises: Promise<void>[] = [];
@@ -220,13 +222,18 @@ export async function startPsBattle(
             })(),
         );
 
+        const playerOptions = {
+            name: id,
+            ...(options.players[id].seed && {
+                seed: options.players[id].seed,
+            }),
+        };
         void streams.omniscient.write(
-            `>player ${id} ${JSON.stringify({
-                name: id,
-                ...(options.players[id].seed && {
-                    seed: options.players[id].seed,
-                }),
-            })}`,
+            `>player ${id} ${JSON.stringify(playerOptions)}`,
+        );
+        logger.debug(
+            `Setting up player ${id} with options: ` +
+                `${JSON.stringify(playerOptions)}`,
         );
     }
 
