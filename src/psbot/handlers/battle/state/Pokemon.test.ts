@@ -590,5 +590,32 @@ export const test = () =>
                 expect(mon1.stats.spe.min).to.equal(100);
                 expect(mon1.stats.spe.max).to.equal(100);
             });
+
+            it("Should allow inference for benched transform target even if it switches back in", function () {
+                const mon1 = new Pokemon("ditto");
+                mon1.switchInto();
+                mon1.moveset.reveal("transform");
+
+                const mon2 = new Pokemon("smeargle");
+                mon2.switchInto();
+                mon2.moveset.reveal("splash");
+
+                mon1.transform(mon2);
+
+                // Transform target switches out then back in.
+                const mon3 = new Pokemon("magikarp");
+                mon3.switchInto(mon2);
+                mon2.switchInto(mon3);
+
+                mon1.moveset.reveal("splash");
+                mon1.moveset.reveal("tackle");
+                mon1.moveset.reveal("takedown");
+                mon1.moveset.reveal("doubleedge");
+
+                expect(mon2.moveset.get("splash")).to.not.be.null;
+                expect(mon2.moveset.get("tackle")).to.not.be.null;
+                expect(mon2.moveset.get("takedown")).to.not.be.null;
+                expect(mon2.moveset.get("doubleedge")).to.not.be.null;
+            });
         });
     });

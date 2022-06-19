@@ -533,9 +533,8 @@ export function setAllVolatiles(volatile: VolatileStatus): void {
     volatile.types = ["normal", "???"];
     volatile.stats = StatTable.base(dex.pokemon["slaking"], 100);
     volatile.ability = "truant";
-    volatile.moveset.link(
+    volatile.moveset.setTransformTarget(
         new Moveset(dex.pokemon["slaking"].movepool),
-        "transform",
     );
 
     volatile.attract = true;

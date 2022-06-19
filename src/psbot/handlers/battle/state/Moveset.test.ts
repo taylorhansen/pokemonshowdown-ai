@@ -99,10 +99,10 @@ export const test = () =>
             it("Should propagate size-based inference to link/base", function () {
                 const moveset = new Moveset();
                 const base = new Moveset(twoMoves, 1);
-                moveset.link(base, "base");
+                moveset.setBase(base);
 
                 const transform = new Moveset();
-                transform.link(moveset, "transform");
+                transform.setTransformTarget(moveset);
 
                 // Expand moveset enough to fit the movepool.
                 transform.size = 2;
@@ -115,155 +115,153 @@ export const test = () =>
             });
         });
 
-        describe("#link()", function () {
-            describe("info = base", function () {
-                it("Should copy moves", function () {
-                    const moveset = new Moveset();
-                    const base = new Moveset();
-                    base.reveal("splash");
-                    moveset.link(base, "base");
-                    expect(moveset.get("splash")).to.equal(base.get("splash"))
-                        .and.to.not.be.null;
-                    // Not by-ref array copy.
-                    expect(moveset.moves).to.not.equal(base.moves);
-                });
-
-                it("Should propagate #reveal() calls from child to parent", function () {
-                    const moveset = new Moveset();
-                    const base = new Moveset();
-                    moveset.link(base, "base");
-                    moveset.reveal("splash");
-                    expect(moveset.get("splash")).to.equal(base.get("splash"))
-                        .and.to.not.be.null;
-                    // Not by-ref array copy.
-                    expect(moveset.moves).to.not.equal(base.moves);
-                });
-
-                it("Should not notice base changes", function () {
-                    const moveset = new Moveset();
-                    const base = new Moveset();
-                    moveset.link(base, "base");
-                    base.reveal("splash");
-                    expect(moveset.get("splash")).to.be.null;
-                });
-
-                it("Should reclaim link if linked again after isolate", function () {
-                    const moveset = new Moveset();
-                    const base = new Moveset();
-                    const transform = new Moveset();
-                    moveset.link(base, "base");
-                    transform.link(moveset, "transform");
-
-                    moveset.isolate();
-                    moveset.link(base, "base");
-                    // To test this, see if changing the base moveset causes a
-                    // change in the transform user.
-                    // If the moveset didn't reclaim its link, the move would be
-                    // propagated normally.
-                    // Technically modifying the base moveset is an error, but
-                    // for now it isn't being caught.
-                    base.reveal("tackle");
-                    expect(moveset.get("tackle")).to.be.null;
-                    expect(transform.get("tackle")).to.be.null;
-                });
-
-                it("Should throw if base changed after reveal", function () {
-                    const moveset = new Moveset();
-                    const base = new Moveset();
-                    moveset.link(base, "base");
-                    base.reveal("splash");
-                    expect(() => moveset.reveal("tackle")).to.throw(
-                        Error,
-                        "Base Moveset expected to not change",
-                    );
-                });
-
-                it("Should throw if base Moveset already has a base", function () {
-                    const moveset = new Moveset();
-                    const base1 = new Moveset();
-                    const base2 = new Moveset();
-                    base1.link(base2, "base");
-
-                    expect(() => moveset.link(base1, "base")).to.throw(
-                        Error,
-                        "Base Moveset can't also have a base Moveset",
-                    );
-                });
-
-                it("Should throw if base Moveset is a Transform user", function () {
-                    const moveset = new Moveset();
-                    const base = new Moveset();
-                    const transform = new Moveset();
-                    base.link(transform, "transform");
-
-                    expect(() => moveset.link(base, "base")).to.throw(
-                        Error,
-                        "Transform source can't be a base Moveset",
-                    );
-                });
+        describe("#setBase()", function () {
+            it("Should copy moves", function () {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                base.reveal("splash");
+                moveset.setBase(base);
+                expect(moveset.get("splash")).to.equal(base.get("splash")).and
+                    .to.not.be.null;
+                // Not by-ref array copy.
+                expect(moveset.moves).to.not.equal(base.moves);
             });
 
-            describe("info = transform", function () {
-                it("Should deep copy moves", function () {
-                    const moveset = new Moveset();
-                    const transform = new Moveset();
-                    transform.reveal("splash");
-                    moveset.link(transform, "transform");
+            it("Should propagate #reveal() calls from child to parent", function () {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                moveset.setBase(base);
+                moveset.reveal("splash");
+                expect(moveset.get("splash")).to.equal(base.get("splash")).and
+                    .to.not.be.null;
+                // Not by-ref array copy.
+                expect(moveset.moves).to.not.equal(base.moves);
+            });
 
-                    // Target moveset should have full pp.
-                    expect(moveset.get("splash")).to.have.property("pp", 5);
-                    expect(transform.get("splash")).to.have.property("pp", 64);
-                });
+            it("Should not notice base changes", function () {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                moveset.setBase(base);
+                base.reveal("splash");
+                expect(moveset.get("splash")).to.be.null;
+            });
 
-                it("Should propagate #reveal() calls from target", function () {
-                    const moveset = new Moveset();
-                    const transform = new Moveset();
-                    moveset.link(transform, "transform");
-                    transform.reveal("splash");
+            it("Should reclaim link if linked again after isolate", function () {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                const transform = new Moveset();
+                moveset.setBase(base);
+                transform.setTransformTarget(moveset);
 
-                    // Target moveset should have full pp.
-                    expect(moveset.get("splash")).to.have.property("pp", 5);
-                    expect(transform.get("splash")).to.have.property("pp", 64);
-                });
+                moveset.isolate();
+                moveset.setBase(base);
+                // To test this, see if changing the base moveset causes a
+                // change in the transform user.
+                // If the moveset didn't reclaim its link, the move would be
+                // propagated normally.
+                // Technically modifying the base moveset is an error, but
+                // for now it isn't being caught.
+                base.reveal("tackle");
+                expect(moveset.get("tackle")).to.be.null;
+                expect(transform.get("tackle")).to.be.null;
+            });
 
-                it("Should propagate #reveal() calls from user", function () {
-                    const moveset = new Moveset();
-                    const transform = new Moveset();
-                    moveset.link(transform, "transform");
-                    moveset.reveal("splash");
+            it("Should throw if base changed after reveal", function () {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                moveset.setBase(base);
+                base.reveal("splash");
+                expect(() => moveset.reveal("tackle")).to.throw(
+                    Error,
+                    "Base Moveset expected to not change",
+                );
+            });
 
-                    // Target moveset should have full pp.
-                    expect(moveset.get("splash")).to.have.property("pp", 5);
-                    expect(transform.get("splash")).to.have.property("pp", 64);
-                });
+            it("Should throw if base Moveset already has a base", function () {
+                const moveset = new Moveset();
+                const base1 = new Moveset();
+                const base2 = new Moveset();
+                base1.setBase(base2);
 
-                it("Should propagate #reveal() calls for multiple Movesets", function () {
-                    const moveset = new Moveset();
-                    const transform1 = new Moveset();
-                    const transform2 = new Moveset();
-                    transform1.link(moveset, "transform");
-                    transform2.link(moveset, "transform");
-                    transform2.reveal("splash");
+                expect(() => moveset.setBase(base1)).to.throw(
+                    Error,
+                    "Base Moveset can't also have a base Moveset",
+                );
+            });
 
-                    // Target moveset should have full pp.
-                    expect(moveset.get("splash")).to.have.property("pp", 64);
-                    expect(transform1.get("splash")).to.have.property("pp", 5);
-                    expect(transform2.get("splash")).to.have.property("pp", 5);
-                });
+            it("Should throw if base Moveset is a Transform user", function () {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                const transform = new Moveset();
+                base.setTransformTarget(transform);
 
-                it("Should propagate to target's base Moveset from a linked Moveset", function () {
-                    const moveset = new Moveset();
-                    const base = new Moveset();
-                    const transform = new Moveset();
-                    moveset.link(base, "base");
-                    transform.link(moveset, "transform");
-                    transform.reveal("splash");
+                expect(() => moveset.setBase(base)).to.throw(
+                    Error,
+                    "Transform source can't be a base Moveset",
+                );
+            });
+        });
 
-                    expect(moveset.get("splash"))
-                        .to.equal(base.get("splash"))
-                        .and.to.have.property("pp", 64);
-                    expect(transform.get("splash")).to.have.property("pp", 5);
-                });
+        describe("#setTransformTarget()", function () {
+            it("Should deep copy moves", function () {
+                const moveset = new Moveset();
+                const transform = new Moveset();
+                transform.reveal("splash");
+                moveset.setTransformTarget(transform);
+
+                // Target moveset should have full pp.
+                expect(moveset.get("splash")).to.have.property("pp", 5);
+                expect(transform.get("splash")).to.have.property("pp", 64);
+            });
+
+            it("Should propagate #reveal() calls from target", function () {
+                const moveset = new Moveset();
+                const transform = new Moveset();
+                moveset.setTransformTarget(transform);
+                transform.reveal("splash");
+
+                // Target moveset should have full pp.
+                expect(moveset.get("splash")).to.have.property("pp", 5);
+                expect(transform.get("splash")).to.have.property("pp", 64);
+            });
+
+            it("Should propagate #reveal() calls from user", function () {
+                const moveset = new Moveset();
+                const transform = new Moveset();
+                moveset.setTransformTarget(transform);
+                moveset.reveal("splash");
+
+                // Target moveset should have full pp.
+                expect(moveset.get("splash")).to.have.property("pp", 5);
+                expect(transform.get("splash")).to.have.property("pp", 64);
+            });
+
+            it("Should propagate #reveal() calls for multiple Movesets", function () {
+                const moveset = new Moveset();
+                const transform1 = new Moveset();
+                const transform2 = new Moveset();
+                transform1.setTransformTarget(moveset);
+                transform2.setTransformTarget(moveset);
+                transform2.reveal("splash");
+
+                // Target moveset should have full pp.
+                expect(moveset.get("splash")).to.have.property("pp", 64);
+                expect(transform1.get("splash")).to.have.property("pp", 5);
+                expect(transform2.get("splash")).to.have.property("pp", 5);
+            });
+
+            it("Should propagate to target's base Moveset from a linked Moveset", function () {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                const transform = new Moveset();
+                moveset.setBase(base);
+                transform.setTransformTarget(moveset);
+                transform.reveal("splash");
+
+                expect(moveset.get("splash"))
+                    .to.equal(base.get("splash"))
+                    .and.to.have.property("pp", 64);
+                expect(transform.get("splash")).to.have.property("pp", 5);
             });
         });
 
@@ -272,8 +270,8 @@ export const test = () =>
                 const moveset = new Moveset();
                 const transform1 = new Moveset();
                 const transform2 = new Moveset();
-                transform1.link(moveset, "transform");
-                transform2.link(moveset, "transform");
+                transform1.setTransformTarget(moveset);
+                transform2.setTransformTarget(moveset);
 
                 moveset.isolate();
                 transform2.reveal("splash");
@@ -289,9 +287,9 @@ export const test = () =>
                 const base = new Moveset();
                 const transform1 = new Moveset();
                 const transform2 = new Moveset();
-                moveset.link(base, "base");
-                transform1.link(moveset, "transform");
-                transform2.link(moveset, "transform");
+                moveset.setBase(base);
+                transform1.setTransformTarget(moveset);
+                transform2.setTransformTarget(moveset);
 
                 moveset.isolate();
                 transform2.reveal("splash");
@@ -397,7 +395,7 @@ export const test = () =>
             it("Should not propagate to base", function () {
                 const moveset = new Moveset();
                 const base = new Moveset();
-                moveset.link(base, "base");
+                moveset.setBase(base);
 
                 moveset.reveal("tackle");
                 moveset.replace("tackle", new Move("splash"));
@@ -408,7 +406,7 @@ export const test = () =>
             it("Should propagate to base if specified", function () {
                 const moveset = new Moveset();
                 const base = new Moveset();
-                moveset.link(base, "base");
+                moveset.setBase(base);
 
                 moveset.reveal("tackle");
                 moveset.replace("tackle", new Move("splash"), true /*base*/);

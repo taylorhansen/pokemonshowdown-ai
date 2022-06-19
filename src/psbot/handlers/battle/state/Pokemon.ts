@@ -454,7 +454,7 @@ export class Pokemon implements ReadonlyPokemon {
         this._volatile.types = this._baseTypes;
         this._volatile.stats = this._baseStats;
         this._volatile.ability = this._baseAbility;
-        this._volatile.moveset.link(this.baseMoveset, "base");
+        this._volatile.moveset.setBase(this.baseMoveset);
         if (selfSwitch) {
             this._volatile.selfSwitch();
         }
@@ -479,7 +479,7 @@ export class Pokemon implements ReadonlyPokemon {
         v.ability = target.ability;
 
         // Link moveset inference.
-        this.volatile.moveset.link(target.moveset, "transform");
+        this.volatile.moveset.setTransformTarget(target.moveset);
     }
 
     // istanbul ignore next: Only used for logging.

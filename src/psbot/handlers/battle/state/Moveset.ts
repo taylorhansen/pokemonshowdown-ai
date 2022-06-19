@@ -117,81 +117,97 @@ export class Moveset implements ReadonlyMoveset {
         }
     }
 
+    /** @override */
     public isIsolated(): boolean {
         return this.base === null && this.linked.size === 1;
     }
 
     /**
-     * Copies a Moveset and starts its shared link.
+     * Copies moves from the given Moveset as if it is its base parent, handling
+     * Transform inferences appropriately.
      *
-     * @param moveset Moveset to copy from.
-     * @param info If `"base"`, the provided moveset is its base parent. Parent
-     * Movesets shouldn't be directly changed unless this Moveset `#link()`s to
-     * a different Moveset, since its moves are copied by reference. If
-     * `"transform"`, moves are deep copied and set to 5 pp as if the moves
-     * were gained via the Transform move.
+     * Parent Movesets shouldn't be directly changed unless this Moveset
+     * calls {@link setTransformTarget} on a different Moveset, since this
+     * method copies moves by reference.
      */
-    public link(moveset: Moveset, info: "base" | "transform"): void {
-        // Clear previous subscriptions if any.
+    public setBase(moveset: Moveset): void {
         this.isolate();
 
-        // Calls to reveal() are propagated differently for base than others.
-        if (info === "base") {
-            if (moveset.base) {
-                throw new Error("Base Moveset can't also have a base Moveset");
-            }
-
-            const linkData = moveset.linked.get(moveset);
-            if (linkData === "transformSource") {
-                throw new Error("Transform source can't be a base Moveset");
-            }
-            // istanbul ignore if: Should never happen, can't reproduce.
-            if (linkData === undefined) {
-                throw new Error("Base Moveset not linked to itself");
-            }
-
-            // Copy moves by reference.
-            // Can't copy map reference since the two can diverge.
-            // Changes to Moves are automatically propagated to base set.
-            this._moves = new Map(moveset._moves);
-
-            // Reclaim linked map from base moveset.
-            this.linked = moveset.linked;
-            moveset.isolate();
-            this.linked.set(this, "transformTarget");
-
-            this.base = moveset;
-        } else {
-            // Future inferences have to be manually propagated to all other
-            // linked Movesets since pp values are different.
-            // Add to target Moveset's shared linked map.
-            this.linked = moveset.linked;
-            this.linked.set(this, "transformSource");
-
-            // Deep copy known moves due to transform (pp=5).
-            this._moves = new Map(
-                [...moveset._moves].map(([name, m]) => [
-                    name,
-                    new Move(m.name, m.maxpp, 5),
-                ]),
-            );
+        if (moveset.base) {
+            throw new Error("Base Moveset can't also have a base Moveset");
         }
 
-        // Copy unknown moves.
+        const linkType = moveset.linked.get(moveset);
+        if (linkType === "transformSource") {
+            throw new Error("Transform source can't be a base Moveset");
+        }
+        // istanbul ignore if: Should never happen, can't reproduce.
+        if (linkType === undefined) {
+            throw new Error("Base Moveset not linked to itself");
+        }
+
+        // Copy moves by reference.
+        // Note: Can't copy map reference since the two can diverge, e.g. mimic.
+        // Changes to Moves are automatically propagated to base set.
+        this._moves = new Map(moveset._moves);
+
+        // Reclaim linked map from base moveset.
+        this.linked = moveset.linked;
+        this.linked.set(this, "transformTarget");
+        moveset.unlink();
+
+        // Share information about unknown moves.
+        this._constraint = moveset._constraint;
+        this._size = moveset.size;
+
+        this.base = moveset;
+    }
+
+    /**
+     * Copies moves from the given Moveset as if the pokemon transformed into
+     * it, handling Transform inferences appropriately.
+     *
+     * Moves will be deep copied and set to 5 pp.
+     */
+    public setTransformTarget(moveset: Moveset): void {
+        this.isolate();
+
+        // Future inferences have to be manually propagated to all other
+        // linked Movesets since pp values are different.
+        // Add to target Moveset's shared linked map.
+        this.linked = moveset.linked;
+        this.linked.set(this, "transformSource");
+
+        // Deep copy known moves due to transform (pp=5).
+        this._moves = new Map(
+            [...moveset._moves].map(([name, m]) => [
+                name,
+                new Move(m.name, m.maxpp, 5),
+            ]),
+        );
+
+        // Share information about unknown moves.
         this._constraint = moveset._constraint;
         this._size = moveset.size;
     }
 
     /** Isolates this Moveset and removes its shared link to other Movesets. */
     public isolate(): void {
-        // Preserve Move inference for other linked Movesets.
+        this.unlink();
+
+        // Copy constraint so it's not shared anymore.
+        this._constraint = new Set(this._constraint);
+    }
+
+    /** Removes the Moveset's shared link to other Movesets. */
+    private unlink(): void {
+        // Preserve Move inference for other linked Movesets by deferring to the
+        // base Moveset.
         if (this.base) {
             this.linked.set(this.base, "transformTarget");
+            this.base.linked = this.linked;
             this.base = null;
         }
-
-        // Copy constraint so it's not linked anymore.
-        this._constraint = new Set(this._constraint);
 
         // Remove this moveset from the linked map.
         this.linked.delete(this);
