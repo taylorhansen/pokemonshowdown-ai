@@ -12,7 +12,7 @@ export const hash = (
     str: string,
     algorithm = "md5",
     inputEncoding: crypto.Encoding = "utf8",
-    outputEncoding: crypto.BinaryToTextEncoding = "binary",
+    outputEncoding: crypto.BinaryToTextEncoding = "hex",
 ): string =>
     crypto
         .createHash(algorithm)
