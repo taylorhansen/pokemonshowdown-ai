@@ -6,7 +6,7 @@ import {ModelWorkerData} from "./ModelProtocol";
 const {gpu, logPath} = workerData as ModelWorkerData;
 const tfn = importTfn(gpu);
 
-/** Used for writing model summary metrics. */
+/** Used for writing model summary metrics to Tensorboard. */
 export class Metrics {
     private static readonly writer = logPath
         ? tfn.node.summaryFileWriter(logPath)

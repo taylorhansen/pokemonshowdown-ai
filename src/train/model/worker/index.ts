@@ -1,2 +1,2 @@
-export * from "./ModelProtocol";
 export * from "./ModelWorker";
+export * from "./ModelProtocol";

@@ -1,9 +1,9 @@
 /** @file Defines the protocol typings for ModelWorkers. */
 import {MessagePort} from "worker_threads";
 import {BatchPredictConfig} from "../../../config/types";
-import {LearnArgsPartial} from "../../learn";
 import {PortMessageBase, PortResultBase} from "../../port/PortProtocol";
 import {WorkerProtocol} from "../../port/WorkerProtocol";
+import {LearnArgs} from "../learn";
 
 /** Typings for the `workerData` object given to the model worker. */
 export interface ModelWorkerData {
@@ -97,7 +97,7 @@ export interface ModelLearnMessage extends ModelMessageBase<"learn"> {
 }
 
 /** Config for the learning algorithm. */
-export type ModelLearnConfig = LearnArgsPartial;
+export type ModelLearnConfig = LearnArgs;
 
 /** Copies weights from one model to another. */
 export interface ModelCopyMessage extends ModelMessageBase<"copy"> {

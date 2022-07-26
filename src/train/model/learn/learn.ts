@@ -1,12 +1,12 @@
 import {workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import seedrandom from "seedrandom";
-import {LearnConfig} from "../../config/types";
-import {hash} from "../../util/hash";
-import {shuffle} from "../../util/shuffle";
-import {ModelLearnData, ModelWorkerData} from "../model/worker";
-import {Metrics} from "../model/worker/Metrics";
-import {TrainingExampleDecoderPool} from "../tfrecord/decoder";
+import {hash} from "../../../util/hash";
+import {shuffle} from "../../../util/shuffle";
+import {TrainingExampleDecoderPool} from "../../tfrecord/decoder";
+import {Metrics} from "../worker/Metrics";
+import {ModelLearnData, ModelWorkerData} from "../worker/ModelProtocol";
+import {LearnArgs} from "./LearnArgs";
 import {BatchedExample, createTrainingDataset} from "./dataset";
 import {loss} from "./loss";
 
@@ -27,43 +27,27 @@ export async function closeDecoderPool() {
     await decoderPool.close();
 }
 
-/** Factored-out high level config from {@link LearnArgs}. */
-export interface LearnArgsPartial
-    extends Omit<LearnConfig, "numDecoderThreads"> {
-    /** Name of the current training run, under which to store logs. */
-    readonly name: string;
-    /** Current episode iteration of the training run. 1-based. */
-    readonly step: number;
-    /** Path to the `.tfrecord` files storing the encoded TrainingExamples. */
-    readonly examplePaths: readonly string[];
-    /** Total number of TrainingExamples for logging. */
-    readonly numExamples: number;
-    /** Seed for shuffling training examples. */
-    readonly seed?: string;
-}
-
-/** Args for {@link learn}. */
-export interface LearnArgs extends LearnArgsPartial {
-    /** Model to train. */
-    readonly model: tf.LayersModel;
-    /** Callback for tracking the training process. */
-    readonly callback?: (data: ModelLearnData) => void;
-}
-
-/** Trains the network over a number of epochs. */
-export async function learn({
-    name,
-    step,
-    model,
-    examplePaths,
-    numExamples,
-    epochs,
-    batchSize,
-    shufflePrefetch,
-    learningRate,
-    callback,
-    seed,
-}: LearnArgs): Promise<void> {
+/**
+ * Trains the network over a number of epochs.
+ *
+ * @param model Model to train.
+ * @param callback Callback for tracking the learning process.
+ */
+export async function learn(
+    {
+        name,
+        step,
+        examplePaths,
+        numExamples,
+        epochs,
+        batchSize,
+        shufflePrefetch,
+        learningRate,
+        seed,
+    }: LearnArgs,
+    model: tf.LayersModel,
+    callback?: (data: ModelLearnData) => void,
+): Promise<void> {
     const metrics = Metrics.get(name);
 
     let seedCounter = 0;

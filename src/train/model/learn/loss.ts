@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {intToChoice} from "../../psbot/handlers/battle/agent";
+import {intToChoice} from "../../../psbot/handlers/battle/agent";
 
 /** Args for the {@link loss} function. */
 export interface LossArgs {

@@ -4,11 +4,11 @@ import {parentPort, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {BatchPredictConfig} from "../../../config/types";
 import {importTfn} from "../../../util/tfn";
-import {closeDecoderPool} from "../../learn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
-import {createModel} from "../model";
 import {Metrics} from "./Metrics";
+import {closeDecoderPool} from "../learn/learn";
+import {createModel} from "../model";
 import {
     ModelCloneResult,
     ModelCopyResult,

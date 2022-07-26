@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
-import {encodedStateToTensors} from "../../psbot/handlers/battle/ai/networkAgent";
-import {TrainingExample} from "../play/experience/TrainingExample";
-import {TrainingExampleDecoderPool} from "../tfrecord/decoder";
+import {encodedStateToTensors} from "../../../psbot/handlers/battle/ai/networkAgent";
+import {TrainingExample} from "../../play/experience/TrainingExample";
+import {TrainingExampleDecoderPool} from "../../tfrecord/decoder";
 
 /**
  * {@link TrainingExample} with values converted to {@link tf.Tensor tensors}.

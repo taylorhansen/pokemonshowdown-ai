@@ -14,9 +14,7 @@ export const teamSize = Team.maxSize;
 /** Number of moves in a moveset. */
 export const numMoves = Moveset.maxSize;
 
-/**
- * Input shapes for the {@link createModel model}, without the batch dimension.
- */
+/** Input shapes for the neural network model, without the batch dimension. */
 export const modelInputShapes: readonly (readonly number[])[] = [
     // Room.
     [encoders.roomStatusEncoder.size],

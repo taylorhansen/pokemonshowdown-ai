@@ -5,7 +5,7 @@ import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {BatchPredictConfig} from "../../../config/types";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
-import {learn, LearnArgsPartial} from "../../learn";
+import {setTimeoutNs} from "../../../util/nanosecond";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {
     PredictMessage,
@@ -15,7 +15,8 @@ import {
 import {modelInputShapes, verifyModel} from "../shapes";
 import {ModelLearnData} from "./ModelProtocol";
 import {PredictBatch} from "./PredictBatch";
-import {setTimeoutNs} from "./nanosecond";
+import {LearnArgs} from "../learn";
+import {learn} from "../learn/learn";
 
 /** Event for when the current batch should be executed. */
 const batchExecute = Symbol("batchExecute");
@@ -34,7 +35,7 @@ export class ModelRegistry {
 
     /** Event listener for batch entries. */
     private readonly predictBatchEvents =
-        // Note: TypedEmitter doesn't contain option typings.
+        // Note: TypedEmitter ctor doesn't contain option typings.
         new EventEmitter({
             captureRejections: true,
         }) as TypedEmitter<BatchEvents>;
@@ -48,7 +49,8 @@ export class ModelRegistry {
     /**
      * Creates a ModelRegistry.
      *
-     * @param model Neural network object.
+     * @param model Neural network object. This registry object will own the
+     * model as soon as the constructor is called.
      * @param config Configuration for batching predict requests.
      */
     public constructor(
@@ -135,20 +137,16 @@ export class ModelRegistry {
     }
 
     /**
-     * Queues a learning episode.
+     * Runs a learning episode.
      *
      * @param config Learning config.
      * @param callback Callback for tracking the training process.
      */
     public async learn(
-        config: LearnArgsPartial,
+        config: LearnArgs,
         callback?: (data: ModelLearnData) => void,
     ): Promise<void> {
-        await learn({
-            ...config,
-            model: this.model,
-            ...(callback && {callback}),
-        });
+        await learn(config, this.model, callback);
     }
 
     /** Copies the weights of the current model to the given model. */
