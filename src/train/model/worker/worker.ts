@@ -115,19 +115,17 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                     parentPort!.postMessage(result);
                 });
             break;
-        case "unload":
-            promise = getRegistry(msg.model)
-                .unload()
-                .then(function () {
-                    models.delete(msg.model);
-                    const result: ModelUnloadResult = {
-                        type: "unload",
-                        rid,
-                        done: true,
-                    };
-                    parentPort!.postMessage(result);
-                });
+        case "unload": {
+            getRegistry(msg.model).unload();
+            models.delete(msg.model);
+            const result: ModelUnloadResult = {
+                type: "unload",
+                rid,
+                done: true,
+            };
+            parentPort!.postMessage(result);
             break;
+        }
         case "subscribe": {
             const port = getRegistry(msg.model).subscribe();
             const result: ModelSubscribeResult = {
@@ -173,14 +171,11 @@ parentPort.on("message", function handle(msg: ModelMessage) {
             break;
         }
         case "close": {
-            promise = Promise.all([
-                ...Array.from(
-                    models,
-                    async ([uid, registry]) =>
-                        await registry.unload().then(() => models.delete(uid)),
-                ),
-                closeDecoderPool(),
-            ]).then(() => {
+            for (const [uid, registry] of models) {
+                registry.unload();
+                models.delete(uid);
+            }
+            promise = closeDecoderPool().then(() => {
                 const result: WorkerClosed = {type: "close", rid, done: true};
                 parentPort!.postMessage(result);
             });

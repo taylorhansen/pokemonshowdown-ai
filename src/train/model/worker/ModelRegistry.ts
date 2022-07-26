@@ -44,8 +44,6 @@ export class ModelRegistry {
     private timeoutPromise: Promise<void> | null = null;
     /** Function to cancel the current batch predict timer. */
     private cancelTimer: (() => void) | null = null;
-    /** Lock promise for managing the neural network resource. */
-    private inUse: Promise<unknown>;
 
     /**
      * Creates a ModelRegistry.
@@ -68,8 +66,6 @@ export class ModelRegistry {
 
         // Setup batch event listener.
         this.predictBatchEvents.on(batchExecute, () => this.executeBatch());
-
-        this.inUse = Promise.resolve();
     }
 
     /** Clones the current model into a new registry with the same config. */
@@ -91,13 +87,11 @@ export class ModelRegistry {
 
     /** Saves the neural network to the given url. */
     public async save(url: string): Promise<void> {
-        await this.inUse;
         await this.model.save(url);
     }
 
-    /** Deletes everything in this registry. */
-    public async unload(): Promise<void> {
-        await this.inUse;
+    /** Safely closes ports and disposes the model. */
+    public unload(): void {
         for (const port of this.ports) {
             port.close();
         }
@@ -150,15 +144,11 @@ export class ModelRegistry {
         config: LearnArgsPartial,
         callback?: (data: ModelLearnData) => void,
     ): Promise<void> {
-        this.inUse = this.inUse.then(
-            async () =>
-                await learn({
-                    ...config,
-                    model: this.model,
-                    ...(callback && {callback}),
-                }),
-        );
-        await this.inUse;
+        await learn({
+            ...config,
+            model: this.model,
+            ...(callback && {callback}),
+        });
     }
 
     /** Copies the weights of the current model to the given model. */
