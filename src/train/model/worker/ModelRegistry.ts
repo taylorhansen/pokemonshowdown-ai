@@ -74,7 +74,7 @@ export class ModelRegistry {
         this.model = model;
 
         // Setup batch event listener.
-        this.batchEvents.on(batchExecute, () => void this.executeBatch());
+        this.batchEvents.on(batchExecute, () => this.executeBatch());
 
         this.inUse = Promise.resolve();
     }
@@ -224,7 +224,7 @@ export class ModelRegistry {
     }
 
     /** Flushes the predict buffer and executes the batch. */
-    private async executeBatch(): Promise<void> {
+    private executeBatch(): void {
         if (this.nextBatch.length <= 0) {
             return;
         }
@@ -236,36 +236,32 @@ export class ModelRegistry {
         // Batch and execute model.
 
         // Here the batchStates array is a 2D array of encoded Float32Arrays of
-        // shape [batch, num_arrays].
-        // We then need to transpose it to [num_arrays, batch] in order to stack
-        // the arrays into batch tensors for the neural network.
+        // shape [batch_size, num_inputs].
+        // Since each prediction requires several different input arrays defined
+        // by modelInputShapes), we then need to transpose our array into
+        // [num_inputs, batch_size] in order to stack them into batch tensor
+        // inputs for the neural network's single batch prediction.
+        // TODO: Can technically do this while building up the batch array.
         const batchStates = batch.map(({state}) => state);
         const batchStatesT = batchStates[0].map((_, colIndex) =>
             batchStates.map(row => row[colIndex]),
         );
 
-        const batchedOutputs = tf.tidy(() => {
-            const batchInput = modelInputShapes.map((shape, i) =>
-                tf.stack(batchStatesT[i]).reshape([batch.length, ...shape]),
-            );
-
-            const batchOutput = this.model.predictOnBatch(
-                batchInput,
-            ) as tf.Tensor;
-            return batchOutput
+        tf.tidy(() =>
+            (
+                this.model.predictOnBatch(
+                    modelInputShapes.map((shape, i) =>
+                        tf
+                            .stack(batchStatesT[i])
+                            .reshape([batch.length, ...shape]),
+                    ),
+                ) as tf.Tensor
+            )
                 .as2D(batch.length, intToChoice.length)
-                .unstack<tf.Tensor1D>();
-        });
-
-        // Unpack and distribute batch entries.
-
-        const outputData = await Promise.all(
-            batchedOutputs.map(async t => (await t.data()) as Float32Array),
+                .unstack<tf.Tensor1D>()
+                .forEach((t, i) =>
+                    batch[i].res({output: t.dataSync() as Float32Array}),
+                ),
         );
-        batchedOutputs.forEach(t => t.dispose());
-
-        for (let i = 0; i < batch.length; ++i) {
-            batch[i].res({output: outputData[i]});
-        }
     }
 }
