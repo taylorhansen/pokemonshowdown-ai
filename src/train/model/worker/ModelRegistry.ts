@@ -14,15 +14,8 @@ import {
     PredictWorkerResult,
 } from "./ModelPortProtocol";
 import {ModelLearnData} from "./ModelProtocol";
+import {PredictBatch} from "./PredictBatch";
 import {setTimeoutNs} from "./nanosecond";
-
-/** State+callback entry for a {@link ModelRegistry}'s batch queue. */
-interface BatchEntry {
-    /** Encoded battle state. */
-    readonly state: Float32Array[];
-    /** Callback after getting the prediction for the given state. */
-    readonly res: (result: PredictResult) => void;
-}
 
 /** Event for when the current batch should be executed. */
 const batchExecute = Symbol("batchExecute");
@@ -39,17 +32,17 @@ export class ModelRegistry {
     /** Currently held game worker ports. */
     private readonly ports = new Set<MessagePort>();
 
-    /** Prediction request buffer. */
-    private readonly nextBatch: BatchEntry[] = [];
     /** Event listener for batch entries. */
-    private readonly batchEvents =
+    private readonly predictBatchEvents =
         // Note: TypedEmitter doesn't contain option typings.
         new EventEmitter({
             captureRejections: true,
         }) as TypedEmitter<BatchEvents>;
+    /** Current pending predict request batch. */
+    private predictBatch = new PredictBatch(modelInputShapes);
     /** Resolves once the current batch timer expires. */
     private timeoutPromise: Promise<void> | null = null;
-    /** Function to cancel the current timer. */
+    /** Function to cancel the current batch predict timer. */
     private cancelTimer: (() => void) | null = null;
     /** Lock promise for managing the neural network resource. */
     private inUse: Promise<unknown>;
@@ -74,7 +67,7 @@ export class ModelRegistry {
         this.model = model;
 
         // Setup batch event listener.
-        this.batchEvents.on(batchExecute, () => this.executeBatch());
+        this.predictBatchEvents.on(batchExecute, () => this.executeBatch());
 
         this.inUse = Promise.resolve();
     }
@@ -176,7 +169,7 @@ export class ModelRegistry {
     /** Queues a prediction for the neural network. */
     private async predict(msg: PredictMessage): Promise<PredictResult> {
         return await new Promise(res => {
-            this.nextBatch.push({state: msg.state, res});
+            this.predictBatch.add(msg.state, res);
             this.checkPredictBatch();
         });
     }
@@ -186,9 +179,9 @@ export class ModelRegistry {
      * executed.
      */
     private checkPredictBatch(): void {
-        if (this.nextBatch.length >= this.config.maxSize) {
+        if (this.predictBatch.length >= this.config.maxSize) {
             // Full batch.
-            this.batchEvents.emit(batchExecute);
+            this.predictBatchEvents.emit(batchExecute);
             return;
         }
 
@@ -214,54 +207,33 @@ export class ModelRegistry {
         Promise.race([
             this.timeoutPromise.then(() => (didTimeout = true)),
             new Promise<void>(res =>
-                this.batchEvents.prependOnceListener(batchExecute, res),
+                this.predictBatchEvents.prependOnceListener(batchExecute, res),
             ).finally(this.cancelTimer),
         ]).finally(() => {
             if (didTimeout) {
-                this.batchEvents.emit(batchExecute);
+                this.predictBatchEvents.emit(batchExecute);
             }
         });
     }
 
     /** Flushes the predict buffer and executes the batch. */
     private executeBatch(): void {
-        if (this.nextBatch.length <= 0) {
+        if (this.predictBatch.length <= 0) {
             return;
         }
 
-        // Allow for the next batch to start filling up.
-        const batch = [...this.nextBatch];
-        this.nextBatch.length = 0;
+        // Consume batch.
+        const batch = this.predictBatch;
+        this.predictBatch = new PredictBatch(modelInputShapes);
 
-        // Batch and execute model.
-
-        // Here the batchStates array is a 2D array of encoded Float32Arrays of
-        // shape [batch_size, num_inputs].
-        // Since each prediction requires several different input arrays defined
-        // by modelInputShapes), we then need to transpose our array into
-        // [num_inputs, batch_size] in order to stack them into batch tensor
-        // inputs for the neural network's single batch prediction.
-        // TODO: Can technically do this while building up the batch array.
-        const batchStates = batch.map(({state}) => state);
-        const batchStatesT = batchStates[0].map((_, colIndex) =>
-            batchStates.map(row => row[colIndex]),
-        );
-
-        tf.tidy(() =>
-            (
-                this.model.predictOnBatch(
-                    modelInputShapes.map((shape, i) =>
-                        tf
-                            .stack(batchStatesT[i])
-                            .reshape([batch.length, ...shape]),
-                    ),
-                ) as tf.Tensor
-            )
-                .as2D(batch.length, intToChoice.length)
-                .unstack<tf.Tensor1D>()
-                .forEach((t, i) =>
-                    batch[i].res({output: t.dataSync() as Float32Array}),
-                ),
+        // Stack batches and execute model.
+        batch.resolve(
+            tf.tidy(() =>
+                (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor)
+                    .as2D(batch.length, intToChoice.length)
+                    .unstack<tf.Tensor1D>()
+                    .map(t => t.dataSync() as Float32Array),
+            ),
         );
     }
 }
