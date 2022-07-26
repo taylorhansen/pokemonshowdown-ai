@@ -7,12 +7,12 @@ import {BatchPredictConfig} from "../../../config/types";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {learn, LearnArgsPartial} from "../../learn";
 import {RawPortResultError} from "../../port/PortProtocol";
-import {modelInputShapes, verifyModel} from "../shapes";
 import {
     PredictMessage,
     PredictResult,
     PredictWorkerResult,
-} from "./ModelPortProtocol";
+} from "../port/ModelPortProtocol";
+import {modelInputShapes, verifyModel} from "../shapes";
 import {ModelLearnData} from "./ModelProtocol";
 import {PredictBatch} from "./PredictBatch";
 import {setTimeoutNs} from "./nanosecond";

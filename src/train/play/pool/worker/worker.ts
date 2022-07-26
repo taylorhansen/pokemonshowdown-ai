@@ -3,7 +3,7 @@ import * as stream from "stream";
 import {serialize} from "v8";
 import {parentPort, workerData} from "worker_threads";
 import seedrandom from "seedrandom";
-import {ModelPort} from "../../../model/worker";
+import {ModelPort} from "../../../model/port";
 import {RawPortResultError} from "../../../port/PortProtocol";
 import {WorkerClosed} from "../../../port/WorkerProtocol";
 import {TrainingExampleEncoder} from "../../../tfrecord/encoder";

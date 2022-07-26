@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {PredictResult} from "./ModelPortProtocol";
+import {PredictResult} from "../port/ModelPortProtocol";
 
 /** State+callback entries for managing batched model predict requests. */
 export class PredictBatch {
