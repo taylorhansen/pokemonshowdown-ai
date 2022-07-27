@@ -15,6 +15,7 @@ import {
     PredictWorkerResult,
 } from "../port/ModelPortProtocol";
 import {modelInputShapes, verifyModel} from "../shapes";
+import {Metrics} from "./Metrics";
 import {ModelLearnData} from "./ModelProtocol";
 import {PredictBatch} from "./PredictBatch";
 
@@ -46,14 +47,20 @@ export class ModelRegistry {
     /** Function to cancel the current batch predict timer. */
     private cancelTimer: (() => void) | null = null;
 
+    private firstRequestTime: bigint | null = null;
+    /** Metrics logger. */
+    private readonly metrics: Metrics | null;
+
     /**
      * Creates a ModelRegistry.
      *
+     * @param name Name of the model.
      * @param model Neural network object. This registry object will own the
      * model as soon as the constructor is called.
      * @param config Configuration for batching predict requests.
      */
     public constructor(
+        name: string,
         model: tf.LayersModel,
         private readonly config: BatchPredictConfig,
     ) {
@@ -68,10 +75,13 @@ export class ModelRegistry {
 
         // Setup batch event listener.
         this.predictBatchEvents.on(batchExecute, () => this.executeBatch());
+
+        this.metrics = Metrics.get(`model/${name}`);
+        this.logNumSubscribers();
     }
 
     /** Clones the current model into a new registry with the same config. */
-    public async clone(): Promise<ModelRegistry> {
+    public async clone(name: string): Promise<ModelRegistry> {
         const modelArtifact = new Promise<tf.io.ModelArtifacts>(
             res =>
                 void this.model.save({
@@ -84,7 +94,7 @@ export class ModelRegistry {
         const clonedModel = await tf.loadLayersModel({
             load: async () => await Promise.resolve(modelArtifact),
         });
-        return new ModelRegistry(clonedModel, this.config);
+        return new ModelRegistry(name, clonedModel, this.config);
     }
 
     /** Saves the neural network to the given url. */
@@ -132,7 +142,11 @@ export class ModelRegistry {
                     }),
         );
         // Remove this port from the recorded references after close.
-        port1.on("close", () => this.ports.delete(port1));
+        port1.on("close", () => {
+            this.ports.delete(port1);
+            this.logNumSubscribers();
+        });
+        this.logNumSubscribers();
         return port2;
     }
 
@@ -156,6 +170,9 @@ export class ModelRegistry {
 
     /** Queues a prediction for the neural network. */
     private async predict(msg: PredictMessage): Promise<PredictResult> {
+        if (this.firstRequestTime === null) {
+            this.firstRequestTime = process.hrtime.bigint();
+        }
         return await new Promise(res => {
             this.predictBatch.add(msg.state, res);
             this.checkPredictBatch();
@@ -215,6 +232,7 @@ export class ModelRegistry {
         this.predictBatch = new PredictBatch(modelInputShapes);
 
         // Stack batches and execute model.
+        const startTime = process.hrtime.bigint();
         batch.resolve(
             tf.tidy(() =>
                 (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor)
@@ -223,5 +241,37 @@ export class ModelRegistry {
                     .map(t => t.dataSync() as Float32Array),
             ),
         );
+        const endTime = process.hrtime.bigint();
+
+        const step = ModelRegistry.getLogStep();
+        this.metrics?.scalar(
+            "predict_latency_us",
+            Number(endTime - startTime) / 1e3 /*us*/,
+            step,
+        );
+        this.metrics?.scalar("predict_size", batch.length, step);
+        if (this.firstRequestTime !== null) {
+            this.metrics?.scalar(
+                "predict_request_latency_us",
+                Number(startTime - this.firstRequestTime) / 1e3,
+                step,
+            );
+            this.firstRequestTime = null;
+        }
+    }
+
+    private logNumSubscribers(): void {
+        this.metrics?.scalar(
+            "num_subscribers",
+            this.ports.size,
+            ModelRegistry.getLogStep(),
+        );
+    }
+
+    /** Gets a timestamp for use with Metrics. */
+    private static getLogStep(): number {
+        // Getting around integer limits. Should be ok as long as uptime doesn't
+        // exceed 7 weeks.
+        return Math.floor(process.uptime() * 1000 /*ms*/);
     }
 }

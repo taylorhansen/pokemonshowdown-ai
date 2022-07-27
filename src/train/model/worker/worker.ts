@@ -55,7 +55,7 @@ function load(
     model: tf.LayersModel,
     batchConfig: BatchPredictConfig,
 ) {
-    models.set(name, new ModelRegistry(model, batchConfig));
+    models.set(name, new ModelRegistry(name, model, batchConfig));
     const result: ModelLoadResult = {
         type: "load",
         rid,
@@ -86,7 +86,7 @@ parentPort.on("message", function handle(msg: ModelMessage) {
             break;
         case "clone":
             promise = getRegistry(msg.model)
-                .clone()
+                .clone(msg.name)
                 .then(reg => {
                     if (models.has(msg.name)) {
                         throw new Error(

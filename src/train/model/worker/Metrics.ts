@@ -9,7 +9,7 @@ const tfn = importTfn(gpu);
 /** Used for writing model summary metrics to Tensorboard. */
 export class Metrics {
     private static readonly writer = logPath
-        ? tfn.node.summaryFileWriter(logPath)
+        ? tfn.node.summaryFileWriter(logPath, 1e4 /*maxQueue*/)
         : null;
     private static readonly instances = new Map<string, Metrics>();
 
