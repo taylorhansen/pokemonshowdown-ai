@@ -112,7 +112,9 @@ async function processMessage(msg: GamePlay): Promise<TrainingExample[]> {
         return gameResult.examples;
     } finally {
         // Make sure all ports are closed at the end.
-        await Promise.all(modelPorts.map(p => p.close()));
+        for (const p of modelPorts) {
+            p.close();
+        }
     }
 }
 
