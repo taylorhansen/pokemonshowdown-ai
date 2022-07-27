@@ -21,6 +21,7 @@ void (async function () {
     const models = new ModelWorker(
         config.tf.gpu,
         path.join(config.paths.logs, "tensorboard/"),
+        config.train.learn.numDecoderThreads,
     );
 
     // No-op in order to ensure the model worker and TF instance are
