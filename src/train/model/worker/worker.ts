@@ -6,9 +6,9 @@ import {BatchPredictConfig} from "../../../config/types";
 import {importTfn} from "../../../util/tfn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {WorkerClosed} from "../../port/WorkerProtocol";
-import {Metrics} from "./Metrics";
 import {closeDecoderPool} from "../learn/learn";
 import {createModel} from "../model";
+import {Metrics} from "./Metrics";
 import {
     ModelCloneResult,
     ModelCopyResult,

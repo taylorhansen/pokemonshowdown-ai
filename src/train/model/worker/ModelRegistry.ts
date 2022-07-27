@@ -7,6 +7,8 @@ import {BatchPredictConfig} from "../../../config/types";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {setTimeoutNs} from "../../../util/nanosecond";
 import {RawPortResultError} from "../../port/PortProtocol";
+import {LearnArgs} from "../learn";
+import {learn} from "../learn/learn";
 import {
     PredictMessage,
     PredictResult,
@@ -15,8 +17,6 @@ import {
 import {modelInputShapes, verifyModel} from "../shapes";
 import {ModelLearnData} from "./ModelProtocol";
 import {PredictBatch} from "./PredictBatch";
-import {LearnArgs} from "../learn";
-import {learn} from "../learn/learn";
 
 /** Event for when the current batch should be executed. */
 const batchExecute = Symbol("batchExecute");
