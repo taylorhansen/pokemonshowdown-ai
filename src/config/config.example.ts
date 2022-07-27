@@ -3,7 +3,6 @@ import * as path from "path";
 import {Verbose} from "../util/logging/Verbose";
 import {Config} from "./types";
 
-const modelsPath = path.join(__dirname, "../../models/");
 // Note: Multithreaded training can introduce nondeterminism that can't be
 // easily reproduced. Setting numThreads to 1 and specifying the random seeds in
 // the training script should make the program fully deterministic.
@@ -24,7 +23,7 @@ export const config: Config = {
         verbose: Verbose.Info,
     },
     paths: {
-        models: modelsPath,
+        models: path.join(__dirname, "../../models/"),
         logs: path.join(__dirname, "../../logs/"),
     },
     tf: {gpu: false},
