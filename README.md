@@ -62,6 +62,18 @@ pip install tensorboard
 tensorboard --logdir logs/tensorboard
 ```
 
+## Comparing trained models
+
+```sh
+npm run compare
+```
+
+Based on the [config](/src/config/config.example.ts), runs several games between
+each of the models that were created by `npm run train` in order to determine
+which one is better at the game. Useful for experiments to compare models from
+differently-configured training runs. Includes support for a baseline
+randomly-acting model and fixed random seeds.
+
 ## Running
 
 ```sh
