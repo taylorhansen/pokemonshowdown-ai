@@ -77,7 +77,7 @@ export async function startPsBattle(
 
     // Setup logger.
     const logFunc: LogFunc = msg => file.write(msg);
-    const logger = new Logger(logFunc, Verbose.Info, "Battle: ");
+    const logger = new Logger(logFunc, Verbose.Debug, "Battle: ");
 
     // Start simulating a battle.
     const battleStream = new BattleStreams.BattleStream({keepAlive: false});

@@ -83,7 +83,10 @@ export async function playGame(
     const experiences: Experience[][] = [];
     const [p1, p2] = args.agents.map<PlayerOptions>(function (agentArgs, i) {
         if (!agentArgs.emitExperience) {
-            return {agent: agentArgs.agent};
+            return {
+                agent: agentArgs.agent,
+                ...(agentArgs.seed && {seed: agentArgs.seed}),
+            };
         }
 
         // Agent is configured to emit partial Experience data, so override the
