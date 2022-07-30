@@ -3,7 +3,7 @@ import * as stream from "stream";
 import {PRNGSeed} from "@pkmn/sim";
 import ProgressBar from "progress";
 import seedrandom from "seedrandom";
-import {ExperienceConfig, GameConfig} from "../../config/types";
+import {ExperienceConfig} from "../../config/types";
 import {LogFunc, Logger} from "../../util/logging/Logger";
 import {ModelWorker} from "../model/worker";
 import {
@@ -42,8 +42,11 @@ export interface PlayGamesArgs {
     readonly agentConfig: GamePoolAgentConfig;
     /** Opponents to play against. */
     readonly opponents: readonly Opponent[];
-    /** Configuration for setting up the games. */
-    readonly gameConfig: GameConfig;
+    /**
+     * Maximum amount of turns until the game is considered a tie. Games can go
+     * on forever if this is not set and both players only decide to switch.
+     */
+    readonly maxTurns: number;
     /** Logger object. */
     readonly logger: Logger;
     /** Path to the folder to store game logs in. Omit to not store logs. */
@@ -112,7 +115,7 @@ export async function playGames({
     games,
     agentConfig,
     opponents,
-    gameConfig: {maxTurns},
+    maxTurns,
     logger,
     logPath,
     experienceConfig,
@@ -277,7 +280,7 @@ function generateSeeds(
     };
 }
 
-/** Same as `PRNG.generateSeed()` but with controled random. */
+/** Same as `PRNG.generateSeed()` from PS but with controled random. */
 function generatePrngSeed(random = Math.random): PRNGSeed {
     // 64-bit big-endian [high -> low] integer, where each element is 16 bits.
     return Array.from({length: 4}, () =>

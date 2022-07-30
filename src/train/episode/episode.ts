@@ -1,7 +1,6 @@
 import {
     EvalTestConfig,
     ExperienceConfig,
-    GameConfig,
     LearnConfig,
 } from "../../config/types";
 import {Logger} from "../../util/logging/Logger";
@@ -33,8 +32,11 @@ export interface EpisodeArgs {
     readonly trainOpponents: readonly Opponent[];
     /** Opponent data for evaluating the model. */
     readonly evalOpponents: readonly Opponent[];
-    /** Configuration for setting up rollout/eval games. */
-    readonly gameConfig: GameConfig;
+    /**
+     * Maximum amount of turns until the game is considered a tie. Games can go
+     * on forever if this is not set and both players only decide to switch.
+     */
+    readonly maxTurns: number;
     /** Configuration for the learning process. */
     readonly learnConfig: LearnConfig;
     /** Configuration for testing the evaluation step results. */
@@ -93,7 +95,7 @@ export async function episode({
     experienceConfig,
     trainOpponents,
     evalOpponents,
-    gameConfig,
+    maxTurns,
     learnConfig,
     evalConfig,
     logger,
@@ -110,7 +112,7 @@ export async function episode({
         explore,
         experienceConfig,
         opponents: trainOpponents,
-        gameConfig,
+        maxTurns,
         logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath}),
         ...(seed && {seed}),
@@ -140,7 +142,7 @@ export async function episode({
         games,
         model,
         opponents: evalOpponents,
-        gameConfig,
+        maxTurns,
         ...(evalConfig && {testConfig: evalConfig}),
         logger: logger.addPrefix("Eval: "),
         ...(logPath && {logPath}),

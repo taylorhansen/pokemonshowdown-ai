@@ -192,7 +192,7 @@ export async function train({
                     },
                 ],
                 evalOpponents,
-                gameConfig: config.train.game,
+                maxTurns: config.train.game.maxTurns,
                 learnConfig: config.train.learn,
                 ...(config.train.eval.test && {
                     evalConfig: config.train.eval.test,

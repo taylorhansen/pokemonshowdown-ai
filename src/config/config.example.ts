@@ -66,4 +66,15 @@ export const config: Config = {
         savePreviousVersions: true,
         verbose: Verbose.Info,
     },
+    compare: {
+        models: ["latest", "original", "random"],
+        numThreads,
+        maxTurns: 100,
+        numGames: 127,
+        threshold: 0.55,
+        batchPredict: {
+            maxSize: numThreads,
+            timeoutNs: 50000n /*50us*/,
+        },
+    },
 };

@@ -10,6 +10,8 @@ export interface Config {
     readonly tf: TensorflowConfig;
     /** Training config. */
     readonly train: TrainConfig;
+    /** Model comparison script config. */
+    readonly compare: CompareConfig;
 }
 
 /**
@@ -190,7 +192,10 @@ export interface EvalTestConfig {
      * model.
      */
     readonly minScore: number;
-    /** Whether to count ties as wins in the test. */
+    /**
+     * Whether to count ties as wins in the test. Otherwise they are counted as
+     * losses.
+     */
     readonly includeTies?: boolean;
 }
 
@@ -210,4 +215,39 @@ export interface LearnConfig {
     readonly shufflePrefetch: number;
     /** Optimizer learning rate. */
     readonly learningRate: number;
+}
+
+/**
+ * Configuration for the model comparison script.
+ *
+ * @see {@link Config}
+ */
+export interface CompareConfig {
+    /**
+     * Models to compare from the {@link PathsConfig.models} directory. Can also
+     * use the string `"random"` to refer to a custom randomly-playing opponent.
+     */
+    readonly models: readonly string[];
+    /** Number of games to play in parallel. */
+    readonly numThreads: number;
+    /**
+     * Maximum amount of turns until the game is considered a tie. Games can go
+     * on forever if this is not set and both players only decide to switch.
+     */
+    readonly maxTurns: number;
+    /** Number of games to play for each matchup. */
+    readonly numGames: number;
+    /**
+     * Significance threshold for the test when comparing win/loss ratios. If
+     * two models compete, one of them must have a win/loss ratio of at least
+     * `threshold` in order to be considered "better", otherwise the models will
+     * be treated as being no better than each other.
+     *
+     * Note that if this is equal to or below 0.5, it's possible for two models
+     * to be considered better than each other, counting as a win for both of
+     * them (rather than a tie) if it was a close match.
+     */
+    readonly threshold: number;
+    /** Batch predict config. */
+    readonly batchPredict: BatchPredictConfig;
 }

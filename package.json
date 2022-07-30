@@ -13,6 +13,7 @@
     "build:watch": "tsc --watch",
     "train": "node -r source-map-support/register dist/demo/train.js",
     "psbot": "node -r source-map-support/register dist/demo/psbot.js",
+    "compare": "node -r source-map-support/register dist/demo/compare.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

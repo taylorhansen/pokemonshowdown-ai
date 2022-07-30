@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as tmp from "tmp-promise";
-import {ExperienceConfig, GameConfig} from "../../config/types";
+import {ExperienceConfig} from "../../config/types";
 import {Logger} from "../../util/logging/Logger";
 import {Verbose} from "../../util/logging/Verbose";
 import {ModelWorker} from "../model/worker";
@@ -27,8 +27,11 @@ export interface RolloutArgs {
     readonly experienceConfig: ExperienceConfig;
     /** Opponent args. */
     readonly opponents: readonly Opponent[];
-    /** Configuration for setting up rollout/eval games. */
-    readonly gameConfig: GameConfig;
+    /**
+     * Maximum amount of turns until the game is considered a tie. Games can go
+     * on forever if this is not set and both players only decide to switch.
+     */
+    readonly maxTurns: number;
     /** Logger object. */
     readonly logger: Logger;
     /** Path to the folder to store episode logs in. Omit to not store logs. */
@@ -62,7 +65,7 @@ export async function rollout({
     explore,
     experienceConfig,
     opponents,
-    gameConfig,
+    maxTurns,
     logger,
     logPath,
     seed,
@@ -87,7 +90,7 @@ export async function rollout({
             emitExperience: true,
         },
         opponents,
-        gameConfig,
+        maxTurns,
         logger,
         ...(logPath && {logPath: path.join(logPath, "rollout")}),
         experienceConfig,
