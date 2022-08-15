@@ -376,7 +376,7 @@ export class TrainingExampleDecoder extends Transform {
             );
         }
 
-        const [v] = value;
+        const [v] = value as unknown[];
         if (Long.isLong(v)) {
             return v.getLowBitsUnsigned();
         }
