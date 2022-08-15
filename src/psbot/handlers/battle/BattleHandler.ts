@@ -96,11 +96,16 @@ export class BattleHandler<TAgent extends BattleAgent = BattleAgent>
         this.sender = sender;
         this.logger = logger;
 
-        const choiceSender: ChoiceSender = async choice =>
+        const choiceSender: ChoiceSender = async (choice, debug) =>
             await new Promise<SenderResult>(res => {
                 this.choiceSenderRes = res;
                 this.logger.info(`Sending choice: ${choice}`);
-                if (!this.sender(`|/choose ${choice}`)) {
+                if (
+                    !this.sender(
+                        `|/choose ${choice}`,
+                        ...(debug !== undefined ? [`|DEBUG: ${debug}`] : []),
+                    )
+                ) {
                     this.logger.debug("Can't send Choice, force accept");
                     res(false);
                 }

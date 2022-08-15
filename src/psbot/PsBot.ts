@@ -305,8 +305,8 @@ export class PsBot {
 
             // Battle room name format: battle-<format>-<id>
             const [, format] = roomid.split("-");
-            const f = this.formats.get(format);
-            if (!f) {
+            const handlerFactory = this.formats.get(format);
+            if (!handlerFactory) {
                 this.logger.error(
                     `Could not join battle room '${roomid}': ` +
                         `Format '${format}' not supported`,
@@ -325,7 +325,7 @@ export class PsBot {
             const sender: Sender = (...responses: string[]) =>
                 this.addResponses(roomid, ...responses);
 
-            handler = f(roomid, this.username, sender);
+            handler = handlerFactory(roomid, this.username, sender);
             this.addHandler(roomid, handler);
         }
 

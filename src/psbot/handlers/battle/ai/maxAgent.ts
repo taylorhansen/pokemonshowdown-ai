@@ -8,17 +8,20 @@ import {ReadonlyBattleState} from "../state";
  * the given evaluator.
  *
  * @param getOutputValues Function for getting the output values of each choice.
+ * @param debugRankings If true, the returned BattleAgent will also return a
+ * debug string displaying the rankings for each choice.
  */
 export function maxAgent(
     getOutputValues: (
         state: ReadonlyBattleState,
     ) => Float32Array | Promise<Float32Array>,
-): BattleAgent<void> {
+    debugRankings?: boolean,
+): BattleAgent<string | undefined> {
     return async function (
         state: ReadonlyBattleState,
         choices: Choice[],
         logger?: Logger,
-    ): Promise<void> {
+    ): Promise<string | undefined> {
         const output = await getOutputValues(state);
         logger?.debug(
             "Ranked choices: {" +
@@ -28,5 +31,40 @@ export function maxAgent(
                 "}",
         );
         choices.sort((a, b) => output[choiceIds[b]] - output[choiceIds[a]]);
+
+        if (debugRankings) {
+            const ourTeam = state.ourSide && state.getTeam(state.ourSide);
+            const moves = ourTeam && [...ourTeam.active.moveset.moves];
+            return intToChoice
+                .map((c, i) => {
+                    let info: string | undefined;
+                    if (ourTeam && moves) {
+                        if (c.startsWith("move")) {
+                            const [, move] =
+                                moves[
+                                    parseInt(c.charAt("move ".length), 10) - 1
+                                ];
+                            info = move.name;
+                        } else if (c.startsWith("switch")) {
+                            const mon =
+                                ourTeam.pokemon[
+                                    parseInt(c.charAt("switch ".length), 10) - 1
+                                ];
+                            if (mon === undefined) {
+                                info = "empty";
+                            } else if (mon === null) {
+                                info = "unknown";
+                            } else {
+                                info = mon.species;
+                            }
+                        }
+                    }
+                    return (
+                        `${c}${info ? ` (${info})` : ""}: ` +
+                        `${output[i].toFixed(3)}`
+                    );
+                })
+                .join(", ");
+        }
     };
 }

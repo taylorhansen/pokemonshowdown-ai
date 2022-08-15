@@ -391,7 +391,7 @@ async function evaluateChoices(
     choices: Choice[],
 ): Promise<void> {
     const agentLogger = ctx.logger.addPrefix("BattleAgent: ");
-    await ctx.agent(ctx.state, choices, agentLogger);
+    const agentDebug = await ctx.agent(ctx.state, choices, agentLogger);
     ctx.logger.debug(`Sorted choices: [${choices.join(", ")}]`);
 
     let result: SenderResult;
@@ -399,7 +399,7 @@ async function evaluateChoices(
     // Most of the rest of the logic here handles corner cases where a choice is
     // invalid, usually due to unknown information where the state has to be
     // updated and the choices re-evaluated.
-    while ((result = await ctx.sender(choices[0]))) {
+    while ((result = await ctx.sender(choices[0], agentDebug))) {
         // A truthy result here means that the choice was rejected.
         // Handle the returned information and re-evaluate.
 

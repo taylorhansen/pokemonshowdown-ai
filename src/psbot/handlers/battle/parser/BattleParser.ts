@@ -38,8 +38,18 @@ export interface BattleParserContext<TAgent extends BattleAgent = BattleAgent> {
     readonly state: BattleState;
 }
 
-/** Function type for sending a Choice to the game. */
-export type ChoiceSender = (choice: Choice) => Promise<SenderResult>;
+/**
+ * Function type for sending a Choice to the game.
+ *
+ * @param choice Choice to send.
+ * @param debug Optional debug information to display publicly.
+ * @returns Info on whether the game accepted the choice, or if a different
+ * action has to be chosen instead.
+ */
+export type ChoiceSender = (
+    choice: Choice,
+    debug?: unknown,
+) => Promise<SenderResult>;
 
 // TODO: Make this into a proper enum?
 /**

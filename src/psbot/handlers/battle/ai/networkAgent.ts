@@ -20,13 +20,16 @@ export type NetworkData = {
  * @param callback Optional. Observes the tensor inputs and outputs of the
  * neural network. This function will own the tensors, so it should take care of
  * disposing them.
+ * @param debugRankings If true, the returned BattleAgent will also return a
+ * debug string displaying the rankings for each choice.
  * @throws Error if the given model does not have the right input and output
  * shapes.
  */
 export function networkAgent(
     model: tf.LayersModel,
     callback: (data: NetworkData) => void = tf.dispose,
-): BattleAgent<void> {
+    debugRankings?: boolean,
+): BattleAgent<string | undefined> {
     verifyModel(model);
     return maxAgent(async function (state) {
         const stateData = allocEncodedState();
@@ -42,7 +45,7 @@ export function networkAgent(
         const outputData = (await outputTensor.data()) as Float32Array;
         callback({state: stateTensors, output: outputTensor});
         return outputData;
-    });
+    }, debugRankings);
 }
 
 /**

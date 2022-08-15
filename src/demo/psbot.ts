@@ -44,7 +44,11 @@ void (async function () {
     }
 
     const model = await modelPromise;
-    const agent = networkAgent(model);
+    const agent = networkAgent(
+        model,
+        undefined /*callback*/,
+        true /*debugRankings*/,
+    );
 
     bot.acceptChallenges(
         "gen4randombattle",
