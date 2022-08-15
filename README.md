@@ -3,6 +3,8 @@
 [![Build](https://github.com/taylorhansen/pokemonshowdown-ai/actions/workflows/build.yml/badge.svg)](https://github.com/taylorhansen/pokemonshowdown-ai/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai/branch/main/graph/badge.svg?token=qRdGD5oRzd)](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai)
 
+https://user-images.githubusercontent.com/13547043/184581452-31b33c7e-87d5-4a26-8772-a7c365704109.mp4
+
 For this project I plan on making and training a neural network to play in a
 Pokemon gen-4 random battle. The code is pretty unstable right now so I wouldn't
 recommend trying to use it out of the box.
