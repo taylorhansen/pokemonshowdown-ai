@@ -23,7 +23,7 @@ const modelPromise = tf.loadLayersModel(
 const logger = new Logger(Logger.stderr, config.psbot.verbose ?? Verbose.Debug);
 
 void (async function () {
-    const bot = new PsBot(logger.addPrefix("PSBot: "));
+    const bot = new PsBot(logger.addPrefix("PsBot: "));
 
     try {
         await bot.connect(config.psbot.websocketRoute);
