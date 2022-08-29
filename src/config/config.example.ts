@@ -63,6 +63,13 @@ export const config: Config = {
             shufflePrefetch: 16 * 128,
             learningRate: 0.001,
         },
+        seeds: {
+            model: "abc",
+            battle: "def",
+            team: "ghi",
+            explore: "jkl",
+            learn: "mno",
+        },
         savePreviousVersions: true,
         verbose: Verbose.Info,
     },
@@ -75,6 +82,11 @@ export const config: Config = {
         batchPredict: {
             maxSize: numThreads,
             timeoutNs: 50000n /*50us*/,
+        },
+        seeds: {
+            battle: "pqr",
+            team: "stu",
+            explore: "vwx",
         },
     },
 };

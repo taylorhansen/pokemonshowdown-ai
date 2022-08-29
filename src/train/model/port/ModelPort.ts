@@ -1,6 +1,5 @@
 import * as util from "util";
 import {MessagePort} from "worker_threads";
-import seedrandom from "seedrandom";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {
     allocEncodedState,
@@ -8,6 +7,7 @@ import {
 } from "../../../psbot/handlers/battle/ai/encoder";
 import {maxAgent} from "../../../psbot/handlers/battle/ai/maxAgent";
 import {WrappedError} from "../../../util/errors/WrappedError";
+import {rng} from "../../../util/random";
 import {
     ExperienceAgent,
     ExperienceAgentData,
@@ -77,9 +77,7 @@ export class ModelPort {
      * @param explore Exploration policy config.
      */
     public getAgent(explore?: AgentExploreConfig): ExperienceAgent {
-        const random = explore?.seed
-            ? seedrandom.alea(explore.seed)
-            : Math.random;
+        const random = explore?.seed ? rng(explore.seed) : Math.random;
 
         let data: ExperienceAgentData | null = null;
 

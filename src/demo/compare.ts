@@ -6,25 +6,11 @@ import * as path from "path";
 import {pathToFileURL} from "url";
 import {config} from "../config";
 import {ModelWorker} from "../train/model/worker";
-import {Opponent, playGames} from "../train/play";
+import {Opponent, playGames, PlayGamesSeeders} from "../train/play";
 import {GamePool} from "../train/play/pool";
-import {hash} from "../util/hash";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
-
-const battleSeeder = (function () {
-    let i = 0;
-    return () => hash("pqr" + String(i++));
-})();
-const teamSeeder = (function () {
-    let i = 0;
-    return () => hash("stu" + String(i++));
-})();
-// Used for random opponents.
-const exploreSeeder = (function () {
-    let i = 0;
-    return () => hash("vwx" + String(i++));
-})();
+import {seeder} from "../util/random";
 
 void (async function () {
     // Dedup.
@@ -76,6 +62,18 @@ void (async function () {
         compareModels.map(model => [model, []]),
     );
 
+    const seeders: PlayGamesSeeders | undefined = config.compare.seeds && {
+        ...(config.compare.seeds.battle && {
+            battle: seeder(config.compare.seeds.battle),
+        }),
+        ...(config.compare.seeds.team && {
+            team: seeder(config.compare.seeds.team),
+        }),
+        ...(config.compare.seeds.explore && {
+            explore: seeder(config.compare.seeds.explore),
+        }),
+    };
+
     try {
         for (let i = 0; i < compareModels.length - 1; ++i) {
             const model = compareModels[i];
@@ -109,11 +107,7 @@ void (async function () {
                 maxTurns: config.compare.maxTurns,
                 logger: logger.addPrefix(`${model}: `),
                 logPath: path.join(config.paths.logs, "compare", model),
-                seed: {
-                    battle: battleSeeder,
-                    team: teamSeeder,
-                    explore: exploreSeeder,
-                },
+                seeders,
                 progress: true,
             });
 

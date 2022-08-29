@@ -5,7 +5,7 @@ import {ExperienceConfig} from "../../config/types";
 import {Logger} from "../../util/logging/Logger";
 import {Verbose} from "../../util/logging/Verbose";
 import {ModelWorker} from "../model/worker";
-import {Opponent, playGames, PlayGamesSeedRandomArgs} from "../play";
+import {Opponent, playGames, PlayGamesSeeders} from "../play";
 import {GamePool} from "../play/pool";
 import {AgentExploreConfig} from "../play/pool/worker/GameProtocol";
 
@@ -37,7 +37,7 @@ export interface RolloutArgs {
     /** Path to the folder to store episode logs in. Omit to not store logs. */
     readonly logPath?: string;
     /** Random seed generators. */
-    readonly seed?: PlayGamesSeedRandomArgs;
+    readonly seeders?: PlayGamesSeeders;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
 }
@@ -68,7 +68,7 @@ export async function rollout({
     maxTurns,
     logger,
     logPath,
-    seed,
+    seeders,
     progress,
 }: RolloutArgs): Promise<RolloutResult> {
     const expFiles: tmp.FileResult[] = [];
@@ -101,7 +101,7 @@ export async function rollout({
             expFiles.push(expFile);
             return expFile.path;
         },
-        ...(seed && {seed}),
+        ...(seeders && {seeders}),
         progress,
     });
 

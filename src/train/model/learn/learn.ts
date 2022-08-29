@@ -1,7 +1,6 @@
 import {workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
-import seedrandom from "seedrandom";
-import {hash} from "../../../util/hash";
+import {rng, seeder} from "../../../util/random";
 import {shuffle} from "../../../util/shuffle";
 import {TrainingExampleDecoderPool} from "../../tfrecord/decoder";
 import {Metrics} from "../worker/Metrics";
@@ -50,11 +49,8 @@ export async function learn(
 ): Promise<void> {
     const metrics = Metrics.get(name);
 
-    let seedCounter = 0;
-    const seedRandom = seed
-        ? () => hash(seed + String(seedCounter++))
-        : undefined;
-    const shuffleRandom = seedRandom && seedrandom.alea(seedRandom());
+    const seedRandom = seed ? seeder(seed) : undefined;
+    const shuffleRandom = seedRandom && rng(seedRandom());
 
     // Have to do this manually (instead of #compile()-ing the model and calling
     // #fit()) since the loss function changes based on the action and reward.

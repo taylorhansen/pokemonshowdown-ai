@@ -1,6 +1,7 @@
 import ProgressBar from "progress";
 import {LearnConfig} from "../../config/types";
 import {Logger} from "../../util/logging/Logger";
+import {Seeder} from "../../util/random";
 import {ModelWorker} from "../model/worker";
 
 /** Args for {@link update}. */
@@ -22,17 +23,17 @@ export interface UpdateArgs {
     /** Logger object. */
     readonly logger: Logger;
     /** Random seed generators. */
-    readonly seed?: UpdateSeedRandomArgs;
+    readonly seeders?: UpdateSeeders;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
 }
 
 /** Random seed generators used by the learning algorithm. */
-export interface UpdateSeedRandomArgs {
+export interface UpdateSeeders {
     /**
      * Random seed generator for learning algorithm's training example shuffler.
      */
-    readonly learn?: () => string;
+    readonly learn?: Seeder;
 }
 
 /**
@@ -51,7 +52,7 @@ export async function update({
     examplePaths,
     learnConfig,
     logger,
-    seed,
+    seeders,
     progress,
 }: UpdateArgs): Promise<number | undefined> {
     logger.info("Training over experience");
@@ -104,7 +105,7 @@ export async function update({
             step,
             examplePaths,
             numExamples,
-            ...(seed?.learn && {seed: seed.learn()}),
+            ...(seeders?.learn && {seed: seeders.learn()}),
         },
         function onStep(data) {
             switch (data.type) {

@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
-import seedrandom from "seedrandom";
 import {Moveset} from "../../psbot/handlers/battle/state/Moveset";
 import {Team} from "../../psbot/handlers/battle/state/Team";
+import {rng} from "../../util/random";
 import * as customLayers from "./custom_layers";
 import {modelInputShapesMap, verifyModel} from "./shapes";
 
@@ -13,7 +13,7 @@ import {modelInputShapesMap, verifyModel} from "./shapes";
  * initializers.
  */
 export function createModel(name: string, seed?: string): tf.LayersModel {
-    const random = seed ? seedrandom.alea(seed) : null;
+    const random = seed ? rng(seed) : null;
 
     const inputs: tf.SymbolicTensor[] = [];
 

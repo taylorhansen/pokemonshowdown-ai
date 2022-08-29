@@ -4,6 +4,7 @@ import {
     LearnConfig,
 } from "../../config/types";
 import {Logger} from "../../util/logging/Logger";
+import {Seeder} from "../../util/random";
 import {ModelWorker} from "../model/worker";
 import {Opponent, OpponentResult} from "../play";
 import {GamePool} from "../play/pool";
@@ -46,23 +47,23 @@ export interface EpisodeArgs {
     /** Path to the folder to store episode logs in. Omit to not store logs. */
     readonly logPath?: string;
     /** Random seed generators. */
-    readonly seed?: EpisodeSeedRandomArgs;
+    readonly seeders?: EpisodeSeeders;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
 }
 
 /** Random seed generators used by the training algorithm. */
-export interface EpisodeSeedRandomArgs {
+export interface EpisodeSeeders {
     /** Random seed generator for the battle PRNGs. */
-    readonly battle?: () => string;
+    readonly battle?: Seeder;
     /** Random seed generator for the random team PRNGs. */
-    readonly team?: () => string;
+    readonly team?: Seeder;
     /** Random seed generator for the random exploration policy. */
-    readonly explore?: () => string;
+    readonly explore?: Seeder;
     /**
      * Random seed generator for learning algorithm's training example shuffler.
      */
-    readonly learn?: () => string;
+    readonly learn?: Seeder;
 }
 
 /** Result from running a training {@link episode}. */
@@ -100,7 +101,7 @@ export async function episode({
     evalConfig,
     logger,
     logPath,
-    seed,
+    seeders,
     progress,
 }: EpisodeArgs): Promise<EpisodeResult> {
     const {numExamples, expFiles} = await rollout({
@@ -115,7 +116,7 @@ export async function episode({
         maxTurns,
         logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath}),
-        ...(seed && {seed}),
+        ...(seeders && {seeders}),
         ...(progress && {progress}),
     });
 
@@ -129,7 +130,7 @@ export async function episode({
         learnConfig,
         logger: logger.addPrefix("Update: "),
         ...(logPath && {logPath}),
-        ...(seed && {seed}),
+        ...(seeders && {seeders}),
         ...(progress && {progress}),
     });
 
@@ -146,7 +147,7 @@ export async function episode({
         ...(evalConfig && {testConfig: evalConfig}),
         logger: logger.addPrefix("Eval: "),
         ...(logPath && {logPath}),
-        ...(seed && {seed}),
+        ...(seeders && {seeders}),
         ...(progress && {progress}),
     });
 

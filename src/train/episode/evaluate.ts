@@ -2,12 +2,7 @@ import * as path from "path";
 import {EvalTestConfig} from "../../config/types";
 import {Logger} from "../../util/logging/Logger";
 import {ModelWorker} from "../model/worker";
-import {
-    Opponent,
-    OpponentResult,
-    playGames,
-    PlayGamesSeedRandomArgs,
-} from "../play";
+import {Opponent, OpponentResult, playGames, PlayGamesSeeders} from "../play";
 import {GamePool} from "../play/pool";
 
 /** Args for {@link evaluate}. */
@@ -36,7 +31,7 @@ export interface EvaluateArgs {
     /** Path to the folder to store episode logs in. Omit to not store logs. */
     readonly logPath?: string;
     /** Random seed generators. */
-    readonly seed?: PlayGamesSeedRandomArgs;
+    readonly seeders?: PlayGamesSeeders;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
 }
@@ -67,7 +62,7 @@ export async function evaluate({
     testConfig,
     logger,
     logPath,
-    seed,
+    seeders,
     progress,
 }: EvaluateArgs): Promise<EvaluateResult> {
     logger.info("Evaluating new network against baselines");
@@ -83,7 +78,7 @@ export async function evaluate({
         maxTurns,
         logger,
         ...(logPath && {logPath: path.join(logPath, "eval")}),
-        ...(seed && {seed}),
+        ...(seeders && {seeders}),
         progress,
     });
 

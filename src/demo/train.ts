@@ -49,13 +49,6 @@ void (async function () {
             models,
             games,
             logger,
-            seeds: {
-                model: "abc",
-                battle: "def",
-                team: "ghi",
-                explore: "jkl",
-                learn: "mno",
-            },
             progress: true,
             // Uncomment to repeat training from the latest model.
             // resume: "latest",

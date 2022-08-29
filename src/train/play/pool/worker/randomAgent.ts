@@ -4,6 +4,7 @@ import {
     encodeState,
 } from "../../../../psbot/handlers/battle/ai/encoder";
 import {ReadonlyBattleState} from "../../../../psbot/handlers/battle/state";
+import {Rng} from "../../../../util/random";
 import {shuffle} from "../../../../util/shuffle";
 import {ModelPort} from "../../../model/port";
 import {ExperienceAgentData} from "../../experience";
@@ -12,7 +13,7 @@ import {ExperienceAgentData} from "../../experience";
 export async function randomAgent(
     state: ReadonlyBattleState,
     choices: Choice[],
-    random?: () => number,
+    random?: Rng,
 ): Promise<void> {
     shuffle(choices, random);
     return await Promise.resolve();
@@ -22,7 +23,7 @@ export async function randomAgent(
 export async function randomExpAgent(
     state: ReadonlyBattleState,
     choices: Choice[],
-    random?: () => number,
+    random?: Rng,
 ): Promise<ExperienceAgentData> {
     await randomAgent(state, choices, random);
 

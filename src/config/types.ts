@@ -74,6 +74,8 @@ export interface TrainConfig {
     readonly eval: EvalConfig;
     /** Learning config. */
     readonly learn: LearnConfig;
+    /** RNG config. */
+    readonly seeds?: TrainSeedConfig;
     /**
      * Whether to save each previous version of the model separately after each
      * training step.
@@ -218,6 +220,24 @@ export interface LearnConfig {
 }
 
 /**
+ * Configuration for random number generators in the training script.
+ *
+ * @see {@link TrainConfig}
+ */
+export interface TrainSeedConfig {
+    /** Seed for model creation. */
+    readonly model?: string;
+    /** Seed for generating the battle sim PRNGs. */
+    readonly battle?: string;
+    /** Seed for generating the random team PRNGs. */
+    readonly team?: string;
+    /** Seed for random exploration in epsilon-greedy policy. */
+    readonly explore?: string;
+    /** Seed for shuffling training examples during the learning step. */
+    readonly learn?: string;
+}
+
+/**
  * Configuration for the model comparison script.
  *
  * @see {@link Config}
@@ -250,4 +270,20 @@ export interface CompareConfig {
     readonly threshold: number;
     /** Batch predict config. */
     readonly batchPredict: BatchPredictConfig;
+    /** RNG config. */
+    readonly seeds?: CompareSeedConfig;
+}
+
+/**
+ * Configuration for random number generators in the comparison script.
+ *
+ * @see {@link CompareConfig}
+ */
+export interface CompareSeedConfig {
+    /** Seed for generating the battle sim PRNGs. */
+    readonly battle?: string;
+    /** Seed for generating the random team PRNGs. */
+    readonly team?: string;
+    /** Seed for random opponents. */
+    readonly explore?: string;
 }

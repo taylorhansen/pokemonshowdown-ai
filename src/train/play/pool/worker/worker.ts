@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as stream from "stream";
 import {serialize} from "v8";
 import {parentPort, workerData} from "worker_threads";
-import seedrandom from "seedrandom";
+import {rng} from "../../../../util/random";
 import {ModelPort} from "../../../model/port";
 import {RawPortResultError} from "../../../port/PortProtocol";
 import {WorkerClosed} from "../../../port/WorkerProtocol";
@@ -48,7 +48,7 @@ async function processMessage(msg: GamePlay): Promise<TrainingExample[]> {
                 }
                 case "random": {
                     const agentRandom = config.exploit.seed
-                        ? seedrandom.alea(config.exploit.seed)
+                        ? rng(config.exploit.seed)
                         : undefined;
                     return config.emitExperience
                         ? ({

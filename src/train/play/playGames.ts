@@ -1,10 +1,9 @@
 import * as path from "path";
 import * as stream from "stream";
-import {PRNGSeed} from "@pkmn/sim";
 import ProgressBar from "progress";
-import seedrandom from "seedrandom";
 import {ExperienceConfig} from "../../config/types";
 import {LogFunc, Logger} from "../../util/logging/Logger";
+import {generatePsPrngSeed, rng, Rng, Seeder} from "../../util/random";
 import {ModelWorker} from "../model/worker";
 import {
     GamePool,
@@ -63,19 +62,19 @@ export interface PlayGamesArgs {
      */
     readonly getExpPath?: () => Promise<string>;
     /** Random seed generators. */
-    readonly seed?: PlayGamesSeedRandomArgs;
+    readonly seeders?: PlayGamesSeeders;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
 }
 
 /** Random number generators used by the game and policy. */
-export interface PlayGamesSeedRandomArgs {
+export interface PlayGamesSeeders {
     /** Random seed generator for the battle PRNGs. */
-    readonly battle?: () => string;
+    readonly battle?: Seeder;
     /** Random seed generator for the random team PRNGs. */
-    readonly team?: () => string;
+    readonly team?: Seeder;
     /** Random seed generator for the random exploration policy. */
-    readonly explore?: () => string;
+    readonly explore?: Seeder;
 }
 
 /** Result from {@link playGames}. */
@@ -120,13 +119,11 @@ export async function playGames({
     logPath,
     experienceConfig,
     getExpPath,
-    seed,
+    seeders,
     progress,
 }: PlayGamesArgs): Promise<PlayGamesResult> {
-    const battleRandom = seed?.battle
-        ? seedrandom.alea(seed.battle())
-        : undefined;
-    const teamRandom = seed?.team ? seedrandom.alea(seed.team()) : undefined;
+    const battleRandom = seeders?.battle && rng(seeders.battle());
+    const teamRandom = seeders?.team && rng(seeders.team());
 
     let numExamples = 0;
     const opponentResults: OpponentResult[] = [];
@@ -179,12 +176,12 @@ export async function playGames({
                         agents: [
                             generateSeeds(
                                 agentConfig,
-                                seed?.explore,
+                                seeders?.explore,
                                 teamRandom,
                             ),
                             generateSeeds(
                                 opponent.agentConfig,
-                                seed?.explore,
+                                seeders?.explore,
                                 teamRandom,
                             ),
                         ],
@@ -194,7 +191,7 @@ export async function playGames({
                             ...(gameLogPath !== undefined && {
                                 logPath: gameLogPath,
                             }),
-                            seed: generatePrngSeed(battleRandom),
+                            seed: generatePsPrngSeed(battleRandom),
                             experienceConfig,
                             expPath: await getExpPath?.(),
                         },
@@ -263,8 +260,8 @@ export async function playGames({
 /** Makes sure random team and exploration seeds are different between games. */
 function generateSeeds(
     config: GamePoolAgentConfig,
-    exploreSeedRandom?: () => string,
-    teamRandom?: () => number,
+    exploreSeedRandom?: Seeder,
+    teamRandom?: Rng,
 ): GamePoolAgentConfig {
     return {
         ...config,
@@ -276,14 +273,6 @@ function generateSeeds(
             exploreSeedRandom && {
                 explore: {...config.explore, seed: exploreSeedRandom()},
             }),
-        seed: generatePrngSeed(teamRandom),
+        seed: generatePsPrngSeed(teamRandom),
     };
-}
-
-/** Same as `PRNG.generateSeed()` from PS but with controled random. */
-function generatePrngSeed(random = Math.random): PRNGSeed {
-    // 64-bit big-endian [high -> low] integer, where each element is 16 bits.
-    return Array.from({length: 4}, () =>
-        Math.floor(random() * 0x10000),
-    ) as PRNGSeed;
 }

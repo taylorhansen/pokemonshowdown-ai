@@ -1,10 +1,10 @@
 import * as path from "path";
 import {pathToFileURL} from "url";
 import {Config} from "../config/types";
-import {hash} from "../util/hash";
 import {Logger} from "../util/logging/Logger";
 import {ensureDir} from "../util/paths/ensureDir";
-import {episode, EpisodeSeedRandomArgs} from "./episode/episode";
+import {seeder} from "../util/random";
+import {episode, EpisodeSeeders} from "./episode/episode";
 import {ModelWorker} from "./model/worker";
 import {Opponent, OpponentResult} from "./play";
 import {GamePool} from "./play/pool";
@@ -22,8 +22,6 @@ export interface TrainArgs {
     readonly games: GamePool;
     /** Logger object used to provide console output. */
     readonly logger: Logger;
-    /** Configure random number generators. */
-    readonly seeds?: SeedConfig;
     /** Whether to show progress bars. */
     readonly progress?: boolean;
     /**
@@ -32,20 +30,6 @@ export interface TrainArgs {
      * a default model.
      */
     readonly resume?: string;
-}
-
-/** Configuration for random number generators. */
-export interface SeedConfig {
-    /** Seed for model creation. */
-    readonly model?: string;
-    /** Seed for generating the battle sim PRNGs. */
-    readonly battle?: string;
-    /** Seed for generating the random team PRNGs. */
-    readonly team?: string;
-    /** Seed for random exploration in epsilon-greedy policy. */
-    readonly explore?: string;
-    /** Seed for shuffling training examples during the learning step. */
-    readonly learn?: string;
 }
 
 /** Result from {@link train}. */
@@ -71,7 +55,6 @@ export async function train({
     models,
     games,
     logger,
-    seeds,
     progress,
     resume,
 }: TrainArgs): Promise<TrainResult> {
@@ -99,7 +82,7 @@ export async function train({
                 "model",
                 config.train.batchPredict,
                 undefined /*url*/,
-                seeds?.model,
+                config.train.seeds?.model,
             );
 
             logger.debug("Saving new model as latest");
@@ -112,7 +95,7 @@ export async function train({
             "model",
             config.train.batchPredict,
             undefined /*url*/,
-            seeds?.model,
+            config.train.seeds?.model,
         );
 
         logger.debug("Saving new model as latest");
@@ -144,11 +127,19 @@ export async function train({
     };
     const {explorationDecay, minExploration} = config.train.rollout.policy;
 
-    const seed: EpisodeSeedRandomArgs | undefined = seeds && {
-        ...(seeds.battle && {battle: createSeedGenerator(seeds.battle)}),
-        ...(seeds.team && {team: createSeedGenerator(seeds.team)}),
-        ...(seeds.explore && {explore: createSeedGenerator(seeds.explore)}),
-        ...(seeds.learn && {learn: createSeedGenerator(seeds.learn)}),
+    const seeders: EpisodeSeeders | undefined = config.train.seeds && {
+        ...(config.train.seeds.battle && {
+            battle: seeder(config.train.seeds.battle),
+        }),
+        ...(config.train.seeds.team && {
+            team: seeder(config.train.seeds.team),
+        }),
+        ...(config.train.seeds.explore && {
+            explore: seeder(config.train.seeds.explore),
+        }),
+        ...(config.train.seeds.learn && {
+            learn: seeder(config.train.seeds.learn),
+        }),
     };
 
     let latestResults: TrainResult | undefined;
@@ -199,7 +190,7 @@ export async function train({
                 }),
                 logger: episodeLog,
                 logPath: path.join(config.paths.logs, `episode-${step}`),
-                ...(seed && {seed}),
+                ...(seeders && {seeders}),
                 progress,
             });
             ({loss, evalResults} = episodeResult);
@@ -251,9 +242,4 @@ export async function train({
         throw new Error("Missing training results");
     }
     return latestResults;
-}
-
-function createSeedGenerator(seed: string): () => string {
-    let i = 0;
-    return () => hash(seed + String(i++));
 }
