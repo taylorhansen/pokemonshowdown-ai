@@ -5,7 +5,7 @@ import {Config} from "./types";
 
 // Note: Multithreaded training can introduce nondeterminism that can't be
 // easily reproduced. Setting numThreads to 1 and specifying the random seeds in
-// the training script should make the program fully deterministic.
+// the training script should make the whole process fully deterministic.
 const numThreads = os.cpus().length;
 
 /**
@@ -16,7 +16,7 @@ const numThreads = os.cpus().length;
 export const config: Config = {
     psbot: {
         loginUrl: "https://play.pokemonshowdown.com/",
-        // Refers to locally-hosted PS instance. Can be overridden to
+        // Refers to locally-hosted PS instance. Can just change this to
         // "ws://sim.smogon.com:8000/" or "wss://sim.smogon.com/" to connect to
         // the official PS server.
         websocketRoute: "ws://localhost:8000/",
@@ -26,11 +26,12 @@ export const config: Config = {
         models: path.join(__dirname, "../../models/"),
         logs: path.join(__dirname, "../../logs/"),
     },
+    // Should set below to true if you have a compatible GPU.
     tf: {gpu: false},
     train: {
-        numEpisodes: 4,
+        numEpisodes: 16,
         batchPredict: {
-            maxSize: numThreads * 2,
+            maxSize: numThreads,
             timeoutNs: 50000n /*50us*/,
         },
         game: {
@@ -39,7 +40,10 @@ export const config: Config = {
             highWaterMark: 4,
         },
         rollout: {
-            numGames: 128,
+            // Warning: The numGames and game.maxTurns settings here can end up
+            // making the program consume ~20GB disk space and 8-10GB RAM. This
+            // is necessary for effective learning.
+            numGames: 1024,
             policy: {
                 exploration: 1.0,
                 explorationDecay: 0.9,
@@ -48,20 +52,19 @@ export const config: Config = {
             experience: {rewardDecay: 0.99},
         },
         eval: {
-            // Note: Make sure numGames is high enough to reduce noise.
-            numGames: 64,
+            numGames: 127,
             test: {
                 against: ["random", "previous"],
-                minScore: 0.55,
+                minScore: 0.51,
                 includeTies: true,
             },
         },
         learn: {
-            epochs: 4,
+            epochs: 3,
             numDecoderThreads: Math.ceil(numThreads / 2),
-            batchSize: 16,
-            shufflePrefetch: 16 * 128,
-            learningRate: 0.001,
+            batchSize: 32,
+            shufflePrefetch: 100 * 2 * 8 /*at least 8 game's worth*/,
+            learningRate: 0.01,
         },
         seeds: {
             model: "abc",

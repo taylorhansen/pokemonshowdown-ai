@@ -79,8 +79,6 @@ export interface TrainConfig {
     /**
      * Whether to save each previous version of the model separately after each
      * training step.
-     *
-     * Not recommended if running on limited disk space.
      */
     readonly savePreviousVersions: boolean;
     /** Verbosity level for logging. Default highest. */
@@ -88,7 +86,8 @@ export interface TrainConfig {
 }
 
 /**
- * Configuration for batch predict.
+ * Configuration for batch predict. This is for configuring how the main neural
+ * network should handle making predictions for the multiple parallel games.
  *
  * @see {@link TrainConfig}
  */
@@ -103,7 +102,7 @@ export interface BatchPredictConfig {
 }
 
 /**
- * Configuration for the game.
+ * Configuration for the game thread manager.
  *
  * @see {@link TrainConfig}
  */
@@ -116,8 +115,8 @@ export interface GameConfig {
      */
     readonly maxTurns: number;
     /**
-     * Soft cap on how many game results each worker can keep in memory before
-     * writing them to disk.
+     * Soft cap on how many game result objects each thread can keep in memory
+     * before writing them to disk.
      */
     readonly highWaterMark?: number;
 }

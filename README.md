@@ -87,7 +87,8 @@ npm run psbot
 Connects to the PS server specified in the
 [config](/src/config/config.example.ts) and starts accepting battle challenges
 in the `gen4randombattle` format, which is the format that this project is using
-for now.
+for now. By default it loads the model from the last completed training run in
+`./models/latest`.
 
 ## License
 
