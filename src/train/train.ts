@@ -1,8 +1,8 @@
 import * as path from "path";
-import {pathToFileURL} from "url";
 import {Config} from "../config/types";
 import {Logger} from "../util/logging/Logger";
 import {ensureDir} from "../util/paths/ensureDir";
+import {pathToFileUrl} from "../util/paths/pathToFileUrl";
 import {seeder} from "../util/random";
 import {episode, EpisodeSeeders} from "./episode/episode";
 import {ModelWorker} from "./model/worker";
@@ -59,15 +59,15 @@ export async function train({
     resume,
 }: TrainArgs): Promise<TrainResult> {
     const latestModelPath = path.join(config.paths.models, "latest");
-    const latestModelUrl = pathToFileURL(latestModelPath).href;
+    const latestModelUrl = pathToFileUrl(latestModelPath);
 
     // Create or load neural network.
     let model: string;
     if (resume) {
         const resumeFolder = path.join(config.paths.models, resume || "");
-        const resumeLoadUrl = pathToFileURL(
+        const resumeLoadUrl = pathToFileUrl(
             path.join(resumeFolder, "model.json"),
-        ).href;
+        );
         logger.info("Loading model: " + resumeFolder);
         try {
             model = await models.load(
@@ -100,6 +100,7 @@ export async function train({
 
         logger.debug("Saving new model as latest");
         await ensureDir(latestModelPath);
+        console.log("save model: " + latestModelUrl);
         await models.save(model, latestModelUrl);
     }
 
@@ -107,7 +108,7 @@ export async function train({
     const previousModel = await models.clone(model, "model_prev");
     logger.debug("Saving copy as original");
     const originalModelFolder = path.join(config.paths.models, "original");
-    await models.save(previousModel, pathToFileURL(originalModelFolder).href);
+    await models.save(previousModel, pathToFileUrl(originalModelFolder));
 
     const evalOpponents: readonly Opponent[] = [
         {
@@ -212,7 +213,7 @@ export async function train({
                 config.paths.models,
                 episodeFolderName,
             );
-            await models.save(model, pathToFileURL(episodeModelFolder).href);
+            await models.save(model, pathToFileUrl(episodeModelFolder));
         }
 
         episodeLog.debug("Saving updated model as latest");

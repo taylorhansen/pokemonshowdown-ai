@@ -3,13 +3,13 @@
  * round-robin format.
  */
 import * as path from "path";
-import {pathToFileURL} from "url";
 import {config} from "../config";
 import {ModelWorker} from "../train/model/worker";
 import {Opponent, playGames, PlayGamesSeeders} from "../train/play";
 import {GamePool} from "../train/play/pool";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
+import {pathToFileUrl} from "../util/paths/pathToFileUrl";
 import {seeder} from "../util/random";
 
 void (async function () {
@@ -46,9 +46,9 @@ void (async function () {
             await models.load(
                 model,
                 config.compare.batchPredict,
-                pathToFileURL(
+                pathToFileUrl(
                     path.join(config.paths.models, model, "model.json"),
-                ).href,
+                ),
             );
         } catch (e) {
             logger.error(`Error loading model: ${e}`);

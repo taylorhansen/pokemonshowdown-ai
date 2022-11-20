@@ -1,6 +1,5 @@
 // istanbul ignore file: Demo.
 import * as path from "path";
-import {pathToFileURL} from "url";
 import * as tf from "@tensorflow/tfjs";
 import {config} from "../config";
 import {PsBot} from "../psbot/PsBot";
@@ -8,6 +7,7 @@ import * as handlers from "../psbot/handlers";
 import {networkAgent} from "../psbot/handlers/battle/ai/networkAgent";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
+import {pathToFileUrl} from "../util/paths/pathToFileUrl";
 import {importTfn} from "../util/tfn";
 // Make sure custom layers can be deserialized.
 import "../train/model/custom_layers";
@@ -17,7 +17,7 @@ importTfn(config.tf.gpu);
 
 // Load neural network from disk in the background while connecting.
 const modelPromise = tf.loadLayersModel(
-    pathToFileURL(path.join(config.paths.models, "latest/model.json")).href,
+    pathToFileUrl(path.join(config.paths.models, "latest/model.json")),
 );
 
 const logger = new Logger(Logger.stderr, config.psbot.verbose ?? Verbose.Debug);
