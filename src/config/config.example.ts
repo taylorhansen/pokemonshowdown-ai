@@ -32,7 +32,7 @@ export const config: Config = {
         numEpisodes: 16,
         batchPredict: {
             maxSize: numThreads,
-            timeoutNs: 50000n /*50us*/,
+            timeoutNs: 5000000n /*5ms*/,
         },
         game: {
             numThreads,

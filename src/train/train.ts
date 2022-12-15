@@ -100,7 +100,6 @@ export async function train({
 
         logger.debug("Saving new model as latest");
         await ensureDir(latestModelPath);
-        console.log("save model: " + latestModelUrl);
         await models.save(model, latestModelUrl);
     }
 
