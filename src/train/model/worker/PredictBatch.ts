@@ -61,17 +61,20 @@ export class PredictBatch {
 
     /**
      * After executing the model using the {@link toTensors tensor form} of this
-     * batch, use method to resolve all the corresponding predict requests.
+     * batch, use this method to resolve all the corresponding predict requests.
      */
-    public resolve(results: Float32Array[]): void {
+    public async resolve(results: tf.Tensor1D[]): Promise<void> {
         if (this.length !== results.length) {
             throw new Error(
                 `Mismatched results length: expected ${this.length}, got ` +
                     `${results.length}`,
             );
         }
-        for (let i = 0; i < results.length; ++i) {
-            this.callbacks[i]({output: results[i]});
-        }
+        await Promise.all(
+            results.map(async (t, i) => {
+                this.callbacks[i]({output: (await t.data()) as Float32Array});
+                t.dispose();
+            }),
+        );
     }
 }
