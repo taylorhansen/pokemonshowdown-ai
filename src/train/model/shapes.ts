@@ -91,8 +91,6 @@ export const modelOutputName = "action";
  * Verifies that the model is compatible with the input/output shapes as
  * specified by {@link modelInputShapes} and {@link modelOutputShape}.
  *
- * The model created by {@link createModel} is guaranteed to satisfy this check.
- *
  * @throws Error if invalid input/output shapes.
  */
 export function verifyModel(model: tf.LayersModel): void {
