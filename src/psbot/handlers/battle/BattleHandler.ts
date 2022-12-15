@@ -346,7 +346,6 @@ const allowedBattleArgs: {
     "|cant|": true,
     "|faint|": true,
     "|message|": false,
-    "|split|": false,
     // Protocol.BattleMinorArgName
     "|-formechange|": true,
     "|-fail|": true,
@@ -408,5 +407,6 @@ const allowedBattleArgs: {
     "|-anim|": false,
     "|-ohko|": true,
     "|-candynamax|": true,
+    "|-terastallize|": true,
     /* eslint-enable @typescript-eslint/naming-convention */
 };

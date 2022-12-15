@@ -1755,7 +1755,7 @@ handlersImpl["|-singleturn|"] = async function (ctx) {
     await consume(ctx);
 };
 handlersImpl["|-candynamax|"] = "unsupported";
-handlersImpl["|updatepoke|"] = "unsupported";
+handlersImpl["|-terastallize|"] = "unsupported";
 
 /** Handlers for all {@link Protocol.ArgName event types}. */
 export const handlers =

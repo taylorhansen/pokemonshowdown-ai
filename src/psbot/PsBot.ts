@@ -167,7 +167,7 @@ export class PsBot {
             init.body =
                 `act=getassertion&userid=${options.username}` +
                 `&challstr=${challstr}`;
-            const result = await fetch(loginServer, init);
+            const result = await fetch(loginServer.href, init);
             assertion = await result.text();
 
             if (assertion.startsWith(";")) {
@@ -185,7 +185,7 @@ export class PsBot {
             init.body =
                 `act=login&name=${options.username}` +
                 `&pass=${options.password}&challstr=${challstr}`;
-            const result = await fetch(loginServer, init);
+            const result = await fetch(loginServer.href, init);
             const text = await result.text();
             // Response text returns "]" followed by json.
             const json = JSON.parse(text.substring(1)) as {
