@@ -247,7 +247,7 @@ export async function startPsBattle(
     // Should probably never happen, but not a big deal if it does.
     if (!battleStream.atEOF) {
         logger.info("Destroying battle stream");
-        battleStream.destroy();
+        void battleStream.destroy();
     }
 
     // Make sure the game completely ends so that the logs are complete.
@@ -273,7 +273,7 @@ function logError(
     logger.info("Error encountered, force tie and discard game");
     void battleStream.write(">forcetie");
     if (!battleStream.atEOF) {
-        battleStream.destroy();
+        void battleStream.destroy();
     }
 }
 
