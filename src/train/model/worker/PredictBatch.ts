@@ -14,6 +14,11 @@ export class PredictBatch {
     private readonly inputs: Float32Array[][] = [];
     /** Resolver callbacks for each request within the batch. */
     private readonly callbacks: ((result: PredictResult) => void)[] = [];
+    /** Corresponding times that the requests were {@link add added}. */
+    public get times(): readonly bigint[] {
+        return this._times;
+    }
+    private readonly _times: bigint[] = [];
 
     /** Current batch size. */
     public get length(): number {
@@ -50,6 +55,7 @@ export class PredictBatch {
             this.inputs[i].push(inputs[i]);
         }
         this.callbacks.push(callback);
+        this._times.push(process.hrtime.bigint());
     }
 
     /** Converts input arrays into tensors. */

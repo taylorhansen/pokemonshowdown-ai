@@ -24,6 +24,8 @@ export interface ModelProtocol
         | "clone"
         | "save"
         | "unload"
+        | "lock"
+        | "unlock"
         | "subscribe"
         | "learn"
         | "copy"
@@ -33,6 +35,8 @@ export interface ModelProtocol
     clone: {message: ModelCloneMessage; result: ModelCloneResult};
     save: {message: ModelSaveMessage; result: ModelSaveResult};
     unload: {message: ModelUnloadMessage; result: ModelUnloadResult};
+    lock: {message: ModelLockMessage; result: ModelLockResult};
+    unlock: {message: ModelUnlockMessage; result: ModelUnlockResult};
     subscribe: {message: ModelSubscribeMessage; result: ModelSubscribeResult};
     learn: {message: ModelLearnMessage; result: ModelLearnResult};
     copy: {message: ModelCopyMessage; result: ModelCopyResult};
@@ -79,6 +83,22 @@ export interface ModelSaveMessage extends ModelMessageBase<"save"> {
 /** Disposes a model from the worker. */
 export interface ModelUnloadMessage extends ModelMessageBase<"unload"> {
     /** Name of the model to dispose. */
+    readonly model: string;
+}
+
+/** Request to lock a registered model. */
+export interface ModelLockMessage extends ModelMessageBase<"lock"> {
+    /** Name of the model. */
+    readonly model: string;
+    /** Scope name. */
+    readonly name: string;
+    /** Scope step number. */
+    readonly step: number;
+}
+
+/** Request to unlock a registered model. */
+export interface ModelUnlockMessage extends ModelMessageBase<"unlock"> {
+    /** Name of the model. */
     readonly model: string;
 }
 
@@ -143,6 +163,18 @@ export interface ModelSaveResult extends ModelResultBase<"save"> {
 
 /** Result of deleting a model. */
 export interface ModelUnloadResult extends ModelResultBase<"unload"> {
+    /** @override */
+    done: true;
+}
+
+/** Result of locking a model. */
+export interface ModelLockResult extends ModelResultBase<"lock"> {
+    /** @override */
+    done: true;
+}
+
+/** Result of unlocking a model. */
+export interface ModelUnlockResult extends ModelResultBase<"unlock"> {
     /** @override */
     done: true;
 }

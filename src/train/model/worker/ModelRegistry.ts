@@ -24,6 +24,17 @@ export class ModelRegistry {
     /** Currently held game worker ports. */
     private readonly ports = new Set<MessagePort>();
 
+    private scopeName: string | null = null;
+    private scopeStep: number | null = null;
+    /** Metrics logger for the current scope. */
+    private scopeMetrics: Metrics | null = null;
+    /** Time it takes for the model to process a batch, in milliseconds. */
+    private readonly predictLatency: number[] = [];
+    /** Time it takes for requests to arrive at the model, in milliseconds. */
+    private readonly predictRequestLatency: number[] = [];
+    /** Number of requests getting batched and sent to the model at once. */
+    private readonly predictSize: number[] = [];
+
     /** Current pending predict request batch. */
     private predictBatch = new PredictBatch(modelInputShapes);
     /**
@@ -33,10 +44,6 @@ export class ModelRegistry {
     private timeoutPromise: Promise<boolean> | null = null;
     /** Function to cancel the current batch predict timer. */
     private cancelTimer: (() => void) | null = null;
-
-    private firstRequestTime: bigint | null = null;
-    /** Metrics logger. */
-    private readonly metrics: Metrics | null;
 
     /**
      * Creates a ModelRegistry.
@@ -59,9 +66,6 @@ export class ModelRegistry {
             throw e;
         }
         this.model = model;
-
-        this.metrics = Metrics.get(`model/${name}`);
-        this.logNumSubscribers();
     }
 
     /** Clones the current model into a new registry with the same config. */
@@ -92,6 +96,58 @@ export class ModelRegistry {
             port.close();
         }
         this.model.dispose();
+    }
+
+    /** Locks the model under a scope name and step number. */
+    public lock(name: string, step: number): void {
+        if (this.scopeName === name && this.scopeStep === step) {
+            return;
+        }
+        if (this.isLocked) {
+            throw new Error(
+                `Already locked under scope '${name}' (step=${step})`,
+            );
+        }
+        this.scopeName = name;
+        this.scopeStep = step;
+        this.scopeMetrics = Metrics.get(name);
+    }
+
+    /**
+     * Whether {@link lock} was called and {@link unlock} hasn't yet been
+     * called.
+     */
+    public get isLocked(): boolean {
+        return this.scopeName !== null && this.scopeStep !== null;
+    }
+
+    /** Unlocks the scope and compiles summary logs. */
+    public unlock(): void {
+        if (!this.isLocked) {
+            return;
+        }
+        this.scopeMetrics?.histogram(
+            `predict_latency_ms`,
+            tf.tensor1d(this.predictLatency),
+            this.scopeStep!,
+        );
+        this.predictLatency.length = 0;
+        this.scopeMetrics?.histogram(
+            `predict_request_latency_ms`,
+            tf.tensor1d(this.predictRequestLatency),
+            this.scopeStep!,
+        );
+        this.predictRequestLatency.length = 0;
+        this.scopeMetrics?.histogram(
+            `predict_size`,
+            tf.tensor1d(this.predictSize, "int32"),
+            this.scopeStep!,
+            this.config.maxSize,
+        );
+        this.predictSize.length = 0;
+        this.scopeName = null;
+        this.scopeStep = null;
+        this.scopeMetrics = null;
     }
 
     /**
@@ -126,11 +182,7 @@ export class ModelRegistry {
                     }),
         );
         // Remove this port from the recorded references after close.
-        port1.on("close", () => {
-            this.ports.delete(port1);
-            this.logNumSubscribers();
-        });
-        this.logNumSubscribers();
+        port1.on("close", () => this.ports.delete(port1));
         return port2;
     }
 
@@ -154,9 +206,6 @@ export class ModelRegistry {
 
     /** Queues a prediction for the neural network. */
     private async predict(msg: PredictMessage): Promise<PredictResult> {
-        if (this.firstRequestTime === null) {
-            this.firstRequestTime = process.hrtime.bigint();
-        }
         const result = new Promise<PredictResult>(res =>
             this.predictBatch.add(msg.state, res),
         );
@@ -212,35 +261,12 @@ export class ModelRegistry {
         );
         const endTime = process.hrtime.bigint();
 
-        const step = ModelRegistry.getLogStep();
-        this.metrics?.scalar(
-            "predict_latency_us",
-            Number(endTime - startTime) / 1e3 /*us*/,
-            step,
-        );
-        this.metrics?.scalar("predict_size", batch.length, step);
-        if (this.firstRequestTime !== null) {
-            this.metrics?.scalar(
-                "predict_request_latency_us",
-                Number(startTime - this.firstRequestTime) / 1e3,
-                step,
+        if (this.isLocked) {
+            this.predictLatency.push(Number(endTime - startTime) / 1e6 /*ms*/);
+            this.predictRequestLatency.push(
+                ...batch.times.map(t => Number(startTime - t) / 1e6 /*ms*/),
             );
-            this.firstRequestTime = null;
+            this.predictSize.push(batch.length);
         }
-    }
-
-    private logNumSubscribers(): void {
-        this.metrics?.scalar(
-            "num_subscribers",
-            this.ports.size,
-            ModelRegistry.getLogStep(),
-        );
-    }
-
-    /** Gets a timestamp for use with Metrics. */
-    private static getLogStep(): number {
-        // Getting around integer limits. Should be ok as long as uptime doesn't
-        // exceed 7 weeks.
-        return Math.floor(process.uptime() * 1000 /*ms*/);
     }
 }

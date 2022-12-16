@@ -164,6 +164,16 @@ export async function playGames({
             progressLog = innerLog;
         }
 
+        const scopeName = `${stage}/vs_${opponent.name}`;
+
+        if (agentConfig.exploit.type === "model") {
+            await models.lock(
+                agentConfig.exploit.model,
+                `${name}/${scopeName}`,
+                step,
+            );
+        }
+
         // Iterator-like stream for piping GamePoolArgs to the GamePool stream.
         const poolArgs = stream.Readable.from(
             (async function* generateGamePoolArgs() {
@@ -244,14 +254,16 @@ export async function playGames({
 
         innerLog.info(`Record: ${wins}-${losses}-${ties}`);
         opponentResults.push({name: opponent.name, wins, losses, ties});
+
         await models.log(name, step, {
-            [`${stage}/vs_${opponent.name}/win_ratio`]:
-                wins / opponent.numGames,
-            [`${stage}/vs_${opponent.name}/loss_ratio`]:
-                losses / opponent.numGames,
-            [`${stage}/vs_${opponent.name}/tie_ratio`]:
-                ties / opponent.numGames,
+            [`${scopeName}/win_ratio`]: wins / opponent.numGames,
+            [`${scopeName}/loss_ratio`]: losses / opponent.numGames,
+            [`${scopeName}/tie_ratio`]: ties / opponent.numGames,
         });
+
+        if (agentConfig.exploit.type === "model") {
+            await models.unlock(agentConfig.exploit.model);
+        }
     }
 
     return {numExamples, opponents: opponentResults};

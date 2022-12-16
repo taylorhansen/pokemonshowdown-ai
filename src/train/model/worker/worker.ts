@@ -14,12 +14,14 @@ import {
     ModelCopyResult,
     ModelLearnResult,
     ModelLoadResult,
+    ModelLockResult,
     ModelLogMessage,
     ModelLogResult,
     ModelMessage,
     ModelSaveResult,
     ModelSubscribeResult,
     ModelUnloadResult,
+    ModelUnlockResult,
     ModelWorkerData,
 } from "./ModelProtocol";
 import {ModelRegistry} from "./ModelRegistry";
@@ -120,6 +122,26 @@ parentPort.on("message", function handle(msg: ModelMessage) {
             models.delete(msg.model);
             const result: ModelUnloadResult = {
                 type: "unload",
+                rid,
+                done: true,
+            };
+            parentPort!.postMessage(result);
+            break;
+        }
+        case "lock": {
+            getRegistry(msg.model).lock(msg.name, msg.step);
+            const result: ModelLockResult = {
+                type: "lock",
+                rid,
+                done: true,
+            };
+            parentPort!.postMessage(result);
+            break;
+        }
+        case "unlock": {
+            getRegistry(msg.model).unlock();
+            const result: ModelUnlockResult = {
+                type: "unlock",
                 rid,
                 done: true,
             };

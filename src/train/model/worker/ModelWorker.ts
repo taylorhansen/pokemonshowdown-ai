@@ -9,11 +9,13 @@ import {
     ModelLearnData,
     ModelLearnMessage,
     ModelLoadMessage,
+    ModelLockMessage,
     ModelLogMessage,
     ModelProtocol,
     ModelSaveMessage,
     ModelSubscribeMessage,
     ModelUnloadMessage,
+    ModelUnlockMessage,
     ModelWorkerData,
 } from "./ModelProtocol";
 
@@ -141,6 +143,53 @@ export class ModelWorker {
 
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"unload">(msg, [], result =>
+                result.type === "error" ? rej(result.err) : res(),
+            ),
+        );
+    }
+
+    /**
+     * Locks the model for a specific macro-operation that we want to track
+     * stats for, such as a batch of games or a learning step.
+     *
+     * @param model Name of the model.
+     * @param name Name of the operation, used as the scope name.
+     * @param step Current step in the operation (e.g. training episode count).
+     */
+    public async lock(
+        model: string,
+        name: string,
+        step: number,
+    ): Promise<void> {
+        const msg: ModelLockMessage = {
+            type: "lock",
+            rid: this.workerPort.nextRid(),
+            model,
+            name,
+            step,
+        };
+
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"lock">(msg, [], result =>
+                result.type === "error" ? rej(result.err) : res(),
+            ),
+        );
+    }
+
+    /**
+     * Unlockes a {@link lock locked} model.
+     *
+     * @param model Name of the model.
+     */
+    public async unlock(model: string): Promise<void> {
+        const msg: ModelUnlockMessage = {
+            type: "unlock",
+            rid: this.workerPort.nextRid(),
+            model,
+        };
+
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"unlock">(msg, [], result =>
                 result.type === "error" ? rej(result.err) : res(),
             ),
         );
