@@ -82,12 +82,11 @@ export async function evaluate({
         progress,
     });
 
-    const testLog = logger.addPrefix("Test: ");
-
-    if (!testConfig) {
-        testLog.debug("Assuming the model is improving for now");
+    if (!testConfig?.minScore) {
         return {didImprove: true, evalResults: gameResults};
     }
+
+    const testLog = logger.addPrefix("Test: ");
 
     testLog.debug(
         "Running a statistical test to see if the model is improving",

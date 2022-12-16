@@ -53,14 +53,16 @@ export const config: Config = {
         },
         eval: {
             numGames: 127,
-            test: {
-                against: ["random", "previous"],
-                minScore: 0.51,
-                includeTies: true,
-            },
+            // Uncomment to use the evaluation results to discard bad learning
+            // steps. Be careful though as this can cause overfitting.
+            //test: {
+            //    against: ["random", "previous"],
+            //    minScore: 0.55,
+            //    includeTies: true,
+            //},
         },
         learn: {
-            epochs: 3,
+            epochs: 1,
             numDecoderThreads: Math.ceil(numThreads / 2),
             batchSize: 32,
             shufflePrefetch: 100 * 2 * 8 /*at least 8 game's worth*/,
@@ -84,7 +86,7 @@ export const config: Config = {
         threshold: 0.55,
         batchPredict: {
             maxSize: numThreads,
-            timeoutNs: 50000n /*50us*/,
+            timeoutNs: 5000000n /*5ms*/,
         },
         seeds: {
             battle: "pqr",

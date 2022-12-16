@@ -190,9 +190,9 @@ export interface EvalTestConfig {
     readonly against: string | string[];
     /**
      * Minimum ratio of wins to total games in order to accept the updated
-     * model.
+     * model. If not provided, then the model will be accepted by default.
      */
-    readonly minScore: number;
+    readonly minScore?: number;
     /**
      * Whether to count ties as wins in the test. Otherwise they are counted as
      * losses.
