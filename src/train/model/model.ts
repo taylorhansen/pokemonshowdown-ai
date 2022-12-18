@@ -1,4 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
+import {ModelConfig} from "../../config/types";
 import {Moveset} from "../../psbot/handlers/battle/state/Moveset";
 import {Team} from "../../psbot/handlers/battle/state/Team";
 import {rng} from "../../util/random";
@@ -9,10 +10,15 @@ import {modelInputShapesMap, verifyModel} from "./shapes";
  * Creates a default model for training.
  *
  * @param name Name of the model.
+ * @param config Additional config options.
  * @param seed Seed for the random number generater to use for kernel
  * initializers.
  */
-export function createModel(name: string, seed?: string): tf.LayersModel {
+export function createModel(
+    name: string,
+    config?: ModelConfig,
+    seed?: string,
+): tf.LayersModel {
     const random = seed ? rng(seed) : null;
 
     const inputs: tf.SymbolicTensor[] = [];
@@ -119,7 +125,8 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
 
     //#endregion
 
-    //#region Output Q-values.
+    //#region Q-values.
+    // If dueling architecture these are actually the action-advantage values.
 
     const actionMove = modelActionMove(
         name,
@@ -135,14 +142,19 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
         random?.(),
     );
 
-    const outputAction = aggregateActionOutput(name, [
-        actionMove,
-        actionSwitch,
-    ]);
+    const actionAdv = aggregateAction(name, [actionMove, actionSwitch]);
 
     //#endregion
 
-    const model = tf.model({name, inputs, outputs: [outputAction]});
+    const outputs = [actionAdv];
+
+    if (config?.dueling) {
+        const stateValue = modelStateValue(name, globalEncoding, random?.());
+        const actionQ = duelingQ(name, stateValue, actionAdv);
+        outputs[0] = actionQ;
+    }
+
+    const model = tf.model({name, inputs, outputs});
     // Consistency check.
     verifyModel(model);
     return model;
@@ -632,15 +644,58 @@ function modelActionSwitch(
     return actionSwitches;
 }
 
-function aggregateActionOutput(
+function aggregateAction(
     name: string,
     actionFeatures: tf.SymbolicTensor[],
 ): tf.SymbolicTensor {
     const outputActionConcat = tf.layers
         .concatenate({
-            name: `${name}/output/action`,
+            name: `${name}/action/concat`,
             axis: -1,
         })
         .apply(actionFeatures) as tf.SymbolicTensor;
     return outputActionConcat;
+}
+
+function modelStateValue(
+    name: string,
+    globalEncoding: tf.SymbolicTensor,
+    seed?: number,
+): tf.SymbolicTensor {
+    const stateValue = tf.layers
+        .dense({
+            name: `${name}/state/value`,
+            units: 1,
+            activation: "tanh",
+            kernelInitializer: tf.initializers.glorotNormal({seed}),
+            biasInitializer: "zeros",
+        })
+        .apply(globalEncoding) as tf.SymbolicTensor;
+    return stateValue;
+}
+
+function duelingQ(
+    name: string,
+    stateValue: tf.SymbolicTensor,
+    actionAdv: tf.SymbolicTensor,
+): tf.SymbolicTensor {
+    const meanAdv = customLayers
+        .mean({
+            name: `${name}/action/advantage/mean`,
+            axis: -1,
+            keepDims: true,
+        })
+        .apply(actionAdv) as tf.SymbolicTensor;
+    const centeredAdv = customLayers
+        .sub({
+            name: `${name}/action/advantage/sub`,
+        })
+        .apply([actionAdv, meanAdv]) as tf.SymbolicTensor;
+
+    const actionQ = tf.layers
+        .add({
+            name: `${name}/action/add`,
+        })
+        .apply([stateValue, centeredAdv]) as tf.SymbolicTensor;
+    return actionQ;
 }

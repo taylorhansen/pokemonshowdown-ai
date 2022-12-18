@@ -1,6 +1,6 @@
 import {resolve} from "path";
 import {MessagePort, Worker} from "worker_threads";
-import {BatchPredictConfig} from "../../../config/types";
+import {BatchPredictConfig, ModelConfig} from "../../../config/types";
 import {WorkerPort} from "../../port/WorkerPort";
 import {
     ModelCloneMessage,
@@ -60,6 +60,7 @@ export class ModelWorker {
      * @param name Name by which to refer to the model.
      * @param batchConfig Options for batching predict requests.
      * @param url URL to load from. If omitted, creates a default model.
+     * @param config Config for creating the model when `url` is omitted.
      * @param seed Seed for the random number generator when initializing the
      * model. Only applicable if `url` is omitted.
      * @returns The registered name of the model.
@@ -68,6 +69,7 @@ export class ModelWorker {
         name: string,
         batchConfig: BatchPredictConfig,
         url?: string,
+        config?: ModelConfig,
         seed?: string,
     ): Promise<string> {
         const msg: ModelLoadMessage = {
@@ -76,6 +78,7 @@ export class ModelWorker {
             name,
             predict: batchConfig,
             ...(url && {url}),
+            ...(config && {config}),
             ...(seed && {seed}),
         };
 

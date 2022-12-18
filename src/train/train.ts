@@ -82,6 +82,7 @@ export async function train({
                 "model",
                 config.train.batchPredict,
                 undefined /*url*/,
+                config.train.model,
                 config.train.seeds?.model,
             );
 
@@ -95,6 +96,7 @@ export async function train({
             "model",
             config.train.batchPredict,
             undefined /*url*/,
+            config.train.model,
             config.train.seeds?.model,
         );
 

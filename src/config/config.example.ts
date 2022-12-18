@@ -39,6 +39,9 @@ export const config: Config = {
             maxTurns: 100,
             highWaterMark: 4,
         },
+        model: {
+            dueling: true,
+        },
         rollout: {
             // Warning: The numGames and game.maxTurns settings here can end up
             // making the program consume ~20GB disk space and 8-10GB RAM. This

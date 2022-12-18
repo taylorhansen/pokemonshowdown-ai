@@ -1,6 +1,6 @@
 /** @file Defines the protocol typings for ModelWorkers. */
 import {MessagePort} from "worker_threads";
-import {BatchPredictConfig} from "../../../config/types";
+import {BatchPredictConfig, ModelConfig} from "../../../config/types";
 import {PortMessageBase, PortResultBase} from "../../port/PortProtocol";
 import {WorkerProtocol} from "../../port/WorkerProtocol";
 import {LearnArgs} from "../learn";
@@ -57,6 +57,8 @@ export interface ModelLoadMessage extends ModelMessageBase<"load"> {
     readonly predict: BatchPredictConfig;
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
+    /** Config for creating the model when {@link url} is omitted. */
+    readonly config?: ModelConfig;
     /**
      * Seed for the random number generator when initializing the model. Only
      * applicable if {@link url} is omitted.

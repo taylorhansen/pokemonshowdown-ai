@@ -66,6 +66,8 @@ export interface TrainConfig {
     readonly numEpisodes: number;
     /** Batch predict config. */
     readonly batchPredict: BatchPredictConfig;
+    /** Model config. */
+    readonly model: ModelConfig;
     /** Game config. */
     readonly game: GameConfig;
     /** Rollout config. */
@@ -99,6 +101,20 @@ export interface BatchPredictConfig {
      * nanoseconds.
      */
     readonly timeoutNs: bigint;
+}
+
+/**
+ * Configuration for the creation of the initial neural network model for
+ * training does not work when resuming training from a previous session.
+ *
+ * @see {@link TrainConfig}
+ */
+export interface ModelConfig {
+    /**
+     * Whether to use a dueling network architecture rather than just vanilla
+     * DQN.
+     */
+    readonly dueling: boolean;
 }
 
 /**

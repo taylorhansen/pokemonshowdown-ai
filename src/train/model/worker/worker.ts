@@ -77,7 +77,7 @@ parentPort.on("message", function handle(msg: ModelMessage) {
                 load(
                     rid,
                     msg.name,
-                    createModel(msg.name, msg.seed),
+                    createModel(msg.name, msg.config, msg.seed),
                     msg.predict,
                 );
             } else {
