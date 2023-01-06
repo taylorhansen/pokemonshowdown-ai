@@ -2,7 +2,7 @@
  * @file Compares specified models by having them play against each other in
  * round-robin format.
  */
-import * as path from "path";
+import {join} from "path";
 import ProgressBar from "progress";
 import {config} from "../config";
 import {GameArgsGenSeeders, GamePipeline, Opponent} from "../train/game/pool";
@@ -30,10 +30,7 @@ void (async function () {
 
     const models = new ModelWorker(
         config.tf.gpu,
-        path.join(
-            config.paths.logs,
-            `tensorboard/compare/${config.compare.name}`,
-        ),
+        join(config.paths.logs, `tensorboard/compare/${config.compare.name}`),
     );
     try {
         for (const model of compareModels) {
@@ -47,7 +44,7 @@ void (async function () {
                     model,
                     config.compare.batchPredict,
                     pathToFileUrl(
-                        path.join(config.paths.models, model, "model.json"),
+                        join(config.paths.models, model, "model.json"),
                     ),
                 );
             } catch (e) {
@@ -138,7 +135,7 @@ void (async function () {
                         })),
                     requestModelPort: async modelName =>
                         await models.subscribe(modelName),
-                    logPath: path.join(
+                    logPath: join(
                         config.paths.logs,
                         "compare",
                         config.compare.name,

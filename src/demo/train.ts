@@ -34,7 +34,7 @@ void (async function () {
     /** Manages the worker thread for Tensorflow ops. */
     const models = new ModelWorker(
         config.tf.gpu,
-        join(config.paths.logs, "tensorboard/"),
+        join(config.paths.logs, "tensorboard", config.train.name),
     );
 
     // Create or load neural network.

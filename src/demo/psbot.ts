@@ -1,5 +1,5 @@
 // istanbul ignore file: Demo.
-import * as path from "path";
+import {join} from "path";
 import * as tf from "@tensorflow/tfjs";
 import {config} from "../config";
 import {PsBot} from "../psbot/PsBot";
@@ -17,7 +17,7 @@ importTfn(config.tf.gpu);
 
 // Load neural network from disk in the background while connecting.
 const modelPromise = tf.loadLayersModel(
-    pathToFileUrl(path.join(config.paths.models, "train/latest/model.json")),
+    pathToFileUrl(join(config.paths.models, "train/latest/model.json")),
 );
 
 const logger = new Logger(Logger.stderr, config.psbot.verbose ?? Verbose.Debug);
