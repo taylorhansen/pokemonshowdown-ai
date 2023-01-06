@@ -85,7 +85,7 @@ export async function playGame(
 ): Promise<PlayGameResult> {
     // Detect battle agents that want to generate Experience objects.
     const experiences: Experience[][] = [];
-    const [p1, p2] = args.agents.map<PlayerOptions>(function (agentArgs, i) {
+    const [p1, p2] = args.agents.map<PlayerOptions>(function (agentArgs) {
         if (!agentArgs.emitExperience) {
             return {
                 name: agentArgs.name,
@@ -105,9 +105,7 @@ export async function playGame(
                 ? (experienceBattleParser(
                       main,
                       exp => exps.push(exp),
-                      // Note: startPSBattle() uses raw SideID as username so
-                      // this arg must match.
-                      `p${i + 1}` /*username*/,
+                      agentArgs.name /*username*/,
                   ) as BattleParser<BattleAgent, [], void>)
                 : main,
             ...(agentArgs.seed && {seed: agentArgs.seed}),

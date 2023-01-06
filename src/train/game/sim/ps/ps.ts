@@ -93,7 +93,9 @@ export async function startPsBattle(
 
     let winner: string | undefined;
     for (const id of ["p1", "p2"] as const) {
-        const innerLog = logger.addPrefix(`${id}: `);
+        const innerLog = logger.addPrefix(
+            `${id}(${options.players[id].name}): `,
+        );
 
         // Setup BattleHandler.
 
