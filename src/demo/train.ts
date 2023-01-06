@@ -19,9 +19,6 @@ process.once("SIGINT", () => process.exit(1));
 
 const resume: string | undefined = undefined;
 
-// TODO: Move this constant to config.
-const name = "train";
-
 /** Main Logger object. */
 const logger = new Logger(
     Logger.stderr,
@@ -30,8 +27,8 @@ const logger = new Logger(
 );
 
 void (async function () {
-    const modelPath = join(config.paths.models, name);
-    const logPath = join(config.paths.logs, name);
+    const modelPath = join(config.paths.models, config.train.name);
+    const logPath = join(config.paths.logs, config.train.name);
     await Promise.all([modelPath, logPath].map(ensureDir));
 
     /** Manages the worker thread for Tensorflow ops. */
@@ -76,13 +73,8 @@ void (async function () {
 
     try {
         const trainProgress = new TrainingProgress(config, logger);
-        await models.train(
-            name,
-            model,
-            config.train,
-            modelPath,
-            logPath,
-            data => trainProgress.callback(data),
+        await models.train(model, config.train, modelPath, logPath, data =>
+            trainProgress.callback(data),
         );
     } catch (e) {
         logger.error((e as Error).stack ?? (e as Error).toString());

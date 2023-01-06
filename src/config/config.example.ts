@@ -29,6 +29,7 @@ export const config: Config = {
     // Should set below to true if you have a compatible GPU.
     tf: {gpu: false},
     train: {
+        name: "train",
         episodes: 16,
         batchPredict: {
             maxSize: numThreads,
@@ -80,6 +81,7 @@ export const config: Config = {
         verbose: Verbose.Info,
     },
     compare: {
+        name: "latest-original-random",
         models: ["train/latest", "train/original", "random"],
         numGames: 256,
         threshold: 0.55,

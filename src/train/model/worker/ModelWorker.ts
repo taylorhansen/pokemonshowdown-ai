@@ -97,7 +97,6 @@ export class ModelWorker {
     /**
      * Starts the training loop for a model.
      *
-     * @param name Name of the training run.
      * @param model Model to train.
      * @param config Training config.
      * @param modelPath Path to store model checkpoints.
@@ -108,7 +107,6 @@ export class ModelWorker {
      * {@link trainStop} is called, or if an error is thrown during training.
      */
     public async train(
-        name: string,
         model: string,
         config: TrainConfig,
         modelPath?: string,
@@ -120,7 +118,6 @@ export class ModelWorker {
                 {
                     type: "train",
                     rid: this.workerPort.nextRid(),
-                    name,
                     model,
                     config,
                     ...(modelPath && {modelPath}),

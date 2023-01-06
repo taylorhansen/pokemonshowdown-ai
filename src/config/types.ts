@@ -46,6 +46,8 @@ export interface TensorflowConfig {
 
 /** Configuration for the training process. */
 export interface TrainConfig {
+    /** Name of the training run under which to store logs. */
+    readonly name: string;
     /** Number of training episodes to complete. */
     readonly episodes: number;
     /** Batch predict config. */
@@ -188,6 +190,8 @@ export interface TrainSeedConfig {
 
 /** Configuration for the model comparison script. */
 export interface CompareConfig {
+    /** Name of the training run under which to store logs. */
+    readonly name: string;
     /**
      * Models to compare from the {@link PathsConfig.models} directory. Can also
      * use the string `"random"` to refer to a custom randomly-playing opponent.

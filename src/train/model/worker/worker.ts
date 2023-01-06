@@ -68,7 +68,6 @@ async function handle(msg: ModelMessage): Promise<void> {
             }
             case "train": {
                 await train(
-                    msg.name,
                     getRegistry(msg.model),
                     msg.config,
                     msg.modelPath,

@@ -14,7 +14,6 @@ import {datasetFromRollout} from "./dataset";
 /**
  * Main training loop.
  *
- * @param name Name of the training run.
  * @param model Model to train.
  * @param config Training config.
  * @param modelPath Path to store model checkpoints.
@@ -23,7 +22,6 @@ import {datasetFromRollout} from "./dataset";
  * during each episode, including errors.
  */
 export async function train(
-    name: string,
     model: ModelRegistry,
     config: TrainConfig,
     modelPath?: string,
@@ -45,8 +43,11 @@ export async function train(
         ...(config.seeds.explore && {explore: seeder(config.seeds.explore)}),
     };
 
+    rolloutModel.lock(config.name, 0 /*step*/);
+    prevModel.lock(config.name, 0);
+
     const rollout = new Rollout(
-        name,
+        config.name,
         // TODO: Mix in prev model as well.
         rolloutModel,
         config.rollout,
@@ -72,14 +73,14 @@ export async function train(
         config.seeds?.learn,
     );
     const learn = new Learn(
-        name,
+        config.name,
         model.model,
         await dataset.iterator(),
         config.learn,
     );
 
     const evaluate = new Evaluate(
-        name,
+        config.name,
         rolloutModel,
         prevModel,
         config.eval,
@@ -93,8 +94,10 @@ export async function train(
 
     let lastEval: Promise<unknown> | undefined;
     try {
-        rolloutModel.lock(name, 1);
-        prevModel.lock(name, 1);
+        rolloutModel.unlock();
+        prevModel.unlock();
+        rolloutModel.lock(config.name, 1);
+        prevModel.lock(config.name, 1);
 
         for (let i = 0; i < config.episodes; ++i) {
             const step = i + 1;
@@ -109,8 +112,8 @@ export async function train(
             rolloutModel.unlock();
             prevModel.unlock();
             if (i < config.episodes) {
-                rolloutModel.lock(name, step + 1);
-                prevModel.lock(name, step + 1);
+                rolloutModel.lock(config.name, step + 1);
+                prevModel.lock(config.name, step + 1);
                 rolloutModel.copyTo(prevModel);
             }
             model.copyTo(rolloutModel);

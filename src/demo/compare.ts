@@ -28,11 +28,12 @@ void (async function () {
         return;
     }
 
-    const name = compareModels.join("-");
-
     const models = new ModelWorker(
         config.tf.gpu,
-        path.join(config.paths.logs, `tensorboard/compare/${name}`),
+        path.join(
+            config.paths.logs,
+            `tensorboard/compare/${config.compare.name}`,
+        ),
     );
     try {
         for (const model of compareModels) {
@@ -137,7 +138,12 @@ void (async function () {
                         })),
                     requestModelPort: async modelName =>
                         await models.subscribe(modelName),
-                    logPath: path.join(config.paths.logs, "compare", model),
+                    logPath: path.join(
+                        config.paths.logs,
+                        "compare",
+                        config.compare.name,
+                        model,
+                    ),
                     ...(seeders && {seeders}),
                 });
             }

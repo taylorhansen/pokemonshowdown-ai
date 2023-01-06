@@ -60,8 +60,6 @@ export interface ModelUnloadMessage extends ModelMessageBase<"unload"> {
 
 /** Runs the training loop. */
 export interface ModelTrainMessage extends ModelMessageBase<"train"> {
-    /** Name of the training run for logging. */
-    readonly name: string;
     /** Name of the model to train. */
     readonly model: string;
     /** Config for training. */
