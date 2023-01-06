@@ -14,11 +14,7 @@ export interface Config {
     readonly compare: CompareConfig;
 }
 
-/**
- * Configuration for the PsBot.
- *
- * @see {@link Config}
- */
+/** Configuration for the PsBot. */
 export interface PsBotConfig {
     /** Account username. If unspecified, use a guest account. */
     readonly username?: string;
@@ -34,11 +30,7 @@ export interface PsBotConfig {
     readonly verbose?: Verbose;
 }
 
-/**
- * Paths to various directories.
- *
- * @see {@link Config}
- */
+/** Paths to various directories. */
 export interface PathsConfig {
     /** Path to the directory containing the models. */
     readonly models: string;
@@ -46,30 +38,20 @@ export interface PathsConfig {
     readonly logs: string;
 }
 
-/**
- * Configuration for TensorFlow.
- *
- * @see {@link Config}
- */
+/** Configuration for TensorFlow. */
 export interface TensorflowConfig {
     /** Whether to use the GPU. */
     readonly gpu: boolean;
 }
 
-/**
- * Configuration for the training process.
- *
- * @see {@link Config}
- */
+/** Configuration for the training process. */
 export interface TrainConfig {
     /** Number of training episodes to complete. */
-    readonly numEpisodes: number;
+    readonly episodes: number;
     /** Batch predict config. */
     readonly batchPredict: BatchPredictConfig;
     /** Model config. */
     readonly model: ModelConfig;
-    /** Game config. */
-    readonly game: GameConfig;
     /** Rollout config. */
     readonly rollout: RolloutConfig;
     /** Evaluation config. */
@@ -90,8 +72,6 @@ export interface TrainConfig {
 /**
  * Configuration for batch predict. This is for configuring how the main neural
  * network should handle making predictions for the multiple parallel games.
- *
- * @see {@link TrainConfig}
  */
 export interface BatchPredictConfig {
     /** Maximum size of a batch. */
@@ -106,8 +86,6 @@ export interface BatchPredictConfig {
 /**
  * Configuration for the creation of the initial neural network model for
  * training does not work when resuming training from a previous session.
- *
- * @see {@link TrainConfig}
  */
 export interface ModelConfig {
     /**
@@ -117,45 +95,34 @@ export interface ModelConfig {
     readonly dueling: boolean;
 }
 
-/**
- * Configuration for the game thread manager.
- *
- * @see {@link TrainConfig}
- */
-export interface GameConfig {
-    /** Number of games to play in parallel. */
-    readonly numThreads: number;
-    /**
-     * Maximum amount of turns until the game is considered a tie. Games can go
-     * on forever if this is not set and both players only decide to switch.
-     */
-    readonly maxTurns: number;
-    /**
-     * Soft cap on how many game result objects each thread can keep in memory
-     * before writing them to disk.
-     */
-    readonly highWaterMark?: number;
-}
-
-/**
- * Configuration for the rollout process.
- *
- * @see {@link TrainConfig}
- */
+/** Configuration for the rollout process. */
 export interface RolloutConfig {
-    /** Number of games to play against self. */
-    readonly numGames: number;
+    /** Game pool config. */
+    readonly pool: GamePoolConfig;
     /** Exploration policy config. */
     readonly policy: PolicyConfig;
     /** Experience config. */
     readonly experience: ExperienceConfig;
 }
 
-/**
- * Configuration for the exploration policy during the rollout phase.
- *
- * @see {@link RolloutConfig}
- */
+/** Configuration for the thread pool for playing games. */
+export interface GamePoolConfig {
+    /** Number of games to play in parallel. */
+    readonly numThreads: number;
+    /**
+     * Maximum amount of turns until the game is considered a tie. Games can go
+     * on forever if this is not set and both players only decide to switch.
+     */
+    readonly maxTurns?: number;
+    /**
+     * Soft cap on how many game result objects each thread can keep in memory
+     * before communicating them to the main or calling thread. Used in stream
+     * backpressuring.
+     */
+    readonly highWaterMark?: number;
+}
+
+/** Configuration for the exploration policy during the rollout phase. */
 export interface PolicyConfig {
     /**
      * Initial value for the epsilon-greedy exploration policy. Specifies the
@@ -171,74 +138,41 @@ export interface PolicyConfig {
     readonly minExploration: number;
 }
 
-/**
- * Configuration for generating experience from rollout games.
- *
- * @see {@link RolloutConfig}
- */
+/** Configuration for generating experience from rollout games. */
 export interface ExperienceConfig {
     /** Discount factor for future rewards. */
     readonly rewardDecay: number;
 }
 
-/**
- * Configuration for the evaluation process.
- *
- * @see {@link TrainConfig}
- */
+/** Configuration for the evaluation process. */
 export interface EvalConfig {
-    /** Number of games to play against each ancestor. */
+    /** Number of games to play against each eval opponent. */
     readonly numGames: number;
-    /** Statistical test config. */
-    readonly test?: EvalTestConfig;
+    /** Game pool config. */
+    readonly pool: GamePoolConfig;
 }
 
-/**
- * Configuration for the statistical test used during evaluation.
- *
- * @see {@link EvalConfig}
- */
-export interface EvalTestConfig {
-    /**
-     * Name of the eval opponent(s) to test the updated model against. The model
-     * must be proven to be better than each opponent in order to be accepted.
-     */
-    readonly against: string | string[];
-    /**
-     * Minimum ratio of wins to total games in order to accept the updated
-     * model. If not provided, then the model will be accepted by default.
-     */
-    readonly minScore?: number;
-    /**
-     * Whether to count ties as wins in the test. Otherwise they are counted as
-     * losses.
-     */
-    readonly includeTies?: boolean;
-}
-
-/**
- * Configuration for the learning process.
- *
- * @see {@link TrainConfig}
- */
+/** Configuration for the learning process. */
 export interface LearnConfig {
-    /** Number of epochs to train for. */
-    readonly epochs: number;
-    /** Number of tfrecord decoder threads. */
-    readonly numDecoderThreads: number;
-    /** Batch size for learning step. */
-    readonly batchSize: number;
-    /** Buffer size for shuffling training examples. */
-    readonly shufflePrefetch: number;
+    /** Number of batch updates before starting the next episode. */
+    readonly updates: number;
     /** Optimizer learning rate. */
     readonly learningRate: number;
+    /** Replay buffer config. */
+    readonly buffer: BufferConfig;
 }
 
-/**
- * Configuration for random number generators in the training script.
- *
- * @see {@link TrainConfig}
- */
+/** Configuration for the experience replay buffer. */
+export interface BufferConfig {
+    /** Number of experiences to buffer for shuffling. */
+    readonly shuffle: number;
+    /** Batch size for learning updates. */
+    readonly batch: number;
+    /** Number of batches to prefetch for learning. */
+    readonly prefetch: number;
+}
+
+/** Configuration for random number generators in the training script. */
 export interface TrainSeedConfig {
     /** Seed for model creation. */
     readonly model?: string;
@@ -252,24 +186,13 @@ export interface TrainSeedConfig {
     readonly learn?: string;
 }
 
-/**
- * Configuration for the model comparison script.
- *
- * @see {@link Config}
- */
+/** Configuration for the model comparison script. */
 export interface CompareConfig {
     /**
      * Models to compare from the {@link PathsConfig.models} directory. Can also
      * use the string `"random"` to refer to a custom randomly-playing opponent.
      */
     readonly models: readonly string[];
-    /** Number of games to play in parallel. */
-    readonly numThreads: number;
-    /**
-     * Maximum amount of turns until the game is considered a tie. Games can go
-     * on forever if this is not set and both players only decide to switch.
-     */
-    readonly maxTurns: number;
     /** Number of games to play for each matchup. */
     readonly numGames: number;
     /**
@@ -285,15 +208,13 @@ export interface CompareConfig {
     readonly threshold: number;
     /** Batch predict config. */
     readonly batchPredict: BatchPredictConfig;
+    /** Game pool config. */
+    readonly pool: GamePoolConfig;
     /** RNG config. */
     readonly seeds?: CompareSeedConfig;
 }
 
-/**
- * Configuration for random number generators in the comparison script.
- *
- * @see {@link CompareConfig}
- */
+/** Configuration for random number generators in the comparison script. */
 export interface CompareSeedConfig {
     /** Seed for generating the battle sim PRNGs. */
     readonly battle?: string;

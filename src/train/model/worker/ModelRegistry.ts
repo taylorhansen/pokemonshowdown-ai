@@ -2,25 +2,22 @@ import {serialize} from "v8";
 import {MessageChannel, MessagePort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {BatchPredictConfig} from "../../../config/types";
+import {modelInputShapes, verifyModel} from "../../../model/shapes";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {setTimeoutNs} from "../../../util/nanosecond";
 import {RawPortResultError} from "../../port/PortProtocol";
-import {LearnArgs} from "../learn";
-import {learn} from "../learn/learn";
 import {
     PredictMessage,
     PredictResult,
     PredictWorkerResult,
 } from "../port/ModelPortProtocol";
-import {modelInputShapes, verifyModel} from "../shapes";
 import {Metrics} from "./Metrics";
-import {ModelLearnData} from "./ModelProtocol";
 import {PredictBatch} from "./PredictBatch";
 
 /** Manages a neural network registry. */
 export class ModelRegistry {
     /** Neural network object. */
-    private readonly model: tf.LayersModel;
+    public readonly model: tf.LayersModel;
     /** Currently held game worker ports. */
     private readonly ports = new Set<MessagePort>();
 
@@ -54,7 +51,7 @@ export class ModelRegistry {
      * @param config Configuration for batching predict requests.
      */
     public constructor(
-        name: string,
+        public readonly name: string,
         model: tf.LayersModel,
         private readonly config: BatchPredictConfig,
     ) {
@@ -110,7 +107,7 @@ export class ModelRegistry {
         }
         this.scopeName = name;
         this.scopeStep = step;
-        this.scopeMetrics = Metrics.get(name);
+        this.scopeMetrics = Metrics.get(`${name}/model/${this.name}`);
     }
 
     /**
@@ -184,19 +181,6 @@ export class ModelRegistry {
         // Remove this port from the recorded references after close.
         port1.on("close", () => this.ports.delete(port1));
         return port2;
-    }
-
-    /**
-     * Runs a learning episode.
-     *
-     * @param config Learning config.
-     * @param callback Callback for tracking the training process.
-     */
-    public async learn(
-        config: LearnArgs,
-        callback?: (data: ModelLearnData) => void,
-    ): Promise<void> {
-        await learn(config, this.model, callback);
     }
 
     /** Copies the weights of the current model to the given model. */

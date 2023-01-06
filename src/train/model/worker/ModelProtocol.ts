@@ -1,50 +1,36 @@
 /** @file Defines the protocol typings for ModelWorkers. */
 import {MessagePort} from "worker_threads";
-import {BatchPredictConfig, ModelConfig} from "../../../config/types";
+import {
+    BatchPredictConfig,
+    ModelConfig,
+    TrainConfig,
+} from "../../../config/types";
+import {SimResult} from "../../game/sim/playGame";
 import {PortMessageBase, PortResultBase} from "../../port/PortProtocol";
 import {WorkerProtocol} from "../../port/WorkerProtocol";
-import {LearnArgs} from "../learn";
 
 /** Typings for the `workerData` object given to the model worker. */
 export interface ModelWorkerData {
     /** Whether to enable GPU support. */
     gpu?: boolean;
-    /** Path to store logs in. */
-    logPath?: string;
-    /**
-     * Number of threads to use for decoding TrainingExamples during training.
-     */
-    numDecoderThreads: number;
+    /** Path to store metrics in. */
+    metricsPath?: string;
 }
 
 /** ModelWorker request protocol typings. */
 export interface ModelProtocol
-    extends WorkerProtocol<
-        | "load"
-        | "clone"
-        | "save"
-        | "unload"
-        | "lock"
-        | "unlock"
-        | "subscribe"
-        | "learn"
-        | "copy"
-        | "log"
-    > {
+    extends WorkerProtocol<"load" | "unload" | "train" | "subscribe"> {
     load: {message: ModelLoadMessage; result: ModelLoadResult};
-    clone: {message: ModelCloneMessage; result: ModelCloneResult};
-    save: {message: ModelSaveMessage; result: ModelSaveResult};
     unload: {message: ModelUnloadMessage; result: ModelUnloadResult};
-    lock: {message: ModelLockMessage; result: ModelLockResult};
-    unlock: {message: ModelUnlockMessage; result: ModelUnlockResult};
+    train: {message: ModelTrainMessage; result: ModelTrainResult};
     subscribe: {message: ModelSubscribeMessage; result: ModelSubscribeResult};
-    learn: {message: ModelLearnMessage; result: ModelLearnResult};
-    copy: {message: ModelCopyMessage; result: ModelCopyResult};
-    log: {message: ModelLogMessage; result: ModelLogResult};
 }
 
 /** The types of requests that can be made to the model worker. */
 export type ModelRequestType = keyof ModelProtocol;
+
+/** Types of messages that the Model can send. */
+export type ModelMessage = ModelProtocol[ModelRequestType]["message"];
 
 /** Base interface for ModelThread messages. */
 type ModelMessageBase<T extends ModelRequestType> = PortMessageBase<T>;
@@ -66,42 +52,24 @@ export interface ModelLoadMessage extends ModelMessageBase<"load"> {
     readonly seed?: string;
 }
 
-/** Clones a model. */
-export interface ModelCloneMessage extends ModelMessageBase<"clone"> {
-    /** Name of the model to clone. */
-    readonly model: string;
-    /** Name by which to refer to the cloned model. */
-    readonly name: string;
-}
-
-/** Saves a model to a given URL. */
-export interface ModelSaveMessage extends ModelMessageBase<"save"> {
-    /** Name of the model to save. */
-    readonly model: string;
-    /** URL to the model folder to save to. */
-    readonly url: string;
-}
-
 /** Disposes a model from the worker. */
 export interface ModelUnloadMessage extends ModelMessageBase<"unload"> {
     /** Name of the model to dispose. */
     readonly model: string;
 }
 
-/** Request to lock a registered model. */
-export interface ModelLockMessage extends ModelMessageBase<"lock"> {
-    /** Name of the model. */
-    readonly model: string;
-    /** Scope name. */
+/** Runs the training loop. */
+export interface ModelTrainMessage extends ModelMessageBase<"train"> {
+    /** Name of the training run for logging. */
     readonly name: string;
-    /** Scope step number. */
-    readonly step: number;
-}
-
-/** Request to unlock a registered model. */
-export interface ModelUnlockMessage extends ModelMessageBase<"unlock"> {
-    /** Name of the model. */
+    /** Name of the model to train. */
     readonly model: string;
+    /** Config for training. */
+    readonly config: TrainConfig;
+    /** Path to store model checkpoints. */
+    readonly modelPath?: string;
+    /** Path to store game logs. */
+    readonly logPath?: string;
 }
 
 /** Requests a game worker port from a registered model. */
@@ -110,57 +78,18 @@ export interface ModelSubscribeMessage extends ModelMessageBase<"subscribe"> {
     readonly model: string;
 }
 
-/** Queues a learning episode. */
-export interface ModelLearnMessage extends ModelMessageBase<"learn"> {
-    /** Name of the model. */
-    readonly model: string;
-    /** Config for the learning algorithm. */
-    readonly config: ModelLearnConfig;
-}
-
-/** Config for the learning algorithm. */
-export type ModelLearnConfig = LearnArgs;
-
-/** Copies weights from one model to another. */
-export interface ModelCopyMessage extends ModelMessageBase<"copy"> {
-    /** Name of the model to copy weights from. */
-    readonly from: string;
-    /** Name of the model to copy weights to. */
-    readonly to: string;
-}
-
-/** Logs metrics to Tensorboard. */
-export interface ModelLogMessage extends ModelMessageBase<"log"> {
-    /** Name of the current training run, under which to store logs. */
-    readonly name: string;
-    /** Current episode iteration of the training run. */
-    readonly step: number;
-    /** Dictionary of metrics to log. */
-    readonly logs: {readonly [key: string]: number};
-}
-
-/** Types of messages that the Model can send. */
-export type ModelMessage = ModelProtocol[ModelRequestType]["message"];
+/** The types of results that can be given to the model worker. */
+export type ModelResult = ModelProtocol[ModelRequestType]["result"];
 
 /** Base interface for Model message results. */
 type ModelResultBase<T extends ModelRequestType> = PortResultBase<T>;
 
 /** Result of loading and registering a model. */
 export interface ModelLoadResult extends ModelResultBase<"load"> {
-    /** Name under which the model was registered. */
-    name: string;
-}
-
-/** Result of cloning a model. */
-export interface ModelCloneResult extends ModelResultBase<"clone"> {
-    /** Name under which the cloned model was registered. */
-    name: string;
-}
-
-/** Result of saving a model. */
-export interface ModelSaveResult extends ModelResultBase<"save"> {
     /** @override */
     done: true;
+    /** Name under which the model was registered. */
+    name: string;
 }
 
 /** Result of deleting a model. */
@@ -169,17 +98,92 @@ export interface ModelUnloadResult extends ModelResultBase<"unload"> {
     done: true;
 }
 
-/** Result of locking a model. */
-export interface ModelLockResult extends ModelResultBase<"lock"> {
+interface ModelTrainDataBase<T extends string> {
+    type: T;
+}
+
+/** Reports that the training episode is just starting. */
+export interface ModelTrainEpisode extends ModelTrainDataBase<"episode"> {
+    /** Current episode number. */
+    step: number;
+}
+
+/** Data that gets reported after each rollout game. */
+export interface ModelTrainRollout<TSerialized = true>
+    extends ModelTrainDataBase<"rollout"> {
+    /** Unique identifier for logging. */
+    readonly id: number;
+    /**
+     * If an exception was thrown during the game, store it here for logging
+     * instead of propagating it through the pipeline. The exception here is
+     * serialized into a Buffer.
+     */
+    err?: TSerialized extends true ? Buffer : Error;
+}
+
+/** Data that gets reported after each batch in the learning step. */
+export interface ModelTrainBatch extends ModelTrainDataBase<"batch"> {
+    /** Current batch number. */
+    step: number;
+    /** Training loss for the batch. */
+    loss: number;
+}
+
+/** Data that gets reported after completing a learning episode. */
+export interface ModelTrainLearn extends ModelTrainDataBase<"learn"> {
+    /** Average training loss for the episode. */
+    loss: number;
+}
+
+/** Data that gets reported after each evaluation game. */
+export interface ModelTrainEval<TSerialized = true>
+    extends ModelTrainDataBase<"eval">,
+        Omit<SimResult, "err"> {
+    /** Current episode number. */
+    readonly step: number;
+    /** Unique identifier for logging. */
+    readonly id: number;
+    /**
+     * If an exception was thrown during the game, store it here for logging
+     * instead of propagating it through the pipeline. The exception here is
+     * serialized into a Buffer.
+     */
+    err?: TSerialized extends true ? Buffer : Error;
+}
+
+/** Notification that all eval games are completed for the current episode. */
+export interface ModelTrainEvalDone extends ModelTrainDataBase<"evalDone"> {
+    /** Current episode number. */
+    readonly step: number;
+    /** Result counts for each opponent. */
+    readonly wlt: {
+        readonly [vs: string]: {win: number; loss: number; tie: number};
+    };
+}
+
+/** Data for events that get reported during training. */
+export type ModelTrainData<TSerialized = true> =
+    | ModelTrainEpisode
+    | ModelTrainRollout<TSerialized>
+    | ModelTrainBatch
+    | ModelTrainLearn
+    | ModelTrainEval<TSerialized>
+    | ModelTrainEvalDone;
+
+interface ModelTrainResultWithData extends ModelResultBase<"train"> {
+    /** Logging data for tracking progress. */
+    data: ModelTrainData;
+    /** @override */
+    done: false;
+}
+
+interface ModelTrainResultDone extends ModelResultBase<"train"> {
     /** @override */
     done: true;
 }
 
-/** Result of unlocking a model. */
-export interface ModelUnlockResult extends ModelResultBase<"unlock"> {
-    /** @override */
-    done: true;
-}
+/** Result of training a model. */
+export type ModelTrainResult = ModelTrainResultWithData | ModelTrainResultDone;
 
 /** Result of requesting a game worker port. */
 export interface ModelSubscribeResult extends ModelResultBase<"subscribe"> {
@@ -187,62 +191,4 @@ export interface ModelSubscribeResult extends ModelResultBase<"subscribe"> {
     done: true;
     /** Port for requesting predictions from a model. */
     port: MessagePort;
-}
-
-interface ModelLearnDataBase<T extends string> {
-    type: T;
-}
-
-/** Reports that the training episode is just starting. */
-export interface ModelLearnStart extends ModelLearnDataBase<"start"> {
-    /** Total amount of batches for each epoch. */
-    numBatches: number;
-}
-
-/** Data that gets reported after each batch in the learning step. */
-export interface ModelLearnBatch extends ModelLearnDataBase<"batch"> {
-    /** Current epoch (1-based). */
-    epoch: number;
-    /** Current batch index (0-based). */
-    batch: number;
-    /** Average loss for the entire batch. */
-    loss: number;
-}
-
-/** Data that gets reported after each epoch in the learning step. */
-export interface ModelLearnEpoch extends ModelLearnDataBase<"epoch"> {
-    /** Current epoch (1-based). */
-    epoch: number;
-    /** Average loss for the entire epoch. */
-    loss: number;
-}
-
-/** Data that gets reported for each batch and epoch in the learning step. */
-export type ModelLearnData =
-    | ModelLearnStart
-    | ModelLearnBatch
-    | ModelLearnEpoch;
-
-/**
- * Result of queueing a learning episode. This is sent multiple times so the
- * master Model thread can track its progress.
- */
-export interface ModelLearnResult extends ModelResultBase<"learn"> {
-    /** Logging data for tracking learning progress. */
-    data?: ModelLearnData;
-}
-
-/** The types of results that can be given to the model worker. */
-export type ModelResult = ModelProtocol[ModelRequestType]["result"];
-
-/** Result of copying a model. */
-export interface ModelCopyResult extends ModelResultBase<"copy"> {
-    /** @override */
-    done: true;
-}
-
-/** Result of logging metrics. */
-export interface ModelLogResult extends ModelResultBase<"log"> {
-    /** @override */
-    done: true;
 }

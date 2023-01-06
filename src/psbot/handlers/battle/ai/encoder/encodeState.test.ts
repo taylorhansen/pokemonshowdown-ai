@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {
     flattenedInputShapes,
     modelInputNames,
-} from "../../../../../train/model/shapes";
+} from "../../../../../model/shapes";
 import {BattleState} from "../../state";
 import {SwitchOptions} from "../../state/Team";
 import {allocEncodedState, encodeState} from "./encodeState";

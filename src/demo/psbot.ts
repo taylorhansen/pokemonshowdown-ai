@@ -10,14 +10,14 @@ import {Verbose} from "../util/logging/Verbose";
 import {pathToFileUrl} from "../util/paths/pathToFileUrl";
 import {importTfn} from "../util/tfn";
 // Make sure custom layers can be deserialized.
-import "../train/model/custom_layers";
+import "../model/custom_layers";
 
 // Select native backend.
 importTfn(config.tf.gpu);
 
 // Load neural network from disk in the background while connecting.
 const modelPromise = tf.loadLayersModel(
-    pathToFileUrl(path.join(config.paths.models, "latest/model.json")),
+    pathToFileUrl(path.join(config.paths.models, "train/latest/model.json")),
 );
 
 const logger = new Logger(Logger.stderr, config.psbot.verbose ?? Verbose.Debug);

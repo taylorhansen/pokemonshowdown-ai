@@ -31,6 +31,11 @@ export class Logger {
         public readonly postfix = "\n",
     ) {}
 
+    /** Creates a new Logger with a different output. */
+    public withFunc(logFunc: LogFunc): Logger {
+        return new Logger(logFunc, this.verbose, this.prefix, this.postfix);
+    }
+
     /** Creates a new Logger with a prefix appended to the current one. */
     public addPrefix(prefix: string): Logger {
         return new Logger(

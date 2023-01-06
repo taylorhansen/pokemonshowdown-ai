@@ -1,5 +1,6 @@
-import * as util from "util";
+import {isSharedArrayBuffer} from "util/types";
 import {MessagePort} from "worker_threads";
+import {modelInputNames} from "../../../model/shapes";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {
     allocEncodedState,
@@ -8,14 +9,13 @@ import {
 import {maxAgent} from "../../../psbot/handlers/battle/ai/maxAgent";
 import {WrappedError} from "../../../util/errors/WrappedError";
 import {rng} from "../../../util/random";
+import {randomExpAgent} from "../../game/agent/random";
 import {
     ExperienceAgent,
     ExperienceAgentData,
-} from "../../play/experience/Experience";
-import {AgentExploreConfig} from "../../play/pool/worker/GameProtocol";
-import {randomExpAgent} from "../../play/pool/worker/randomAgent";
+} from "../../game/experience/Experience";
+import {AgentExploreConfig} from "../../game/pool/worker";
 import {AsyncPort, ProtocolResultRaw} from "../../port/AsyncPort";
-import {modelInputNames} from "../shapes";
 import {
     ModelPortProtocol,
     PredictMessage,
@@ -152,7 +152,8 @@ export class ModelPort {
     /**
      * Requests a prediction from the neural network.
      *
-     * @param state State data.
+     * @param state State data. Must be backed by SharedArrayBuffers if the
+     * caller intends to access the array after the call.
      */
     private async predict(state: Float32Array[]): Promise<PredictResult> {
         const msg: PredictMessage = {
@@ -163,7 +164,7 @@ export class ModelPort {
         // Note: SharedArrayBuffers can't be in the transfer list since they're
         // already accessible from both threads.
         const transferList = state.flatMap(arr =>
-            util.types.isSharedArrayBuffer(arr.buffer) ? [] : [arr.buffer],
+            isSharedArrayBuffer(arr.buffer) ? [] : [arr.buffer],
         );
 
         return await new Promise((res, rej) =>

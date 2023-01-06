@@ -78,7 +78,7 @@ export class PredictBatch {
         }
         await Promise.all(
             results.map(async (t, i) => {
-                this.callbacks[i]({output: (await t.data()) as Float32Array});
+                this.callbacks[i]({output: await t.data<"float32">()});
                 t.dispose();
             }),
         );

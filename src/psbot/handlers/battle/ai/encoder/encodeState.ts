@@ -3,7 +3,7 @@ import {
     modelInputNames,
     numTeams,
     teamSize,
-} from "../../../../../train/model/shapes";
+} from "../../../../../model/shapes";
 import {alloc} from "../../../../../util/buf";
 import * as dex from "../../dex";
 import {ReadonlyBattleState} from "../../state/BattleState";

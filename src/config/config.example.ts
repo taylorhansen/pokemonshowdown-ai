@@ -29,47 +29,45 @@ export const config: Config = {
     // Should set below to true if you have a compatible GPU.
     tf: {gpu: false},
     train: {
-        numEpisodes: 16,
+        episodes: 16,
         batchPredict: {
             maxSize: numThreads,
-            timeoutNs: 5000000n /*5ms*/,
-        },
-        game: {
-            numThreads,
-            maxTurns: 100,
-            highWaterMark: 4,
+            timeoutNs: 10_000_000n /*10ms*/,
         },
         model: {
             dueling: true,
         },
         rollout: {
-            // Warning: The numGames and game.maxTurns settings here can end up
-            // making the program consume ~20GB disk space and 8-10GB RAM. This
-            // is necessary for effective learning.
-            numGames: 1024,
+            pool: {
+                numThreads,
+                maxTurns: 100,
+                highWaterMark: 2,
+            },
             policy: {
                 exploration: 1.0,
                 explorationDecay: 0.9,
                 minExploration: 0.1,
             },
-            experience: {rewardDecay: 0.99},
+            experience: {
+                rewardDecay: 0.99,
+            },
         },
         eval: {
-            numGames: 127,
-            // Uncomment to use the evaluation results to discard bad learning
-            // steps. Be careful though as this can cause overfitting.
-            //test: {
-            //    against: ["random", "previous"],
-            //    minScore: 0.55,
-            //    includeTies: true,
-            //},
+            numGames: 128,
+            pool: {
+                numThreads,
+                maxTurns: 100,
+                highWaterMark: 2,
+            },
         },
         learn: {
-            epochs: 1,
-            numDecoderThreads: Math.ceil(numThreads / 2),
-            batchSize: 32,
-            shufflePrefetch: 100 * 2 * 8 /*at least 8 game's worth*/,
-            learningRate: 0.01,
+            updates: 1024,
+            learningRate: 0.0001,
+            buffer: {
+                shuffle: 100 * 2 * 8 /*at least 8 game's worth*/,
+                batch: 32,
+                prefetch: 4,
+            },
         },
         seeds: {
             model: "abc",
@@ -82,14 +80,17 @@ export const config: Config = {
         verbose: Verbose.Info,
     },
     compare: {
-        models: ["latest", "original", "random"],
-        numThreads,
-        maxTurns: 100,
-        numGames: 127,
+        models: ["train/latest", "train/original", "random"],
+        numGames: 256,
         threshold: 0.55,
         batchPredict: {
             maxSize: numThreads,
-            timeoutNs: 5000000n /*5ms*/,
+            timeoutNs: 10_000_000n /*10ms*/,
+        },
+        pool: {
+            numThreads,
+            maxTurns: 100,
+            highWaterMark: 8,
         },
         seeds: {
             battle: "pqr",

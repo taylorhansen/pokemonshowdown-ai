@@ -3,13 +3,13 @@ import * as tf from "@tensorflow/tfjs";
 import {importTfn} from "../../../util/tfn";
 import {ModelWorkerData} from "./ModelProtocol";
 
-const {gpu, logPath} = workerData as ModelWorkerData;
+const {gpu, metricsPath} = workerData as ModelWorkerData;
 const tfn = importTfn(gpu);
 
 /** Used for writing model summary metrics to Tensorboard. */
 export class Metrics {
-    private static readonly writer = logPath
-        ? tfn.node.summaryFileWriter(logPath)
+    private static readonly writer = metricsPath
+        ? tfn.node.summaryFileWriter(metricsPath)
         : null;
     private static readonly instances = new Map<string, Metrics>();
 

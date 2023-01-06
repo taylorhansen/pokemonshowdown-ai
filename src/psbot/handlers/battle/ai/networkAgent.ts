@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {modelInputShapes, verifyModel} from "../../../../train/model/shapes";
+import {modelInputShapes, verifyModel} from "../../../../model/shapes";
 import {BattleAgent} from "../agent";
 import {allocEncodedState, encodeState} from "./encoder";
 import {maxAgent} from "./maxAgent";
@@ -42,7 +42,7 @@ export function networkAgent(
         const outputTensor = tf.tidy(() =>
             (model.predict(stateTensors) as tf.Tensor).as1D(),
         );
-        const outputData = (await outputTensor.data()) as Float32Array;
+        const outputData = await outputTensor.data<"float32">();
         callback({state: stateTensors, output: outputTensor});
         return outputData;
     }, debugRankings);
