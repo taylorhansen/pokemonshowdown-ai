@@ -17,7 +17,7 @@ importTfn(config.tf.gpu);
 
 // Load neural network from disk in the background while connecting.
 const modelPromise = tf.loadLayersModel(
-    pathToFileUrl(join(config.paths.models, "train/latest/model.json")),
+    pathToFileUrl(join(config.paths.models, config.psbot.model, "model.json")),
 );
 
 const logger = new Logger(Logger.stderr, config.psbot.verbose ?? Verbose.Debug);

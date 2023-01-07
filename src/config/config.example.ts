@@ -20,6 +20,7 @@ export const config: Config = {
         // "ws://sim.smogon.com:8000/" or "wss://sim.smogon.com/" to connect to
         // the official PS server.
         websocketRoute: "ws://localhost:8000/",
+        model: "train/latest",
         verbose: Verbose.Info,
     },
     paths: {

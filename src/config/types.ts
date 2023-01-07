@@ -26,6 +26,8 @@ export interface PsBotConfig {
     readonly loginUrl: string;
     /** Websocket route to the PS server used for actual play. */
     readonly websocketRoute: string;
+    /** Name of the model to serve. */
+    readonly model: string;
     /** Verbosity level for logging. Default highest. */
     readonly verbose?: Verbose;
 }
