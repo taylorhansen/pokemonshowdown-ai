@@ -17,6 +17,7 @@ Error.stackTraceLimit = Infinity;
 // eslint-disable-next-line no-process-exit
 process.once("SIGINT", () => process.exit(1));
 
+// Can replace this with a pre-trained model to resume training.
 const resume: string | undefined = undefined;
 
 /** Main Logger object. */
@@ -71,8 +72,8 @@ void (async function () {
         );
     }
 
+    const trainProgress = new TrainingProgress(config, logger);
     try {
-        const trainProgress = new TrainingProgress(config, logger);
         await models.train(model, config.train, modelPath, logPath, data =>
             trainProgress.callback(data),
         );
@@ -81,6 +82,7 @@ void (async function () {
     } finally {
         await models.unload(model);
         await models.close();
+        trainProgress.done();
         logger.info("Done");
     }
 })();

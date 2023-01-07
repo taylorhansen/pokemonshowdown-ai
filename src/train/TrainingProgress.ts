@@ -24,6 +24,9 @@ export class TrainingProgress {
         this.lossDigits +
         2;
 
+    /** Total rollout games played. */
+    private numRolloutGames = 0;
+
     /** Logger object. */
     private readonly logger: Logger;
     /** Logger with episode counter. */
@@ -113,14 +116,19 @@ export class TrainingProgress {
     /** Called after processing all learning batches for the current episode. */
     private learn(data: ModelTrainLearn): void {
         this.episodeLogger.addPrefix("Learn: ").info(`Loss = ${data.loss}`);
+        this.learnProgress?.terminate();
         this.learnProgress = undefined;
     }
 
     /** Called after each rollout game. */
     private rollout(data: ModelTrainRollout<false /*TSerialized*/>): void {
+        // Note that this indicates a game was completed but not necessarily
+        // that the collected data has made it into the learning step just yet.
+        ++this.numRolloutGames;
+
         if (data.err) {
             this.logger
-                .addPrefix("Rollout")
+                .addPrefix("Rollout: ")
                 .error(
                     `Game ${data.id} threw an error: ` +
                         `${data.err.stack ?? data.err.toString()}`,
@@ -158,6 +166,15 @@ export class TrainingProgress {
         return `Episode(${String(step).padStart(this.stepPadding)}/${
             this.config.train.episodes
         }): `;
+    }
+
+    /** Prints short summary of completed training session. */
+    public done(): void {
+        this.learnProgress?.terminate();
+        this.learnProgress = undefined;
+        this.logger
+            .addPrefix("Rollout: ")
+            .info(`Total games = ${this.numRolloutGames}`);
     }
 }
 
