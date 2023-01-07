@@ -43,11 +43,11 @@ export async function train(
         ...(config.seeds.explore && {explore: seeder(config.seeds.explore)}),
     };
 
-    rolloutModel.lock(config.name, 0 /*step*/);
-    prevModel.lock(config.name, 0);
+    rolloutModel.lock("train", 0 /*step*/);
+    prevModel.lock("train", 0);
 
     const rollout = new Rollout(
-        config.name,
+        "train",
         // TODO: Mix in prev model as well.
         rolloutModel,
         config.rollout,
@@ -73,14 +73,14 @@ export async function train(
         config.seeds?.learn,
     );
     const learn = new Learn(
-        config.name,
+        "train",
         model.model,
         await dataset.iterator(),
         config.learn,
     );
 
     const evaluate = new Evaluate(
-        config.name,
+        "train",
         rolloutModel,
         prevModel,
         config.eval,
@@ -96,8 +96,8 @@ export async function train(
     try {
         rolloutModel.unlock();
         prevModel.unlock();
-        rolloutModel.lock(config.name, 1);
-        prevModel.lock(config.name, 1);
+        rolloutModel.lock("train", 1);
+        prevModel.lock("train", 1);
 
         for (let i = 0; i < config.episodes; ++i) {
             const step = i + 1;
@@ -112,8 +112,8 @@ export async function train(
             rolloutModel.unlock();
             prevModel.unlock();
             if (i < config.episodes) {
-                rolloutModel.lock(config.name, step + 1);
-                prevModel.lock(config.name, step + 1);
+                rolloutModel.lock("train", step + 1);
+                prevModel.lock("train", step + 1);
                 rolloutModel.copyTo(prevModel);
             }
             model.copyTo(rolloutModel);

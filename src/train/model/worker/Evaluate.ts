@@ -36,7 +36,7 @@ export class Evaluate {
      * @param seeders Random seed generators.
      */
     public constructor(
-        private readonly name: string,
+        public readonly name: string,
         private readonly model: ModelRegistry,
         private readonly prevModel: ModelRegistry,
         private readonly config: EvalConfig,
