@@ -137,6 +137,7 @@ export class Evaluate {
             ...(this.logPath !== undefined && {
                 logPath: join(this.logPath, `episode-${step}`),
             }),
+            ...(this.config.pool.reduceLogs && {reduceLogs: true}),
             ...(this.seeders && {seeders: this.seeders}),
         })) {
             yield args;

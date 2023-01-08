@@ -151,10 +151,10 @@ export async function train(
                           ),
                       ]
                     : []),
-            ])
-                // Suppress unhandled exception warnings since we'll await this
-                // promise later.
-                .catch(() => {});
+            ]);
+            // Suppress unhandled exception warnings since we'll await this
+            // promise later.
+            lastEval.catch(() => {});
         }
     } finally {
         await lastEval;

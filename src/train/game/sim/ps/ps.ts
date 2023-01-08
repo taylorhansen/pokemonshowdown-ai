@@ -1,10 +1,8 @@
-import * as fs from "fs";
-import * as path from "path";
 import * as stream from "stream";
+import {setTimeout} from "timers/promises";
 import {TeamGenerators} from "@pkmn/randoms";
 import {BattleStreams, PRNGSeed, Teams} from "@pkmn/sim";
 import {SideID} from "@pkmn/types";
-import * as tmp from "tmp-promise";
 import {Sender} from "../../../../psbot/PsBot";
 import {BattleHandler} from "../../../../psbot/handlers/battle";
 import {BattleAgent} from "../../../../psbot/handlers/battle/agent";
@@ -15,12 +13,20 @@ import {
     MessageParser,
     RoomEvent,
 } from "../../../../psbot/parser";
+import {DeferredFile} from "../../../../util/DeferredFile";
 import {LogFunc, Logger} from "../../../../util/logging/Logger";
 import {Verbose} from "../../../../util/logging/Verbose";
-import {ensureDir} from "../../../../util/paths/ensureDir";
-import {SimResult} from "../playGame";
+import {SimArgs, SimResult} from "../playGame";
 
 Teams.setGeneratorFactory(TeamGenerators);
+
+/** Options for {@link startPsBattle}.  */
+export interface GameOptions extends Omit<SimArgs, "agents"> {
+    /** Player configs. */
+    readonly players: {
+        readonly [P in Exclude<SideID, "p3" | "p4">]: PlayerOptions;
+    };
+}
 
 /** Player options for {@link startPsBattle}. */
 export interface PlayerOptions {
@@ -34,47 +40,26 @@ export interface PlayerOptions {
     readonly seed?: PRNGSeed;
 }
 
-/** Options for {@link startPsBattle}.  */
-export interface GameOptions {
-    /** Player configs. */
-    readonly players: {
-        readonly [P in Exclude<SideID, "p3" | "p4">]: PlayerOptions;
-    };
-    /**
-     * Maximum amount of turns until the game is considered a tie. Games can go
-     * on forever if this is not set and both agents only decide to switch.
-     */
-    readonly maxTurns?: number;
-    /** Path to the file to store game logs in. Optional. */
-    readonly logPath?: string;
-    /** Seed to use for the battle PRNG. */
-    readonly seed?: PRNGSeed;
-}
-
 /** Result from playing a PS game. */
 export interface PsGameResult extends Omit<SimResult, "agents" | "winner"> {
     /** Name of the winner if it's not a tie. */
     winner?: string;
 }
 
+/** Temp log file template. */
+const template = "psbattle-XXXXXX";
+
 /** Runs a simulated PS battle. */
 export async function startPsBattle(
     options: GameOptions,
 ): Promise<PsGameResult> {
-    // Setup logfile.
-    let logPath: string;
-    if (options.logPath) {
-        await ensureDir(path.dirname(options.logPath));
-        ({logPath} = options);
-    } else {
-        // Create a temp file so logs can still be recovered.
-        logPath = (await tmp.file({template: "psbattle-XXXXXX", keep: true}))
-            .path;
+    const file = new DeferredFile();
+    if (options.logPath && !options.onlyLogOnError) {
+        await file.ensure(options.logPath, template);
     }
-    const file = fs.createWriteStream(logPath);
 
     // Setup logger.
-    const logFunc: LogFunc = msg => file.write(msg);
+    const logFunc: LogFunc = msg => file.stream.write(msg);
     const logger = new Logger(logFunc, Verbose.Debug, "Battle: ");
 
     // Start simulating a battle.
@@ -176,23 +161,28 @@ export async function startPsBattle(
                         const e = event as RoomEvent | HaltEvent;
                         if (e.args[0] === "halt") {
                             handler.halt();
-                        } else {
-                            await handler.handle(e as RoomEvent);
+                            continue;
                         }
+                        await wrapTimeout(
+                            async () => await handler.handle(e as RoomEvent),
+                            30e3 /*30s*/,
+                        );
                     }
                 } catch (e) {
                     // Log game errors and leave a new exception specifying
                     // where to find it.
                     logError(innerLog, battleStream, (loopErr = e as Error));
-                    throwLog(logPath);
+                    throwLog(await file.ensure(options.logPath, template));
                 } finally {
                     innerLog.info("Finishing");
                     try {
-                        if (loopErr) {
-                            await handler.forceFinish();
-                        } else {
-                            await handler.finish();
-                        }
+                        await wrapTimeout(async () => {
+                            if (loopErr) {
+                                await handler.forceFinish();
+                            } else {
+                                await handler.finish();
+                            }
+                        }, 30e3 /*30s*/);
                     } catch (e) {
                         if (loopErr !== e) {
                             logError(innerLog, battleStream, e as Error);
@@ -202,22 +192,22 @@ export async function startPsBattle(
                             );
                         }
                         if (!loopErr) {
-                            throwLog(logPath);
+                            throwLog(
+                                await file.ensure(options.logPath, template),
+                            );
                         }
                     }
                 }
             })(),
         );
 
-        // Attach the finish promise to a catch handler/logger so it doesn't
-        // crash the worker.
         gamePromises.push(
             (async function () {
                 try {
                     await handler.finish();
                 } catch (e) {
                     logError(innerLog, battleStream, e as Error);
-                    throwLog(logPath);
+                    throwLog(await file.ensure(options.logPath, template));
                 }
             })(),
         );
@@ -252,12 +242,14 @@ export async function startPsBattle(
 
     // Make sure the game completely ends so that the logs are complete.
     // Note: Subsequent errors are swallowed since they've already been logged
-    // and we already captured one via Promise.all() to notify the main thread.
+    // and we already captured one from the earlier Promise.all() to notify the
+    // main thread.
     logger.info("Settling");
     await Promise.allSettled(gamePromises);
 
     // Close the log file and return.
-    await new Promise<void>(res => file.end("Done\n", "utf8", res));
+    file.stream.write("Done\n");
+    await file.finish();
     return {winner, ...(err && {err})};
 }
 
@@ -270,15 +262,42 @@ function logError(
     if (err) {
         logger.error(err.stack ?? err.toString());
     }
-    logger.info("Error encountered, force tie and discard game");
+    logger.info("Error encountered, force tie");
     void battleStream.write(">forcetie");
     if (!battleStream.atEOF) {
         void battleStream.destroy();
     }
 }
 
-function throwLog(logPath: string): never {
+function throwLog(logPath?: string): never {
     throw new Error(
-        `startPSBattle() encountered an error. Check ${logPath} for details.`,
+        "startPSBattle() encountered an error." +
+            (logPath ? `Check ${logPath} for details.` : ""),
     );
+}
+
+async function wrapTimeout<T>(
+    f: () => Promise<T>,
+    milliseconds: number,
+): Promise<T> {
+    const ac = new AbortController();
+    return (
+        await Promise.all([
+            f().finally(() => ac.abort()),
+            setTimeout(milliseconds, true, {
+                signal: ac.signal,
+            })
+                .catch(err => {
+                    if (!(err instanceof Error) || err.name !== "AbortError") {
+                        throw err;
+                    }
+                    return false;
+                })
+                .then(timedOut => {
+                    if (timedOut) {
+                        throw new Error("Timeout exceeded");
+                    }
+                }),
+        ])
+    )[0];
 }

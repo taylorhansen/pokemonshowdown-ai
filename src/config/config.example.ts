@@ -44,6 +44,7 @@ export const config: Config = {
                 numThreads,
                 maxTurns: 100,
                 highWaterMark: 2,
+                reduceLogs: true,
             },
             policy: {
                 exploration: 1.0,
@@ -60,6 +61,7 @@ export const config: Config = {
                 numThreads,
                 maxTurns: 100,
                 highWaterMark: 2,
+                reduceLogs: true,
             },
         },
         learn: {
@@ -94,6 +96,7 @@ export const config: Config = {
             numThreads,
             maxTurns: 100,
             highWaterMark: 8,
+            reduceLogs: true,
         },
         seeds: {
             battle: "pqr",

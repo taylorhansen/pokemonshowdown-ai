@@ -94,6 +94,7 @@ const gameStream = new stream.Transform({
                         maxTurns: gameWorkerData.maxTurns,
                     }),
                     ...(msg.play.logPath && {logPath: msg.play.logPath}),
+                    ...(msg.play.onlyLogOnError && {onlyLogOnError: true}),
                     ...(msg.play.seed && {seed: msg.play.seed}),
                 },
                 msg.play.experienceConfig,

@@ -31,8 +31,17 @@ export type GamePoolAgentConfig = GameAgentConfig<false /*TWithModelPort*/>;
 
 /** Args for starting a game. */
 export interface PlayArgs {
-    /** Path to the file to store logs in. */
+    /**
+     * Path to the file to store game logs in. If not specified, and the
+     * simulator encounters an error, then the logs will be stored in a temp
+     * file.
+     */
     readonly logPath?: string;
+    /**
+     * If true, logs should only be written to disk (either to {@link logPath}
+     * or a tmp file) if an error is encountered, and discarded if no error.
+     */
+    readonly onlyLogOnError?: true;
     /** Seed for the battle PRNG. */
     readonly seed?: PRNGSeed;
     /**

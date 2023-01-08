@@ -19,7 +19,7 @@ export interface GameWorkerData {
      * before communicating them to the main or calling thread. Used in stream
      * backpressuring.
      */
-    highWaterMark?: number;
+    readonly highWaterMark?: number;
 }
 
 /** GameWorker request protocol typings. */

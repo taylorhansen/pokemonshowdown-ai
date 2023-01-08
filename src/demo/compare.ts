@@ -141,6 +141,7 @@ void (async function () {
                         config.compare.name,
                         model,
                     ),
+                    ...(config.compare.pool.reduceLogs && {reduceLogs: true}),
                     ...(seeders && {seeders}),
                 });
             }

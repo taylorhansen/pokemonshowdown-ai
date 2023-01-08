@@ -11,6 +11,30 @@ import {
 } from "../experience";
 import {experienceBattleParser, PlayerOptions, startPsBattle} from "./ps";
 
+/** Arguments for general battle sims. */
+export interface SimArgs {
+    /** The two agents that will play against each other. */
+    readonly agents: readonly [SimArgsAgent, SimArgsAgent];
+    /**
+     * Maximum amount of turns until the game is considered a tie. Games can go
+     * on forever if this is not set and both agents only decide to switch.
+     */
+    readonly maxTurns?: number;
+    /**
+     * Path to the file to store game logs in. If not specified, and the
+     * simulator encounters an error, then the logs will be stored in a temp
+     * file.
+     */
+    readonly logPath?: string;
+    /**
+     * If true, logs should only be written to disk (either to {@link logPath}
+     * or a tmp file) if an error is encountered, and discarded if no error.
+     */
+    readonly onlyLogOnError?: true;
+    /** Seed for the battle PRNG. */
+    readonly seed?: PRNGSeed;
+}
+
 /** Base interface for {@link SimArgsAgent}. */
 interface SimArgsAgentBase<TAgent extends BattleAgent, TExp extends boolean> {
     /** Name for logging. */
@@ -36,21 +60,6 @@ export type SimArgsExpAgent = SimArgsAgentBase<ExperienceAgent, true>;
 
 /** Config for a {@link BattleAgent}. */
 export type SimArgsAgent = SimArgsNoexpAgent | SimArgsExpAgent;
-
-/** Arguments for BattleSim functions. */
-export interface SimArgs {
-    /** The two agents that will play against each other. */
-    readonly agents: readonly [SimArgsAgent, SimArgsAgent];
-    /**
-     * Maximum amount of turns until the game is considered a tie. Games can go
-     * on forever if this is not set and both agents only decide to switch.
-     */
-    readonly maxTurns?: number;
-    /** Path to the file to store logs in. */
-    readonly logPath?: string;
-    /** Seed for the battle PRNG. */
-    readonly seed?: PRNGSeed;
-}
 
 /** Base simulator result type. */
 export interface SimResult {
@@ -117,6 +126,7 @@ export async function playGame(
         players: {p1, p2},
         ...(args.maxTurns && {maxTurns: args.maxTurns}),
         ...(args.logPath && {logPath: args.logPath}),
+        ...(args.onlyLogOnError && {onlyLogOnError: true}),
         ...(args.seed && {seed: args.seed}),
     });
 

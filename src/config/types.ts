@@ -124,6 +124,11 @@ export interface GamePoolConfig {
      * backpressuring.
      */
     readonly highWaterMark?: number;
+    /**
+     * Exponentially reduces the amount of games that get to keep logs on disk.
+     * Note that if a game encounters an error then it will always log to disk.
+     */
+    readonly reduceLogs?: boolean;
 }
 
 /** Configuration for the exploration policy during the rollout phase. */

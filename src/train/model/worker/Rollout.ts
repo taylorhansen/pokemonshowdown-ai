@@ -135,6 +135,7 @@ export class Rollout {
                 return this.model.subscribe();
             },
             ...(this.logPath !== undefined && {logPath: this.logPath}),
+            ...(this.config.pool.reduceLogs && {reduceLogs: true}),
             experienceConfig: this.config.experience,
             ...(this.seeders && {seeders: this.seeders}),
         })) {
