@@ -35,7 +35,7 @@ export class Metrics {
         Metrics.writer?.flush();
     }
 
-    private static ensureWriter(): NonNullable<typeof Metrics["writer"]> {
+    private static ensureWriter(): NonNullable<(typeof Metrics)["writer"]> {
         if (!Metrics.writer) {
             throw new Error("No metrics writer available");
         }

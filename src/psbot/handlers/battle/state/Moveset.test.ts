@@ -425,7 +425,7 @@ export const test = () =>
                 expect(moveset.size).to.equal(3);
 
                 const remaining = fiveMoves.filter(
-                    n => !twoMoves.includes(n as typeof twoMoves[number]),
+                    n => !twoMoves.includes(n as (typeof twoMoves)[number]),
                 );
                 expect(moveset.moves).to.have.all.keys(remaining);
             });
