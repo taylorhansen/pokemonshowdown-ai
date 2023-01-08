@@ -1,4 +1,4 @@
-import {Rng} from "./random";
+import {Rng} from "./rng";
 
 /**
  * Standard unbiased Fisher-Yates shuffle algorithm. Shuffles in-place.

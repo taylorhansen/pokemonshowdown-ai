@@ -4,8 +4,7 @@ import {
     encodeState,
 } from "../../../psbot/handlers/battle/ai/encoder";
 import {ReadonlyBattleState} from "../../../psbot/handlers/battle/state";
-import {Rng} from "../../../util/random";
-import {shuffle} from "../../../util/shuffle";
+import {Rng, shuffle} from "../../../util/random";
 import {ModelPort} from "../../model/port";
 import {ExperienceAgentData} from "../experience";
 
