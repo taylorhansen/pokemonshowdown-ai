@@ -134,7 +134,7 @@ export class Learn {
             this.metrics?.histogram(`${weights.name}/weights`, weights, step);
         }
 
-        for (const layer of this.model.layers) {
+        for (const layer of this.denseLayers) {
             layer.clearCallHook();
         }
 

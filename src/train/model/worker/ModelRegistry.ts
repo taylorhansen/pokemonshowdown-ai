@@ -123,25 +123,37 @@ export class ModelRegistry {
         if (!this.isLocked) {
             return;
         }
+        const predictLatency = tf.tensor1d(this.predictLatency, "float32");
         this.scopeMetrics?.histogram(
             `predict_latency_ms`,
-            tf.tensor1d(this.predictLatency),
+            predictLatency,
             this.scopeStep!,
         );
         this.predictLatency.length = 0;
+        tf.dispose(predictLatency);
+
+        const predictRequestLatency = tf.tensor1d(
+            this.predictRequestLatency,
+            "float32",
+        );
         this.scopeMetrics?.histogram(
             `predict_request_latency_ms`,
-            tf.tensor1d(this.predictRequestLatency),
+            predictRequestLatency,
             this.scopeStep!,
         );
         this.predictRequestLatency.length = 0;
+        tf.dispose(predictRequestLatency);
+
+        const predictSize = tf.tensor1d(this.predictSize, "int32");
         this.scopeMetrics?.histogram(
             `predict_size`,
-            tf.tensor1d(this.predictSize, "int32"),
+            predictSize,
             this.scopeStep!,
             this.config.maxSize,
         );
         this.predictSize.length = 0;
+        tf.dispose(predictSize);
+
         this.scopeName = null;
         this.scopeStep = null;
         this.scopeMetrics = null;
