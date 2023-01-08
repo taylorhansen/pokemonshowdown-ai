@@ -54,6 +54,7 @@ export const config: Config = {
             experience: {
                 rewardDecay: 0.99,
             },
+            prev: 0.1,
         },
         eval: {
             numGames: 128,
@@ -77,8 +78,9 @@ export const config: Config = {
             model: "abc",
             battle: "def",
             team: "ghi",
-            explore: "jkl",
-            learn: "mno",
+            rollout: "jkl",
+            explore: "mno",
+            learn: "pqr",
         },
         savePreviousVersions: true,
         verbose: Verbose.Info,
@@ -99,9 +101,9 @@ export const config: Config = {
             reduceLogs: true,
         },
         seeds: {
-            battle: "pqr",
-            team: "stu",
-            explore: "vwx",
+            battle: "stu",
+            team: "vwx",
+            explore: "yz!",
         },
     },
 };

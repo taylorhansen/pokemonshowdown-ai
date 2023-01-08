@@ -48,14 +48,15 @@ export async function train(
 
     const rollout = new Rollout(
         "train",
-        // TODO: Mix in prev model as well.
         rolloutModel,
+        prevModel,
         config.rollout,
         logPath && join(logPath, "rollout"),
-        seeders && {
-            ...(seeders.battle && {battle: seeder(seeders.battle())}),
-            ...(seeders.team && {team: seeder(seeders.team())}),
-            ...(seeders.explore && {explore: seeder(seeders.explore())}),
+        {
+            ...seeders,
+            ...(config.seeds?.rollout && {
+                rollout: seeder(config.seeds.rollout),
+            }),
         },
     );
 

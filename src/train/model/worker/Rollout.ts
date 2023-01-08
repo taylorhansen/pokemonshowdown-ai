@@ -1,7 +1,9 @@
 import {PassThrough} from "stream";
 import {RolloutConfig} from "../../../config/types";
+import {rng, Seeder} from "../../../util/random";
 import {TrainingExample} from "../../game/experience";
 import {
+    GameArgsGenOptions,
     GameArgsGenSeeders,
     GamePipeline,
     GamePoolArgs,
@@ -9,6 +11,11 @@ import {
 } from "../../game/pool";
 import {Metrics} from "./Metrics";
 import {ModelRegistry} from "./ModelRegistry";
+
+export interface RolloutSeeders extends GameArgsGenSeeders {
+    /** Random seed generator for opponent selection. */
+    readonly rollout?: Seeder;
+}
 
 /**
  * Encapsulates the rollout part of training, where the model plays games
@@ -31,7 +38,9 @@ export class Rollout {
      * Creates a Rollout object.
      *
      * @param name Name of the training run for logging.
-     * @param model Model to run.
+     * @param model Model to run self-play games with.
+     * @param prevModel Previous model version that will sometimes play against
+     * the main model.
      * @param config Configuration for the rollout step.
      * @param logPath Path to the folder to store games logs in. Omit to not
      * store logs.
@@ -40,9 +49,10 @@ export class Rollout {
     public constructor(
         public readonly name: string,
         private readonly model: ModelRegistry,
+        private readonly prevModel: ModelRegistry,
         private readonly config: RolloutConfig,
         private readonly logPath?: string,
-        private readonly seeders?: GameArgsGenSeeders,
+        private readonly seeders?: RolloutSeeders,
     ) {
         this.games = new GamePipeline(config.pool);
         this.exploration = config.policy.exploration;
@@ -101,45 +111,52 @@ export class Rollout {
 
     /** Generates game configs for the thread pool. */
     private *genArgs(): Generator<GamePoolArgs> {
-        for (const args of GamePipeline.genArgs({
+        const opts: GameArgsGenOptions = {
             agentConfig: {
                 name: "rollout",
-                exploit: {
-                    type: "model",
-                    model: this.model.name,
-                },
-                explore: {
-                    factor: this.exploration,
-                },
+                exploit: {type: "model", model: this.model.name},
+                explore: {factor: this.exploration},
                 emitExperience: true,
             },
-            opponents: [
-                {
-                    agentConfig: {
-                        name: "self",
-                        exploit: {
-                            type: "model",
-                            model: this.model.name,
-                        },
-                        explore: {
-                            factor: this.exploration,
-                        },
-                        emitExperience: true,
-                    },
-                },
-            ],
+            opponent: {
+                name: "self",
+                exploit: {type: "model", model: this.model.name},
+                explore: {factor: this.exploration},
+                emitExperience: true,
+            },
             requestModelPort: (model: string) => {
-                if (model !== this.model.name) {
-                    throw new Error(`Invalid model name '${model}'`);
+                switch (model) {
+                    case this.model.name:
+                        return this.model.subscribe();
+                    case this.prevModel.name:
+                        return this.prevModel.subscribe();
+                    default:
+                        throw new Error(`Invalid model name '${model}'`);
                 }
-                return this.model.subscribe();
             },
             ...(this.logPath !== undefined && {logPath: this.logPath}),
             ...(this.config.pool.reduceLogs && {reduceLogs: true}),
             experienceConfig: this.config.experience,
             ...(this.seeders && {seeders: this.seeders}),
-        })) {
-            yield args;
+        };
+        const gen = GamePipeline.genArgs(opts);
+
+        const prevOpts: GameArgsGenOptions = {
+            ...opts,
+            opponent: {
+                name: "prev",
+                exploit: {type: "model", model: this.prevModel.name},
+            },
+        };
+        const prevGen = GamePipeline.genArgs(prevOpts);
+
+        const random = rng(this.seeders?.rollout?.());
+        while (true) {
+            if (random() < this.config.prev) {
+                yield prevGen.next().value;
+            } else {
+                yield gen.next().value;
+            }
         }
     }
 }

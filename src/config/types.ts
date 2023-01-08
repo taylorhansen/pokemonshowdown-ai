@@ -107,6 +107,11 @@ export interface RolloutConfig {
     readonly policy: PolicyConfig;
     /** Experience config. */
     readonly experience: ExperienceConfig;
+    /**
+     * Fraction of self-play games that should by played against the model's
+     * previous version rather than itself.
+     */
+    readonly prev: number;
 }
 
 /** Configuration for the thread pool for playing games. */
@@ -189,6 +194,8 @@ export interface TrainSeedConfig {
     readonly battle?: string;
     /** Seed for generating the random team PRNGs. */
     readonly team?: string;
+    /** Seed for random opponent selection during rollout games. */
+    readonly rollout?: string;
     /** Seed for random exploration in epsilon-greedy policy. */
     readonly explore?: string;
     /** Seed for shuffling training examples during the learning step. */

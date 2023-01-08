@@ -15,12 +15,14 @@ import {GamePoolStream} from "./GamePoolStream";
 export interface GameArgsGenOptions {
     /** Config for the agent. */
     readonly agentConfig: GamePoolAgentConfig;
-    /** Opponents to play against. */
-    readonly opponents: readonly Opponent[];
+    /** Config for the opponent agent. */
+    readonly opponent: GamePoolAgentConfig;
     /** Used to request model ports for the game workers. */
     readonly requestModelPort: (
         name: string,
     ) => MessagePort | Promise<MessagePort>;
+    /** Number of games to play. Omit to play indefinitely. */
+    readonly numGames?: number;
     /** Path to the folder to store game logs in. Omit to not store logs. */
     readonly logPath?: string;
     /**
@@ -35,16 +37,6 @@ export interface GameArgsGenOptions {
     readonly experienceConfig?: ExperienceConfig;
     /** Random seed generators. */
     readonly seeders?: GameArgsGenSeeders;
-}
-
-/** Opponent options. */
-export interface Opponent {
-    /** Config for the agent. */
-    readonly agentConfig: GamePoolAgentConfig;
-    /**
-     * Number of games that this opponent will play. Omit to play indefinitely.
-     */
-    readonly numGames?: number;
 }
 
 /** Random number generators used by the game and policy. */
@@ -108,8 +100,9 @@ export class GamePipeline {
     /** Generates game configs to feed into a game thread pool. */
     public static *genArgs({
         agentConfig,
-        opponents,
+        opponent,
         requestModelPort,
+        numGames,
         logPath,
         reduceLogs,
         experienceConfig,
@@ -117,41 +110,32 @@ export class GamePipeline {
     }: GameArgsGenOptions): Generator<GamePoolArgs> {
         const battleRandom = seeders?.battle && rng(seeders.battle());
         const teamRandom = seeders?.team && rng(seeders.team());
-        for (const opponent of opponents) {
-            for (
-                let id = 1;
-                !opponent.numGames || id <= opponent.numGames;
-                ++id
-            ) {
-                yield {
-                    id,
-                    agents: [
-                        GamePipeline.buildAgent(
-                            agentConfig,
-                            seeders?.explore,
-                            teamRandom,
-                        ),
-                        GamePipeline.buildAgent(
-                            opponent.agentConfig,
-                            seeders?.explore,
-                            teamRandom,
-                        ),
-                    ],
-                    requestModelPort,
-                    play: {
-                        ...(logPath !== undefined && {
-                            logPath: join(
-                                logPath,
-                                `game-${id}-${opponent.agentConfig.name}`,
-                            ),
-                        }),
-                        ...(reduceLogs &&
-                            Math.log2(id) % 1 !== 0 && {onlyLogOnError: true}),
-                        seed: generatePsPrngSeed(battleRandom),
-                        ...(experienceConfig && {experienceConfig}),
-                    },
-                };
-            }
+        for (let id = 1; !numGames || id <= numGames; ++id) {
+            yield {
+                id,
+                agents: [
+                    GamePipeline.buildAgent(
+                        agentConfig,
+                        seeders?.explore,
+                        teamRandom,
+                    ),
+                    GamePipeline.buildAgent(
+                        opponent,
+                        seeders?.explore,
+                        teamRandom,
+                    ),
+                ],
+                requestModelPort,
+                play: {
+                    ...(logPath !== undefined && {
+                        logPath: join(logPath, `game-${id}-${opponent.name}`),
+                    }),
+                    ...(reduceLogs &&
+                        Math.log2(id) % 1 !== 0 && {onlyLogOnError: true}),
+                    seed: generatePsPrngSeed(battleRandom),
+                    ...(experienceConfig && {experienceConfig}),
+                },
+            };
         }
     }
 

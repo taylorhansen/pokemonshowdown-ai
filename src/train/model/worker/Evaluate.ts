@@ -1,6 +1,7 @@
 import {join} from "path";
 import {EvalConfig} from "../../../config/types";
 import {
+    GameArgsGenOptions,
     GameArgsGenSeeders,
     GamePipeline,
     GamePoolArgs,
@@ -106,24 +107,11 @@ export class Evaluate {
 
     /** Generates game configs for the thread pool. */
     private *genArgs(step: number): Generator<GamePoolArgs> {
-        for (const args of GamePipeline.genArgs({
+        const opts: Omit<GameArgsGenOptions, "opponent"> = {
             agentConfig: {
                 name: "evaluate",
                 exploit: {type: "model", model: this.model.name},
             },
-            opponents: [
-                {
-                    agentConfig: {
-                        name: "previous",
-                        exploit: {type: "model", model: this.prevModel.name},
-                    },
-                    numGames: this.config.numGames,
-                },
-                {
-                    agentConfig: {name: "random", exploit: {type: "random"}},
-                    numGames: this.config.numGames,
-                },
-            ],
             requestModelPort: (model: string) => {
                 switch (model) {
                     case this.model.name:
@@ -134,13 +122,24 @@ export class Evaluate {
                         throw new Error(`Invalid model name '${model}'`);
                 }
             },
+            numGames: this.config.numGames,
             ...(this.logPath !== undefined && {
                 logPath: join(this.logPath, `episode-${step}`),
             }),
             ...(this.config.pool.reduceLogs && {reduceLogs: true}),
             ...(this.seeders && {seeders: this.seeders}),
-        })) {
-            yield args;
-        }
+        };
+
+        yield* GamePipeline.genArgs({
+            ...opts,
+            opponent: {
+                name: "previous",
+                exploit: {type: "model", model: this.prevModel.name},
+            },
+        });
+        yield* GamePipeline.genArgs({
+            ...opts,
+            opponent: {name: "random", exploit: {type: "random"}},
+        });
     }
 }

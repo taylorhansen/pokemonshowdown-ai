@@ -5,7 +5,11 @@
 import {join} from "path";
 import ProgressBar from "progress";
 import {config} from "../config";
-import {GameArgsGenSeeders, GamePipeline, Opponent} from "../train/game/pool";
+import {
+    GameArgsGenOptions,
+    GameArgsGenSeeders,
+    GamePipeline,
+} from "../train/game/pool";
 import {ModelWorker} from "../train/model/worker";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
@@ -110,8 +114,7 @@ void (async function () {
         const genArgs = function* () {
             for (let i = 0; i < compareModels.length - 1; ++i) {
                 const model = compareModels[i];
-
-                yield* GamePipeline.genArgs({
+                const opts: Omit<GameArgsGenOptions, "opponent"> = {
                     agentConfig: {
                         name: model,
                         // Note: Random seeds filled in by playGames().
@@ -120,21 +123,9 @@ void (async function () {
                                 ? {type: "random"}
                                 : {type: "model", model},
                     },
-                    opponents: compareModels
-                        .slice(i + 1)
-                        .map<Opponent>(opp => ({
-                            agentConfig: {
-                                name: opp,
-                                // Note: Random seeds filled in by provided seeders.
-                                exploit:
-                                    opp === "random"
-                                        ? {type: "random"}
-                                        : {type: "model", model: opp},
-                            },
-                            numGames: config.compare.numGames,
-                        })),
                     requestModelPort: async modelName =>
                         await models.subscribe(modelName),
+                    numGames: config.compare.numGames,
                     logPath: join(
                         config.paths.logs,
                         "compare",
@@ -143,7 +134,21 @@ void (async function () {
                     ),
                     ...(config.compare.pool.reduceLogs && {reduceLogs: true}),
                     ...(seeders && {seeders}),
-                });
+                };
+                for (let j = i + 1; j < compareModels.length; ++j) {
+                    const opp = compareModels[j];
+                    yield* GamePipeline.genArgs({
+                        ...opts,
+                        opponent: {
+                            name: opp,
+                            // Note: Random seeds filled in by provided seeders.
+                            exploit:
+                                opp === "random"
+                                    ? {type: "random"}
+                                    : {type: "model", model: opp},
+                        },
+                    });
+                }
             }
         };
 
