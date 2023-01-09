@@ -1,4 +1,3 @@
-import {isSharedArrayBuffer} from "util/types";
 import {MessagePort} from "worker_threads";
 import {modelInputNames} from "../../../model/shapes";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
@@ -82,7 +81,7 @@ export class ModelPort {
         let data: ExperienceAgentData | null = null;
 
         const innerAgent = maxAgent(async state => {
-            const stateData = allocEncodedState("shared");
+            const stateData = allocEncodedState();
             encodeState(stateData, state);
             ModelPort.verifyInput(stateData);
 
@@ -149,26 +148,19 @@ export class ModelPort {
         }
     }
 
-    /**
-     * Requests a prediction from the neural network.
-     *
-     * @param state State data. Must be backed by SharedArrayBuffers if the
-     * caller intends to access the array after the call.
-     */
+    /** Requests a prediction from the neural network. */
     private async predict(state: Float32Array[]): Promise<PredictResult> {
         const msg: PredictMessage = {
             type: "predict",
             rid: this.asyncPort.nextRid(),
             state,
         };
-        // Note: SharedArrayBuffers can't be in the transfer list since they're
-        // already accessible from both threads.
-        const transferList = state.flatMap(arr =>
-            isSharedArrayBuffer(arr.buffer) ? [] : [arr.buffer],
-        );
-
+        // Note: No transferList for the state buffers since they're still
+        // needed by this thread to be later re-sent as an experience batch, and
+        // apparently tensorflow can't work with SharedArrayBuffers so our best
+        // option is to just let the port copy the data here.
         return await new Promise((res, rej) =>
-            this.asyncPort.postMessage(msg, transferList, result =>
+            this.asyncPort.postMessage(msg, [], result =>
                 result.type === "error" ? rej(result.err) : res(result),
             ),
         );

@@ -28,7 +28,7 @@ export class Rollout {
     private readonly games: GamePipeline;
 
     /** Current exploration factor for the agent. */
-    private exploration: number;
+    private readonly exploration: {factor: number};
     /** Counter for number of games played for the episode. */
     private numGames = 0;
     /** Number of ties during the episode. */
@@ -55,7 +55,7 @@ export class Rollout {
         private readonly seeders?: RolloutSeeders,
     ) {
         this.games = new GamePipeline(config.pool);
-        this.exploration = config.policy.exploration;
+        this.exploration = {factor: config.policy.exploration};
     }
 
     /** Closes game threads. */
@@ -97,10 +97,10 @@ export class Rollout {
      * for the next episode.
      */
     public step(step: number): void {
-        this.metrics?.scalar("exploration", this.exploration, step);
-        this.exploration *= this.config.policy.explorationDecay;
-        if (this.exploration < this.config.policy.minExploration) {
-            this.exploration = this.config.policy.minExploration;
+        this.metrics?.scalar("exploration", this.exploration.factor, step);
+        this.exploration.factor *= this.config.policy.explorationDecay;
+        if (this.exploration.factor < this.config.policy.minExploration) {
+            this.exploration.factor = this.config.policy.minExploration;
         }
 
         this.metrics?.scalar("num_games", this.numGames, step);
@@ -115,13 +115,15 @@ export class Rollout {
             agentConfig: {
                 name: "rollout",
                 exploit: {type: "model", model: this.model.name},
-                explore: {factor: this.exploration},
+                // Use object reference so that step() updates with the new rate
+                // for newly-created games
+                explore: this.exploration,
                 emitExperience: true,
             },
             opponent: {
                 name: "self",
                 exploit: {type: "model", model: this.model.name},
-                explore: {factor: this.exploration},
+                explore: this.exploration,
                 emitExperience: true,
             },
             requestModelPort: (model: string) => {
