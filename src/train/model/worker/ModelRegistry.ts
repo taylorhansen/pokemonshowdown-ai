@@ -128,6 +128,7 @@ export class ModelRegistry {
             `predict_latency_ms`,
             predictLatency,
             this.scopeStep!,
+            100 /*buckets*/,
         );
         this.predictLatency.length = 0;
         tf.dispose(predictLatency);
@@ -140,6 +141,7 @@ export class ModelRegistry {
             `predict_request_latency_ms`,
             predictRequestLatency,
             this.scopeStep!,
+            100 /*buckets*/,
         );
         this.predictRequestLatency.length = 0;
         tf.dispose(predictRequestLatency);
@@ -149,7 +151,7 @@ export class ModelRegistry {
             `predict_size`,
             predictSize,
             this.scopeStep!,
-            this.config.maxSize,
+            this.config.maxSize /*buckets*/,
         );
         this.predictSize.length = 0;
         tf.dispose(predictSize);
@@ -178,7 +180,11 @@ export class ModelRegistry {
                             done: true,
                             ...prediction,
                         };
-                        port1.postMessage(result, [result.output.buffer]);
+                        port1.postMessage(result, [
+                            // Give the buffer back to the calling thread.
+                            ...result.input.map(a => a.buffer),
+                            result.output.buffer,
+                        ]);
                     })
                     .catch(err => {
                         const result: RawPortResultError = {

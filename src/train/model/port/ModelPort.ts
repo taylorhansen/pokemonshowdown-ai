@@ -88,7 +88,7 @@ export class ModelPort {
             const result = await this.predict(stateData);
             ModelPort.verifyOutput(result.output);
 
-            data = {state: stateData};
+            data = {state: result.input};
             return result.output;
         });
 
@@ -155,13 +155,12 @@ export class ModelPort {
             rid: this.asyncPort.nextRid(),
             state,
         };
-        // Note: No transferList for the state buffers since they're still
-        // needed by this thread to be later re-sent as an experience batch, and
-        // apparently tensorflow can't work with SharedArrayBuffers so our best
-        // option is to just let the port copy the data here.
         return await new Promise((res, rej) =>
-            this.asyncPort.postMessage(msg, [], result =>
-                result.type === "error" ? rej(result.err) : res(result),
+            this.asyncPort.postMessage(
+                msg,
+                msg.state.map(a => a.buffer),
+                result =>
+                    result.type === "error" ? rej(result.err) : res(result),
             ),
         );
     }

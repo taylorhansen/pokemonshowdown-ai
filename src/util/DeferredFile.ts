@@ -51,8 +51,10 @@ export class DeferredFile {
             await this.ensure();
             this.pass.end();
             await this.pipelinePromise;
+            this.file.destroy();
         } else {
-            this.pass.destroy();
+            this.pass.end();
         }
+        this.pass.destroy();
     }
 }

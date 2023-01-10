@@ -20,11 +20,6 @@ export class Evaluate {
     /** Used to manage eval game threads. */
     private readonly games: GamePipeline;
 
-    /** Result counts for each opponent. */
-    private wlt: {
-        [vs: string]: {win: number; loss: number; tie: number};
-    } = {};
-
     /**
      * Creates an Evaluate object.
      *
@@ -62,9 +57,11 @@ export class Evaluate {
         step: number,
         callback?: (result: GamePoolResult) => void | Promise<void>,
     ): Promise<{[vs: string]: {win: number; loss: number; tie: number}}> {
-        this.wlt = {};
+        const wlts: {
+            [vs: string]: {win: number; loss: number; tie: number};
+        } = {};
         await this.games.run(this.genArgs(step), async result => {
-            const wlt = (this.wlt[result.agents[1]] ??= {
+            const wlt = (wlts[result.agents[1]] ??= {
                 win: 0,
                 loss: 0,
                 tie: 0,
@@ -80,9 +77,9 @@ export class Evaluate {
         });
 
         if (this.metrics) {
-            for (const vs in this.wlt) {
-                if (Object.prototype.hasOwnProperty.call(this.wlt, vs)) {
-                    const wlt = this.wlt[vs];
+            for (const vs in wlts) {
+                if (Object.prototype.hasOwnProperty.call(wlts, vs)) {
+                    const wlt = wlts[vs];
                     const total = wlt.win + wlt.loss + wlt.tie;
                     this.metrics?.scalar(
                         `vs_${vs}/win_rate`,
@@ -102,7 +99,7 @@ export class Evaluate {
                 }
             }
         }
-        return this.wlt;
+        return wlts;
     }
 
     /** Generates game configs for the thread pool. */

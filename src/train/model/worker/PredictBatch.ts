@@ -11,9 +11,9 @@ export class PredictBatch {
      * inner array corresponds to each individual request that we're batching
      * (corresponds to {@link callbacks}).
      */
-    private readonly inputs: Float32Array[][] = [];
+    private readonly transposedInput: Float32Array[][] = [];
     /** Resolver callbacks for each request within the batch. */
-    private readonly callbacks: ((result: PredictResult) => void)[] = [];
+    private readonly callbacks: ((output: Float32Array) => void)[] = [];
     /** Corresponding times that the requests were {@link add added}. */
     public get times(): readonly bigint[] {
         return this._times;
@@ -36,7 +36,7 @@ export class PredictBatch {
         private readonly inputShapes: readonly (readonly number[])[],
     ) {
         for (let i = 0; i < inputShapes.length; ++i) {
-            this.inputs[i] = [];
+            this.transposedInput[i] = [];
         }
     }
 
@@ -48,20 +48,20 @@ export class PredictBatch {
      * result is extracted.
      */
     public add(
-        inputs: Float32Array[],
+        input: Float32Array[],
         callback: (result: PredictResult) => void,
     ): void {
-        for (let i = 0; i < inputs.length; ++i) {
-            this.inputs[i].push(inputs[i]);
+        for (let i = 0; i < input.length; ++i) {
+            this.transposedInput[i].push(input[i]);
         }
-        this.callbacks.push(callback);
+        this.callbacks.push(output => callback({input, output}));
         this._times.push(process.hrtime.bigint());
     }
 
     /** Converts input arrays into tensors. */
     public toTensors(): tf.Tensor[] {
         return this.inputShapes.map((shape, i) =>
-            tf.stack(this.inputs[i]).reshape([this.length, ...shape]),
+            tf.stack(this.transposedInput[i]).reshape([this.length, ...shape]),
         );
     }
 
@@ -77,10 +77,11 @@ export class PredictBatch {
             );
         }
         await Promise.all(
-            results.map(async (t, i) => {
-                this.callbacks[i]({output: await t.data<"float32">()});
-                t.dispose();
-            }),
+            results.map(async (t, i) =>
+                this.callbacks[i](
+                    await t.data<"float32">().finally(() => t.dispose()),
+                ),
+            ),
         );
     }
 }

@@ -1,5 +1,4 @@
 import * as stream from "stream";
-import {isSharedArrayBuffer} from "util/types";
 import {serialize} from "v8";
 import {parentPort, TransferListItem, workerData} from "worker_threads";
 import {rng} from "../../../../util/random";
@@ -141,9 +140,7 @@ const resultStream = new stream.Writable({
                 if (result.examples) {
                     transferList.push(
                         ...result.examples.flatMap(exp =>
-                            exp.state.flatMap(s =>
-                                isSharedArrayBuffer(s.buffer) ? [] : [s.buffer],
-                            ),
+                            exp.state.map(s => s.buffer),
                         ),
                     );
                 }
