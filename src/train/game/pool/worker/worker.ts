@@ -20,21 +20,20 @@ if (!parentPort) {
     throw new Error("No parent port!");
 }
 
-const inputStream = new stream.Readable({
+// Stream mostly used for buffering capability.
+// Note: Any errors in handling specific requests get wrapped and sent to the
+// calling thread. If something very bad happens, the AsyncPort/WorkerPort that
+// wraps this Worker should be able to handle the crash and take care of any
+// unresolved requests.
+const gameStream = new stream.Writable({
     objectMode: true,
-    highWaterMark: 1,
-    read() {},
-});
-
-const gameStream = new stream.Transform({
-    objectMode: true,
-    highWaterMark: 1,
-    async transform(
+    async write(
         msg: GamePlay,
         encoding: BufferEncoding,
-        callback: stream.TransformCallback,
+        callback: (error?: Error | null | undefined) => void,
     ): Promise<void> {
         let result: GamePlayResult | RawPortResultError;
+        const transferList: TransferListItem[] = [];
         const modelPorts: ModelPort[] = [];
         try {
             const agents = msg.agents.map<SimArgsAgent>(config => {
@@ -109,6 +108,16 @@ const gameStream = new stream.Transform({
                 winner: gameResult.winner,
                 ...(gameResult.err && {err: serialize(gameResult.err)}),
             };
+            if (result.examples) {
+                transferList.push(
+                    ...result.examples.flatMap(exp =>
+                        exp.state.map(s => s.buffer),
+                    ),
+                );
+            }
+            if (result.err) {
+                transferList.push(result.err.buffer);
+            }
         } catch (err) {
             result = {
                 type: "error",
@@ -116,42 +125,10 @@ const gameStream = new stream.Transform({
                 done: true,
                 err: serialize(err),
             };
+            transferList.push(result.err.buffer);
         } finally {
             for (const port of modelPorts) {
                 port.close();
-            }
-        }
-        this.push(result);
-        callback();
-    },
-});
-
-const resultStream = new stream.Writable({
-    objectMode: true,
-    highWaterMark: gameWorkerData.highWaterMark ?? 1,
-    write(
-        result: GamePlayResult | RawPortResultError,
-        encoding: BufferEncoding,
-        callback: (error?: Error | null) => void,
-    ): void {
-        const transferList: TransferListItem[] = [];
-        switch (result.type) {
-            case "play": {
-                if (result.examples) {
-                    transferList.push(
-                        ...result.examples.flatMap(exp =>
-                            exp.state.map(s => s.buffer),
-                        ),
-                    );
-                }
-                if (result.err) {
-                    transferList.push(result.err.buffer);
-                }
-                break;
-            }
-            case "error": {
-                transferList.push(result.err.buffer);
-                break;
             }
         }
         parentPort!.postMessage(result, transferList);
@@ -159,26 +136,15 @@ const resultStream = new stream.Writable({
     },
 });
 
-// Note: Any errors in handling specific requests get wrapped and sent to the
-// calling thread. If something very bad happens the AsyncPort/WorkerPort that
-// wraps this Worker should be able to handle the crash and take care of any
-// unresolved requests.
-let pipelinePromise = stream.promises.pipeline(
-    inputStream,
-    gameStream,
-    resultStream,
-);
-
 parentPort.on("message", function handle(msg: GameMessage) {
     switch (msg.type) {
         case "play":
-            // Note: Due to stream backpressure, this may not be immediately
+            // Note: Due to stream buffering, this may not be immediately
             // processed.
-            inputStream.push(msg);
+            gameStream.write(msg);
             break;
         case "close":
-            pipelinePromise = pipelinePromise.finally(() => {
-                // Indicate done.
+            gameStream.end(() => {
                 const response: WorkerClosed = {
                     type: "close",
                     rid: msg.rid,
@@ -186,8 +152,6 @@ parentPort.on("message", function handle(msg: GameMessage) {
                 };
                 parentPort!.postMessage(response);
             });
-            // Signal end of stream.
-            inputStream.push(null);
             break;
     }
 });

@@ -159,9 +159,8 @@ export async function train(
         }
     } finally {
         await lastEval;
-        await evaluate.cleanup();
+        await Promise.all([rollout.cleanup(), evaluate.cleanup()]);
         learn.cleanup();
-        await rollout.cleanup();
         rolloutModel.unload();
         prevModel.unload();
     }

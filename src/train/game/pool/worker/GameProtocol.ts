@@ -14,12 +14,6 @@ export interface GameWorkerData {
      * on forever if this is not set and both players only decide to switch.
      */
     readonly maxTurns?: number;
-    /**
-     * Soft cap on how many game result objects each thread can keep in memory
-     * before communicating them to the main or calling thread. Used in stream
-     * backpressuring.
-     */
-    readonly highWaterMark?: number;
 }
 
 /** GameWorker request protocol typings. */

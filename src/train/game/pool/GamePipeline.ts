@@ -67,7 +67,6 @@ export class GamePipeline {
 
     /** Closes game threads. Can be called while games are still running. */
     public async cleanup(): Promise<void> {
-        // TODO: What happens to in-progress games?
         this.ac.abort();
         return await this.pool.close();
     }
@@ -76,8 +75,8 @@ export class GamePipeline {
      * Starts the game pipeline. Can be called multiple times.
      *
      * @param genArgs Generator for game configs.
-     * @param callback Called for each game result. May be out of order due to
-     * thread pool scheduling.
+     * @param callback Called for each game result, which may be out of order
+     * due to thread pool scheduling.
      */
     public async run(
         genArgs: Generator<GamePoolArgs>,

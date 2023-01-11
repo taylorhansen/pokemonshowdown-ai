@@ -28,7 +28,7 @@ export type BatchedExample = {
         : TrainingExample[T] extends Float32Array
         ? tf.Tensor2D
         : TrainingExample[T] extends Float32Array[]
-        ? {[index: number]: tf.Tensor}
+        ? {[index: number]: tf.Tensor2D}
         : never;
 };
 

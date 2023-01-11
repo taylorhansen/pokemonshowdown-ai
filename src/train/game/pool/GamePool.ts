@@ -91,9 +91,6 @@ export class GamePool {
             GameWorker,
             () => ({
                 ...(config.maxTurns && {maxTurns: config.maxTurns}),
-                ...(config.highWaterMark !== undefined && {
-                    highWaterMark: config.highWaterMark,
-                }),
             }) /*workerData*/,
         );
     }

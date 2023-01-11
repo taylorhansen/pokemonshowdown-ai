@@ -17,7 +17,7 @@ export class GamePoolStream extends Transform {
      * destroyed.
      */
     public constructor(private readonly pool: GamePool) {
-        super({objectMode: true, highWaterMark: pool.numThreads});
+        super({objectMode: true, highWaterMark: 1});
     }
 
     public override _transform(

@@ -43,7 +43,6 @@ export const config: Config = {
             pool: {
                 numThreads,
                 maxTurns: 100,
-                highWaterMark: 2,
                 reduceLogs: true,
             },
             policy: {
@@ -61,7 +60,6 @@ export const config: Config = {
             pool: {
                 numThreads,
                 maxTurns: 100,
-                highWaterMark: 2,
                 reduceLogs: true,
             },
         },
@@ -97,7 +95,6 @@ export const config: Config = {
         pool: {
             numThreads,
             maxTurns: 100,
-            highWaterMark: 8,
             reduceLogs: true,
         },
         seeds: {
