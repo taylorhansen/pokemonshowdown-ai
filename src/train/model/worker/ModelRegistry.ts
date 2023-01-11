@@ -181,8 +181,8 @@ export class ModelRegistry {
                             ...prediction,
                         };
                         port1.postMessage(result, [
-                            // Give the buffer back to the calling thread.
-                            ...result.input.map(a => a.buffer),
+                            // Give the state buffer back to the calling thread.
+                            ...result.input.map(s => s.buffer),
                             result.output.buffer,
                         ]);
                     })
