@@ -11,7 +11,7 @@ export class PredictBatch {
      * inner array corresponds to each individual request that we're batching
      * (corresponds to {@link callbacks}).
      */
-    private readonly transposedInput: Float32Array[][] = [];
+    private readonly transposedInput: tf.Tensor[][] = [];
     /** Resolver callbacks for each request within the batch. */
     private readonly callbacks: ((output: Float32Array) => void)[] = [];
     /** Corresponding times that the requests were {@link add added}. */
@@ -52,7 +52,9 @@ export class PredictBatch {
         callback: (result: PredictResult) => void,
     ): void {
         for (let i = 0; i < input.length; ++i) {
-            this.transposedInput[i].push(input[i]);
+            this.transposedInput[i].push(
+                tf.tensor(input[i], this.inputShapes[i] as number[], "float32"),
+            );
         }
         this.callbacks.push(output => callback({input, output}));
         this._times.push(process.hrtime.bigint());
@@ -60,9 +62,7 @@ export class PredictBatch {
 
     /** Converts input arrays into tensors. */
     public toTensors(): tf.Tensor[] {
-        return this.inputShapes.map((shape, i) =>
-            tf.stack(this.transposedInput[i]).reshape([this.length, ...shape]),
-        );
+        return this.transposedInput.map(t => tf.stack(t));
     }
 
     /**
@@ -76,12 +76,15 @@ export class PredictBatch {
                     `${results.length}`,
             );
         }
+        tf.dispose(this.transposedInput);
         await Promise.all(
-            results.map(async (t, i) =>
-                this.callbacks[i](
-                    await t.data<"float32">().finally(() => t.dispose()),
-                ),
-            ),
+            results.map(async (t, i) => {
+                try {
+                    this.callbacks[i](await t.data<"float32">());
+                } finally {
+                    t.dispose();
+                }
+            }),
         );
     }
 }
