@@ -54,10 +54,7 @@ export class Learn {
         step: number,
         callback?: (step: number, loss: number) => void,
     ): Promise<number> {
-        let avgLoss = tf.scalar(0, "float32");
-        const totalGrads: tf.NamedTensorMap = {};
         const avgInputs: tf.NamedTensorMap = {};
-
         for (const layer of this.denseLayers) {
             // Note: Call hook is wrapped in tf.tidy() so tf.keep() is used.
             layer.setCallHook(function logInputs(inputs) {
@@ -83,9 +80,35 @@ export class Learn {
             });
         }
 
+        // Discard very first batch in order to warmup the gpu and fill rollout
+        // threads and prefetch buffers without polluting performance stats.
+        if (step === 1) {
+            const result = await this.iterator.next();
+            if (result.done) {
+                throw new Error("No more data in dataset");
+            }
+            tf.dispose(result.value);
+        }
+
+        const beforeUpdate = process.hrtime.bigint();
+        const batchFetchTimes: number[] = [];
+        const batchUpdateTimes: number[] = [];
+        const batchTotalTimes: number[] = [];
+        let avgLoss = tf.scalar(0, "float32");
+        const totalGrads: tf.NamedTensorMap = {};
         for (let i = 0; i < this.config.updates; ++i) {
-            const {batchLoss, batchGrads} = await this.update();
+            const beforeFetch = process.hrtime.bigint();
+            const result = await this.iterator.next();
+            if (result.done) {
+                throw new Error("No more data in dataset");
+            }
+            const batch = result.value;
+            const afterFetch = process.hrtime.bigint();
+
+            const {batchLoss, batchGrads} = this.update(batch);
+            tf.dispose(batch);
             callback?.(i + 1, (await batchLoss.data<"float32">())[0]);
+            const afterUpdate = process.hrtime.bigint();
 
             const oldAvgLoss = avgLoss;
             avgLoss = tf.add(oldAvgLoss, batchLoss);
@@ -103,14 +126,51 @@ export class Learn {
                     totalGrads[name] = batchGrads[name];
                 }
             }
+            const afterAll = process.hrtime.bigint();
+
+            batchFetchTimes.push(Number(afterFetch - beforeFetch) / 1e6 /*ms*/);
+            batchUpdateTimes.push(Number(afterUpdate - afterFetch) / 1e6);
+            batchTotalTimes.push(Number(afterAll - beforeFetch) / 1e6);
         }
+        const afterUpdate = process.hrtime.bigint();
+
+        const updateTime = Number(afterUpdate - beforeUpdate) / 1e9;
+        this.metrics?.scalar("update_s", updateTime, step);
+        this.metrics?.scalar(
+            "update_throughput_s",
+            (this.config.updates * this.config.buffer.batch) / updateTime,
+            step,
+        );
+
+        tf.tidy(() => {
+            const batchFetchTensor = tf.tensor1d(batchFetchTimes, "float32");
+            const batchUpdateTensor = tf.tensor1d(batchUpdateTimes, "float32");
+            const batchTotalTensor = tf.tensor1d(batchTotalTimes, "float32");
+            this.metrics?.histogram("batch_fetch_ms", batchFetchTensor, step);
+            this.metrics?.scalar(
+                "batch_fetch_ms/avg",
+                tf.mean(batchFetchTensor).asScalar(),
+                step,
+            );
+            this.metrics?.histogram("batch_update_ms", batchUpdateTensor, step);
+            this.metrics?.scalar(
+                "batch_update_ms/avg",
+                tf.mean(batchUpdateTensor).asScalar(),
+                step,
+            );
+            this.metrics?.histogram("batch_total_ms", batchTotalTensor, step);
+            this.metrics?.scalar(
+                "batch_total_ms/avg",
+                tf.mean(batchTotalTensor).asScalar(),
+                step,
+            );
+        });
+
         const oldAvgLoss = avgLoss;
         avgLoss = tf.div(oldAvgLoss, this.config.updates);
-        tf.dispose(oldAvgLoss);
-
         const avgLossData = await avgLoss.data<"float32">();
         this.metrics?.scalar("loss", avgLoss, step);
-        tf.dispose(avgLoss);
+        tf.dispose([oldAvgLoss, avgLoss]);
 
         for (const name in totalGrads) {
             if (!Object.prototype.hasOwnProperty.call(totalGrads, name)) {
@@ -142,16 +202,10 @@ export class Learn {
     }
 
     /** Performs one batch update step, returning the loss. */
-    private async update(): Promise<{
+    private update(batch: BatchedExample): {
         batchLoss: tf.Scalar;
         batchGrads: tf.NamedTensorMap;
-    }> {
-        const result = await this.iterator.next();
-        if (result.done) {
-            throw new Error("No more data in dataset");
-        }
-        const batch = result.value;
-
+    } {
         // Dataset batching process turns arrays into objs so need to undo this.
         const batchState: tf.Tensor[] = [];
         for (const key of Object.keys(batch.state)) {
@@ -165,7 +219,6 @@ export class Learn {
                 () => this.loss(batchState, batch.action, batch.returns),
                 this.variables,
             );
-        tf.dispose(batch);
         this.optimizer.applyGradients(batchGrads);
 
         return {batchLoss, batchGrads};

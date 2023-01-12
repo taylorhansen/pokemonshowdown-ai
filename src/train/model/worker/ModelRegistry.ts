@@ -123,39 +123,37 @@ export class ModelRegistry {
         if (!this.isLocked) {
             return;
         }
-        const predictLatency = tf.tensor1d(this.predictLatency, "float32");
-        this.scopeMetrics?.histogram(
-            `predict_latency_ms`,
-            predictLatency,
-            this.scopeStep!,
-            100 /*buckets*/,
-        );
-        this.predictLatency.length = 0;
-        tf.dispose(predictLatency);
+        tf.tidy(() => {
+            const predictLatency = tf.tensor1d(this.predictLatency, "float32");
+            this.scopeMetrics?.histogram(
+                `predict_latency_ms`,
+                predictLatency,
+                this.scopeStep!,
+                100 /*buckets*/,
+            );
+            this.predictLatency.length = 0;
 
-        const predictRequestLatency = tf.tensor1d(
-            this.predictRequestLatency,
-            "float32",
-        );
-        this.scopeMetrics?.histogram(
-            `predict_request_latency_ms`,
-            predictRequestLatency,
-            this.scopeStep!,
-            100 /*buckets*/,
-        );
-        this.predictRequestLatency.length = 0;
-        tf.dispose(predictRequestLatency);
+            const predictRequestLatency = tf.tensor1d(
+                this.predictRequestLatency,
+                "float32",
+            );
+            this.scopeMetrics?.histogram(
+                `predict_request_latency_ms`,
+                predictRequestLatency,
+                this.scopeStep!,
+                100 /*buckets*/,
+            );
+            this.predictRequestLatency.length = 0;
 
-        const predictSize = tf.tensor1d(this.predictSize, "int32");
-        this.scopeMetrics?.histogram(
-            `predict_size`,
-            predictSize,
-            this.scopeStep!,
-            this.config.maxSize /*buckets*/,
-        );
-        this.predictSize.length = 0;
-        tf.dispose(predictSize);
-
+            const predictSize = tf.tensor1d(this.predictSize, "int32");
+            this.scopeMetrics?.histogram(
+                `predict_size`,
+                predictSize,
+                this.scopeStep!,
+                this.config.maxSize /*buckets*/,
+            );
+            this.predictSize.length = 0;
+        });
         this.scopeName = null;
         this.scopeStep = null;
         this.scopeMetrics = null;
