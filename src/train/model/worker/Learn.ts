@@ -107,11 +107,11 @@ export class Learn {
 
             const {batchLoss, batchGrads} = this.update(batch);
             tf.dispose(batch);
-            callback?.(i + 1, (await batchLoss.data<"float32">())[0]);
             const afterUpdate = process.hrtime.bigint();
 
             const oldAvgLoss = avgLoss;
             avgLoss = tf.add(oldAvgLoss, batchLoss);
+            callback?.(i + 1, (await batchLoss.data<"float32">())[0]);
             tf.dispose([oldAvgLoss, batchLoss]);
 
             for (const name in batchGrads) {
