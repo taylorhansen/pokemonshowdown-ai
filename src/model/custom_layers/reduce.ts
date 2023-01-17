@@ -1,8 +1,10 @@
 import * as tf from "@tensorflow/tfjs";
 import {LayerArgs} from "./LayerArgs";
 
-/** Args for {@link mean}. */
-export interface MeanArgs extends LayerArgs {
+/** Args for {@link reduce}. */
+export interface ReduceArgs extends LayerArgs {
+    /** Type of reduction operation. */
+    type: "mean" | "max";
     /** Axis or axes to reduce. Default all. */
     axis?: number | number[];
     /**
@@ -12,14 +14,22 @@ export interface MeanArgs extends LayerArgs {
     keepDims?: boolean;
 }
 
-class Mean extends tf.layers.Layer {
-    public static className = "Mean";
+class Reduce extends tf.layers.Layer {
+    public static className = "Reduce";
 
+    private readonly type: "mean" | "max";
+    private readonly func: (
+        x: tf.Tensor,
+        axis?: number | number[],
+        keepDims?: boolean,
+    ) => tf.Tensor;
     private readonly axis?: number | number[];
     private readonly keepDims?: boolean;
 
-    public constructor(args: MeanArgs) {
+    public constructor(args: ReduceArgs) {
         super(args);
+        this.type = args.type;
+        this.func = tf[args.type];
         if (args.axis !== undefined) {
             this.axis = args.axis;
         }
@@ -39,7 +49,7 @@ class Mean extends tf.layers.Layer {
             }
             [inputs] = inputs;
         }
-        return tf.mean(inputs, this.axis, this.keepDims);
+        return this.func(inputs, this.axis, this.keepDims);
     }
 
     public override computeOutputShape(inputShape: tf.Shape): tf.Shape {
@@ -63,6 +73,7 @@ class Mean extends tf.layers.Layer {
     public override getConfig(): tf.serialization.ConfigDict {
         const config = super.getConfig();
         Object.assign(config, {
+            type: this.type,
             ...(this.axis !== undefined && {axis: this.axis}),
             ...(this.keepDims && {keepDims: true}),
         });
@@ -70,7 +81,15 @@ class Mean extends tf.layers.Layer {
     }
 }
 
-tf.serialization.registerClass(Mean);
+tf.serialization.registerClass(Reduce);
+
+/**
+ * Creates a custom layer that summarizes elements across dimensions of the
+ * input tensor.
+ */
+export function reduce(args: ReduceArgs) {
+    return new Reduce(args);
+}
 
 /**
  * Creates a custom layer that computes the mean of elements across dimensions
@@ -78,6 +97,16 @@ tf.serialization.registerClass(Mean);
  *
  * @see {@link tf.mean}
  */
-export function mean(args: MeanArgs) {
-    return new Mean(args);
+export function mean(args: Omit<ReduceArgs, "type">) {
+    return new Reduce({...args, type: "mean"});
+}
+
+/**
+ * Creates a custom layer that computes the max of elements across dimensions of
+ * the input tensor.
+ *
+ * @see {@link tf.max}
+ */
+export function max(args: Omit<ReduceArgs, "type">) {
+    return new Reduce({...args, type: "max"});
 }
