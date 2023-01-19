@@ -1,10 +1,10 @@
 import * as tf from "@tensorflow/tfjs";
 import {LayerArgs} from "./LayerArgs";
 
-/** Args for {@link reduce}. */
-export interface ReduceArgs extends LayerArgs {
+/** Args for {@link aggregate}. */
+export interface AggregateArgs extends LayerArgs {
     /** Type of reduction operation. */
-    type: "mean" | "max";
+    type: "sum" | "mean" | "max";
     /** Axis or axes to reduce. Default all. */
     axis?: number | number[];
     /**
@@ -14,10 +14,10 @@ export interface ReduceArgs extends LayerArgs {
     keepDims?: boolean;
 }
 
-class Reduce extends tf.layers.Layer {
-    public static className = "Reduce";
+class Aggregate extends tf.layers.Layer {
+    public static className = "Aggregate";
 
-    private readonly type: "mean" | "max";
+    private readonly type: "sum" | "mean" | "max";
     private readonly func: (
         x: tf.Tensor,
         axis?: number | number[],
@@ -26,7 +26,7 @@ class Reduce extends tf.layers.Layer {
     private readonly axis?: number | number[];
     private readonly keepDims?: boolean;
 
-    public constructor(args: ReduceArgs) {
+    public constructor(args: AggregateArgs) {
         super(args);
         this.type = args.type;
         this.func = tf[args.type];
@@ -81,14 +81,24 @@ class Reduce extends tf.layers.Layer {
     }
 }
 
-tf.serialization.registerClass(Reduce);
+tf.serialization.registerClass(Aggregate);
 
 /**
  * Creates a custom layer that summarizes elements across dimensions of the
  * input tensor.
  */
-export function reduce(args: ReduceArgs) {
-    return new Reduce(args);
+export function aggregate(args: AggregateArgs) {
+    return new Aggregate(args);
+}
+
+/**
+ * Creates a custom layer that sums the elements across dimensions of the input
+ * tensor.
+ *
+ * @see {@link tf.sum}
+ */
+export function sum(args: Omit<AggregateArgs, "type">) {
+    return aggregate({...args, type: "sum"});
 }
 
 /**
@@ -97,8 +107,8 @@ export function reduce(args: ReduceArgs) {
  *
  * @see {@link tf.mean}
  */
-export function mean(args: Omit<ReduceArgs, "type">) {
-    return new Reduce({...args, type: "mean"});
+export function mean(args: Omit<AggregateArgs, "type">) {
+    return aggregate({...args, type: "mean"});
 }
 
 /**
@@ -107,6 +117,6 @@ export function mean(args: Omit<ReduceArgs, "type">) {
  *
  * @see {@link tf.max}
  */
-export function max(args: Omit<ReduceArgs, "type">) {
-    return new Reduce({...args, type: "max"});
+export function max(args: Omit<AggregateArgs, "type">) {
+    return aggregate({...args, type: "max"});
 }

@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {ModelConfig} from "../config/types";
+import {ModelAggregateType, ModelConfig} from "../config/types";
 import {Moveset} from "../psbot/handlers/battle/state/Moveset";
 import {Team} from "../psbot/handlers/battle/state/Team";
 import {rng} from "../util/random";
@@ -41,7 +41,11 @@ export function createModel(
     const types = inputTypes(name, random?.());
     const stats = inputStats(name, random?.());
     const ability = inputAbility(name, random?.());
-    const moveset = inputMoveset(name, random?.());
+    const moveset = inputMoveset(
+        name,
+        config?.aggregate.move ?? "sum",
+        random?.(),
+    );
 
     //#region Active pokemon's volatile status and override traits.
 
@@ -106,6 +110,7 @@ export function createModel(
             name,
             pokemonFeaturesList,
             benchAliveInput,
+            config?.aggregate.pokemon ?? "sum",
         );
     globalFeatures.push(teamPokemonAggregate);
 
@@ -249,6 +254,9 @@ function inputBenchBasic(name: string, seed?: number): InputFeatures {
 type TeamInputFeatures = Record<"active" | "bench", InputFeatures>;
 
 function inputSpecies(name: string, seed?: number): TeamInputFeatures {
+    // Note: Most of the important aspects of the species (movepool, types,
+    // abilities, stats, etc) are already handled by other input features, so
+    // there isn't much more information that can be gained from this.
     const pokemonSpeciesLayer = tf.layers.dense({
         name: `${name}/team/pokemon/species/dense`,
         units: 64,
@@ -378,7 +386,11 @@ interface MovesetInputFeatures {
     bench: InputFeatures;
 }
 
-function inputMoveset(name: string, seed?: number): MovesetInputFeatures {
+function inputMoveset(
+    name: string,
+    aggregate: ModelAggregateType,
+    seed?: number,
+): MovesetInputFeatures {
     const pokemonMoveLayer = tf.layers.dense({
         name: `${name}/team/pokemon/moveset/move/dense`,
         units: 32,
@@ -386,8 +398,10 @@ function inputMoveset(name: string, seed?: number): MovesetInputFeatures {
         kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
     });
-    const pokemonMovesetAggregateLayer = customLayers.mean({
-        name: `${name}/team/pokemon/moveset/mean`,
+    // TODO: Exclude nonexistent moves.
+    const pokemonMovesetAggregateLayer = customLayers.aggregate({
+        name: `${name}/team/pokemon/moveset/${aggregate}`,
+        type: aggregate,
         axis: -2,
     });
 
@@ -467,6 +481,7 @@ function aggregateTeamPokemonFeatures(
     name: string,
     pokemonFeaturesList: tf.SymbolicTensor[],
     benchAliveInput: tf.SymbolicTensor,
+    aggregate: ModelAggregateType,
 ): TeamPokemonAggregateFeatures {
     // Each of the [batch, num_teams, team_size, x] input features are
     // concatenated into a single tensor of shape
@@ -483,12 +498,14 @@ function aggregateTeamPokemonFeatures(
         .mask({name: `${name}/team/pokemon/alive_masked`})
         .apply([pokemonFeatures, benchAliveInput]) as tf.SymbolicTensor;
 
-    // Here we element-wise average each of the pokemon features to remove
-    // dependency on order, so we get a shape [batch, num_teams, y] tensor.
-    // TODO: Should we exclude the active pokemon's base traits?
+    // Permutation-invariant aggregate layer taking the important features of
+    // each pokemon and treating them as one.
+    // End result is a shape [batch, num_teams, y] output tensor.
+    // TODO: Exclude dead/nonexistent mons.
     const teamPokemonAggregate = customLayers
-        .mean({
-            name: `${name}/team/pokemon/mean`,
+        .aggregate({
+            name: `${name}/team/pokemon/${aggregate}`,
+            type: aggregate,
             axis: -2,
         })
         .apply(pokemonFeaturesMasked) as tf.SymbolicTensor;

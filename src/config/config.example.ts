@@ -38,6 +38,10 @@ export const config: Config = {
         },
         model: {
             dueling: true,
+            aggregate: {
+                move: "mean",
+                pokemon: "mean",
+            },
         },
         rollout: {
             pool: {

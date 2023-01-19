@@ -97,7 +97,30 @@ export interface ModelConfig {
      * DQN.
      */
     readonly dueling: boolean;
+    /** Config for aggregate operations. */
+    readonly aggregate: ModelAggregateConfig;
 }
+
+/**
+ * Configuration for the model's pooling architecture for certain unordered
+ * inputs.
+ */
+export interface ModelAggregateConfig {
+    /** Pooling scheme for pokemon's movesets. */
+    readonly move: ModelAggregateType;
+    /** Pooling scheme for each team's pokemon. */
+    readonly pokemon: ModelAggregateType;
+}
+
+/**
+ * Type of pooling scheme to use for unordered input.
+ *
+ * * `"sum"` - Add all the features together elementwise.
+ * * `"mean"` - Average features. Note that dead or zeroed-out inputs are
+ * included in the average.
+ * * `"max"` - Take the maximum of each feature.
+ */
+export type ModelAggregateType = "sum" | "mean" | "max";
 
 /** Configuration for the rollout process. */
 export interface RolloutConfig {
