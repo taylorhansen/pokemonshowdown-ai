@@ -7,6 +7,7 @@ import {seeder} from "../../../util/random";
 import {GameArgsGenSeeders} from "../../game/pool";
 import {Evaluate} from "./Evaluate";
 import {Learn} from "./Learn";
+import {Metrics} from "./Metrics";
 import {ModelTrainData} from "./ModelProtocol";
 import {ModelRegistry} from "./ModelRegistry";
 import {Rollout} from "./Rollout";
@@ -29,6 +30,8 @@ export async function train(
     logPath?: string,
     callback?: (data: ModelTrainData) => void,
 ): Promise<void> {
+    const metrics = Metrics.get("train");
+
     if (modelPath) {
         await model.save(pathToFileUrl(join(modelPath, "original")));
     }
@@ -94,12 +97,21 @@ export async function train(
         },
     );
 
+    const logMemoryMetrics = (step: number) => {
+        if (metrics) {
+            const memory = tf.memory();
+            metrics.scalar("memory/num_bytes", memory.numBytes, step);
+            metrics.scalar("memory/num_tensors", memory.numTensors, step);
+        }
+    };
+
     let lastEval: Promise<unknown> | undefined;
     try {
         rolloutModel.unlock();
         prevModel.unlock();
         rolloutModel.lock("train", 1);
         prevModel.lock("train", 1);
+        logMemoryMetrics(0);
 
         for (let i = 0; i < config.episodes; ++i) {
             const step = i + 1;
@@ -108,8 +120,9 @@ export async function train(
                 callback?.({type: "batch", step: batchStep, loss: batchLoss}),
             );
             await lastEval;
-            console.log(JSON.stringify(tf.memory())); // TODO: Move to tensorboard.
             callback?.({type: "learn", loss});
+
+            logMemoryMetrics(step);
 
             rollout.step(step);
             rolloutModel.unlock();
