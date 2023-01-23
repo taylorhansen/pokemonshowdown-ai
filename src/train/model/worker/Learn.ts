@@ -18,8 +18,12 @@ export class Learn {
         w => w.read() as tf.Variable,
     );
     /** Used for logging inputs during loss calcs. */
-    private readonly denseLayers: readonly tf.layers.Layer[] =
-        this.model.layers.filter(l => l.getClassName() === "Dense");
+    private readonly hookLayers: readonly tf.layers.Layer[] =
+        this.model.layers.filter(l =>
+            ["Dense", "SetAttention", "SetMultiHeadAttention"].includes(
+                l.getClassName(),
+            ),
+        );
 
     /**
      * Creates a Learn object.
@@ -38,7 +42,17 @@ export class Learn {
     ) {
         // Log initial weights.
         for (const weights of this.variables) {
-            this.metrics?.histogram(`${weights.name}/weights`, weights, 0);
+            if (weights.size === 1) {
+                const weightScalar = weights.asScalar();
+                this.metrics?.scalar(
+                    `${weights.name}/weights`,
+                    weightScalar,
+                    0,
+                );
+                tf.dispose(weightScalar);
+            } else {
+                this.metrics?.histogram(`${weights.name}/weights`, weights, 0);
+            }
         }
     }
 
@@ -55,7 +69,7 @@ export class Learn {
         callback?: (step: number, loss: number) => void,
     ): Promise<number> {
         const avgInputs: tf.NamedTensorMap = {};
-        for (const layer of this.denseLayers) {
+        for (const layer of this.hookLayers) {
             // Note: Call hook is wrapped in tf.tidy() so tf.keep() is used.
             layer.setCallHook(function logInputs(inputs) {
                 if (!Array.isArray(inputs)) {
@@ -176,8 +190,15 @@ export class Learn {
             if (!Object.prototype.hasOwnProperty.call(totalGrads, name)) {
                 continue;
             }
-            this.metrics?.histogram(`${name}/grads`, totalGrads[name], step);
-            tf.dispose(totalGrads[name]);
+            const grad = totalGrads[name];
+            if (grad.size === 1) {
+                const gradScalar = grad.asScalar();
+                this.metrics?.scalar(`${name}/grads`, gradScalar, step);
+                tf.dispose(gradScalar);
+            } else {
+                this.metrics?.histogram(`${name}/grads`, grad, step);
+            }
+            tf.dispose(grad);
         }
 
         for (const name in avgInputs) {
@@ -191,10 +212,24 @@ export class Learn {
         }
 
         for (const weights of this.variables) {
-            this.metrics?.histogram(`${weights.name}/weights`, weights, step);
+            if (weights.size === 1) {
+                const weightScalar = weights.asScalar();
+                this.metrics?.scalar(
+                    `${weights.name}/weights`,
+                    weightScalar,
+                    step,
+                );
+                tf.dispose(weightScalar);
+            } else {
+                this.metrics?.histogram(
+                    `${weights.name}/weights`,
+                    weights,
+                    step,
+                );
+            }
         }
 
-        for (const layer of this.denseLayers) {
+        for (const layer of this.hookLayers) {
             layer.clearCallHook();
         }
 

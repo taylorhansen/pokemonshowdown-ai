@@ -1,8 +1,8 @@
 import * as tf from "@tensorflow/tfjs";
-import {ModelAggregateType, ModelConfig} from "../config/types";
+import {ModelAggregateConfig, ModelConfig} from "../config/types";
 import {Moveset} from "../psbot/handlers/battle/state/Moveset";
 import {Team} from "../psbot/handlers/battle/state/Team";
-import {rng} from "../util/random";
+import {Rng, rng} from "../util/random";
 import * as customLayers from "./custom_layers";
 import {modelInputShapesMap, verifyModel} from "./shapes";
 
@@ -19,7 +19,7 @@ export function createModel(
     config?: ModelConfig,
     seed?: string,
 ): tf.LayersModel {
-    const random = seed ? rng(seed) : null;
+    const random = seed ? rng(seed) : undefined;
 
     const inputs: tf.SymbolicTensor[] = [];
 
@@ -43,8 +43,8 @@ export function createModel(
     const ability = inputAbility(name, random?.());
     const moveset = inputMoveset(
         name,
-        config?.aggregate.move ?? "sum",
-        random?.(),
+        config?.aggregate.move ?? {type: "mean"},
+        random,
     );
 
     //#region Active pokemon's volatile status and override traits.
@@ -110,7 +110,8 @@ export function createModel(
             name,
             pokemonFeaturesList,
             benchAliveInput,
-            config?.aggregate.pokemon ?? "sum",
+            config?.aggregate.pokemon ?? {type: "mean"},
+            random,
         );
     globalFeatures.push(teamPokemonAggregate);
 
@@ -241,7 +242,7 @@ function inputBenchBasic(name: string, seed?: number): InputFeatures {
     const benchBasicFeatures = tf.layers
         .dense({
             name: `${name}/pokemon/basic/dense`,
-            units: 8,
+            units: 16,
             activation: "relu",
             kernelInitializer: tf.initializers.heNormal({seed}),
             biasInitializer: "zeros",
@@ -259,7 +260,7 @@ function inputSpecies(name: string, seed?: number): TeamInputFeatures {
     // there isn't much more information that can be gained from this.
     const pokemonSpeciesLayer = tf.layers.dense({
         name: `${name}/team/pokemon/species/dense`,
-        units: 64,
+        units: 32,
         activation: "relu",
         kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
@@ -352,7 +353,7 @@ function inputStats(name: string, seed?: number): TeamInputFeatures {
 function inputAbility(name: string, seed?: number): TeamInputFeatures {
     const pokemonAbilityLayer = tf.layers.dense({
         name: `${name}/team/pokemon/ability/dense`,
-        units: 32,
+        units: 64,
         activation: "relu",
         kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
@@ -388,44 +389,104 @@ interface MovesetInputFeatures {
 
 function inputMoveset(
     name: string,
-    aggregate: ModelAggregateType,
-    seed?: number,
+    aggregateConfig: ModelAggregateConfig,
+    random?: Rng,
 ): MovesetInputFeatures {
     const pokemonMoveLayer = tf.layers.dense({
         name: `${name}/team/pokemon/moveset/move/dense`,
         units: 32,
         activation: "relu",
-        kernelInitializer: tf.initializers.heNormal({seed}),
+        kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
         biasInitializer: "zeros",
-    });
-    // TODO: Exclude nonexistent moves.
-    const pokemonMovesetAggregateLayer = customLayers.aggregate({
-        name: `${name}/team/pokemon/moveset/${aggregate}`,
-        type: aggregate,
-        axis: -2,
     });
 
     const activeMoveInput = tf.layers.input({
         name: `${name}/input/team/active/moves`,
         shape: [...modelInputShapesMap["team/active/moves"]],
     });
-    const activeMoveFeatures = pokemonMoveLayer.apply(
+    let activeMoveFeatures = pokemonMoveLayer.apply(
         activeMoveInput,
-    ) as tf.SymbolicTensor;
-    const activeMovesetAggregate = pokemonMovesetAggregateLayer.apply(
-        activeMoveFeatures,
     ) as tf.SymbolicTensor;
 
     const benchMoveInput = tf.layers.input({
         name: `${name}/input/team/pokemon/moves`,
         shape: [...modelInputShapesMap["team/pokemon/moves"]],
     });
-    const benchMoveFeatures = pokemonMoveLayer.apply(
+    let benchMoveFeatures = pokemonMoveLayer.apply(
         benchMoveInput,
     ) as tf.SymbolicTensor;
-    const benchMovesetAggregate = pokemonMovesetAggregateLayer.apply(
+
+    // TODO: Exclude nonexistent moves.
+    const pokemonMovesetAggregateLayer = customLayers.aggregate({
+        name: `${name}/team/pokemon/moveset/${aggregateConfig.type}`,
+        type: aggregateConfig.type,
+        axis: -2,
+    });
+
+    if (aggregateConfig.attention) {
+        const pokemonMoveAttentionLayer = customLayers.setMultiHeadAttention({
+            name: `${name}/team/pokemon/moveset/move/attention`,
+            heads: 4,
+            headUnits: 8,
+            units: 32,
+            kernelInitializer: tf.initializers.glorotNormal({
+                seed: random?.(),
+            }),
+        });
+        const pokemonMoveAttentionReluLayer = tf.layers.reLU({
+            name: `${name}/team/pokemon/moveset/move/attention/relu`,
+        });
+        const pokemonMoveAttentionResidualLayer1 = tf.layers.add({
+            name: `${name}/team/pokemon/moveset/move/attention/residual/1`,
+        });
+        const pokemonMoveAttentionDenseLayer = tf.layers.dense({
+            name: `${name}/team/pokemon/moveset/move/attention/dense`,
+            units: 32,
+            activation: "relu",
+            kernelInitializer: tf.initializers.heNormal({
+                seed: random?.(),
+            }),
+            biasInitializer: "zeros",
+        });
+        const pokemonMoveAttentionResidualLayer2 = tf.layers.add({
+            name: `${name}/team/pokemon/moveset/move/attention/residual/2`,
+        });
+
+        [activeMoveFeatures, benchMoveFeatures] = [
+            activeMoveFeatures,
+            benchMoveFeatures,
+        ].map(features => {
+            let attention = pokemonMoveAttentionLayer.apply(
+                features,
+            ) as tf.SymbolicTensor;
+            attention = pokemonMoveAttentionReluLayer.apply(
+                attention,
+            ) as tf.SymbolicTensor;
+            // Add skip connection.
+            features = pokemonMoveAttentionResidualLayer1.apply([
+                features,
+                attention,
+            ]) as tf.SymbolicTensor;
+            // Final encoder.
+            const dense = pokemonMoveAttentionDenseLayer.apply(
+                features,
+            ) as tf.SymbolicTensor;
+            // Final skip connection.
+            features = pokemonMoveAttentionResidualLayer2.apply([
+                features,
+                dense,
+            ]) as tf.SymbolicTensor;
+            return features;
+        });
+    }
+
+    const [activeMovesetAggregate, benchMovesetAggregate] = [
+        activeMoveFeatures,
         benchMoveFeatures,
-    ) as tf.SymbolicTensor;
+    ].map(
+        features =>
+            pokemonMovesetAggregateLayer.apply(features) as tf.SymbolicTensor,
+    );
 
     return {
         active: {
@@ -446,7 +507,7 @@ interface InputFeaturesList {
 function inputItem(name: string, seed?: number): InputFeaturesList {
     const pokemonItemLayer = tf.layers.dense({
         name: `${name}/team/pokemon/item/dense`,
-        units: 32,
+        units: 64,
         activation: "relu",
         kernelInitializer: tf.initializers.heNormal({seed}),
         biasInitializer: "zeros",
@@ -481,39 +542,80 @@ function aggregateTeamPokemonFeatures(
     name: string,
     pokemonFeaturesList: tf.SymbolicTensor[],
     benchAliveInput: tf.SymbolicTensor,
-    aggregate: ModelAggregateType,
+    aggregateConfig: ModelAggregateConfig,
+    random?: Rng,
 ): TeamPokemonAggregateFeatures {
     // Each of the [batch, num_teams, team_size, x] input features are
     // concatenated into a single tensor of shape
     // [batch, num_teams, team_size, y].
-    const pokemonFeatures = tf.layers
+    let pokemonFeatures = tf.layers
         .concatenate({
             name: `${name}/team/pokemon/concat`,
             axis: -1,
         })
         .apply(pokemonFeaturesList) as tf.SymbolicTensor;
-
+    // Process features.
+    pokemonFeatures = tf.layers
+        .dense({
+            name: `${name}/team/pokemon/dense`,
+            units: 64,
+            activation: "relu",
+            kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
+            biasInitializer: "zeros",
+        })
+        .apply(pokemonFeatures) as tf.SymbolicTensor;
     // Mask out features of pokemon that are not alive or nonexistent.
-    const pokemonFeaturesMasked = customLayers
+    pokemonFeatures = customLayers
         .mask({name: `${name}/team/pokemon/alive_masked`})
         .apply([pokemonFeatures, benchAliveInput]) as tf.SymbolicTensor;
+
+    if (aggregateConfig.attention) {
+        let attention = customLayers
+            .setMultiHeadAttention({
+                name: `${name}/team/pokemon/attention`,
+                heads: 4,
+                headUnits: 16,
+                units: 64,
+                kernelInitializer: tf.initializers.glorotNormal({
+                    seed: random?.(),
+                }),
+            })
+            .apply([pokemonFeatures, benchAliveInput]) as tf.SymbolicTensor;
+        attention = tf.layers
+            .reLU({name: `${name}/team/pokemon/attention/relu`})
+            .apply(attention) as tf.SymbolicTensor;
+        // Add skip connection.
+        pokemonFeatures = tf.layers
+            .add({name: `${name}/team/pokemon/attention/residual/1`})
+            .apply([pokemonFeatures, attention]) as tf.SymbolicTensor;
+        // Final encoder.
+        const dense = tf.layers
+            .dense({
+                name: `${name}/team/pokemon/attention/dense`,
+                units: 64,
+                activation: "relu",
+                kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
+                biasInitializer: "zeros",
+            })
+            .apply(pokemonFeatures) as tf.SymbolicTensor;
+        // Final skip connection.
+        pokemonFeatures = tf.layers
+            .add({name: `${name}/team/pokemon/attention/residual/2`})
+            .apply([pokemonFeatures, dense]) as tf.SymbolicTensor;
+    }
 
     // Permutation-invariant aggregate layer taking the important features of
     // each pokemon and treating them as one.
     // End result is a shape [batch, num_teams, y] output tensor.
-    // TODO: Exclude dead/nonexistent mons.
     const teamPokemonAggregate = customLayers
         .aggregate({
-            name: `${name}/team/pokemon/${aggregate}`,
-            type: aggregate,
+            name: `${name}/team/pokemon/${aggregateConfig.type}`,
+            type: aggregateConfig.type,
             axis: -2,
         })
-        .apply(pokemonFeaturesMasked) as tf.SymbolicTensor;
+        .apply(pokemonFeatures) as tf.SymbolicTensor;
 
-    return {
-        individual: pokemonFeaturesMasked,
-        aggregate: teamPokemonAggregate,
-    };
+    return {individual: pokemonFeatures, aggregate: teamPokemonAggregate};
 }
 
 function aggregateGlobalFeatures(
@@ -539,7 +641,7 @@ function aggregateGlobalFeatures(
     const globalEncoding = tf.layers
         .dense({
             name: `${name}/global/dense`,
-            units: 64,
+            units: 128,
             activation: "relu",
             kernelInitializer: tf.initializers.heNormal({seed}),
             biasInitializer: "zeros",

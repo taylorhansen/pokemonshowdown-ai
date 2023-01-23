@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {LayerArgs} from "./LayerArgs";
+import {Kwargs, LayerArgs} from "./layerUtil";
 
 /** Args for {@link aggregate}. */
 export interface AggregateArgs extends LayerArgs {
@@ -40,22 +40,37 @@ class Aggregate extends tf.layers.Layer {
 
     public override call(
         inputs: tf.Tensor | tf.Tensor[],
+        kwargs: Kwargs,
     ): tf.Tensor | tf.Tensor[] {
-        if (Array.isArray(inputs)) {
-            if (inputs.length !== 1) {
-                throw new Error(
-                    `Expected 1 input tensor but got ${inputs.length}`,
-                );
+        return tf.tidy(() => {
+            this.invokeCallHook(inputs, kwargs);
+            if (Array.isArray(inputs)) {
+                if (inputs.length !== 1) {
+                    throw new Error(
+                        `Expected 1 input tensor but got ${inputs.length}`,
+                    );
+                }
+                [inputs] = inputs;
             }
-            [inputs] = inputs;
-        }
-        return this.func(inputs, this.axis, this.keepDims);
+            return this.func(inputs, this.axis, this.keepDims);
+        });
     }
 
-    public override computeOutputShape(inputShape: tf.Shape): tf.Shape {
+    public override computeOutputShape(
+        inputShape: tf.Shape | tf.Shape[],
+    ): tf.Shape {
+        if (Array.isArray(inputShape[0])) {
+            if (inputShape.length !== 1) {
+                throw new Error(
+                    `Expected 1 input tensor but got ${inputShape.length}`,
+                );
+            }
+            [inputShape] = inputShape;
+        }
+
         // Note: Utility function takes care of missing axis (defaults to all
         // axes) and negative axes.
-        inputShape = [...inputShape];
+        inputShape = [...inputShape] as tf.Shape;
         const axis = tf.util.parseAxisParam(this.axis!, inputShape as number[]);
         for (let i = inputShape.length - 1; i > 0; --i) {
             if (!axis.includes(i)) {

@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {LayerArgs} from "./LayerArgs";
+import {LayerArgs, Kwargs} from "./layerUtil";
 
 /** Args for {@link slice}. */
 export interface SliceArgs extends LayerArgs {
@@ -32,16 +32,22 @@ class Slice extends tf.layers.Layer {
             : [];
     }
 
-    public override call(inputs: tf.Tensor | tf.Tensor[]): tf.Tensor {
-        if (Array.isArray(inputs)) {
-            if (inputs.length !== 1) {
-                throw new Error(
-                    `Expected 1 input tensor but got ${inputs.length}`,
-                );
+    public override call(
+        inputs: tf.Tensor | tf.Tensor[],
+        kwargs: Kwargs,
+    ): tf.Tensor {
+        return tf.tidy(() => {
+            this.invokeCallHook(inputs, kwargs);
+            if (Array.isArray(inputs)) {
+                if (inputs.length !== 1) {
+                    throw new Error(
+                        `Expected 1 input tensor but got ${inputs.length}`,
+                    );
+                }
+                [inputs] = inputs;
             }
-            [inputs] = inputs;
-        }
-        return tf.slice(inputs, [0, ...this.begin], [-1, ...this.size]);
+            return tf.slice(inputs, [0, ...this.begin], [-1, ...this.size]);
+        });
     }
 
     public override computeOutputShape(inputShape: tf.Shape): tf.Shape {

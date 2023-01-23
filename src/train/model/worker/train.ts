@@ -1,5 +1,6 @@
 import {join} from "path";
 import {serialize} from "v8";
+import * as tf from "@tensorflow/tfjs";
 import {TrainConfig} from "../../../config/types";
 import {pathToFileUrl} from "../../../util/paths/pathToFileUrl";
 import {seeder} from "../../../util/random";
@@ -107,6 +108,7 @@ export async function train(
                 callback?.({type: "batch", step: batchStep, loss: batchLoss}),
             );
             await lastEval;
+            console.log(JSON.stringify(tf.memory())); // TODO: Move to tensorboard.
             callback?.({type: "learn", loss});
 
             rollout.step(step);

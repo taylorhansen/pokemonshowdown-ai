@@ -18,6 +18,9 @@ if (!parentPort) {
     throw new Error("No parent port!");
 }
 
+// Used for debugging.
+Error.stackTraceLimit = Infinity;
+
 // Make sure we're using the right TF backend.
 const {gpu} = workerData as ModelWorkerData;
 importTfn(gpu);

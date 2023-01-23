@@ -28,7 +28,7 @@ export const modelInputShapes: readonly (readonly number[])[] = [
     [numTeams, encoders.definedAbilityEncoder.size],
     [numTeams, Moveset.maxSize, encoders.moveSlotEncoder.size],
     // Bench traits/statuses.
-    [numTeams, teamSize, 1],
+    [numTeams, teamSize],
     [numTeams, teamSize, encoders.basicEncoder.size],
     [numTeams, teamSize, encoders.speciesEncoder.size],
     [numTeams, teamSize, encoders.typesEncoder.size],

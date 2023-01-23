@@ -1,22 +1,26 @@
 import * as tf from "@tensorflow/tfjs";
-import {LayerArgs} from "./LayerArgs";
+import {LayerArgs, Kwargs} from "./layerUtil";
 
 class Mask extends tf.layers.Layer {
     public static className = "Mask";
 
     public override call(
         inputs: tf.Tensor | tf.Tensor[],
+        kwargs: Kwargs,
     ): tf.Tensor | tf.Tensor[] {
-        if (!Array.isArray(inputs)) {
-            throw new Error("Expected 2 input tensors but got 1");
-        }
-        if (inputs.length !== 2) {
-            throw new Error(
-                `Expected 2 input tensors but got ${inputs.length}`,
-            );
-        }
-        const [input, inputMask] = inputs;
-        return tf.mul(input, inputMask);
+        return tf.tidy(() => {
+            this.invokeCallHook(inputs, kwargs);
+            if (!Array.isArray(inputs)) {
+                throw new Error("Expected 2 input tensors but got 1");
+            }
+            if (inputs.length !== 2) {
+                throw new Error(
+                    `Expected 2 input tensors but got ${inputs.length}`,
+                );
+            }
+            const [input, inputMask] = inputs;
+            return tf.mul(input, tf.expandDims(inputMask, -1));
+        });
     }
 
     public override computeOutputShape(inputShape: tf.Shape[]): tf.Shape {
@@ -31,7 +35,7 @@ tf.serialization.registerClass(Mask);
  * broadcasting it as necessary.
  *
  * The input should be of shape `[batch, ...dims, channels]` and the mask
- * should be of shape `[batch, ...dims, 1]` containing 0s and 1s.
+ * should be of shape `[batch, ...dims]` containing 0s and 1s.
  */
 export function mask(args?: LayerArgs) {
     return new Mask(args);

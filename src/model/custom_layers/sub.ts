@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {LayerArgs} from "./LayerArgs";
+import {LayerArgs, Kwargs} from "./layerUtil";
 
 class Sub extends tf.layers.Layer {
     public static className = "Sub";
@@ -10,17 +10,21 @@ class Sub extends tf.layers.Layer {
 
     public override call(
         inputs: tf.Tensor | tf.Tensor[],
+        kwargs: Kwargs,
     ): tf.Tensor | tf.Tensor[] {
-        if (Array.isArray(inputs)) {
-            if (inputs.length !== 2) {
-                throw new Error(
-                    `Expected 2 input tensors but got ${inputs.length}`,
-                );
+        return tf.tidy(() => {
+            this.invokeCallHook(inputs, kwargs);
+            if (Array.isArray(inputs)) {
+                if (inputs.length !== 2) {
+                    throw new Error(
+                        `Expected 2 input tensors but got ${inputs.length}`,
+                    );
+                }
+            } else {
+                throw new Error("Expected 2 input tensors but got 1");
             }
-        } else {
-            throw new Error("Expected 2 input tensors but got 1");
-        }
-        return tf.sub(inputs[0], inputs[1]);
+            return tf.sub(inputs[0], inputs[1]);
+        });
     }
 
     public override computeOutputShape(inputShape: tf.Shape[]): tf.Shape {

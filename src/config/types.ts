@@ -97,8 +97,8 @@ export interface ModelConfig {
      * DQN.
      */
     readonly dueling: boolean;
-    /** Config for aggregate operations. */
-    readonly aggregate: ModelAggregateConfig;
+    /** Config for aggregate operations on movesets and team lists. */
+    readonly aggregate: Record<"move" | "pokemon", ModelAggregateConfig>;
 }
 
 /**
@@ -106,10 +106,10 @@ export interface ModelConfig {
  * inputs.
  */
 export interface ModelAggregateConfig {
-    /** Pooling scheme for pokemon's movesets. */
-    readonly move: ModelAggregateType;
-    /** Pooling scheme for each team's pokemon. */
-    readonly pokemon: ModelAggregateType;
+    /** Type of pooling scheme to use. */
+    readonly type: ModelAggregateType;
+    /** Whether to include an attention model before the aggregate operation. */
+    readonly attention?: boolean;
 }
 
 /**
