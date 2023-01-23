@@ -39,8 +39,8 @@ export const config: Config = {
         model: {
             dueling: true,
             aggregate: {
-                move: {type: "mean"},
-                pokemon: {type: "mean"},
+                move: {type: "mean", attention: true},
+                pokemon: {type: "mean", attention: true},
             },
         },
         rollout: {
