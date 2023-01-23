@@ -124,35 +124,60 @@ export class ModelRegistry {
             return;
         }
         tf.tidy(() => {
-            const predictLatency = tf.tensor1d(this.predictLatency, "float32");
-            this.scopeMetrics?.histogram(
-                `predict_latency_ms`,
-                predictLatency,
-                this.scopeStep!,
-                100 /*buckets*/,
-            );
-            this.predictLatency.length = 0;
+            if (this.predictLatency.length > 0) {
+                const predictLatency = tf.tensor1d(
+                    this.predictLatency,
+                    "float32",
+                );
+                this.scopeMetrics?.histogram(
+                    "predict_latency_ms",
+                    predictLatency,
+                    this.scopeStep!,
+                    100 /*buckets*/,
+                );
+                // TODO: Use median instead, more robust to outliers.
+                this.scopeMetrics?.scalar(
+                    "predict_latency_ms/mean",
+                    tf.mean(predictLatency).asScalar(),
+                    this.scopeStep!,
+                );
+                this.predictLatency.length = 0;
+            }
 
-            const predictRequestLatency = tf.tensor1d(
-                this.predictRequestLatency,
-                "float32",
-            );
-            this.scopeMetrics?.histogram(
-                `predict_request_latency_ms`,
-                predictRequestLatency,
-                this.scopeStep!,
-                100 /*buckets*/,
-            );
-            this.predictRequestLatency.length = 0;
+            if (this.predictRequestLatency.length > 0) {
+                const predictRequestLatency = tf.tensor1d(
+                    this.predictRequestLatency,
+                    "float32",
+                );
+                this.scopeMetrics?.histogram(
+                    "predict_request_latency_ms",
+                    predictRequestLatency,
+                    this.scopeStep!,
+                    100 /*buckets*/,
+                );
+                this.scopeMetrics?.scalar(
+                    "predict_request_latency_ms/mean",
+                    tf.mean(predictRequestLatency).asScalar(),
+                    this.scopeStep!,
+                );
+                this.predictRequestLatency.length = 0;
+            }
 
-            const predictSize = tf.tensor1d(this.predictSize, "int32");
-            this.scopeMetrics?.histogram(
-                `predict_size`,
-                predictSize,
-                this.scopeStep!,
-                this.config.maxSize /*buckets*/,
-            );
-            this.predictSize.length = 0;
+            if (this.predictSize.length > 0) {
+                const predictSize = tf.tensor1d(this.predictSize, "int32");
+                this.scopeMetrics?.histogram(
+                    "predict_size",
+                    predictSize,
+                    this.scopeStep!,
+                    this.config.maxSize /*buckets*/,
+                );
+                this.scopeMetrics?.scalar(
+                    "predict_size/mean",
+                    tf.mean(predictSize).asScalar(),
+                    this.scopeStep!,
+                );
+                this.predictSize.length = 0;
+            }
         });
         this.scopeName = null;
         this.scopeStep = null;
@@ -264,7 +289,7 @@ export class ModelRegistry {
         if (this.isLocked) {
             this.predictLatency.push(Number(endTime - startTime) / 1e6 /*ms*/);
             this.predictRequestLatency.push(
-                ...batch.times.map(t => Number(startTime - t) / 1e6 /*ms*/),
+                ...batch.times.map(t => Number(startTime - t) / 1e6),
             );
             this.predictSize.push(batch.length);
         }
