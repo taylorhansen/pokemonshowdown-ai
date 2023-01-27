@@ -3,7 +3,7 @@ import {MessagePort} from "worker_threads";
 import {PRNGSeed} from "@pkmn/sim";
 import {ExperienceConfig, GamePoolConfig} from "../../../config/types";
 import {ThreadPool} from "../../pool";
-import {TrainingExample} from "../experience";
+import {Experience} from "../experience";
 import {SimResult} from "../sim/playGame";
 import {
     GameAgentConfig,
@@ -24,6 +24,11 @@ export interface GamePoolArgs {
     ) => MessagePort | Promise<MessagePort>;
     /** Args for starting the game. */
     readonly play: PlayArgs;
+    /**
+     * Callback for processing Experience objects if the game is configured for
+     * it.
+     */
+    readonly experienceCallback?: (experience: Experience) => void;
 }
 
 /** Config for {@link GamePool.add} agents. */
@@ -57,8 +62,6 @@ export interface PlayArgs {
 export interface GamePoolResult extends SimResult {
     /** Unique identifier for logging. */
     readonly id: number;
-    /** Generated experience data, if enabled. */
-    examples?: TrainingExample[];
 }
 
 /** Path to the GameWorker script. */
@@ -100,6 +103,8 @@ export class GamePool {
      *
      * @param args Game args.
      * @param callback Called when a worker has been assigned to the game.
+     * @param experienceCallback Callback to handle generated Experience objects
+     * if the game is configured for it.
      * @returns A Promise to get the results of the game. Also wraps and returns
      * any errors.
      */

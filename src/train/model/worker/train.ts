@@ -36,10 +36,11 @@ export async function train(
         await model.save(pathToFileUrl(join(modelPath, "original")));
     }
 
-    const [rolloutModel, prevModel] = await Promise.all([
-        model.clone("rollout"),
-        model.clone("prev"),
-    ]);
+    const [rolloutModel, prevModel, targetModel] = await Promise.all(
+        ["rollout", "prev", "target"].map(
+            async name => await model.clone(name),
+        ),
+    );
 
     const seeders: GameArgsGenSeeders | undefined = config.seeds && {
         ...(config.seeds.battle && {battle: seeder(config.seeds.battle)}),
@@ -80,6 +81,7 @@ export async function train(
     const learn = new Learn(
         "train",
         model.model,
+        targetModel.model,
         await dataset.iterator(),
         config.learn,
     );
@@ -133,6 +135,7 @@ export async function train(
                 rolloutModel.copyTo(prevModel);
             }
             model.copyTo(rolloutModel);
+            model.copyTo(targetModel);
 
             lastEval = Promise.all([
                 evaluate
@@ -176,7 +179,8 @@ export async function train(
         await lastEval;
         await Promise.all([rollout.cleanup(), evaluate.cleanup()]);
         learn.cleanup();
-        rolloutModel.unload();
-        prevModel.unload();
+        for (const m of [rolloutModel, prevModel, targetModel]) {
+            m.unload();
+        }
     }
 }

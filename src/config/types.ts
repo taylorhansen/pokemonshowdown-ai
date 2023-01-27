@@ -128,8 +128,6 @@ export interface RolloutConfig {
     readonly pool: GamePoolConfig;
     /** Exploration policy config. */
     readonly policy: PolicyConfig;
-    /** Experience config. */
-    readonly experience: ExperienceConfig;
     /**
      * Fraction of self-play games that should by played against the model's
      * previous version rather than itself.
@@ -169,12 +167,6 @@ export interface PolicyConfig {
     readonly minExploration: number;
 }
 
-/** Configuration for generating experience from rollout games. */
-export interface ExperienceConfig {
-    /** Discount factor for future rewards. */
-    readonly rewardDecay: number;
-}
-
 /** Configuration for the evaluation process. */
 export interface EvalConfig {
     /** Number of games to play against each eval opponent. */
@@ -191,6 +183,13 @@ export interface LearnConfig {
     readonly learningRate: number;
     /** Replay buffer config. */
     readonly buffer: BufferConfig;
+    /** Experience config. */
+    readonly experience: ExperienceConfig;
+    /**
+     * Whether to use a target network to increase training stability, or
+     * `"double"` to implement double Q learning approach using the target net.
+     */
+    readonly target?: boolean | "double";
 }
 
 /** Configuration for the experience replay buffer. */
@@ -201,6 +200,12 @@ export interface BufferConfig {
     readonly batch: number;
     /** Number of batches to prefetch for learning. */
     readonly prefetch: number;
+}
+
+/** Configuration for learning on experience generated from rollout games. */
+export interface ExperienceConfig {
+    /** Discount factor for future rewards. */
+    readonly rewardDecay: number;
 }
 
 /** Configuration for random number generators in the training script. */

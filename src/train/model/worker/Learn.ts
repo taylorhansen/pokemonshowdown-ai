@@ -2,7 +2,7 @@ import * as tf from "@tensorflow/tfjs";
 import {LearnConfig} from "../../../config/types";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {Metrics} from "./Metrics";
-import {BatchedExample} from "./dataset";
+import {BatchedExp} from "./dataset";
 
 /**
  * Encapsulates the learning step of training, where the model is updated based
@@ -30,6 +30,8 @@ export class Learn {
      *
      * @param name Name of the training run for logging.
      * @param model Model to train.
+     * @param targetModel Model for computing TD targets. Can be set to the same
+     * model to disable target model mechanism.
      * @param iterator Iterator to pull from to obtain batched experiences for
      * learning.
      * @param config Learning config.
@@ -37,7 +39,8 @@ export class Learn {
     public constructor(
         public readonly name: string,
         private readonly model: tf.LayersModel,
-        private readonly iterator: AsyncIterator<BatchedExample>,
+        private readonly targetModel: tf.LayersModel,
+        private readonly iterator: AsyncIterator<BatchedExp>,
         private readonly config: LearnConfig,
     ) {
         // Log initial weights.
@@ -237,43 +240,95 @@ export class Learn {
     }
 
     /** Performs one batch update step, returning the loss. */
-    private update(batch: BatchedExample): {
+    private update(batch: BatchedExp): {
         batchLoss: tf.Scalar;
         batchGrads: tf.NamedTensorMap;
     } {
-        // Dataset batching process turns arrays into objs so need to undo this.
-        const batchState: tf.Tensor[] = [];
-        for (const key of Object.keys(batch.state)) {
-            const index = Number(key);
-            batchState[index] = batch.state[index];
-        }
+        return tf.tidy(() => {
+            // Dataset batching process turns arrays into objs so need to undo
+            // this.
+            const batchState: tf.Tensor[] = [];
+            for (const key of Object.keys(batch.state)) {
+                const index = Number(key);
+                batchState[index] = batch.state[index];
+            }
 
-        // Compute batch gradients manually to be able to do logging in-between.
-        const {value: batchLoss, grads: batchGrads} =
-            this.optimizer.computeGradients(
-                () => this.loss(batchState, batch.action, batch.returns),
-                this.variables,
+            const batchNextState: tf.Tensor[] = [];
+            for (const key of Object.keys(batch.nextState)) {
+                const index = Number(key);
+                batchNextState[index] = batch.nextState[index];
+            }
+            const target = this.calculateTarget(
+                batch.reward,
+                batchNextState,
+                batch.done,
             );
-        this.optimizer.applyGradients(batchGrads);
 
-        return {batchLoss, batchGrads};
+            // Compute batch gradients manually to be able to do logging
+            // in-between.
+            const {value: batchLoss, grads: batchGrads} =
+                this.optimizer.computeGradients(
+                    () => this.loss(batchState, batch.action, target),
+                    this.variables,
+                );
+            this.optimizer.applyGradients(batchGrads);
+
+            return {batchLoss, batchGrads};
+        });
+    }
+
+    /** Calculates TD target. */
+    private calculateTarget(
+        reward: tf.Tensor,
+        nextState: tf.Tensor[],
+        done: tf.Tensor,
+    ): tf.Tensor {
+        return tf.tidy(() => {
+            let targetQ: tf.Tensor;
+            const q = this.model.predictOnBatch(nextState) as tf.Tensor;
+            if (!this.config.target) {
+                // Vanilla DQN TD target: r + gamma * max_a(Q(s', a))
+                targetQ = tf.max(q, -1);
+            } else {
+                targetQ = this.targetModel.predictOnBatch(
+                    nextState,
+                ) as tf.Tensor;
+                if (this.config.target !== "double") {
+                    // TD target with target net: r + gamma * max_a(Qt(s', a))
+                    targetQ = tf.max(targetQ, -1);
+                } else {
+                    // Double Q target: r + gamma * Qt(s', argmax_a(Q(s', a)))
+                    const action = tf.argMax(q, -1);
+                    const actionMask = tf.oneHot(action, intToChoice.length);
+                    targetQ = tf.sum(tf.mul(targetQ, actionMask), -1);
+                }
+            }
+
+            // Also mask out q values of terminal states.
+            targetQ = tf.where(done, 0, targetQ);
+
+            const target = tf.add(
+                reward,
+                tf.mul(this.config.experience.rewardDecay, targetQ),
+            );
+            return target;
+        });
     }
 
     private loss(
         state: tf.Tensor[],
         action: tf.Tensor,
-        returns: tf.Tensor,
+        target: tf.Tensor,
     ): tf.Scalar {
-        const {model} = this;
-        return tf.tidy("loss", function lossImpl() {
+        return tf.tidy("loss", () => {
             // Isolate the Q-value of the action that was taken.
-            const output = model.predictOnBatch(state) as tf.Tensor;
+            let q = this.model.predictOnBatch(state) as tf.Tensor;
             const mask = tf.oneHot(action, intToChoice.length);
-            const q = tf.sum(tf.mul(output, mask), -1);
+            q = tf.sum(tf.mul(q, mask), -1);
 
             // Compute the loss based on the discount reward actually obtained
             // from that action.
-            return tf.losses.meanSquaredError(returns, q);
+            return tf.losses.meanSquaredError(target, q);
         });
     }
 

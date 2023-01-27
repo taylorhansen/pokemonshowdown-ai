@@ -59,29 +59,33 @@ export class GameWorker {
                 ),
                 workerResult => {
                     let result: GamePoolResult;
-                    if (workerResult.type !== "error") {
-                        result = {
-                            id: args.id,
-                            agents: workerResult.agents,
-                            winner: workerResult.winner,
-                            ...(workerResult.examples && {
-                                examples: workerResult.examples,
-                            }),
-                            // GamePort doesn't automatically deserialize errors
-                            // outside of PortResultError (where type=error).
-                            ...(workerResult.err && {
-                                err: deserialize(workerResult.err) as Error,
-                            }),
-                        };
+                    if (!workerResult.done) {
+                        args.experienceCallback?.(workerResult.experience);
                     } else {
-                        result = {
-                            id: args.id,
-                            agents: [args.agents[0].name, args.agents[1].name],
-                            err: workerResult.err,
-                        };
+                        if (workerResult.type === "error") {
+                            result = {
+                                id: args.id,
+                                agents: [
+                                    args.agents[0].name,
+                                    args.agents[1].name,
+                                ],
+                                err: workerResult.err,
+                            };
+                        } else {
+                            result = {
+                                id: args.id,
+                                agents: workerResult.agents,
+                                winner: workerResult.winner,
+                                // GamePort doesn't automatically deserialize
+                                // errors outside of PortResultError (where
+                                // type=error).
+                                ...(workerResult.err && {
+                                    err: deserialize(workerResult.err) as Error,
+                                }),
+                            };
+                        }
+                        res(result);
                     }
-
-                    res(result);
                 },
             ),
         );

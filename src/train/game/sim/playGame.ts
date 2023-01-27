@@ -1,14 +1,8 @@
 import {PRNGSeed} from "@pkmn/sim";
-import {ExperienceConfig} from "../../../config/types";
 import {BattleAgent} from "../../../psbot/handlers/battle/agent";
 import {BattleParser} from "../../../psbot/handlers/battle/parser/BattleParser";
 import {main} from "../../../psbot/handlers/battle/parser/main";
-import {
-    createTrainingExamples,
-    Experience,
-    ExperienceAgent,
-    TrainingExample,
-} from "../experience";
+import {Experience, ExperienceAgent} from "../experience";
 import {experienceBattleParser, PlayerOptions, startPsBattle} from "./ps";
 
 /** Arguments for general battle sims. */
@@ -74,28 +68,21 @@ export interface SimResult {
     err?: Error;
 }
 
-/** Result of a game after it has been completed and processed by the worker. */
-export interface PlayGameResult extends SimResult {
-    /** Processed Experience objects suitable for learning. */
-    examples: TrainingExample[];
-}
-
 /**
  * Plays a single game and processes the results.
  *
  * @param args Arguments for the simulator.
- * @param expConfig Config for processing {@link Experience}s (if any
- * BattleAgents are configured to emit them) into {@link TrainingExample}s
- * suitable for learning. If omitted, the Experiences will instead be discarded.
+ * @param experienceCallback Callback for processing {@link Experience}s if any
+ * of the provided BattleAgents are configured to emit them. If omitted, the
+ * Experiences will instead be discarded.
  */
 export async function playGame(
     args: SimArgs,
-    expConfig?: ExperienceConfig,
-): Promise<PlayGameResult> {
+    experienceCallback?: (exp: Experience) => void,
+): Promise<SimResult> {
     // Detect battle agents that want to generate Experience objects.
-    const experiences: Experience[][] = [];
     const [p1, p2] = args.agents.map<PlayerOptions>(function (agentArgs) {
-        if (!agentArgs.emitExperience) {
+        if (!experienceCallback || !agentArgs.emitExperience) {
             return {
                 name: agentArgs.name,
                 agent: agentArgs.agent,
@@ -105,15 +92,13 @@ export async function playGame(
 
         // Agent is configured to emit partial Experience data, so override the
         // BattleParser to process them into full Experience objects.
-        const exps: Experience[] = [];
-        experiences.push(exps);
         return {
             name: agentArgs.name,
             agent: agentArgs.agent,
             parser: agentArgs.emitExperience
                 ? (experienceBattleParser(
                       main,
-                      exp => exps.push(exp),
+                      experienceCallback,
                       agentArgs.name /*username*/,
                   ) as BattleParser<BattleAgent, [], void>)
                 : main,
@@ -129,20 +114,10 @@ export async function playGame(
         ...(args.onlyLogOnError && {onlyLogOnError: true}),
         ...(args.seed && {seed: args.seed}),
     });
-
-    const examples: TrainingExample[] = [];
-    if (expConfig && !err) {
-        // Process experiences as long as the game wasn't errored.
-        for (const batch of experiences) {
-            examples.push(...createTrainingExamples(batch, expConfig));
-        }
-    }
-
     return {
         agents: [args.agents[0].name, args.agents[1].name],
         // Pass winner id as an index corresponding to agents/experiences.
         ...(winner && {winner: winner === args.agents[0].name ? 0 : 1}),
         ...(err && {err}),
-        examples,
     };
 }

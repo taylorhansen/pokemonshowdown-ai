@@ -4,9 +4,14 @@ import {
     choiceIds,
 } from "../../../../psbot/handlers/battle/agent";
 import {
+    allocEncodedState,
+    encodeState,
+} from "../../../../psbot/handlers/battle/ai/encoder";
+import {
     BattleParser,
     BattleParserContext,
 } from "../../../../psbot/handlers/battle/parser/BattleParser";
+import {ReadonlyBattleState} from "../../../../psbot/handlers/battle/state";
 import {
     Experience,
     ExperienceAgent,
@@ -40,14 +45,23 @@ export function experienceBattleParser<
         let expAgentData: ExperienceAgentData | null = null;
         let lastChoice: Choice | null = null;
         let reward = 0;
-        function emitExperience() {
+        function emitExperience(state: ReadonlyBattleState, done = false) {
             if (!expAgentData || !lastChoice) {
                 return;
             }
             // Collect data to emit an experience.
             const action = choiceIds[lastChoice];
+            const nextState = allocEncodedState();
+            encodeState(nextState, state);
+
             ctx.logger.info(`Emitting experience, reward=${reward}`);
-            callback({...expAgentData, action, reward});
+            callback({
+                ...expAgentData,
+                action,
+                reward,
+                nextState,
+                done,
+            });
             // Reset collected data for the next decision.
             expAgentData = null;
             lastChoice = null;
@@ -60,7 +74,8 @@ export function experienceBattleParser<
                 ...ctx,
                 // Extract additional info from the ExperienceAgent.
                 async agent(state, choices, logger) {
-                    emitExperience();
+                    // Emit experience between last and current decision.
+                    emitExperience(state);
                     expAgentData = await ctx.agent(state, choices, logger);
                 },
                 iter: {
@@ -91,7 +106,7 @@ export function experienceBattleParser<
         );
 
         // Emit final experience at the end of the game.
-        emitExperience();
+        emitExperience(ctx.state, true /*done*/);
         return result;
     };
 }

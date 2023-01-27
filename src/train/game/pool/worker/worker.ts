@@ -96,25 +96,30 @@ const gameStream = new stream.Writable({
                     ...(msg.play.onlyLogOnError && {onlyLogOnError: true}),
                     ...(msg.play.seed && {seed: msg.play.seed}),
                 },
-                msg.play.experienceConfig,
+                experience => {
+                    const expResult: GamePlayResult = {
+                        type: "play",
+                        rid: msg.rid,
+                        done: false,
+                        experience,
+                    };
+                    parentPort!.postMessage(
+                        expResult,
+                        [experience.state, experience.nextState].flatMap(
+                            s => s?.map(a => a.buffer) ?? [],
+                        ),
+                    );
+                },
             );
 
             result = {
                 type: "play",
                 rid: msg.rid,
                 done: true,
-                ...(gameResult.examples && {examples: gameResult.examples}),
                 agents: gameResult.agents,
                 winner: gameResult.winner,
                 ...(gameResult.err && {err: serialize(gameResult.err)}),
             };
-            if (result.examples) {
-                transferList.push(
-                    ...result.examples.flatMap(exp =>
-                        exp.state.map(s => s.buffer),
-                    ),
-                );
-            }
             if (result.err) {
                 transferList.push(result.err.buffer);
             }

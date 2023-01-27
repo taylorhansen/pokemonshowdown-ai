@@ -1,7 +1,7 @@
 import {PassThrough} from "stream";
 import {RolloutConfig} from "../../../config/types";
 import {rng, Seeder} from "../../../util/random";
-import {TrainingExample} from "../../game/experience";
+import {Experience} from "../../game/experience";
 import {
     GameArgsGenOptions,
     GameArgsGenSeeders,
@@ -66,27 +66,30 @@ export class Rollout {
     /** Generator for getting experience data from the training games. */
     public async *gen(
         callback?: (result: GamePoolResult) => void,
-    ): AsyncGenerator<TrainingExample> {
+    ): AsyncGenerator<Experience> {
         const stream = new PassThrough({objectMode: true, highWaterMark: 1});
 
         const run = this.games
-            .run(this.genArgs(), async result => {
-                ++this.numGames;
-                if (result.winner === undefined) {
-                    ++this.numTies;
-                }
-                callback?.(result);
-                if (!stream.write(result)) {
-                    await new Promise(res => stream.once("drain", res));
-                }
-            })
+            .run(
+                this.genArgs(exp => stream.write(exp)),
+                async result => {
+                    ++this.numGames;
+                    if (result.winner === undefined) {
+                        ++this.numTies;
+                    }
+                    callback?.(result);
+                    // Need to check for backpressure.
+                    if (!stream.write(undefined)) {
+                        await new Promise(res => stream.once("drain", res));
+                    }
+                },
+            )
             .catch(e => void stream.emit("error", e))
             .finally(() => stream.end());
 
-        for await (const result of stream) {
-            const typed = result as GamePoolResult;
-            for (const example of typed.examples ?? []) {
-                yield example;
+        for await (const exp of stream) {
+            if (exp) {
+                yield exp as Experience;
             }
         }
         await run;
@@ -110,7 +113,9 @@ export class Rollout {
     }
 
     /** Generates game configs for the thread pool. */
-    private *genArgs(): Generator<GamePoolArgs> {
+    private *genArgs(
+        experienceCallback?: (exp: Experience) => void,
+    ): Generator<GamePoolArgs> {
         const opts: GameArgsGenOptions = {
             agentConfig: {
                 name: "rollout",
@@ -138,8 +143,8 @@ export class Rollout {
             },
             ...(this.logPath !== undefined && {logPath: this.logPath}),
             ...(this.config.pool.reduceLogs && {reduceLogs: true}),
-            experienceConfig: this.config.experience,
             ...(this.seeders && {seeders: this.seeders}),
+            ...(experienceCallback && {experienceCallback}),
         };
         const gen = GamePipeline.genArgs(opts);
 

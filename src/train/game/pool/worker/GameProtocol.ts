@@ -3,7 +3,7 @@ import {MessagePort} from "worker_threads";
 import {PRNGSeed} from "@pkmn/sim";
 import {PortMessageBase, PortResultBase} from "../../../port/PortProtocol";
 import {WorkerProtocol} from "../../../port/WorkerProtocol";
-import {TrainingExample} from "../../experience";
+import {Experience} from "../../experience";
 import {SimResult} from "../../sim/playGame";
 import {PlayArgs} from "../GamePool";
 
@@ -102,12 +102,16 @@ export type GameResult = GameProtocol[GameRequestType]["result"];
 /** Base interface for game worker message results. */
 type GameResultBase<T extends GameRequestType> = PortResultBase<T>;
 
-/** Result of a game after it has been completed and processed by the worker. */
-export interface GamePlayResult
+interface GamePlayResultExp extends GameResultBase<"play"> {
+    /** Generated experience data. */
+    experience: Experience;
+    /** @override */
+    done: false;
+}
+
+interface GamePlayResultDone
     extends GameResultBase<"play">,
         Omit<SimResult, "err"> {
-    /** Generated experience data, if enabled. */
-    examples?: TrainingExample[];
     /**
      * If an exception was thrown during the game, store it here for logging
      * instead of propagating it through the pipeline. The exception here is
@@ -117,3 +121,6 @@ export interface GamePlayResult
     /** @override */
     done: true;
 }
+
+/** Result of a game after it has been completed and processed by the worker. */
+export type GamePlayResult = GamePlayResultExp | GamePlayResultDone;

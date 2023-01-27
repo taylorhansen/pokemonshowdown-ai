@@ -54,9 +54,6 @@ export const config: Config = {
                 explorationDecay: 0.9,
                 minExploration: 0.1,
             },
-            experience: {
-                rewardDecay: 0.99,
-            },
             prev: 0.1,
         },
         eval: {
@@ -75,6 +72,10 @@ export const config: Config = {
                 batch: 32,
                 prefetch: 4,
             },
+            experience: {
+                rewardDecay: 0.99,
+            },
+            target: "double",
         },
         seeds: {
             model: "abc",

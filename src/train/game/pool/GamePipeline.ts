@@ -3,6 +3,7 @@ import {pipeline} from "stream/promises";
 import {MessagePort} from "worker_threads";
 import {GamePoolConfig, ExperienceConfig} from "../../../config/types";
 import {generatePsPrngSeed, rng, Rng, Seeder} from "../../../util/random";
+import {Experience} from "../experience";
 import {
     GamePool,
     GamePoolAgentConfig,
@@ -37,6 +38,11 @@ export interface GameArgsGenOptions {
     readonly experienceConfig?: ExperienceConfig;
     /** Random seed generators. */
     readonly seeders?: GameArgsGenSeeders;
+    /**
+     * Callback for processing Experience objects if the game is configured for
+     * it.
+     */
+    readonly experienceCallback?: (exp: Experience) => void;
 }
 
 /** Random number generators used by the game and policy. */
@@ -106,6 +112,7 @@ export class GamePipeline {
         reduceLogs,
         experienceConfig,
         seeders,
+        experienceCallback,
     }: GameArgsGenOptions): Generator<GamePoolArgs> {
         const battleRandom = seeders?.battle && rng(seeders.battle());
         const teamRandom = seeders?.team && rng(seeders.team());
@@ -134,6 +141,7 @@ export class GamePipeline {
                     seed: generatePsPrngSeed(battleRandom),
                     ...(experienceConfig && {experienceConfig}),
                 },
+                ...(experienceCallback && {experienceCallback}),
             };
         }
     }

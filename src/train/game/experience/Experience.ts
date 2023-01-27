@@ -18,4 +18,8 @@ export interface Experience extends ExperienceAgentData {
     action: number;
     /** Reward gained from the action and state transition. */
     reward: number;
+    /** Resultant state from action. */
+    nextState: Float32Array[];
+    /** Marks {@link nextState} as a terminal state so it won't be processed. */
+    done: boolean;
 }
