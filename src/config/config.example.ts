@@ -20,12 +20,13 @@ export const config: Config = {
         // "ws://sim.smogon.com:8000/" or "wss://sim.smogon.com/" to connect to
         // the official PS server.
         websocketRoute: "ws://localhost:8000/",
-        model: "train/latest",
+        model: "train",
         verbose: Verbose.Info,
     },
     paths: {
         models: path.join(__dirname, "../../models/"),
         logs: path.join(__dirname, "../../logs/"),
+        metrics: path.join(__dirname, "../../metrics"),
     },
     // Should set below to true if you have a compatible GPU.
     tf: {gpu: false},
@@ -90,7 +91,7 @@ export const config: Config = {
     },
     compare: {
         name: "latest-original-random",
-        models: ["train/latest", "train/original", "random"],
+        models: ["train", "train/checkpoints/original", "random"],
         numGames: 256,
         threshold: 0.55,
         batchPredict: {

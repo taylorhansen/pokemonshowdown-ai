@@ -13,6 +13,7 @@ import {
 import {ModelWorker} from "../train/model/worker";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
+import {ensureDir} from "../util/paths/ensureDir";
 import {pathToFileUrl} from "../util/paths/pathToFileUrl";
 import {seeder} from "../util/random";
 
@@ -32,10 +33,15 @@ void (async function () {
         return;
     }
 
-    const models = new ModelWorker(
-        config.tf.gpu,
-        join(config.paths.logs, `tensorboard/compare/${config.compare.name}`),
+    const logPath = join(config.paths.logs, "compare", config.compare.name);
+    const metricsPath = join(
+        config.paths.metrics,
+        "compare",
+        config.compare.name,
     );
+    await Promise.all([logPath, metricsPath].map(ensureDir));
+
+    const models = new ModelWorker(config.tf.gpu, metricsPath);
     try {
         for (const model of compareModels) {
             if (model === "random") {
@@ -126,12 +132,7 @@ void (async function () {
                     requestModelPort: async modelName =>
                         await models.subscribe(modelName),
                     numGames: config.compare.numGames,
-                    logPath: join(
-                        config.paths.logs,
-                        "compare",
-                        config.compare.name,
-                        model,
-                    ),
+                    logPath: join(logPath, model),
                     ...(config.compare.pool.reduceLogs && {reduceLogs: true}),
                     ...(seeders && {seeders}),
                 };

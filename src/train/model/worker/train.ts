@@ -1,7 +1,8 @@
 import {join} from "path";
 import {serialize} from "v8";
 import * as tf from "@tensorflow/tfjs";
-import {TrainConfig} from "../../../config/types";
+import {PathsConfig, TrainConfig} from "../../../config/types";
+import {ensureDir} from "../../../util/paths/ensureDir";
 import {pathToFileUrl} from "../../../util/paths/pathToFileUrl";
 import {seeder} from "../../../util/random";
 import {GameArgsGenSeeders} from "../../game/pool";
@@ -18,22 +19,31 @@ import {datasetFromRollout} from "./dataset";
  *
  * @param model Model to train.
  * @param config Training config.
- * @param modelPath Path to store model checkpoints.
- * @param logPath Path to store game logs.
+ * @param paths Optional paths to store model checkpoints, game logs, and
+ * metrics.
  * @param callback Callback for notifying the main thread of various events
  * during each episode, including errors.
  */
 export async function train(
     model: ModelRegistry,
     config: TrainConfig,
-    modelPath?: string,
-    logPath?: string,
+    paths?: Partial<PathsConfig>,
     callback?: (data: ModelTrainData) => void,
 ): Promise<void> {
     const metrics = Metrics.get("train");
 
-    if (modelPath) {
-        await model.save(pathToFileUrl(join(modelPath, "original")));
+    let checkpointsPath: string | undefined;
+    if (paths?.models) {
+        checkpointsPath = join(paths.models, "checkpoints");
+        await Promise.all([
+            (async function () {
+                await ensureDir(checkpointsPath),
+                    await model.save(
+                        pathToFileUrl(join(checkpointsPath, "original")),
+                    );
+            })(),
+            model.save(pathToFileUrl(paths.models)),
+        ]);
     }
 
     const [rolloutModel, prevModel, targetModel] = await Promise.all(
@@ -56,7 +66,7 @@ export async function train(
         rolloutModel,
         prevModel,
         config.rollout,
-        logPath && join(logPath, "rollout"),
+        paths?.logs ? join(paths.logs, "rollout") : undefined,
         {
             ...seeders,
             ...(config.seeds?.rollout && {
@@ -91,7 +101,7 @@ export async function train(
         rolloutModel,
         prevModel,
         config.eval,
-        logPath && join(logPath, "eval"),
+        paths?.logs ? join(paths.logs, "eval") : undefined,
         seeders && {
             ...(seeders.battle && {battle: seeder(seeders.battle())}),
             ...(seeders.team && {team: seeder(seeders.team())}),
@@ -160,15 +170,17 @@ export async function train(
                         callback &&
                             (wlt => callback({type: "evalDone", step, wlt})),
                     ),
-                ...(modelPath
+                ...(checkpointsPath
                     ? [
                           rolloutModel.save(
-                              pathToFileUrl(join(modelPath, `episode-${step}`)),
-                          ),
-                          rolloutModel.save(
-                              pathToFileUrl(join(modelPath, "latest")),
+                              pathToFileUrl(
+                                  join(checkpointsPath, `episode-${step}`),
+                              ),
                           ),
                       ]
+                    : []),
+                ...(paths?.models
+                    ? [rolloutModel.save(pathToFileUrl(paths.models))]
                     : []),
             ]);
             // Suppress unhandled exception warnings since we'll await this

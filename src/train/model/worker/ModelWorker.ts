@@ -4,6 +4,7 @@ import {MessagePort, Worker} from "worker_threads";
 import {
     BatchPredictConfig,
     ModelConfig,
+    PathsConfig,
     TrainConfig,
 } from "../../../config/types";
 import {WorkerPort} from "../../port/WorkerPort";
@@ -101,6 +102,8 @@ export class ModelWorker {
      * @param config Training config.
      * @param modelPath Path to store model checkpoints.
      * @param logPath Path to store game logs.
+     * @param paths Optional paths to store model checkpoints, game logs,
+     * and metrics.
      * @param callback Called after each evaluation step with data that should
      * be logged to the user.
      * @returns A Promise that resolves once training is complete or
@@ -109,8 +112,7 @@ export class ModelWorker {
     public async train(
         model: string,
         config: TrainConfig,
-        modelPath?: string,
-        logPath?: string,
+        paths?: Partial<PathsConfig>,
         callback?: (data: ModelTrainData<false /*TSerialized*/>) => void,
     ): Promise<void> {
         return await new Promise((res, rej) =>
@@ -120,8 +122,7 @@ export class ModelWorker {
                     rid: this.workerPort.nextRid(),
                     model,
                     config,
-                    ...(modelPath && {modelPath}),
-                    ...(logPath && {logPath}),
+                    ...(paths && {paths}),
                 },
                 [],
                 result => {

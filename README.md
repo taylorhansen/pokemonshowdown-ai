@@ -58,12 +58,14 @@ and may take several hours depending on how it's
 [configured](/src/config/config.example.ts).
 
 The training script saves logs to `./logs/` and checkpoints to `./models/` (can
-be changed by config). Some logs such as loss, gradients, evaluation scores,
-etc. can be viewed with Tensorboard.
+be changed by config).
+
+Some metrics such as loss, gradients, evaluation scores, etc. can be viewed
+using TensorBoard.
 
 ```sh
 pip install tensorboard
-tensorboard --logdir logs/tensorboard
+tensorboard --logdir metrics
 ```
 
 ## Comparing trained models
@@ -73,9 +75,9 @@ npm run compare
 ```
 
 Based on the [config](/src/config/config.example.ts), runs several games between
-each of the models that were created by `npm run train` in order to determine
-which one is better at the game. Useful for experiments to compare models from
-differently-configured training runs. Includes support for a baseline
+each of the models that were created by differently-configured training runs
+(via `npm run train`), round-robin style, in order to determine which model
+performs the best against the others. Includes support for a baseline
 randomly-acting model and fixed random seeds.
 
 ## Running

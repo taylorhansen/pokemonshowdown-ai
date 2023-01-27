@@ -3,6 +3,7 @@ import {MessagePort} from "worker_threads";
 import {
     BatchPredictConfig,
     ModelConfig,
+    PathsConfig,
     TrainConfig,
 } from "../../../config/types";
 import {SimResult} from "../../game/sim/playGame";
@@ -64,10 +65,8 @@ export interface ModelTrainMessage extends ModelMessageBase<"train"> {
     readonly model: string;
     /** Config for training. */
     readonly config: TrainConfig;
-    /** Path to store model checkpoints. */
-    readonly modelPath?: string;
-    /** Path to store game logs. */
-    readonly logPath?: string;
+    /** Optional paths to store model checkpoints, game logs, and metrics. */
+    readonly paths?: Partial<PathsConfig>;
 }
 
 /** Requests a game worker port from a registered model. */

@@ -38,6 +38,8 @@ export interface PathsConfig {
     readonly models: string;
     /** Path to the directory containing the logs. */
     readonly logs: string;
+    /** Path to the directory containing the TensorBoard metrics. */
+    readonly metrics: string;
 }
 
 /** Configuration for TensorFlow. */

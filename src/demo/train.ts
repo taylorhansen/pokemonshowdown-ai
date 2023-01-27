@@ -30,18 +30,16 @@ const logger = new Logger(
 void (async function () {
     const modelPath = join(config.paths.models, config.train.name);
     const logPath = join(config.paths.logs, config.train.name);
-    await Promise.all([modelPath, logPath].map(ensureDir));
+    const metricsPath = join(config.paths.metrics, config.train.name);
+    await Promise.all([modelPath, logPath, metricsPath].map(ensureDir));
 
     /** Manages the worker thread for Tensorflow ops. */
-    const models = new ModelWorker(
-        config.tf.gpu,
-        join(config.paths.logs, "tensorboard", config.train.name),
-    );
+    const models = new ModelWorker(config.tf.gpu, metricsPath);
 
     // Create or load neural network.
     let model: string;
     if (resume) {
-        const resumeFolder = join(config.paths.models, resume || "");
+        const resumeFolder = join(config.paths.models, resume);
         const resumeLoadUrl = pathToFileUrl(join(resumeFolder, "model.json"));
         logger.info("Loading model: " + resumeFolder);
         try {
@@ -74,8 +72,11 @@ void (async function () {
 
     const trainProgress = new TrainingProgress(config, logger);
     try {
-        await models.train(model, config.train, modelPath, logPath, data =>
-            trainProgress.callback(data),
+        await models.train(
+            model,
+            config.train,
+            {models: modelPath, logs: logPath, metrics: metricsPath},
+            data => trainProgress.callback(data),
         );
     } catch (e) {
         logger.error((e as Error).stack ?? (e as Error).toString());

@@ -73,8 +73,7 @@ async function handle(msg: ModelMessage): Promise<void> {
                 await train(
                     getRegistry(msg.model),
                     msg.config,
-                    msg.modelPath,
-                    msg.logPath,
+                    msg.paths,
                     data => {
                         const interim: ModelTrainResult = {
                             type: "train",
