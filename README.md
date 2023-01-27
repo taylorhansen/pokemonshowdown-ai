@@ -90,8 +90,8 @@ Connects to the PS server specified in the
 [config](/src/config/config.example.ts) and starts accepting battle challenges
 in the `gen4randombattle` format, which is the format that this project is using
 for now. By default it loads the model from the last completed training run in
-`./models/train/latest`. This allows the model to take on human challengers or
-any other outside bots.
+`./models/train`. This allows the model to take on human challengers or any
+other outside bots.
 
 ## License
 
