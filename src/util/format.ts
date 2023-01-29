@@ -1,6 +1,9 @@
 /** Gets the number of whole decimal digits in a number. */
 export function numDigits(n: number): number {
-    return Math.max(1, Math.ceil(Math.log10(Math.abs(n))));
+    if (n === 0) {
+        return 1;
+    }
+    return 1 + Math.floor(Math.log10(Math.abs(n)));
 }
 
 /** Formats a {@link process.uptime} value. */
