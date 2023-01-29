@@ -13,17 +13,18 @@ that can be taken.
 ## Algorithm
 
 -   Load the neural network to be trained, or create one if it doesn't exist.
--   Run the [training loop](model/worker/train.ts):
-    -   Use a [thread pool](game/pool/GamePool.ts) to queue up multiple
+-   Run the [training loop](train.ts):
+    -   Use a [thread pool](../game/pool/GamePool.ts) to queue up multiple
         self-play games and collect reward/state data, called
-        [experience](game/experience/Experience.ts). This is called the
-        [rollout](model/worker/Rollout.ts) stage.
-    -   Asynchronously feed experience into the [learner](model/worker/Learn.ts)
-        to compute the model update.
-    -   Play [evaluation](model/worker/Evaluate.ts) games against previous
+        [experience](../game/experience/Experience.ts). This is called the
+        [rollout](Rollout.ts) stage.
+    -   Feed experience into the [learner](Learn.ts) to compute model updates.
+    -   Periodically play [evaluation](Evaluate.ts) games against previous
         versions to track progress.
 
-The entire algorithm takes place on a separate [thread](model/worker/worker.ts)
-where all the Tensorflow operations are kept and
-[managed](model/worker/ModelWorker.ts) by the main thread. It also manages batch
-predictions for parallel games.
+The entire algorithm takes place on a separate
+[thread](../model/worker/worker.ts) where all the Tensorflow operations
+(including batch predictions for parallel games) are kept and
+[managed](../model/worker/ModelWorker.ts) asynchronously by the main thread. The
+main thread is also used to [track](TrainingProgress.ts) training progress with
+a progress bar if configured for it.

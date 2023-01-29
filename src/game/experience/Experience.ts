@@ -1,0 +1,24 @@
+import {BattleAgent} from "../../psbot/handlers/battle/agent";
+
+/**
+ * BattleAgent decision evaluation data. Can be processed in batches to
+ * effectively train a neural network.
+ */
+export interface Experience {
+    /** State in which the action was taken. Flattened array data. */
+    state: Float32Array[];
+    /** Id of the action that was taken. */
+    action: number;
+    /** Reward gained from the action and state transition. */
+    reward: number;
+    /** Resultant state from action. */
+    nextState: Float32Array[];
+    /** Marks {@link nextState} as a terminal state so it won't be processed. */
+    done: boolean;
+}
+
+/** BattleAgent with additional args for experience generation. */
+export type ExperienceBattleAgent<TInfo = unknown> = BattleAgent<
+    TInfo,
+    [lastAction?: number, reward?: number]
+>;

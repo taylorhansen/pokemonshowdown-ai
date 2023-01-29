@@ -1,10 +1,17 @@
+/** @file Defines the model and a few utilities for interacting with it. */
 import * as tf from "@tensorflow/tfjs";
 import {ModelAggregateConfig, ModelConfig} from "../config/types";
 import {Moveset} from "../psbot/handlers/battle/state/Moveset";
 import {Team} from "../psbot/handlers/battle/state/Team";
 import {Rng, rng} from "../util/random";
 import * as customLayers from "./custom_layers";
-import {modelInputShapesMap, verifyModel} from "./shapes";
+import {
+    modelInputNames,
+    modelInputShapes,
+    modelInputShapesMap,
+    modelOutputName,
+    modelOutputShape,
+} from "./shapes";
 
 /**
  * Creates a default model for training.
@@ -883,4 +890,92 @@ function duelingQ(
         })
         .apply([stateValue, centeredAdv]) as tf.SymbolicTensor;
     return actionQ;
+}
+
+/**
+ * Verifies that the model is compatible with the input/output shapes as
+ * specified by {@link modelInputShapes} and {@link modelOutputShape}.
+ *
+ * @throws Error if invalid input/output shapes.
+ */
+export function verifyModel(model: tf.LayersModel): void {
+    validateInput(model.input);
+    validateOutput(model.output);
+}
+
+/** Ensures that the model input shape is valid. */
+function validateInput(input: tf.SymbolicTensor | tf.SymbolicTensor[]): void {
+    if (!Array.isArray(input)) {
+        throw new Error("Model input is not an array");
+    }
+    if (input.length !== modelInputShapes.length) {
+        throw new Error(
+            `Expected ${modelInputShapes.length} inputs but found ` +
+                `${input.length}`,
+        );
+    }
+    for (let i = 0; i < modelInputShapes.length; ++i) {
+        const {shape} = input[i];
+        const expectedShape = [null, ...modelInputShapes[i]];
+        let invalid: boolean | undefined;
+        if (shape.length !== expectedShape.length) {
+            invalid = true;
+        } else {
+            for (let j = 0; j < expectedShape.length; ++j) {
+                if (shape[j] !== expectedShape[j]) {
+                    invalid = true;
+                    break;
+                }
+            }
+        }
+        if (invalid) {
+            throw new Error(
+                `Expected input ${i} (${modelInputNames[i]}) to have shape ` +
+                    `${JSON.stringify(expectedShape)} but found ` +
+                    `${JSON.stringify(shape)}`,
+            );
+        }
+    }
+}
+
+/** Ensures that the model output shape is valid. */
+function validateOutput(output: tf.SymbolicTensor | tf.SymbolicTensor[]): void {
+    if (Array.isArray(output)) {
+        throw new Error("Model output must not be an array");
+    }
+    const expectedShape = [null, ...modelOutputShape];
+    for (let i = 0; i < expectedShape.length; ++i) {
+        if (output.shape[i] !== expectedShape[i]) {
+            throw new Error(
+                `Expected output (${modelOutputName}) to have shape ` +
+                    `${JSON.stringify(expectedShape)} but found ` +
+                    `${JSON.stringify(output.shape)}`,
+            );
+        }
+    }
+}
+
+/**
+ * Converts the data lists into tensors
+ *
+ * @param includeBatchDim Whether to include an extra 1 dimension in the first
+ * axis for the batch. Default false.
+ */
+export function encodedStateToTensors(
+    arr: Float32Array[],
+    includeBatchDim?: boolean,
+): tf.Tensor[] {
+    if (arr.length !== modelInputShapes.length) {
+        throw new Error(
+            `Expected ${modelInputShapes.length} inputs but found ` +
+                `${arr.length}`,
+        );
+    }
+    return modelInputShapes.map((shape, i) =>
+        tf.tensor(
+            arr[i],
+            includeBatchDim ? [1, ...shape] : [...shape],
+            "float32",
+        ),
+    );
 }

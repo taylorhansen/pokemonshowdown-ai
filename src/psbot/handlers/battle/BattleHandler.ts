@@ -87,7 +87,7 @@ export class BattleHandler<TAgent extends BattleAgent = BattleAgent>
     /** Creates a BattleHandler. */
     public constructor({
         username,
-        parser = main as unknown as BattleParser<TAgent, [], void>,
+        parser = main,
         stateCtor = BattleState,
         agent,
         sender,

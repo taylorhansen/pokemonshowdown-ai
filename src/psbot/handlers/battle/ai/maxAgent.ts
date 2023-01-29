@@ -7,22 +7,24 @@ import {ReadonlyBattleState} from "../state";
  * Creates a {@link BattleAgent} function that selects the best choice based on
  * the given evaluator.
  *
- * @param getOutputValues Function for getting the output values of each choice.
+ * @param evaluator Function for evaluating the ranking of each choice.
  * @param debugRankings If true, the returned BattleAgent will also return a
  * debug string displaying the rankings for each choice.
  */
-export function maxAgent(
-    getOutputValues: (
+export function maxAgent<TArgs extends unknown[] = []>(
+    evaluator: (
         state: ReadonlyBattleState,
+        ...args: TArgs
     ) => Float32Array | Promise<Float32Array>,
     debugRankings?: boolean,
-): BattleAgent<string | undefined> {
+): BattleAgent<string | undefined, TArgs> {
     return async function (
         state: ReadonlyBattleState,
         choices: Choice[],
         logger?: Logger,
+        ...args: TArgs
     ): Promise<string | undefined> {
-        const output = await getOutputValues(state);
+        const output = await evaluator(state, ...args);
         logger?.debug(
             "Ranked choices: {" +
                 intToChoice

@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {modelInputShapes, verifyModel} from "../../../../model/shapes";
+import {encodedStateToTensors, verifyModel} from "../../../../model/model";
 import {BattleAgent} from "../agent";
 import {allocEncodedState, encodeState} from "./encoder";
 import {maxAgent} from "./maxAgent";
@@ -46,29 +46,4 @@ export function networkAgent(
         callback({state: stateTensors, output: outputTensor});
         return outputData;
     }, debugRankings);
-}
-
-/**
- * Converts the data lists into tensors
- *
- * @param includeBatchDim Whether to include an extra 1 dimension in the first
- * axis for the batch. Default false.
- */
-export function encodedStateToTensors(
-    arr: Float32Array[],
-    includeBatchDim?: boolean,
-): tf.Tensor[] {
-    if (arr.length !== modelInputShapes.length) {
-        throw new Error(
-            `Expected ${modelInputShapes.length} inputs but found ` +
-                `${arr.length}`,
-        );
-    }
-    return modelInputShapes.map((shape, i) =>
-        tf.tensor(
-            arr[i],
-            includeBatchDim ? [1, ...shape] : [...shape],
-            "float32",
-        ),
-    );
 }

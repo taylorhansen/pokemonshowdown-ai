@@ -8,6 +8,8 @@ import {Config} from "./types";
 // the training script should make the whole process fully deterministic.
 const numThreads = os.cpus().length;
 
+const maxTurns = 100;
+
 /**
  * Top-level config. Should only be accessed by the top-level.
  *
@@ -32,7 +34,7 @@ export const config: Config = {
     tf: {gpu: false},
     train: {
         name: "train",
-        episodes: 16,
+        steps: maxTurns * 2 * 50 /*enough for at least 50 games*/,
         batchPredict: {
             maxSize: numThreads,
             timeoutNs: 10_000_000n /*10ms*/,
@@ -47,36 +49,36 @@ export const config: Config = {
         rollout: {
             pool: {
                 numThreads,
-                maxTurns: 100,
+                maxTurns,
                 reduceLogs: true,
             },
             policy: {
                 exploration: 1.0,
-                explorationDecay: 0.9,
+                explorationDecay: 0.999,
                 minExploration: 0.1,
             },
             prev: 0.1,
         },
-        eval: {
-            numGames: 128,
-            pool: {
-                numThreads,
-                maxTurns: 100,
-                reduceLogs: true,
-            },
+        experience: {
+            rewardDecay: 0.99,
+            bufferSize: maxTurns * 2 * 25 /*enough for at least 25 games*/,
+            prefill: maxTurns * 2 * numThreads /*at least one complete game*/,
         },
         learn: {
-            updates: 1024,
             learningRate: 0.0001,
-            buffer: {
-                shuffle: 100 * 2 * 8 /*at least 8 game's worth*/,
-                batch: 32,
-                prefetch: 4,
-            },
-            experience: {
-                rewardDecay: 0.99,
-            },
+            batchSize: 32,
             target: "double",
+            targetInterval: 500,
+            metricsInterval: 100,
+        },
+        eval: {
+            numGames: 32,
+            pool: {
+                numThreads,
+                maxTurns,
+                reduceLogs: true,
+            },
+            interval: 1000,
         },
         seeds: {
             model: "abc",
@@ -87,6 +89,8 @@ export const config: Config = {
             learn: "pqr",
         },
         savePreviousVersions: true,
+        checkpointInterval: 1000,
+        progress: true,
         verbose: Verbose.Info,
     },
     compare: {

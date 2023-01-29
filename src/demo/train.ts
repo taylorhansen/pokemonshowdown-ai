@@ -2,8 +2,9 @@
 import {join} from "path";
 import {setGracefulCleanup} from "tmp-promise";
 import {config} from "../config";
+import {ModelWorker} from "../model/worker";
 import {TrainingProgress} from "../train/TrainingProgress";
-import {ModelWorker} from "../train/model/worker";
+import {formatUptime} from "../util/format";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
 import {ensureDir} from "../util/paths/ensureDir";
@@ -70,7 +71,7 @@ void (async function () {
         );
     }
 
-    const trainProgress = new TrainingProgress(config, logger);
+    const trainProgress = new TrainingProgress(config.train, logger);
     try {
         await models.train(
             model,
@@ -84,6 +85,7 @@ void (async function () {
         await models.unload(model);
         await models.close();
         trainProgress.done();
+        logger.info("Uptime: " + formatUptime(process.uptime()));
         logger.info("Done");
     }
 })();

@@ -52,25 +52,31 @@ export interface TensorflowConfig {
 export interface TrainConfig {
     /** Name of the training run under which to store logs. */
     readonly name: string;
-    /** Number of training episodes to complete. */
-    readonly episodes: number;
-    /** Batch predict config. */
+    /** Number of learning steps. Omit or set to zero to train indefinitely. */
+    readonly steps?: number;
+    /** Batch predict config for models outside the learning step. */
     readonly batchPredict: BatchPredictConfig;
     /** Model config. */
     readonly model: ModelConfig;
     /** Rollout config. */
     readonly rollout: RolloutConfig;
-    /** Evaluation config. */
-    readonly eval: EvalConfig;
+    /** Experience config. */
+    readonly experience: ExperienceConfig;
     /** Learning config. */
     readonly learn: LearnConfig;
+    /** Evaluation config. */
+    readonly eval: EvalConfig;
     /** RNG config. */
     readonly seeds?: TrainSeedConfig;
+    /** Whether to save model checkpoints as separate versions. */
+    readonly savePreviousVersions?: boolean;
     /**
-     * Whether to save each previous version of the model separately after each
-     * training step.
+     * Step interval for saving model checkpoints. Omit to not store
+     * checkpoints.
      */
-    readonly savePreviousVersions: boolean;
+    readonly checkpointInterval?: number;
+    /** Whether to display a progress bar if {@link steps} is also defined. */
+    readonly progress?: boolean;
     /** Verbosity level for logging. Default highest. */
     readonly verbose?: Verbose;
 }
@@ -133,6 +139,8 @@ export interface RolloutConfig {
     /**
      * Fraction of self-play games that should by played against the model's
      * previous version rather than itself.
+     *
+     * The previous version is defined by the last {@link EvalConfig eval} step.
      */
     readonly prev: number;
 }
@@ -160,13 +168,43 @@ export interface PolicyConfig {
      * proportion of actions to take randomly rather than consulting the model.
      */
     readonly exploration: number;
-    /**
-     * Exploration (epsilon) decay factor. Applied after each full episode of
-     * training.
-     */
+    /** Exploration (epsilon) decay factor. Applied after each learning step. */
     readonly explorationDecay: number;
     /** Minumum exploration (epsilon) value. */
     readonly minExploration: number;
+}
+
+/** Configuration for learning on experience generated from rollout games. */
+export interface ExperienceConfig {
+    /** Discount factor for future rewards. */
+    readonly rewardDecay: number;
+    /** Size of the experience replay buffer. */
+    readonly bufferSize: number;
+    /**
+     * Minimum number of experiences to generate before starting training. Must
+     * be at least as big as the batch size.
+     */
+    readonly prefill: number;
+}
+
+/** Configuration for the learning process. */
+export interface LearnConfig {
+    /** Optimizer learning rate. */
+    readonly learningRate: number;
+    /** Batch size. */
+    readonly batchSize: number;
+    /**
+     * Whether to use a target network to increase training stability, or
+     * `"double"` to implement double Q learning approach using the target net.
+     */
+    readonly target: boolean | "double";
+    /** Step interval for updating the target network. */
+    readonly targetInterval: number;
+    /**
+     * Step interval for tracking expensive batch update model metrics such as
+     * histograms which can significanly slow down training.
+     */
+    readonly metricsInterval: number;
 }
 
 /** Configuration for the evaluation process. */
@@ -175,39 +213,8 @@ export interface EvalConfig {
     readonly numGames: number;
     /** Game pool config. */
     readonly pool: GamePoolConfig;
-}
-
-/** Configuration for the learning process. */
-export interface LearnConfig {
-    /** Number of batch updates before starting the next episode. */
-    readonly updates: number;
-    /** Optimizer learning rate. */
-    readonly learningRate: number;
-    /** Replay buffer config. */
-    readonly buffer: BufferConfig;
-    /** Experience config. */
-    readonly experience: ExperienceConfig;
-    /**
-     * Whether to use a target network to increase training stability, or
-     * `"double"` to implement double Q learning approach using the target net.
-     */
-    readonly target?: boolean | "double";
-}
-
-/** Configuration for the experience replay buffer. */
-export interface BufferConfig {
-    /** Number of experiences to buffer for shuffling. */
-    readonly shuffle: number;
-    /** Batch size for learning updates. */
-    readonly batch: number;
-    /** Number of batches to prefetch for learning. */
-    readonly prefetch: number;
-}
-
-/** Configuration for learning on experience generated from rollout games. */
-export interface ExperienceConfig {
-    /** Discount factor for future rewards. */
-    readonly rewardDecay: number;
+    /** Step interval for performing model evaluations. */
+    readonly interval: number;
 }
 
 /** Configuration for random number generators in the training script. */

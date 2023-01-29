@@ -9,8 +9,8 @@ import {
     GameArgsGenOptions,
     GameArgsGenSeeders,
     GamePipeline,
-} from "../train/game/pool";
-import {ModelWorker} from "../train/model/worker";
+} from "../game/pool";
+import {ModelWorker} from "../model/worker";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
 import {ensureDir} from "../util/paths/ensureDir";
@@ -198,8 +198,9 @@ void (async function () {
                     );
                 }
             });
+            await games.close();
         } finally {
-            await games.cleanup();
+            await games.terminate();
             progressBar.terminate();
         }
 
