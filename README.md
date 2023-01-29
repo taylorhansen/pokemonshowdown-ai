@@ -12,8 +12,7 @@ This project has three parts:
 -   [PsBot](/src/psbot) framework for creating a general Pokemon Showdown bot
     and setting up the battle interface.
 -   [Battle](/src/psbot/handlers/battle) state tracker and PS protocol parser.
--   Neural network [management](/src/psbot/handlers/battle/ai) and
-    [training](/src/train) scripts.
+-   Neural network [management](/src/model) and [training](/src/train) scripts.
 
 https://user-images.githubusercontent.com/13547043/184581452-31b33c7e-87d5-4a26-8772-a7c365704109.mp4
 

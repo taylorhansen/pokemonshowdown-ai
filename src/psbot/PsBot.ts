@@ -35,7 +35,7 @@ export type HandlerFactory = (
     room: string,
     username: string,
     sender: Sender,
-) => handlers.RoomHandler;
+) => handlers.RoomHandler | Promise<handlers.RoomHandler>;
 
 /** Manages the connection to a PokemonShowdown server. */
 export class PsBot {
@@ -325,7 +325,7 @@ export class PsBot {
             const sender: Sender = (...responses: string[]) =>
                 this.addResponses(roomid, ...responses);
 
-            handler = handlerFactory(roomid, this.username, sender);
+            handler = await handlerFactory(roomid, this.username, sender);
             this.addHandler(roomid, handler);
         }
 

@@ -28,6 +28,8 @@ export interface PsBotConfig {
     readonly websocketRoute: string;
     /** Name of the model to serve. */
     readonly model: string;
+    /** Batch predict config for the model. */
+    readonly batchPredict: BatchPredictConfig;
     /** Verbosity level for logging. Default highest. */
     readonly verbose?: Verbose;
 }

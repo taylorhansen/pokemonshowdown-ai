@@ -65,8 +65,13 @@ export class ModelPort {
      * Creates a BattleAgent from this port.
      *
      * @param explore Exploration policy config.
+     * @param debugRankings If true, the returned BattleAgent will also return a
+     * debug string displaying the output of each choice.
      */
-    public getAgent(explore?: AgentExploreConfig): ExperienceBattleAgent {
+    public getAgent(
+        explore?: AgentExploreConfig,
+        debugRankings?: boolean,
+    ): ExperienceBattleAgent<string | undefined> {
         const random = explore?.seed ? rng(explore.seed) : Math.random;
 
         const greedyAgent = maxAgent(
@@ -84,6 +89,7 @@ export class ModelPort {
 
                 return result.output;
             },
+            debugRankings,
         );
 
         return async function modelPortAgent(
@@ -93,12 +99,19 @@ export class ModelPort {
             lastAction,
             reward,
         ) {
-            await greedyAgent(state, choices, logger, lastAction, reward);
+            const info = await greedyAgent(
+                state,
+                choices,
+                logger,
+                lastAction,
+                reward,
+            );
 
             if (explore && random() < explore.factor) {
                 logger?.debug("Exploring");
                 await randomAgent(state, choices, random);
             }
+            return info;
         };
     }
 

@@ -9,7 +9,7 @@ import {ReadonlyBattleState} from "../state";
  *
  * @param evaluator Function for evaluating the ranking of each choice.
  * @param debugRankings If true, the returned BattleAgent will also return a
- * debug string displaying the rankings for each choice.
+ * debug string displaying the evaluation of each choice.
  */
 export function maxAgent<TArgs extends unknown[] = []>(
     evaluator: (

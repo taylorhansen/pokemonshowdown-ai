@@ -1,28 +1,20 @@
 // istanbul ignore file: Demo.
 import {join} from "path";
-import * as tf from "@tensorflow/tfjs";
 import {config} from "../config";
+import {ModelPort} from "../model/port";
+import {ModelWorker} from "../model/worker";
 import {PsBot} from "../psbot/PsBot";
 import * as handlers from "../psbot/handlers";
-import {networkAgent} from "../psbot/handlers/battle/ai/networkAgent";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
 import {pathToFileUrl} from "../util/paths/pathToFileUrl";
-import {importTfn} from "../util/tfn";
-// Make sure custom layers can be deserialized.
-import "../model/custom_layers";
-
-// Select native backend.
-importTfn(config.tf.gpu);
-
-// Load neural network from disk in the background while connecting.
-const modelPromise = tf.loadLayersModel(
-    pathToFileUrl(join(config.paths.models, config.psbot.model, "model.json")),
-);
-
-const logger = new Logger(Logger.stderr, config.psbot.verbose ?? Verbose.Debug);
 
 void (async function () {
+    const logger = new Logger(
+        Logger.stderr,
+        config.psbot.verbose ?? Verbose.Debug,
+    );
+
     const bot = new PsBot(logger.addPrefix("PsBot: "));
 
     try {
@@ -43,21 +35,28 @@ void (async function () {
         bot.setAvatar(config.psbot.avatar);
     }
 
-    const model = await modelPromise;
-    const agent = networkAgent(
-        model,
-        undefined /*callback*/,
-        true /*debugRankings*/,
+    const models = new ModelWorker(config.tf.gpu);
+    const model = await models.load(
+        "model",
+        config.psbot.batchPredict,
+        pathToFileUrl(
+            join(config.paths.models, config.psbot.model, "model.json"),
+        ),
     );
 
-    bot.acceptChallenges(
-        "gen4randombattle",
-        (room, user, sender) =>
-            new handlers.battle.BattleHandler({
-                username: user,
-                agent,
-                sender,
-                logger: logger.addPrefix(`BattleHandler(${room}): `),
-            }),
-    );
+    bot.acceptChallenges("gen4randombattle", async (room, user, sender) => {
+        const port = new ModelPort(await models.subscribe(model));
+        const handler = new handlers.battle.BattleHandler({
+            username: user,
+            agent: port.getAgent(undefined /*explore*/, true /*debugRankings*/),
+            sender,
+            logger: logger.addPrefix(`BattleHandler(${room}): `),
+        });
+        // Make sure ports aren't dangling.
+        void handler
+            .finish()
+            .catch(() => {})
+            .finally(() => port.close());
+        return handler;
+    });
 })();

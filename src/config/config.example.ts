@@ -23,6 +23,11 @@ export const config: Config = {
         // the official PS server.
         websocketRoute: "ws://localhost:8000/",
         model: "train",
+        batchPredict: {
+            // Can be tuned based on expected load.
+            maxSize: 1,
+            timeoutNs: 10_000_000n /*10ms*/,
+        },
         verbose: Verbose.Info,
     },
     paths: {
