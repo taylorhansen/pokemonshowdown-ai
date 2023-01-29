@@ -1,6 +1,6 @@
 import "mocha";
 import {expect} from "chai";
-import {numDigits} from "./format";
+import {formatUptime, numDigits} from "./format";
 
 export const test = () =>
     describe("format", function () {
@@ -33,6 +33,24 @@ export const test = () =>
                         `expected numDigits(${i}) to equal 3 but got ${digits}`,
                     );
                 }
+            });
+        });
+
+        describe("formatUptime()", function () {
+            it("Should display seconds", function () {
+                expect(formatUptime(1)).to.equal("1s");
+            });
+
+            it("Should display minutes", function () {
+                expect(formatUptime(61)).to.equal("1m01s");
+            });
+
+            it("Should display hours", function () {
+                expect(formatUptime(3661)).to.equal("1h01m01s");
+            });
+
+            it("Should display days", function () {
+                expect(formatUptime(90061)).to.equal("1d01h01m01s");
             });
         });
     });
