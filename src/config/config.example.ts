@@ -70,7 +70,12 @@ export const config: Config = {
             prefill: maxTurns * 2 * numThreads /*at least one complete game*/,
         },
         learn: {
-            learningRate: 0.0001,
+            optimizer: {
+                type: "rmsprop",
+                learningRate: 0.0001,
+                decay: 0.9,
+                momentum: 0,
+            },
             batchSize: 32,
             target: "double",
             targetInterval: 500,

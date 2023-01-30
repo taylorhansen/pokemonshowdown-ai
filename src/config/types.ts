@@ -191,8 +191,8 @@ export interface ExperienceConfig {
 
 /** Configuration for the learning process. */
 export interface LearnConfig {
-    /** Optimizer learning rate. */
-    readonly learningRate: number;
+    /** Neural network optimizer config. */
+    readonly optimizer: OptimizerConfig;
     /** Batch size. */
     readonly batchSize: number;
     /**
@@ -208,6 +208,30 @@ export interface LearnConfig {
      */
     readonly metricsInterval: number;
 }
+
+interface OptimizerConfigBase<T extends string> {
+    /** Type of optimizer. */
+    readonly type: T;
+}
+
+/** Configuration for SGD optimizer. */
+export interface SgdConfig extends OptimizerConfigBase<"sgd"> {
+    /** Learning rate for stochastic gradient descent. */
+    readonly learningRate: number;
+}
+
+/** Configuration for RMSProp optimizer. */
+export interface RmsPropConfig extends OptimizerConfigBase<"rmsprop"> {
+    /** Learning rate for gradient descent. */
+    readonly learningRate: number;
+    /** Discounting factor for the coming gradient. */
+    readonly decay?: number;
+    /** Momentum to use for gradient descent. */
+    readonly momentum?: number;
+}
+
+/** Configuration for the neural network optimizer. */
+export type OptimizerConfig = SgdConfig | RmsPropConfig;
 
 /** Configuration for the evaluation process. */
 export interface EvalConfig {

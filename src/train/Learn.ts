@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import {ExperienceConfig, LearnConfig} from "../config/types";
+import {ExperienceConfig, LearnConfig, OptimizerConfig} from "../config/types";
 import {BatchTensorExperience} from "../game/experience/tensor";
 import {Metrics} from "../model/worker/Metrics";
 import {intToChoice} from "../psbot/handlers/battle/agent";
@@ -12,7 +12,7 @@ export class Learn {
     /** Metrics logger. */
     private readonly metrics = Metrics.get(`${this.name}/learn`);
     /** Used for calculating gradients. */
-    private readonly optimizer = tf.train.sgd(this.config.learningRate);
+    private readonly optimizer = Learn.getOptimizer(this.config.optimizer);
     /** Collection of trainable variables in the model. */
     private readonly variables = this.model.trainableWeights.map(
         w => w.read() as tf.Variable,
@@ -54,6 +54,27 @@ export class Learn {
                 tf.dispose(weightScalar);
             } else {
                 this.metrics?.histogram(`${weights.name}/weights`, weights, 0);
+            }
+        }
+    }
+
+    /** Creates the neural network optimizer from config. */
+    private static getOptimizer(config: OptimizerConfig): tf.Optimizer {
+        switch (config.type) {
+            case "sgd":
+                return tf.train.sgd(config.learningRate);
+            case "rmsprop":
+                return tf.train.rmsprop(
+                    config.learningRate,
+                    config.decay,
+                    config.momentum,
+                );
+            default: {
+                const unsupported: never = config;
+                throw new Error(
+                    "Unsupported data type " +
+                        `'${(unsupported as {type: string}).type}'`,
+                );
             }
         }
     }
