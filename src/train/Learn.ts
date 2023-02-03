@@ -199,6 +199,9 @@ export class Learn {
         nextState: tf.Tensor[],
         done: tf.Tensor,
     ): tf.Tensor {
+        if (!Number.isFinite(this.expConfig.steps)) {
+            return reward;
+        }
         return tf.tidy(() => {
             let targetQ: tf.Tensor;
             const q = this.model.predictOnBatch(nextState) as tf.Tensor;
@@ -225,7 +228,10 @@ export class Learn {
 
             const target = tf.add(
                 reward,
-                tf.mul(this.expConfig.rewardDecay, targetQ),
+                tf.mul(
+                    tf.pow(this.expConfig.rewardDecay, this.expConfig.steps),
+                    targetQ,
+                ),
             );
             return target;
         });

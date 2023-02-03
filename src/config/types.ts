@@ -178,13 +178,20 @@ export interface PolicyConfig {
 
 /** Configuration for learning on experience generated from rollout games. */
 export interface ExperienceConfig {
-    /** Discount factor for future rewards. */
+    /** Discount factor for future rewards, aka gamma. */
     readonly rewardDecay: number;
+    /**
+     * Number of lookahead steps for experience generation, minimum 1. This is
+     * the n in n-step returns for temporal difference (TD) learning. Can be set
+     * to `Infinity` to mimic Monte Carlo (MC) returns which use the full
+     * discount reward sum.
+     */
+    readonly steps: number;
     /** Size of the experience replay buffer. */
     readonly bufferSize: number;
     /**
      * Minimum number of experiences to generate before starting training. Must
-     * be at least as big as the batch size.
+     * be at least as big as the {@link LearnConfig.batchSize batch size}.
      */
     readonly prefill: number;
 }

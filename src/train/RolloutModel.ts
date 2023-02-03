@@ -3,6 +3,7 @@ import {serialize} from "v8";
 import {MessageChannel, MessagePort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
+import {ExperienceConfig} from "../config/types";
 import {TensorExperience} from "../game/experience/tensor";
 import {encodedStateToTensors, verifyModel} from "../model/model";
 import {
@@ -31,7 +32,7 @@ interface Events extends ListenerSignature<{[predictRequest]: true}> {
 /**
  * Wraps a model for use in the rollout stage of training. Manages batched
  * synchronized time steps with both the learn stage and the rollout game
- * threads.
+ * threads for experience generation.
  */
 export class RolloutModel {
     /** Currently held game worker ports. */
@@ -56,10 +57,12 @@ export class RolloutModel {
      * @param name Name of the model.
      * @param model Model to wrap. Does not assume ownership since it's assumed
      * that a ModelRegistry already owns it.
+     * @param config Experience config.
      */
     public constructor(
         public readonly name: string,
         public readonly model: tf.LayersModel,
+        private readonly config: ExperienceConfig,
     ) {
         verifyModel(model);
     }
@@ -77,7 +80,7 @@ export class RolloutModel {
      * @returns A port for queueing predictions that the game worker will use.
      */
     public subscribe(): MessagePort {
-        const ec = new ExperienceContext(exp =>
+        const ec = new ExperienceContext(this.config, exp =>
             this.experienceBuffer.push(exp),
         );
         const {port1, port2} = new MessageChannel();
@@ -150,15 +153,7 @@ export class RolloutModel {
         ec: ExperienceContext,
     ): FinalizeResult {
         const state = msg.state && encodedStateToTensors(msg.state);
-        const lastAction =
-            msg.lastAction !== undefined
-                ? tf.scalar(msg.lastAction, "int32")
-                : undefined;
-        const reward =
-            msg.reward !== undefined
-                ? tf.scalar(msg.reward, "float32")
-                : undefined;
-        ec.finalize(state, lastAction, reward);
+        ec.finalize(state, msg.lastAction, msg.reward);
         return {
             type: "finalize",
             rid: msg.rid,
@@ -203,16 +198,24 @@ export class RolloutModel {
 
 /** Tracks Experience generation for one side of a game. */
 class ExperienceContext {
-    private lastState?: tf.Tensor[];
-    private lastAction?: tf.Scalar;
-    private lastReward?: tf.Scalar;
+    /** Contains last `steps-1` states. */
+    private readonly states: tf.Tensor[][] = [];
+    /** Contains last `steps-1` actions. */
+    private readonly actions: number[] = [];
+    /** Contains last `steps-1` rewards. */
+    private readonly rewards: number[] = [];
+
+    /** Most recent state. */
+    private latestState: tf.Tensor[] | null = null;
 
     /**
      * Creates an ExperienceContext.
      *
+     * @param config Experience config.
      * @param callback Callback to emit experiences.
      */
     public constructor(
+        private readonly config: ExperienceConfig,
         private readonly callback: (exp: TensorExperience) => void,
     ) {}
 
@@ -224,10 +227,12 @@ class ExperienceContext {
      * @param reward Net reward from state transition.
      */
     public add(state: tf.Tensor[], action?: number, reward?: number): void {
-        if (!this.lastState) {
-            this.lastState = state;
+        if (!this.latestState) {
+            // First decision doesn't have past action/reward yet.
+            this.latestState = state;
             return;
         }
+
         if (action === undefined) {
             throw new Error(
                 "Predict requests after first must include previous action",
@@ -238,16 +243,30 @@ class ExperienceContext {
                 "Predict requests after first must include previous reward",
             );
         }
-        const {lastState} = this;
-        this.lastState = state;
-        this.lastAction?.dispose();
-        this.lastAction = tf.scalar(action, "int32");
-        this.lastReward?.dispose();
-        this.lastReward = tf.scalar(reward, "float32");
+
+        this.states.push(this.latestState);
+        this.latestState = state;
+        this.actions.push(action);
+        this.rewards.push(reward);
+
+        if (this.states.length < this.config.steps) {
+            return;
+        }
+
+        const lastState = this.states.shift()!;
+        const lastAction = this.actions.shift()!;
+
+        // Get n-step returns for current experience.
+        let returns = this.rewards[this.rewards.length - 1];
+        for (let i = this.rewards.length - 2; i >= 0; --i) {
+            returns = this.rewards[i] + this.config.rewardDecay * returns;
+        }
+        this.rewards.shift();
+
         this.callback({
             state: lastState,
-            action: this.lastAction.clone(),
-            reward: this.lastReward.clone(),
+            action: tf.scalar(lastAction, "int32"),
+            reward: tf.scalar(returns, "float32"),
             nextState: state.map(t => t.clone()),
             done: tf.scalar(false),
         });
@@ -262,46 +281,60 @@ class ExperienceContext {
      */
     public finalize(
         state?: tf.Tensor[],
-        action?: tf.Scalar,
-        reward?: tf.Scalar,
+        action?: number,
+        reward?: number,
     ): void {
         if (!state) {
             // Game was forced to end abruptly.
-            tf.dispose(this.lastState);
-            this.lastAction?.dispose();
-            this.lastReward?.dispose();
-            action?.dispose();
-            reward?.dispose();
+            for (const s of this.states) {
+                for (const t of s) {
+                    t.dispose();
+                }
+            }
             return;
         }
-        if (!this.lastState) {
+
+        if (action === undefined) {
+            throw new Error("No last action provided");
+        }
+        if (reward === undefined) {
+            throw new Error("No last reward provided");
+        }
+
+        if (!this.latestState) {
             throw new Error("No last state");
         }
-        if (!action) {
-            action = this.lastAction;
-            if (!action) {
-                throw new Error("No last action provided");
-            }
-        } else {
-            this.lastAction?.dispose();
-            this.lastAction = undefined;
+
+        const exps: TensorExperience[] = [
+            {
+                state: this.latestState,
+                action: tf.scalar(action, "int32"),
+                reward: tf.scalar(reward, "float32"),
+                nextState: state,
+                done: tf.scalar(true),
+            },
+        ];
+
+        // Get up-to-n-step returns for remaining buffered experiences.
+        let returns = reward;
+        while (this.states.length > 0) {
+            const lastState = this.states.pop()!;
+            const lastAction = this.actions.pop()!;
+            const lastReward = this.rewards.pop()!;
+            returns = lastReward + this.config.rewardDecay * returns;
+
+            exps.push({
+                state: lastState,
+                action: tf.scalar(lastAction, "int32"),
+                reward: tf.scalar(returns, "float32"),
+                nextState: state.map(t => t.clone()),
+                done: tf.scalar(true),
+            });
         }
-        if (!reward) {
-            reward = this.lastReward;
-            if (!reward) {
-                throw new Error("No last reward provided");
-            }
-        } else {
-            this.lastReward?.dispose();
-            this.lastReward = undefined;
+
+        // Preserve experience order.
+        while (exps.length > 0) {
+            this.callback(exps.pop()!);
         }
-        this.callback({
-            state: this.lastState,
-            action,
-            reward,
-            nextState: state,
-            done: tf.scalar(true),
-        });
-        this.lastState = undefined;
     }
 }

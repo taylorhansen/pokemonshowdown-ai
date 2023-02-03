@@ -102,7 +102,7 @@ export function experienceBattleParser<
         if (lastChoice && !forcedGameOver) {
             const stateData = allocEncodedState();
             encodeState(stateData, ctx.state);
-            const lastAction = lastChoice ? choiceIds[lastChoice] : undefined;
+            const lastAction = choiceIds[lastChoice];
             ctx.logger.debug(`Finalizing experience: reward = ${reward}`);
             await callback(stateData, lastAction, reward);
         } else {

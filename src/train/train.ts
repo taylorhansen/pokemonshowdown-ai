@@ -48,7 +48,7 @@ export async function train(
         ]);
     }
 
-    const rolloutModel = new RolloutModel("rollout", model);
+    const rolloutModel = new RolloutModel("rollout", model, config.experience);
     const [evalModel, prevModel] = await Promise.all(
         ["eval", "prev"].map(
             async name =>

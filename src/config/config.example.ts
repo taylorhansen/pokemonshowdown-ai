@@ -66,14 +66,15 @@ export const config: Config = {
         },
         experience: {
             rewardDecay: 0.99,
+            steps: 1,
             bufferSize: maxTurns * 2 * 25 /*enough for at least 25 games*/,
             prefill: maxTurns * 2 * numThreads /*at least one complete game*/,
         },
         learn: {
             optimizer: {
                 type: "rmsprop",
-                learningRate: 0.0001,
-                decay: 0.9,
+                learningRate: 1e-4,
+                decay: 0.95,
                 momentum: 0,
             },
             batchSize: 32,

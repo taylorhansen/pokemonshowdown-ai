@@ -9,7 +9,9 @@ export interface Experience {
     state: Float32Array[];
     /** Id of the action that was taken. */
     action: number;
-    /** Reward gained from the action and state transition. */
+    /**
+     * Reward (or n-step returns) gained from the action and state transition.
+     */
     reward: number;
     /** Resultant state from action. */
     nextState: Float32Array[];
