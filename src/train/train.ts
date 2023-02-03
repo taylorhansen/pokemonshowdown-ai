@@ -37,15 +37,18 @@ export async function train(
     let checkpointsPath: string | undefined;
     if (paths?.models) {
         checkpointsPath = join(paths.models, "checkpoints");
-        await Promise.all([
-            (async function () {
-                await ensureDir(checkpointsPath),
-                    await model.save(
-                        pathToFileUrl(join(checkpointsPath, "original")),
-                    );
-            })(),
-            model.save(pathToFileUrl(paths.models)),
-        ]);
+        await Promise.all(
+            [
+                paths.models,
+                ...(config.savePreviousVersions
+                    ? [
+                          ensureDir(checkpointsPath).then(() =>
+                              join(checkpointsPath!, "original"),
+                          ),
+                      ]
+                    : []),
+            ].map(async p => await model.save(pathToFileUrl(await p))),
+        );
     }
 
     const rolloutModel = new RolloutModel("rollout", model, config.experience);
