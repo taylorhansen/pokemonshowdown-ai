@@ -79,8 +79,10 @@ export async function train(
         prevModel,
         config.rollout,
         paths?.logs ? join(paths.logs, "rollout") : undefined,
-        {
-            ...seeders,
+        seeders && {
+            ...(seeders.battle && {battle: seeder(seeders.battle())}),
+            ...(seeders.team && {team: seeder(seeders.team())}),
+            ...(seeders.explore && {explore: seeder(seeders.explore())}),
             ...(config.seeds?.rollout && {
                 rollout: seeder(config.seeds.rollout),
             }),
