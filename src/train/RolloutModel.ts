@@ -133,7 +133,7 @@ export class RolloutModel {
         ec: ExperienceContext,
     ): Promise<PredictWorkerResult> {
         const state = encodedStateToTensors(msg.state);
-        ec.add(state, msg.lastAction, msg.reward);
+        ec.add(state, msg.choices, msg.lastAction, msg.reward);
 
         const result = await new Promise<PredictResult>(res => {
             this.predictBatch.add(state, res);
@@ -223,10 +223,16 @@ class ExperienceContext {
      * Adds data for generating experience.
      *
      * @param state Resultant state.
+     * @param choices Available choices for the new state.
      * @param action Action used to get to state.
      * @param reward Net reward from state transition.
      */
-    public add(state: tf.Tensor[], action?: number, reward?: number): void {
+    public add(
+        state: tf.Tensor[],
+        choices: Uint8Array,
+        action?: number,
+        reward?: number,
+    ): void {
         if (!this.latestState) {
             // First decision doesn't have past action/reward yet.
             this.latestState = state;
@@ -268,6 +274,7 @@ class ExperienceContext {
             action: tf.scalar(lastAction, "int32"),
             reward: tf.scalar(returns, "float32"),
             nextState: state.map(t => t.clone()),
+            choices: tf.tensor1d(choices, "bool"),
             done: tf.scalar(false),
         });
     }
@@ -311,6 +318,7 @@ class ExperienceContext {
                 action: tf.scalar(action, "int32"),
                 reward: tf.scalar(reward, "float32"),
                 nextState: state,
+                choices: tf.zeros([intToChoice.length], "bool"),
                 done: tf.scalar(true),
             },
         ];
@@ -328,6 +336,7 @@ class ExperienceContext {
                 action: tf.scalar(lastAction, "int32"),
                 reward: tf.scalar(returns, "float32"),
                 nextState: state.map(t => t.clone()),
+                choices: tf.zeros([intToChoice.length], "bool"),
                 done: tf.scalar(true),
             });
         }

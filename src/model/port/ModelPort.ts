@@ -3,6 +3,7 @@ import {randomAgent} from "../../game/agent/random";
 import {ExperienceBattleAgent} from "../../game/experience";
 import {AgentExploreConfig} from "../../game/pool/worker";
 import {verifyInputData, verifyOutputData} from "../../model/verify";
+import {choiceIds, intToChoice} from "../../psbot/handlers/battle/agent";
 import {
     allocEncodedState,
     encodeState,
@@ -75,13 +76,19 @@ export class ModelPort {
         const random = explore?.seed ? rng(explore.seed) : Math.random;
 
         const greedyAgent = maxAgent(
-            async (state, lastAction?: number, reward?: number) => {
+            async (state, choices, lastAction?: number, reward?: number) => {
                 const stateData = allocEncodedState();
                 encodeState(stateData, state);
                 verifyInputData(stateData);
 
+                const choiceData = new Uint8Array(intToChoice.length);
+                for (const c of choices) {
+                    choiceData[choiceIds[c]] = 1;
+                }
+
                 const result = await this.predict(
                     stateData,
+                    choiceData,
                     lastAction,
                     reward,
                 );
@@ -144,6 +151,7 @@ export class ModelPort {
     /** Requests a prediction from the neural network. */
     private async predict(
         state: Float32Array[],
+        choices: Uint8Array,
         lastAction?: number,
         reward?: number,
     ): Promise<PredictResult> {
@@ -153,10 +161,11 @@ export class ModelPort {
                     type: "predict",
                     rid: this.asyncPort.nextRid(),
                     state,
+                    choices,
                     ...(lastAction !== undefined && {lastAction}),
                     ...(reward !== undefined && {reward}),
                 },
-                state.map(a => a.buffer),
+                [...state.map(a => a.buffer), choices.buffer],
                 result =>
                     result.type === "error" ? rej(result.err) : res(result),
             ),

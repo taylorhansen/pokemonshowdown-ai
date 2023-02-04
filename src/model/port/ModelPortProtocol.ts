@@ -26,6 +26,8 @@ type PredictRequestBase<T extends ModelPortRequestType> = PortRequestBase<T>;
 export interface PredictMessage extends PredictRequestBase<"predict"> {
     /** State data. */
     state: Float32Array[];
+    /** Choice legality mask. */
+    choices: Uint8Array;
     /** Id of the previous action. Used for experience generation. */
     lastAction?: number;
     /** Reward from the state transition. Used for experience generation. */

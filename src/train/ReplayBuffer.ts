@@ -4,6 +4,7 @@ import {
     TensorExperience,
 } from "../game/experience/tensor";
 import {modelInputShapes} from "../model/shapes";
+import {intToChoice} from "../psbot/handlers/battle/agent";
 import {Rng} from "../util/random";
 
 /** Experience replay buffer, implemented as a circular buffer. */
@@ -19,6 +20,7 @@ export class ReplayBuffer {
         modelInputShapes,
         () => new Array<tf.Tensor>(this.maxSize),
     );
+    private readonly choices = new Array<tf.Tensor1D>(this.maxSize);
     private readonly dones = new Array<tf.Scalar>(this.maxSize);
 
     private start = 0;
@@ -61,6 +63,8 @@ export class ReplayBuffer {
         this.actions[i] = exp.action;
         this.rewards[i]?.dispose();
         this.rewards[i] = exp.reward;
+        this.choices[i]?.dispose();
+        this.choices[i] = exp.choices;
         this.dones[i]?.dispose();
         this.dones[i] = exp.done;
     }
@@ -92,6 +96,7 @@ export class ReplayBuffer {
             modelInputShapes,
             () => new Array<tf.Tensor>(size),
         );
+        const choices = new Array<tf.Tensor1D>(size);
         const dones = new Array<tf.Scalar>(size);
         for (let t = 0, m = 0; m < size; ++t) {
             if ((this._length - t) * random() < size - m) {
@@ -101,6 +106,7 @@ export class ReplayBuffer {
                 }
                 actions[m] = this.actions[t];
                 rewards[m] = this.rewards[t];
+                choices[m] = this.choices[t];
                 dones[m] = this.dones[t];
                 ++m;
             }
@@ -110,6 +116,7 @@ export class ReplayBuffer {
             action: tf.stack(actions).as1D(),
             reward: tf.stack(rewards).as1D(),
             nextState: modelInputShapes.map((_, s) => tf.stack(nextStates[s])),
+            choices: tf.stack(choices).as2D(size, intToChoice.length),
             done: tf.stack(dones).as1D(),
         }));
     }

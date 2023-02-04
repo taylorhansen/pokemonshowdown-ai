@@ -3,9 +3,11 @@ import {Experience} from "./Experience";
 
 /** {@link Experience} with values converted to {@link tf.Tensor tensors}. */
 export type TensorExperience = {
-    [T in keyof Experience]: Experience[T] extends number | boolean
+    [T in keyof Experience]: T extends "action" | "reward" | "done"
         ? tf.Scalar
-        : Experience[T] extends Float32Array[]
+        : T extends "choices"
+        ? tf.Tensor1D
+        : T extends "state" | "nextState"
         ? tf.Tensor[]
         : never;
 };
@@ -17,9 +19,11 @@ export type TensorExperience = {
  * stacked tensors.
  */
 export type BatchTensorExperience = {
-    [T in keyof Experience]: Experience[T] extends number | boolean
+    [T in keyof Experience]: T extends "action" | "reward" | "done"
         ? tf.Tensor1D
-        : Experience[T] extends Float32Array[]
+        : T extends "choices"
+        ? tf.Tensor2D
+        : T extends "state" | "nextState"
         ? tf.Tensor[]
         : never;
 };

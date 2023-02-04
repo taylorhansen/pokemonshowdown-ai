@@ -14,6 +14,7 @@ import {ReadonlyBattleState} from "../state";
 export function maxAgent<TArgs extends unknown[] = []>(
     evaluator: (
         state: ReadonlyBattleState,
+        choices: readonly Choice[],
         ...args: TArgs
     ) => Float32Array | Promise<Float32Array>,
     debugRankings?: boolean,
@@ -24,7 +25,7 @@ export function maxAgent<TArgs extends unknown[] = []>(
         logger?: Logger,
         ...args: TArgs
     ): Promise<string | undefined> {
-        const output = await evaluator(state, ...args);
+        const output = await evaluator(state, choices, ...args);
         logger?.debug(
             "Ranked choices: {" +
                 intToChoice

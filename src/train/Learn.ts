@@ -94,6 +94,7 @@ export class Learn {
             const target = this.calculateTarget(
                 batch.reward,
                 batch.nextState,
+                batch.choices,
                 batch.done,
             );
 
@@ -193,10 +194,20 @@ export class Learn {
         });
     }
 
-    /** Calculates TD target for an experience batch. */
+    /**
+     * Calculates TD target for an experience batch.
+     *
+     * @param reward Reward tensor of shape `[batch]`.
+     * @param nextState Tensors for next state, of shape `[batch, Ns...]`.
+     * @param choices Choice legality mask for next state, of shape
+     * `[batch, Nc]`.
+     * @param done Terminal state indicator for next state, of shape `[batch]`.
+     * @returns Temporal difference target, of shape `[batch]`.
+     */
     private calculateTarget(
         reward: tf.Tensor,
         nextState: tf.Tensor[],
+        choices: tf.Tensor,
         done: tf.Tensor,
     ): tf.Tensor {
         if (!Number.isFinite(this.expConfig.steps)) {
@@ -204,9 +215,12 @@ export class Learn {
         }
         return tf.tidy(() => {
             let targetQ: tf.Tensor;
-            const q = this.model.predictOnBatch(nextState) as tf.Tensor;
             if (!this.config.target) {
                 // Vanilla DQN TD target: r + gamma * max_a(Q(s', a))
+                let q = this.model.predictOnBatch(nextState) as tf.Tensor;
+                // Also prevent illegal actions from influencing the value
+                // function.
+                q = tf.where(choices, q, -Infinity);
                 targetQ = tf.max(q, -1);
             } else {
                 targetQ = this.targetModel.predictOnBatch(
@@ -214,9 +228,12 @@ export class Learn {
                 ) as tf.Tensor;
                 if (this.config.target !== "double") {
                     // TD target with target net: r + gamma * max_a(Qt(s', a))
+                    targetQ = tf.where(choices, targetQ, -Infinity);
                     targetQ = tf.max(targetQ, -1);
                 } else {
                     // Double Q target: r + gamma * Qt(s', argmax_a(Q(s', a)))
+                    let q = this.model.predictOnBatch(nextState) as tf.Tensor;
+                    q = tf.where(choices, q, -Infinity);
                     const action = tf.argMax(q, -1);
                     const actionMask = tf.oneHot(action, intToChoice.length);
                     targetQ = tf.sum(tf.mul(targetQ, actionMask), -1);
@@ -237,7 +254,13 @@ export class Learn {
         });
     }
 
-    /** Calculates training loss on an experience batch. */
+    /**
+     * Calculates training loss on an experience batch.
+     *
+     * @param state Tensors for state, of shape `[batch, Ns...]`.
+     * @param action Action ids for each state, of shape `[batch]`.
+     * @param target TD target of shape `[batch]`.
+     */
     private loss(
         state: tf.Tensor[],
         action: tf.Tensor,

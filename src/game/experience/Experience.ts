@@ -15,6 +15,8 @@ export interface Experience {
     reward: number;
     /** Resultant state from action. */
     nextState: Float32Array[];
+    /** Binary choice legality data for the {@link nextState next state}. */
+    choices: Int32Array;
     /** Marks {@link nextState} as a terminal state so it won't be processed. */
     done: boolean;
 }
