@@ -275,7 +275,7 @@ class ExperienceContext {
             reward: tf.scalar(returns, "float32"),
             nextState: state.map(t => t.clone()),
             choices: tf.tensor1d(choices, "bool"),
-            done: tf.scalar(false),
+            done: tf.scalar(0),
         });
     }
 
@@ -319,7 +319,7 @@ class ExperienceContext {
                 reward: tf.scalar(reward, "float32"),
                 nextState: state,
                 choices: tf.zeros([intToChoice.length], "bool"),
-                done: tf.scalar(true),
+                done: tf.scalar(1),
             },
         ];
 
@@ -337,7 +337,7 @@ class ExperienceContext {
                 reward: tf.scalar(returns, "float32"),
                 nextState: state.map(t => t.clone()),
                 choices: tf.zeros([intToChoice.length], "bool"),
-                done: tf.scalar(true),
+                done: tf.scalar(1),
             });
         }
 

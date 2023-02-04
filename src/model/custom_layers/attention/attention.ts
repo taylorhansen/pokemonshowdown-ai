@@ -10,8 +10,10 @@ import * as tf from "@tensorflow/tfjs";
  * this should be set to the reciprocal of the standard deviation of the dot
  * product of queries and values, which if both are independent standard normal
  * random variables is `1/sqrt(Dk)`.
- * @param queryMask Queries which should not be processed. Shape `[..., Nq]`.
- * @param valueMask Values which should not be processed. Shape `[..., Nk]`.
+ * @param queryMask Queries which should (=1) or should not (=0) be processed.
+ * Shape `[..., Nq]`.
+ * @param valueMask Values which should (=1) or should not (=0) be processed.
+ * Shape `[..., Nk]`.
  * @returns Attention output `softmax(Q*K^T/temp)*V`, shape `[..., Nk, Dv]`.
  * @see https://arxiv.org/abs/1706.03762v5
  */

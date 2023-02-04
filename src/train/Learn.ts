@@ -25,6 +25,12 @@ export class Learn {
             ),
         );
 
+    /** Scale for TD target value. */
+    private readonly tdScale = tf.scalar(
+        this.expConfig.rewardDecay ** this.expConfig.steps,
+        "float32",
+    );
+
     /**
      * Creates a Learn object.
      *
@@ -241,15 +247,9 @@ export class Learn {
             }
 
             // Also mask out q values of terminal states.
-            targetQ = tf.where(done, 0, targetQ);
+            targetQ = tf.mul(targetQ, tf.sub(1, done));
 
-            const target = tf.add(
-                reward,
-                tf.mul(
-                    tf.pow(this.expConfig.rewardDecay, this.expConfig.steps),
-                    targetQ,
-                ),
-            );
+            const target = tf.add(reward, tf.mul(this.tdScale, targetQ));
             return target;
         });
     }
@@ -276,6 +276,7 @@ export class Learn {
 
     /** Cleans up dangling variables. */
     public cleanup(): void {
+        this.tdScale.dispose();
         this.optimizer.dispose();
         Metrics.flush();
     }
