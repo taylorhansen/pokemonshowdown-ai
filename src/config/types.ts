@@ -173,10 +173,13 @@ export interface PolicyConfig {
      * proportion of actions to take randomly rather than consulting the model.
      */
     readonly exploration: number;
-    /** Exploration (epsilon) decay factor. Applied after each learning step. */
-    readonly explorationDecay: number;
     /** Minumum exploration (epsilon) value. */
     readonly minExploration: number;
+    /**
+     * Number of steps over which to linearly decay {@link exploration} down to
+     * {@link minExploration}.
+     */
+    readonly interpolate: number;
 }
 
 /** Configuration for learning on experience generated from rollout games. */

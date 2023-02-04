@@ -59,8 +59,8 @@ export const config: Config = {
             },
             policy: {
                 exploration: 1.0,
-                explorationDecay: 0.999,
                 minExploration: 0.1,
+                interpolate: maxTurns * 2 * 25,
             },
             prev: 0.1,
         },

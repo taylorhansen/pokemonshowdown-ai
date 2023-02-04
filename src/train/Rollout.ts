@@ -86,7 +86,13 @@ export class Rollout {
      */
     public step(step: number): void {
         this.metrics?.scalar("exploration", this.exploration.factor, step);
-        this.exploration.factor *= this.config.policy.explorationDecay;
+
+        this.exploration.factor =
+            this.config.policy.exploration -
+            ((this.config.policy.exploration -
+                this.config.policy.minExploration) *
+                step) /
+                this.config.policy.interpolate;
         if (this.exploration.factor < this.config.policy.minExploration) {
             this.exploration.factor = this.config.policy.minExploration;
         }
