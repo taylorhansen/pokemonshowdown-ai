@@ -160,22 +160,28 @@ export async function train(
                 if (config.steps && step > config.steps) {
                     break;
                 }
+
                 replayBuffer.add(exp);
-                const loss = tf.tidy(() =>
-                    learn.step(
-                        step,
-                        replayBuffer.sample(
-                            config.learn.batchSize,
-                            bufferRandom,
+
+                let loss: number | undefined;
+                if (step % config.learn.interval === 0) {
+                    const lossTensor = tf.tidy(() =>
+                        learn.step(
+                            step,
+                            replayBuffer.sample(
+                                config.learn.batchSize,
+                                bufferRandom,
+                            ),
                         ),
-                    ),
-                );
+                    );
+                    [loss] = await lossTensor.data<"float32">();
+                    lossTensor.dispose();
+                }
                 callback?.({
-                    type: "learn",
+                    type: "step",
                     step,
-                    loss: (await loss.data<"float32">())[0],
+                    ...(loss !== undefined && {loss}),
                 });
-                loss.dispose();
 
                 rollout.step(step);
                 logMemoryMetrics(step);

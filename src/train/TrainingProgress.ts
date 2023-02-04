@@ -4,8 +4,8 @@ import {
     ModelTrainData,
     ModelTrainEval,
     ModelTrainEvalDone,
-    ModelTrainLearn,
     ModelTrainRollout,
+    ModelTrainStep,
 } from "../model/worker";
 import {formatUptime, numDigits} from "../util/format";
 import {Logger} from "../util/logging/Logger";
@@ -25,6 +25,7 @@ export class TrainingProgress {
         " eta=00d00h00m00s".length +
         1;
     private startTime: number | undefined;
+    private lastLoss = (0).toFixed(TrainingProgress.lossDigits);
 
     /** Total rollout games played. */
     private numRolloutGames = 0;
@@ -57,7 +58,7 @@ export class TrainingProgress {
             );
             this.progress.render({
                 step: "0".padStart(this.stepPadding),
-                loss: (0).toFixed(TrainingProgress.lossDigits),
+                loss: this.lastLoss,
                 est: "0s",
             });
         }
@@ -79,8 +80,8 @@ export class TrainingProgress {
     /** Callback for events during the training loop. */
     public callback(data: ModelTrainData<false /*TSerialized*/>): void {
         switch (data.type) {
-            case "learn":
-                return this.learn(data);
+            case "step":
+                return this.step(data);
             case "rollout":
                 return this.rollout(data);
             case "eval":
@@ -97,8 +98,8 @@ export class TrainingProgress {
         }
     }
 
-    /** Called after processing a learning batch. */
-    private learn(data: ModelTrainLearn): void {
+    /** Called after each training step. */
+    private step(data: ModelTrainStep): void {
         if (this.progress) {
             let est: string;
             if (!this.startTime) {
@@ -114,9 +115,12 @@ export class TrainingProgress {
                           (this.progress.total / this.progress.curr - 1);
                 est = formatUptime(eta);
             }
+            if (data.loss !== undefined) {
+                this.lastLoss = data.loss.toFixed(TrainingProgress.lossDigits);
+            }
             this.progress.tick({
                 step: String(data.step).padStart(this.stepPadding),
-                loss: data.loss.toFixed(TrainingProgress.lossDigits),
+                loss: this.lastLoss,
                 est,
             });
         } else {

@@ -99,6 +99,14 @@ interface ModelTrainDataBase<T extends string> {
     type: T;
 }
 
+/** Data that gets reported after completing a training step. */
+export interface ModelTrainStep extends ModelTrainDataBase<"step"> {
+    /** Step number. */
+    step: number;
+    /** Training loss for the step. */
+    loss?: number;
+}
+
 /** Data that gets reported after each rollout game. */
 export interface ModelTrainRollout<TSerialized = true>
     extends ModelTrainDataBase<"rollout"> {
@@ -110,14 +118,6 @@ export interface ModelTrainRollout<TSerialized = true>
      * serialized into a Buffer.
      */
     err?: TSerialized extends true ? Buffer : Error;
-}
-
-/** Data that gets reported after completing a learning step. */
-export interface ModelTrainLearn extends ModelTrainDataBase<"learn"> {
-    /** Step number. */
-    step: number;
-    /** Training loss for the step. */
-    loss: number;
 }
 
 /** Data that gets reported after each evaluation game. */
@@ -148,8 +148,8 @@ export interface ModelTrainEvalDone extends ModelTrainDataBase<"evalDone"> {
 
 /** Data for events that get reported during training. */
 export type ModelTrainData<TSerialized = true> =
+    | ModelTrainStep
     | ModelTrainRollout<TSerialized>
-    | ModelTrainLearn
     | ModelTrainEval<TSerialized>
     | ModelTrainEvalDone;
 

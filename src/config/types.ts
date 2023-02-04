@@ -207,6 +207,8 @@ export interface LearnConfig {
      * `"double"` to implement double Q learning approach using the target net.
      */
     readonly target: boolean | "double";
+    /** Step interval for sampling a batch and updating the network. */
+    readonly interval: number;
     /** Step interval for updating the target network. */
     readonly targetInterval: number;
     /**
