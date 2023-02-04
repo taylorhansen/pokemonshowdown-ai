@@ -109,6 +109,26 @@ export async function train(
             ...(seeders.explore && {explore: seeder(seeders.explore())}),
         },
     );
+    const runEval = async (step: number) =>
+        await evaluate
+            .run(
+                step,
+                callback &&
+                    (result =>
+                        callback({
+                            type: "eval",
+                            step,
+                            id: result.id,
+                            agents: result.agents,
+                            ...(result.winner !== undefined && {
+                                winner: result.winner,
+                            }),
+                            ...(result.err && {
+                                err: serialize(result.err),
+                            }),
+                        })),
+            )
+            .then(wlt => callback?.({type: "evalDone", step, wlt}));
 
     const logMemoryMetrics = (step: number) => {
         if (metrics) {
@@ -152,6 +172,11 @@ export async function train(
         prevModel.lock("train", step);
 
         logMemoryMetrics(step);
+
+        lastEval = runEval(step);
+        // Suppress unhandled exception warnings since we'll be awaiting this
+        // promise later.
+        lastEval.catch(() => {});
 
         ++step;
         while (!config.steps || step < config.steps) {
@@ -200,30 +225,7 @@ export async function train(
                     evalModel.lock("train", step);
                     prevModel.lock("train", step);
 
-                    const evalStep = step;
-                    lastEval = evaluate
-                        .run(
-                            evalStep,
-                            callback &&
-                                (result =>
-                                    callback({
-                                        type: "eval",
-                                        step: evalStep,
-                                        id: result.id,
-                                        agents: result.agents,
-                                        ...(result.winner !== undefined && {
-                                            winner: result.winner,
-                                        }),
-                                        ...(result.err && {
-                                            err: serialize(result.err),
-                                        }),
-                                    })),
-                        )
-                        .then(wlt =>
-                            callback?.({type: "evalDone", step: evalStep, wlt}),
-                        );
-                    // Suppress unhandled exception warnings since we'll await
-                    // this promise later.
+                    lastEval = runEval(step);
                     lastEval.catch(() => {});
                 }
                 if (
