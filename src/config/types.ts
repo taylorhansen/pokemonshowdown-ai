@@ -70,7 +70,10 @@ export interface TrainConfig {
     readonly eval: EvalConfig;
     /** RNG config. */
     readonly seeds?: TrainSeedConfig;
-    /** Whether to save model checkpoints as separate versions. */
+    /**
+     * Whether to save model checkpoints as separate versions. If false, only
+     * the latest model version will be saved.
+     */
     readonly savePreviousVersions?: boolean;
     /**
      * Step interval for saving model checkpoints if {@link PathsConfig.models}
