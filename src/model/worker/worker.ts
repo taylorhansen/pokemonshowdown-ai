@@ -25,6 +25,8 @@ Error.stackTraceLimit = Infinity;
 const {gpu} = workerData as ModelWorkerData;
 importTfn(gpu);
 
+tf.enableProdMode();
+
 /** Maps model name to their registry objects. */
 const models = new Map<string, ModelRegistry>();
 
