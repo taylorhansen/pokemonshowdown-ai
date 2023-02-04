@@ -73,8 +73,8 @@ export interface TrainConfig {
     /** Whether to save model checkpoints as separate versions. */
     readonly savePreviousVersions?: boolean;
     /**
-     * Step interval for saving model checkpoints. Omit to not store
-     * checkpoints.
+     * Step interval for saving model checkpoints if {@link PathsConfig.models}
+     * is defined. Omit to not store checkpoints.
      */
     readonly checkpointInterval?: number;
     /** Whether to display a progress bar if {@link steps} is also defined. */

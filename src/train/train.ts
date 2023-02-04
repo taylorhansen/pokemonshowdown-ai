@@ -34,21 +34,25 @@ export async function train(
 ): Promise<void> {
     const metrics = Metrics.get("train");
 
-    let checkpointsPath: string | undefined;
+    let saveCheckpoint: ((step: number) => Promise<void>) | undefined;
     if (paths?.models) {
-        checkpointsPath = join(paths.models, "checkpoints");
-        await Promise.all(
-            [
-                paths.models,
-                ...(config.savePreviousVersions
-                    ? [
-                          ensureDir(checkpointsPath).then(() =>
-                              join(checkpointsPath!, "original"),
-                          ),
-                      ]
-                    : []),
-            ].map(async p => await model.save(pathToFileUrl(await p))),
-        );
+        const modelUrl = pathToFileUrl(paths.models);
+        const checkpointsPath = config.savePreviousVersions
+            ? ensureDir(join(paths.models, "checkpoints"))
+            : undefined;
+        saveCheckpoint = async step =>
+            void (await Promise.all(
+                [
+                    modelUrl,
+                    ...(checkpointsPath
+                        ? [
+                              checkpointsPath.then(p =>
+                                  pathToFileUrl(join(p, `step-${step}`)),
+                              ),
+                          ]
+                        : []),
+                ].map(async url => await model.save(await url)),
+            ));
     }
 
     const rolloutModel = new RolloutModel("rollout", model, config.experience);
@@ -178,6 +182,8 @@ export async function train(
         // promise later.
         lastEval.catch(() => {});
 
+        await saveCheckpoint?.(step);
+
         ++step;
         while (!config.steps || step < config.steps) {
             const exps = await rolloutModel.step();
@@ -232,21 +238,7 @@ export async function train(
                     config.checkpointInterval &&
                     step % config.checkpointInterval === 0
                 ) {
-                    // TODO: Use a separate model copy so this isn't blocking.
-                    await Promise.all(
-                        [
-                            ...(paths?.models
-                                ? [pathToFileUrl(paths.models)]
-                                : []),
-                            ...(config.savePreviousVersions && checkpointsPath
-                                ? [
-                                      pathToFileUrl(
-                                          join(checkpointsPath, `step-${step}`),
-                                      ),
-                                  ]
-                                : []),
-                        ].map(async url => await model.save(url)),
-                    );
+                    await saveCheckpoint?.(step);
                 }
 
                 // Async yield to allow for evaluate step to run in parallel.
