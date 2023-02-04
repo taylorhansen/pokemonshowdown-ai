@@ -157,7 +157,7 @@ export async function train(
         while (!config.steps || step < config.steps) {
             const exps = await rolloutModel.step();
             for (const exp of exps) {
-                if (config.steps && step >= config.steps) {
+                if (config.steps && step > config.steps) {
                     break;
                 }
                 replayBuffer.add(exp);
