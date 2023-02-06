@@ -38,24 +38,6 @@ class Aggregate extends tf.layers.Layer {
         }
     }
 
-    public override call(
-        inputs: tf.Tensor | tf.Tensor[],
-        kwargs: Kwargs,
-    ): tf.Tensor | tf.Tensor[] {
-        return tf.tidy(() => {
-            this.invokeCallHook(inputs, kwargs);
-            if (Array.isArray(inputs)) {
-                if (inputs.length !== 1) {
-                    throw new Error(
-                        `Expected 1 input tensor but got ${inputs.length}`,
-                    );
-                }
-                [inputs] = inputs;
-            }
-            return this.func(inputs, this.axis, this.keepDims);
-        });
-    }
-
     public override computeOutputShape(
         inputShape: tf.Shape | tf.Shape[],
     ): tf.Shape {
@@ -83,6 +65,24 @@ class Aggregate extends tf.layers.Layer {
             }
         }
         return inputShape;
+    }
+
+    public override call(
+        inputs: tf.Tensor | tf.Tensor[],
+        kwargs: Kwargs,
+    ): tf.Tensor | tf.Tensor[] {
+        return tf.tidy(() => {
+            this.invokeCallHook(inputs, kwargs);
+            if (Array.isArray(inputs)) {
+                if (inputs.length !== 1) {
+                    throw new Error(
+                        `Expected 1 input tensor but got ${inputs.length}`,
+                    );
+                }
+                [inputs] = inputs;
+            }
+            return this.func(inputs, this.axis, this.keepDims);
+        });
     }
 
     public override getConfig(): tf.serialization.ConfigDict {

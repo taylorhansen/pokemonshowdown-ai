@@ -4,6 +4,10 @@ import {LayerArgs, Kwargs} from "./layerUtil";
 class Mask extends tf.layers.Layer {
     public static className = "Mask";
 
+    public override computeOutputShape(inputShape: tf.Shape[]): tf.Shape {
+        return inputShape[0];
+    }
+
     public override call(
         inputs: tf.Tensor | tf.Tensor[],
         kwargs: Kwargs,
@@ -21,10 +25,6 @@ class Mask extends tf.layers.Layer {
             const [input, inputMask] = inputs;
             return tf.mul(input, tf.expandDims(inputMask, -1));
         });
-    }
-
-    public override computeOutputShape(inputShape: tf.Shape[]): tf.Shape {
-        return inputShape[0];
     }
 }
 

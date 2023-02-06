@@ -235,19 +235,42 @@ export const test = () =>
             init: () => new TeamStatus(),
         });
 
-        testEncoder("aliveEncoder", {
-            name: "Fully Initialized",
-            encoder: encoders.pokemonAliveEncoder,
-            init() {
-                const mon1 = new Pokemon("magikarp");
-                mon1.hp.set(100, 100);
-                const mon2 = new Pokemon("ditto");
-                mon2.hp.set(0);
+        testEncoder(
+            "aliveEncoder",
+            {
+                name: "Fully Initialized",
+                encoder: encoders.aliveEncoder,
+                init() {
+                    const mon = new Pokemon("magikarp");
+                    mon.hp.set(100, 100);
 
-                return [mon1, mon2, null, null, undefined, undefined];
+                    return mon;
+                },
+                values: new Float32Array([1]),
             },
-            values: new Float32Array([1, 0, 1, 1, 0, 0]),
-        });
+            {
+                name: "Fainted",
+                encoder: encoders.aliveEncoder,
+                init() {
+                    const mon = new Pokemon("ditto");
+                    mon.hp.set(0);
+                    return mon;
+                },
+                values: new Float32Array([0]),
+            },
+            {
+                name: "Unrevealed",
+                encoder: encoders.aliveEncoder,
+                init: () => null,
+                values: new Float32Array([1]),
+            },
+            {
+                name: "Nonexistent",
+                encoder: encoders.aliveEncoder,
+                init: () => undefined,
+                values: new Float32Array([0]),
+            },
+        );
 
         testEncoder(
             "Hp",

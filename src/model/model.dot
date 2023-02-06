@@ -1,0 +1,274 @@
+digraph model {
+    label = "Model\nTotal Parameters = 170,379"
+    node [shape=rect]
+    rankdir = LR
+    splines = polyline
+    ranksep = 1
+    nodesep = 0.1
+
+    subgraph cluster_input {
+        label = "Input"
+
+        node [style=filled]
+        room_status [label="Room Status\n(6)"]
+        team_status [label="Team Status\n(2x16)"]
+        active_volatile [label="Active Volatile\n(2x1x68)"]
+        pokemon_alive [label="Pokemon Alive\n(2x6)"]
+        pokemon_basic [label="Pokemon Basic\n(2x6x11)"]
+        pokemon_species [label="Pokemon Species\n(2x7x557)"]
+        pokemon_types [label="Pokemon Types\n(2x7x17)"]
+        pokemon_stats [label="Pokemon Stats\n(2x7x35)"]
+        pokemon_ability [label="Pokemon Ability\n(2x7x123)"]
+        pokemon_item [label="Pokemon Item\n(2x6x209)"]
+        pokemon_last_item [label="Pokemon Last Item\n(2x6x209)"]
+        pokemon_moves [label="Pokemon Moves\n(2x7x4x472)"]
+    }
+
+    subgraph cluster_encoder {
+        label = "Individual Encoders"
+
+        room_status_dense [label = "Dense(8) + Leaky ReLU\n(8)"]
+        team_status_dense [label = "Dense(16) + Leaky ReLU\n(2x16)"]
+        active_volatile_dense [label = "Dense(32) + Leaky ReLU\n(2x1x32)"]
+        pokemon_basic_dense [label="Dense(16) + Leaky ReLU\n(2x6x16)"]
+        pokemon_species_dense [label="Dense(32) + Leaky ReLU\n(2x7x32)"]
+        pokemon_types_dense [label="Dense(32) + Leaky ReLU\n(2x7x32)"]
+        pokemon_stats_dense [label="Dense(32) + Leaky ReLU\n(2x7x32)"]
+        pokemon_ability_dense [label="Dense(64) + Leaky ReLU\n(2x7x64)"]
+        pokemon_item_dense [label="Dense(64) + Leaky ReLU\n(2x6x64)"]
+        pokemon_last_item_dense [label="Dense(64) + Leaky ReLU\n(2x6x64)"]
+        pokemon_moves_dense [label="Dense(32) + Leaky ReLU\n(2x7x4x32)"]
+
+        room_status -> room_status_dense
+        team_status -> team_status_dense
+        active_volatile -> active_volatile_dense
+        pokemon_basic -> pokemon_basic_dense
+        pokemon_species -> pokemon_species_dense
+        pokemon_types -> pokemon_types_dense
+        pokemon_stats -> pokemon_stats_dense
+        pokemon_ability -> pokemon_ability_dense
+        pokemon_item -> pokemon_item_dense
+        pokemon_last_item -> pokemon_last_item_dense
+        pokemon_moves -> pokemon_moves_dense
+
+        edge [dir=none constraint=false style=dotted label="(shared)"]
+        pokemon_item_dense -> pokemon_last_item_dense
+    }
+
+    subgraph cluster_move {
+        label = "Move Features"
+
+        pokemon_moves_attention [label="SAB(4,8,32)\n(2x7x4x32)"]
+        pokemon_moves_aggregate [label="Max Pool\n(2x7x32)"]
+
+        // TODO: Why does this cause a duplicate edge to be rendered?
+        pokemon_moves_dense -> pokemon_moves_attention
+        pokemon_moves_attention -> pokemon_moves_aggregate
+
+        pokemon_moves -> pokemon_moves_attention [style=invis]
+    }
+
+    subgraph cluster_active {
+        label = "Active Features"
+
+        active_alive [label="Slice + Reshape\n(2x1)"]
+        active_basic [label="Slice + Reshape\n(2x1x16)"]
+        active_species [label="Slice + Reshape\n(2x1x64)"]
+        active_types [label="Slice + Reshape\n(2x1x64)"]
+        active_stats [label="Slice + Reshape\n(2x1x64)"]
+        active_ability [label="Slice + Reshape\n(2x1x64)"] 
+        active_item [label="Slice + Reshape\n(2x1x64)"]
+        active_last_item [label="Slice + Reshape\n(2x1x64)"]
+        active_moves [label="Slice + Reshape\n(2x1x64)"]
+        active_concat [label="Concat\n(2x1x464)"]
+        active_dense [label="Dense(64) + Leaky ReLU\n(2x1x64)"]
+        active_mask [label="Mask\n(2x1x64)"]
+
+        pokemon_alive -> active_alive
+        pokemon_basic_dense -> active_basic
+        pokemon_species_dense -> active_species
+        pokemon_types_dense -> active_types
+        pokemon_stats_dense -> active_stats
+        pokemon_ability_dense -> active_ability
+        pokemon_item_dense -> active_item
+        pokemon_last_item_dense -> active_last_item
+        pokemon_moves_aggregate -> active_moves
+        {
+            active_volatile_dense
+            active_basic
+            active_species
+            active_types
+            active_stats
+            active_ability
+            active_item
+            active_last_item
+            active_moves
+        } -> active_concat
+        active_concat -> active_dense
+        active_dense -> active_mask
+        active_alive -> active_mask [label="(mask)"]
+    }
+
+    subgraph cluster_bench {
+        label = "Bench Features"
+
+        bench_alive [label="Slice + Reshape\n(2x5)"]
+        bench_basic [label="Slice + Reshape\n(2x5x16)"]
+        bench_species [label="Slice + Reshape\n(2x5x32)"]
+        bench_types [label="Slice + Reshape\n(2x5x32)"]
+        bench_stats [label="Slice + Reshape\n(2x5x32)"]
+        bench_ability [label="Slice + Reshape\n(2x5x32)"] 
+        bench_item [label="Slice + Reshape\n(2x5x64)"]
+        bench_last_item [label="Slice + Reshape\n(2x5x64)"]
+        bench_moves [label="Slice + Reshape\n(2x5x32)"]
+        bench_concat [label="Concat\n(2x5x304)"]
+        bench_dense [label="Dense(64) + Leaky ReLU\n(2x1x64)"]
+        bench_mask [label="Mask\n(2x5x64)"]
+
+        pokemon_alive -> bench_alive
+        pokemon_basic_dense -> bench_basic
+        pokemon_species_dense -> bench_species
+        pokemon_types_dense -> bench_types
+        pokemon_stats_dense -> bench_stats
+        pokemon_ability_dense -> bench_ability
+        pokemon_item_dense -> bench_item
+        pokemon_last_item_dense -> bench_last_item
+        pokemon_moves_aggregate -> bench_moves
+        {
+            bench_basic
+            bench_species
+            bench_types
+            bench_stats
+            bench_ability
+            bench_item
+            bench_last_item
+            bench_moves
+        } -> bench_concat
+        bench_concat -> bench_dense
+        bench_dense -> bench_mask
+        bench_alive -> bench_mask [label="(mask)"]
+
+        //active_concat -> bench_concat [style=invis]
+    }
+
+    subgraph cluster_bench_aggregate {
+        label = "Bench Aggregate"
+
+        bench_attention [label="SAB(4,16,64)\n(2x5x64)"]
+        bench_aggregate [label="Max Pool\n(2x64)"]
+
+        bench_mask -> bench_attention
+        bench_alive -> bench_attention [label="(mask)"]
+        bench_attention -> bench_aggregate
+    }
+
+    subgraph cluster_global {
+        label = "Global"
+
+        global_concat [label="Flatten + Concat\n(296)"]
+        global_dense [label="Dense(128) + Leaky RelU\n(128)"]
+
+        {
+            room_status_dense
+            team_status_dense
+            active_mask
+            bench_aggregate
+        } -> global_concat
+        global_concat -> global_dense
+    }
+
+    subgraph cluster_action {
+        label = "Action"
+
+        subgraph cluster_action_move {
+            label = "Move"
+
+            us_moves_slice [label="Slice + Reshape\n(4x32)"]
+            us_moves_concat [label="Concat\n(4x160)"]
+            us_move_q [label="Dense(1) + Reshape\n(4)"]
+
+            pokemon_moves_attention -> us_moves_slice
+            us_moves_slice -> us_moves_concat
+            global_dense -> us_moves_concat [label="(tiled x4)"]
+            us_moves_concat -> us_move_q
+
+            global_concat -> us_moves_slice [style=invis]
+        }
+
+        subgraph cluster_action_switch {
+            label = "Switch"
+
+            us_pokemon_slice [label="Slice + Reshape\n(5x64)"]
+            us_pokemon_concat [label="Concat\n(5x192)"]
+            us_switch_q [label="Dense(1) + Reshape\n(5)"]
+
+            bench_attention -> us_pokemon_slice
+            us_pokemon_slice -> us_pokemon_concat
+            global_dense -> us_pokemon_concat [label="(tiled x5)"]
+            us_pokemon_concat -> us_switch_q
+
+            global_concat -> us_pokemon_slice [style=invis]
+        }
+
+        q [label="Concat\n(9)"]
+
+        us_move_q -> q
+        us_switch_q -> q
+    }
+
+    subgraph cluster_value {
+        label = "Value"
+
+        v [label="Dense(1) + tanh\n(1)"]
+
+        global_dense -> v
+
+        q -> v [style=invis]
+    }
+
+    subgraph cluster_dueling {
+        label = "Dueling"
+
+        q_centered [label="Sub Mean\n(9)"]
+        a [label="Add\n(9)"]
+
+        q -> q_centered
+        q_centered -> a
+        v -> a
+    }
+
+    subgraph cluster_output {
+        label = "Output"
+
+        node [style=filled]
+        output [label="Action\n(9)"]
+
+        a -> output
+    }
+
+    subgraph cluster_sab {
+        label = "Self Attention Block for set input (permutation invariant) using multi-head attention mechanism\nSAB(h,hu,u)"
+
+        features [style=filled label="Features\n(NxU)"]
+        mask [style=filled label="Mask (optional)\n(N)"]
+        attention [label="Multi-head Attention\n(NxU)"]
+        attention_activation [label="Leaky ReLU\n(NxU)"]
+        residual_1 [label="Add\n(NxU)"]
+        attention_dense [label="Dense(U) + Leaky ReLU\n(NxU)"]
+        residual_2 [label="Add\n(NxU)"]
+        attention_mask [label="Mask\n(NxU)"]
+        attention_out [style=filled label="Output\n(NxU)"]
+
+        features -> attention
+        mask -> attention
+        attention -> attention_activation
+        features -> residual_1
+        attention_activation -> residual_1
+        residual_1 -> attention_dense
+        residual_1 -> residual_2
+        attention_dense ->  residual_2
+        residual_2 -> attention_mask
+        mask -> attention_mask
+        attention_mask -> attention_out
+    }
+}

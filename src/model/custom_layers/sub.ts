@@ -8,25 +8,6 @@ class Sub extends tf.layers.Layer {
         super(args);
     }
 
-    public override call(
-        inputs: tf.Tensor | tf.Tensor[],
-        kwargs: Kwargs,
-    ): tf.Tensor | tf.Tensor[] {
-        return tf.tidy(() => {
-            this.invokeCallHook(inputs, kwargs);
-            if (Array.isArray(inputs)) {
-                if (inputs.length !== 2) {
-                    throw new Error(
-                        `Expected 2 input tensors but got ${inputs.length}`,
-                    );
-                }
-            } else {
-                throw new Error("Expected 2 input tensors but got 1");
-            }
-            return tf.sub(inputs[0], inputs[1]);
-        });
-    }
-
     public override computeOutputShape(inputShape: tf.Shape[]): tf.Shape {
         let [a, b] = inputShape;
 
@@ -48,6 +29,25 @@ class Sub extends tf.layers.Layer {
             shape.unshift(null);
         }
         return shape;
+    }
+
+    public override call(
+        inputs: tf.Tensor | tf.Tensor[],
+        kwargs: Kwargs,
+    ): tf.Tensor | tf.Tensor[] {
+        return tf.tidy(() => {
+            this.invokeCallHook(inputs, kwargs);
+            if (Array.isArray(inputs)) {
+                if (inputs.length !== 2) {
+                    throw new Error(
+                        `Expected 2 input tensors but got ${inputs.length}`,
+                    );
+                }
+            } else {
+                throw new Error("Expected 2 input tensors but got 1");
+            }
+            return tf.sub(inputs[0], inputs[1]);
+        });
     }
 }
 

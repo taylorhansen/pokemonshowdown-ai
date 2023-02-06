@@ -9,7 +9,6 @@ import {ReadonlyPokemon} from "../../state/Pokemon";
 import {ReadonlyRoomStatus} from "../../state/RoomStatus";
 import {ReadonlyStatRange, StatRange} from "../../state/StatRange";
 import {ReadonlyStatTable} from "../../state/StatTable";
-import {Team} from "../../state/Team";
 import {ReadonlyTeamStatus} from "../../state/TeamStatus";
 import {ReadonlyTempStatus} from "../../state/TempStatus";
 import {ReadonlyVolatileStatus} from "../../state/VolatileStatus";
@@ -129,24 +128,18 @@ export type PokemonArgs = ReadonlyPokemon | null | undefined;
 
 //#region Alive boolean.
 
-/** Encodes whether each pokemon is alive. */
-export const pokemonAliveEncoder: Encoder<PokemonArgs[]> = {
+export const aliveEncoder: Encoder<PokemonArgs> = {
     encode(data, args) {
         checkLength(data, this.size);
-        checkLength(args, this.size);
-
-        for (let i = 0; i < this.size; ++i) {
-            const arg = args[i];
-            if (arg === undefined) {
-                data[i] = 0;
-            } else if (arg === null) {
-                data[i] = 1;
-            } else {
-                data[i] = arg.hp.current > 0 ? 1 : 0;
-            }
+        if (args === undefined) {
+            data[0] = 0;
+        } else if (args === null) {
+            data[0] = 1;
+        } else {
+            data[0] = args.hp.current > 0 ? 1 : 0;
         }
     },
-    size: Team.maxSize,
+    size: 1,
 };
 
 //#endregion
@@ -226,12 +219,6 @@ export const basicEncoder: Encoder<PokemonArgs> = optional(
     definedBasicEncoder,
     unknownBasicEncoder,
     emptyBasicEncoder,
-);
-
-/** Encoder for basic traits/statuses for all Pokemon on a team. */
-export const pokemonBasicEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    basicEncoder,
 );
 
 //#endregion
@@ -348,15 +335,6 @@ export const speciesEncoder: Encoder<string | null | undefined> = optional(
     emptySpeciesEncoder,
 );
 
-/** Encoder for species for all Pokemon on a team. */
-export const pokemonSpeciesEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    // Note: Don't use optional chain (?.) operator since that turns null into
-    // undefined, which has a different meaning in this context.
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-    augment(p => p && p.baseSpecies, speciesEncoder),
-);
-
 //#endregion
 
 //#region Types.
@@ -393,13 +371,6 @@ export const emptyTypesEncoder: Encoder<undefined> = zeroEncoder(
 /** Encoder for a Pokemon's types. */
 export const typesEncoder: Encoder<readonly dex.Type[] | null | undefined> =
     optional(definedTypesEncoder, unknownTypesEncoder, emptyTypesEncoder);
-
-/** Encoder for types for all Pokemon on a team. */
-export const pokemonTypesEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-    augment(p => p && p.baseTypes, typesEncoder),
-);
 
 //#endregion
 
@@ -485,13 +456,6 @@ export const statTableEncoder: Encoder<ReadonlyStatTable | null | undefined> =
         emptyStatTableEncoder,
     );
 
-/** Encoder for StatTables for all Pokemon on a team. */
-export const pokemonStatTableEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-    augment(p => p && p.baseStats, statTableEncoder),
-);
-
 //#endregion
 
 //#region Ability.
@@ -514,19 +478,6 @@ export const emptyAbilityEncoder: Encoder<undefined> = zeroEncoder(
 /** Encoder for a Pokemon's ability. */
 export const abilityEncoder: Encoder<readonly string[] | null | undefined> =
     optional(definedAbilityEncoder, unknownAbilityEncoder, emptyAbilityEncoder);
-
-/** Encoder for abilities for all Pokemon on a team. */
-export const pokemonAbilityEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    augment(
-        p =>
-            p &&
-            (p.baseAbility
-                ? [p.baseAbility]
-                : dex.pokemon[p.species].abilities),
-        abilityEncoder,
-    ),
-);
 
 //#endregion
 
@@ -560,13 +511,6 @@ export const itemEncoder: Encoder<string | null | undefined> = optional(
     emptyItemEncoder,
 );
 
-/** Encoder for items for all Pokemon on a team. */
-export const pokemonItemEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-    augment(p => p && p.item, itemEncoder),
-);
-
 /** Encoder for an unknown Pokemon's last item. */
 export const unknownLastItemEncoder: Encoder<null> = augment(
     () => ["none"],
@@ -578,13 +522,6 @@ export const lastItemEncoder: Encoder<string | null | undefined> = optional(
     definedItemEncoder,
     unknownLastItemEncoder,
     emptyItemEncoder,
-);
-
-/** Encoder for last items for all Pokemon on a team. */
-export const pokemonLastItemEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-    augment(p => p && p.lastItem, lastItemEncoder),
 );
 
 //#endregion
@@ -763,19 +700,6 @@ export const emptyMovesetEncoder: Encoder<undefined> = concat(
 /** Encoder for a Pokemon's Moveset. */
 export const movesetEncoder: Encoder<DefinedMovesetArgs | null | undefined> =
     optional(definedMovesetEncoder, unknownMovesetEncoder, emptyMovesetEncoder);
-
-/** Encoder for Movesets for all Pokemon on a team. */
-export const pokemonMovesetEncoder: Encoder<PokemonArgs[]> = map(
-    Team.maxSize,
-    augment(
-        p =>
-            p && {
-                moveset: p.baseMoveset,
-                volatile: p.active ? p.volatile : null,
-            },
-        movesetEncoder,
-    ),
-);
 
 //#endregion
 

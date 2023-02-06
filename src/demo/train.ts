@@ -56,7 +56,6 @@ void (async function () {
                 "model",
                 config.train.batchPredict,
                 undefined /*url*/,
-                config.train.model,
                 config.train.seeds?.model,
             );
         }
@@ -66,7 +65,6 @@ void (async function () {
             "model",
             config.train.batchPredict,
             undefined /*url*/,
-            config.train.model,
             config.train.seeds?.model,
         );
     }

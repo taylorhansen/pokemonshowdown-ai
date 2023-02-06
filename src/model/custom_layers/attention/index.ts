@@ -1,2 +1,1 @@
-export {setAttention} from "./setAttention";
-export {setMultiHeadAttention} from "./setMultiHeadAttention";
+export * from "./setAttention";

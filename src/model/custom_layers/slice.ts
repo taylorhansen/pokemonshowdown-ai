@@ -32,24 +32,6 @@ class Slice extends tf.layers.Layer {
             : [];
     }
 
-    public override call(
-        inputs: tf.Tensor | tf.Tensor[],
-        kwargs: Kwargs,
-    ): tf.Tensor {
-        return tf.tidy(() => {
-            this.invokeCallHook(inputs, kwargs);
-            if (Array.isArray(inputs)) {
-                if (inputs.length !== 1) {
-                    throw new Error(
-                        `Expected 1 input tensor but got ${inputs.length}`,
-                    );
-                }
-                [inputs] = inputs;
-            }
-            return tf.slice(inputs, [0, ...this.begin], [-1, ...this.size]);
-        });
-    }
-
     public override computeOutputShape(inputShape: tf.Shape): tf.Shape {
         if (inputShape[0] !== null) {
             throw new Error("Expected batch dimension to be on first axis");
@@ -67,6 +49,24 @@ class Slice extends tf.layers.Layer {
                 inputShape[axis]! - (this.begin[axis - 1] ?? 0);
         }
         return size;
+    }
+
+    public override call(
+        inputs: tf.Tensor | tf.Tensor[],
+        kwargs: Kwargs,
+    ): tf.Tensor {
+        return tf.tidy(() => {
+            this.invokeCallHook(inputs, kwargs);
+            if (Array.isArray(inputs)) {
+                if (inputs.length !== 1) {
+                    throw new Error(
+                        `Expected 1 input tensor but got ${inputs.length}`,
+                    );
+                }
+                [inputs] = inputs;
+            }
+            return tf.slice(inputs, [0, ...this.begin], [-1, ...this.size]);
+        });
     }
 
     public override getConfig(): tf.serialization.ConfigDict {

@@ -58,8 +58,6 @@ export interface TrainConfig {
     readonly steps?: number;
     /** Batch predict config for models outside the learning step. */
     readonly batchPredict: BatchPredictConfig;
-    /** Model config. */
-    readonly model: ModelConfig;
     /** Rollout config. */
     readonly rollout: RolloutConfig;
     /** Experience config. */
@@ -98,20 +96,6 @@ export interface BatchPredictConfig {
      * nanoseconds.
      */
     readonly timeoutNs: bigint;
-}
-
-/**
- * Configuration for the creation of the initial neural network model for
- * training does not work when resuming training from a previous session.
- */
-export interface ModelConfig {
-    /**
-     * Whether to use a dueling network architecture rather than just vanilla
-     * DQN.
-     */
-    readonly dueling: boolean;
-    /** Config for aggregate operations on movesets and team lists. */
-    readonly aggregate: Record<"move" | "pokemon", ModelAggregateConfig>;
 }
 
 /**

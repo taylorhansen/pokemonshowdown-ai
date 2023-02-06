@@ -13,32 +13,26 @@ export const numTeams = 2;
 /** Number of pokemon on a team. */
 export const teamSize = Team.maxSize;
 
+/** Number of active pokemon per team. */
+export const numActive = 1;
+
 /** Number of moves in a moveset. */
 export const numMoves = Moveset.maxSize;
 
 /** Input shapes for the neural network model, without the batch dimension. */
 export const modelInputShapes: readonly (readonly number[])[] = [
-    // Room.
     [encoders.roomStatusEncoder.size],
-    // Team status.
     [numTeams, encoders.teamStatusEncoder.size],
-    // Active traits/statuses.
-    [numTeams, encoders.volatileStatusEncoder.size],
-    [numTeams, encoders.definedSpeciesEncoder.size],
-    [numTeams, encoders.definedTypesEncoder.size],
-    [numTeams, encoders.definedStatTableEncoder.size],
-    [numTeams, encoders.definedAbilityEncoder.size],
-    [numTeams, Moveset.maxSize, encoders.moveSlotEncoder.size],
-    // Bench traits/statuses.
+    [numTeams, numActive, encoders.volatileStatusEncoder.size],
     [numTeams, teamSize],
     [numTeams, teamSize, encoders.basicEncoder.size],
-    [numTeams, teamSize, encoders.speciesEncoder.size],
-    [numTeams, teamSize, encoders.typesEncoder.size],
-    [numTeams, teamSize, encoders.statTableEncoder.size],
-    [numTeams, teamSize, encoders.abilityEncoder.size],
+    [numTeams, teamSize + numActive, encoders.speciesEncoder.size],
+    [numTeams, teamSize + numActive, encoders.typesEncoder.size],
+    [numTeams, teamSize + numActive, encoders.statTableEncoder.size],
+    [numTeams, teamSize + numActive, encoders.abilityEncoder.size],
     [numTeams, teamSize, encoders.itemEncoder.size],
     [numTeams, teamSize, encoders.lastItemEncoder.size],
-    [numTeams, teamSize, numMoves, encoders.moveSlotEncoder.size],
+    [numTeams, teamSize + numActive, numMoves, encoders.moveSlotEncoder.size],
 ];
 
 /** Flattened version of {@link modelInputShapes}. */
@@ -47,28 +41,23 @@ export const flattenedInputShapes: readonly number[] = modelInputShapes.map(
 );
 
 /**
- * Input names for the {@link createModel model}.
+ * Input names for the model.
  *
- * Same length as {@link modelInputShapes}.
+ * Maps 1:1 to {@link modelInputShapes}.
  */
 export const modelInputNames: readonly string[] = [
-    "room",
+    "room/status",
     "team/status",
-    "team/active/volatile",
-    "team/active/species",
-    "team/active/types",
-    "team/active/stats",
-    "team/active/ability",
-    "team/active/moves",
-    "team/pokemon/alive",
-    "team/pokemon/basic",
-    "team/pokemon/species",
-    "team/pokemon/types",
-    "team/pokemon/stats",
-    "team/pokemon/ability",
-    "team/pokemon/item",
-    "team/pokemon/last_item",
-    "team/pokemon/moves",
+    "active/volatile",
+    "pokemon/alive",
+    "pokemon/basic",
+    "pokemon/species",
+    "pokemon/types",
+    "pokemon/stats",
+    "pokemon/ability",
+    "pokemon/item",
+    "pokemon/last_item",
+    "pokemon/moves",
 ];
 
 /**
@@ -81,10 +70,8 @@ export const modelInputShapesMap: {
     modelInputNames.map((name, i) => [name, modelInputShapes[i]]),
 );
 
-/**
- * Output shape for the {@link createModel model}, without the batch dimension.
- */
+/** Output shape for the model, without the batch dimension. */
 export const modelOutputShape = [intToChoice.length];
 
-/** Output name for the {@link createModel model}. */
+/** Output name for the model. */
 export const modelOutputName = "action";

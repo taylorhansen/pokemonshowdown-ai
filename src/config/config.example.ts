@@ -44,13 +44,6 @@ export const config: Config = {
             maxSize: numThreads,
             timeoutNs: 10_000_000n /*10ms*/,
         },
-        model: {
-            dueling: true,
-            aggregate: {
-                move: {type: "mean", attention: true},
-                pokemon: {type: "mean", attention: true},
-            },
-        },
         rollout: {
             pool: {
                 numThreads,
