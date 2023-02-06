@@ -162,8 +162,7 @@ export class ThreadPool<
     /**
      * Closes each of the threads that are currently running.
      *
-     * Future calls to {@link takePort} and {@link givePort} will throw after
-     * this method is called.
+     * Future calls to {@link takePort} will throw after this method is called.
      */
     public async terminate(): Promise<void> {
         this.freePorts.length = 0;
