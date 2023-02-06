@@ -120,7 +120,9 @@ export class ThreadPool<
      */
     public givePort(port: TWorker): void {
         if (this.ports.size <= 0) {
-            throw new Error("ThreadPool is closed");
+            // Pass silently in case we're in an invalid state, since throwing
+            // here could overshadow another more important error.
+            return;
         }
 
         if (!this.ports.has(port)) {
