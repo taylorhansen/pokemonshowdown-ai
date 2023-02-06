@@ -20,9 +20,7 @@ export class Learn {
     /** Used for logging inputs during loss calcs. */
     private readonly hookLayers: readonly tf.layers.Layer[] =
         this.model.layers.filter(l =>
-            ["Dense", "SetAttention", "SetMultiHeadAttention"].includes(
-                l.getClassName(),
-            ),
+            ["Dense", "SetAttention"].includes(l.getClassName()),
         );
 
     /** Scale for TD target value. */
@@ -142,7 +140,11 @@ export class Learn {
             );
 
             this.metrics?.scalar("loss", loss, step);
+
             if (storeBatchMetrics) {
+                this.metrics?.histogram("target", target, step);
+                target.dispose();
+
                 for (const name in grads) {
                     if (Object.prototype.hasOwnProperty.call(grads, name)) {
                         const grad = grads[name];
@@ -159,6 +161,7 @@ export class Learn {
                                 step,
                             );
                         }
+                        grad.dispose();
                     }
                 }
 
@@ -166,14 +169,20 @@ export class Learn {
                     if (
                         Object.prototype.hasOwnProperty.call(hookedInputs, name)
                     ) {
+                        const inputs = hookedInputs[name];
+                        if (inputs.length <= 0) {
+                            continue;
+                        }
                         this.metrics?.histogram(
                             name,
-                            tf.concat1d(hookedInputs[name]),
+                            inputs.length === 1
+                                ? inputs[0]
+                                : tf.concat1d(inputs),
                             step,
                         );
+                        tf.dispose(inputs);
                     }
                 }
-                tf.dispose(hookedInputs);
 
                 for (const weights of this.variables) {
                     if (weights.size === 1) {
