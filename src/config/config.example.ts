@@ -100,7 +100,7 @@ export const config: Config = {
     },
     compare: {
         name: "latest-original-random",
-        models: ["train", "train/checkpoints/original", "random"],
+        models: ["train", "train/checkpoints/episode-0", "random"],
         numGames: 256,
         threshold: 0.55,
         batchPredict: {
