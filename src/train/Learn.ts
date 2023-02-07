@@ -20,7 +20,9 @@ export class Learn {
     /** Used for logging inputs during loss calcs. */
     private readonly hookLayers: readonly tf.layers.Layer[] =
         this.model.layers.filter(l =>
-            ["Dense", "SetAttention"].includes(l.getClassName()),
+            ["Dense", "SetAttention", "PoolingAttention"].includes(
+                l.getClassName(),
+            ),
         );
 
     /** Scale for TD target value. */

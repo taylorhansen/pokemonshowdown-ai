@@ -137,7 +137,14 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
         moveUnits /*units*/,
         random,
     )(moves.features);
-    const moveset = pooling(name, "pokemon/moves", "max")(moveAttention);
+    const moveset = poolingAttentionBlock(
+        name,
+        "pokemon/moves",
+        4 /*heads*/,
+        8 /*headUnits*/,
+        moveUnits /*units*/,
+        random,
+    )(moveAttention);
     const movesetSplit = splitPokemon(
         name,
         "pokemon/moves",
@@ -176,7 +183,14 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
         random,
     )(bench, benchAlive);
 
-    const benchAggregate = pooling(name, "bench", "max")(benchAttention);
+    const benchAggregate = poolingAttentionBlock(
+        name,
+        "bench",
+        4 /*heads*/,
+        8 /*headUnits*/,
+        benchUnits /*units*/,
+        random,
+    )(benchAttention);
     globalFeatures.push(benchAggregate);
 
     //#endregion
@@ -403,7 +417,7 @@ function splitBench(
  * @param units Size of input.
  * @param random Optional seeder for weight init.
  * @returns A function to apply the attention block and output the same shape as
- * input.
+ * input but with the feature dimension replaced with `units`.
  */
 function selfAttentionBlock(
     name: string,
@@ -514,25 +528,47 @@ function combinePokemon(
 }
 
 /**
- * Creates a layer that aggregates via pooling.
+ * Creates a pooling multi-head attention block for unordered input.
  *
  * @param name Name of model.
  * @param label Name of module.
- * @param type Type of pooling.
- * @returns A function that applies the pooling operation. Collapses second last
- * dimension.
+ * @param heads Number of attention heads.
+ * @param headUnits Size of each head.
+ * @param units Size of input.
+ * @param random Optional seeder for weight init.
+ * @returns A function to apply the pooling attention block. Collapses element
+ * dimension and replaces feature dimension with `units`.
  */
-function pooling(
+function poolingAttentionBlock(
     name: string,
     label: string,
-    type: "sum" | "mean" | "max",
-): (features: tf.SymbolicTensor) => tf.SymbolicTensor {
-    const poolingLayer = customLayers.aggregate({
-        name: `${name}/${label}/${type}`,
-        type,
-        axis: -2,
+    heads: number,
+    headUnits: number,
+    units: number,
+    random?: Rng,
+): (
+    features: tf.SymbolicTensor,
+    mask?: tf.SymbolicTensor,
+) => tf.SymbolicTensor {
+    const attentionLayer = customLayers.poolingAttention({
+        name: `${name}/${label}/pooling_attention`,
+        seeds: 1,
+        heads,
+        headUnits,
+        units,
+        collapseSeedDim: true,
+        kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
     });
-    return features => poolingLayer.apply(features) as tf.SymbolicTensor;
+    const activationLayer = tf.layers.leakyReLU({
+        name: `${name}/${label}/pooling_attention/leaky_relu`,
+    });
+    return function selfAttentionBlockImpl(features, mask) {
+        features = attentionLayer.apply(
+            mask ? [features, mask] : features,
+        ) as tf.SymbolicTensor;
+        features = activationLayer.apply(features) as tf.SymbolicTensor;
+        return features;
+    };
 }
 
 /**
