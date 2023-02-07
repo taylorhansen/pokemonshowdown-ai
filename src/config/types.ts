@@ -203,7 +203,8 @@ export interface LearnConfig {
     readonly targetInterval: number;
     /**
      * Step interval for tracking expensive batch update model metrics such as
-     * histograms which can significanly slow down training.
+     * histograms which can significanly slow down training. Must be divisible
+     * by {@link interval}.
      */
     readonly metricsInterval: number;
 }

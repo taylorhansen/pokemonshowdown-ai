@@ -105,21 +105,25 @@ export class Learn {
             const hookedInputs: {[name: string]: tf.Tensor1D[]} = {};
             if (storeBatchMetrics) {
                 for (const layer of this.hookLayers) {
-                    // Note: Call hook is wrapped in tf.tidy() so tf.keep() is
-                    // used to extract training inputs.
-                    layer.setCallHook(function logInputs(inputs) {
-                        if (!Array.isArray(inputs)) {
-                            inputs = [inputs];
-                        }
-                        for (let i = 0; i < inputs.length; ++i) {
-                            const input = inputs[i].flatten();
-                            let name = `${layer.name}/input`;
-                            if (inputs.length > 1) {
-                                name += `/${i}`;
+                    layer.setCallHook(inputs =>
+                        tf.tidy(() => {
+                            if (!Array.isArray(inputs)) {
+                                inputs = [inputs];
                             }
-                            (hookedInputs[name] ??= []).push(tf.keep(input));
-                        }
-                    });
+                            for (let i = 0; i < inputs.length; ++i) {
+                                // Only take one example out of the batch to
+                                // prevent excessive memory usage.
+                                const input = tf.keep(
+                                    inputs[i].slice(0, 1).flatten(),
+                                );
+                                let name = `${layer.name}/input`;
+                                if (inputs.length > 1) {
+                                    name += `/${i}`;
+                                }
+                                (hookedInputs[name] ??= []).push(input);
+                            }
+                        }),
+                    );
                 }
             }
 
@@ -170,16 +174,11 @@ export class Learn {
                         Object.prototype.hasOwnProperty.call(hookedInputs, name)
                     ) {
                         const inputs = hookedInputs[name];
-                        if (inputs.length <= 0) {
-                            continue;
-                        }
-                        this.metrics?.histogram(
-                            name,
-                            inputs.length === 1
-                                ? inputs[0]
-                                : tf.concat1d(inputs),
-                            step,
-                        );
+                        const t = tf.concat1d(inputs);
+                        this.metrics?.histogram(name, t, step);
+                        t.dispose();
+                        // Hooked inputs are tf.keep()'d so we have to dispose
+                        // them manually.
                         tf.dispose(inputs);
                     }
                 }
@@ -203,6 +202,10 @@ export class Learn {
                 for (const layer of this.hookLayers) {
                     layer.clearCallHook();
                 }
+
+                // Since some of the histograms can use a lot of data, this
+                // prevents buffer buildup over multiple learn steps.
+                Metrics.flush();
             }
 
             return loss;
