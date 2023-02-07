@@ -11,6 +11,7 @@ import {
     GamePipeline,
 } from "../game/pool";
 import {ModelWorker} from "../model/worker";
+import {formatUptime} from "../util/format";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
 import {ensureDir} from "../util/paths/ensureDir";
@@ -213,6 +214,7 @@ void (async function () {
         logger.error((e as Error).stack ?? (e as Error).toString());
     } finally {
         await models.close();
+        logger.info("Uptime: " + formatUptime(process.uptime()));
         logger.info("Done");
     }
 })();
