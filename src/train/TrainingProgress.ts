@@ -7,6 +7,7 @@ import {
     ModelTrainRollout,
     ModelTrainStep,
 } from "../model/worker";
+import {estimateEta} from "../util/eta";
 import {formatUptime, numDigits} from "../util/format";
 import {Logger} from "../util/logging/Logger";
 
@@ -106,14 +107,14 @@ export class TrainingProgress {
                 this.startTime = process.uptime();
                 est = "n/a";
             } else {
-                this.startTime ??= process.uptime();
-                const elapsed = process.uptime() - this.startTime;
-                const eta =
-                    this.progress.curr >= this.progress.total
-                        ? 0
-                        : elapsed *
-                          (this.progress.total / this.progress.curr - 1);
-                est = formatUptime(eta);
+                est = formatUptime(
+                    estimateEta(
+                        this.startTime,
+                        process.uptime(),
+                        this.progress.curr + 1,
+                        this.progress.total,
+                    ),
+                );
             }
             if (data.loss !== undefined) {
                 this.lastLoss = data.loss.toFixed(TrainingProgress.lossDigits);

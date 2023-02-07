@@ -11,6 +11,7 @@ import {
     GamePipeline,
 } from "../game/pool";
 import {ModelWorker} from "../model/worker";
+import {estimateEta} from "../util/eta";
 import {formatUptime} from "../util/format";
 import {Logger} from "../util/logging/Logger";
 import {Verbose} from "../util/logging/Verbose";
@@ -69,18 +70,21 @@ void (async function () {
         const totalGames = numMatchups * config.compare.numGames;
         const gamesPadding = Math.max(1, Math.ceil(Math.log10(totalGames)));
         const progressBar = new ProgressBar(
-            logger.prefix + "Games :games/:total :bar",
+            logger.prefix + "Games :games/:total :bar eta=:est",
             {
                 total: totalGames,
                 head: ">",
                 clear: true,
                 width:
                     (process.stderr.columns || 80) -
+                    logger.prefix.length -
                     "Games / ".length -
-                    2 * gamesPadding,
+                    2 * gamesPadding -
+                    " eta=00h00m00s".length -
+                    1,
             },
         );
-        progressBar.render({games: "0".padStart(gamesPadding)});
+        progressBar.render({games: "0".padStart(gamesPadding), est: "0s"});
         const progressLogger = logger.withFunc(msg =>
             progressBar.complete
                 ? Logger.stderr(msg)
@@ -156,9 +160,18 @@ void (async function () {
 
         const games = new GamePipeline(config.compare.pool);
         try {
+            const startTime = process.uptime();
             await games.run(genArgs(), result => {
                 progressBar.tick({
                     games: String(progressBar.curr + 1).padStart(gamesPadding),
+                    est: formatUptime(
+                        estimateEta(
+                            startTime,
+                            process.uptime(),
+                            progressBar.curr + 1,
+                            progressBar.total,
+                        ),
+                    ),
                 });
 
                 const gameLogger = progressLogger.addPrefix(
