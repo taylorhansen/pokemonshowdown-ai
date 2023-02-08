@@ -350,28 +350,28 @@ function splitPokemon(
 ): (
     features: tf.SymbolicTensor,
 ) => Record<"active" | "bench", tf.SymbolicTensor> {
-    const activeSplitLayer = customLayers.slice({
-        name: `${name}/${label}/split/active`,
-        begin: [0, 0],
+    // [2,7,X] -> [2,2,X], [2,5,X]
+    const splitLayer = customLayers.split({
+        name: `${name}/${label}/split`,
         // Note: Have to account for both override and base trait vectors for
         // each active pokemon.
-        size: [numTeams, numActive * 2],
+        numOrSizeSplits: [numActive * 2, teamSize - numActive],
+        axis: 1,
     });
+    // [2,2,X] -> [2,1,2*X]
     const activeReshapeLayer = tf.layers.reshape({
         name: `${name}/${label}/split/active/reshape`,
         targetShape: [numTeams, numActive, units * 2],
     });
-    const benchSplitLayer = customLayers.slice({
-        name: `${name}/${label}/split/bench`,
-        begin: [0, numActive * 2],
-        size: [numTeams, teamSize - numActive],
-    });
-    return features => ({
-        active: activeReshapeLayer.apply(
-            activeSplitLayer.apply(features),
-        ) as tf.SymbolicTensor,
-        bench: benchSplitLayer.apply(features) as tf.SymbolicTensor,
-    });
+    return function splitPokemonImpl(features) {
+        const [active, bench] = splitLayer.apply(
+            features,
+        ) as tf.SymbolicTensor[];
+        return {
+            active: activeReshapeLayer.apply(active) as tf.SymbolicTensor,
+            bench,
+        };
+    };
 }
 
 /**
@@ -391,20 +391,18 @@ function splitBench(
 ): (
     features: tf.SymbolicTensor,
 ) => Record<"active" | "bench", tf.SymbolicTensor> {
-    const activeSplit = customLayers.slice({
-        name: `${name}/${label}/split/active`,
-        begin: [0, 0],
-        size: [numTeams, numActive],
+    // [2,6,X] -> [2,1,X], [2,5,X]
+    const splitLayer = customLayers.split({
+        name: `${name}/${label}/split`,
+        numOrSizeSplits: [numActive, teamSize - numActive],
+        axis: 1,
     });
-    const benchSplit = customLayers.slice({
-        name: `${name}/${label}/split/bench`,
-        begin: [0, numActive],
-        size: [numTeams, teamSize - numActive],
-    });
-    return features => ({
-        active: activeSplit.apply(features) as tf.SymbolicTensor,
-        bench: benchSplit.apply(features) as tf.SymbolicTensor,
-    });
+    return function splitBenchImpl(features) {
+        const [active, bench] = splitLayer.apply(
+            features,
+        ) as tf.SymbolicTensor[];
+        return {active, bench};
+    };
 }
 
 /**
