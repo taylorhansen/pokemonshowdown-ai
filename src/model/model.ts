@@ -32,11 +32,11 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
 
     const globalFeatures: tf.SymbolicTensor[] = [];
 
-    const roomStatus = inputFeatures(name, "room/status", 8, random);
+    const roomStatus = inputFeatures(name, "room/status", 32, random);
     inputs.push(roomStatus.input);
     globalFeatures.push(roomStatus.features);
 
-    const teamStatus = inputFeatures(name, "team/status", 16, random);
+    const teamStatus = inputFeatures(name, "team/status", 32, random);
     inputs.push(teamStatus.input);
     globalFeatures.push(teamStatus.features);
 
@@ -44,27 +44,26 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
 
     //#region Individual pokemon features.
 
-    const activeFeatures: tf.SymbolicTensor[] = [];
-    const benchFeatures: tf.SymbolicTensor[] = [];
+    // For [2,7,X] features where active traits also include override info.
+    const activeAndPokemonFeatures: tf.SymbolicTensor[] = [];
+    // For [2,6,X] features where active traits are not overridden.
+    const pokemonFeatures: tf.SymbolicTensor[] = [];
 
-    const activeVolatile = inputFeatures(name, "active/volatile", 32, random);
+    const activeVolatile = inputFeatures(name, "active/volatile", 64, random);
     inputs.push(activeVolatile.input);
-    activeFeatures.push(activeVolatile.features);
 
     const aliveInput = inputLayer(name, "pokemon/alive");
     inputs.push(aliveInput);
-    const {active: activeAlive, bench: benchAlive} = splitBench(
+    const {active: activeAlive, bench: benchAlive} = splitPokemon(
         name,
         "pokemon/alive",
     )(aliveInput);
 
-    const basic = inputFeatures(name, "pokemon/basic", 16, random);
+    const basic = inputFeatures(name, "pokemon/basic", 32, random);
     inputs.push(basic.input);
-    const basicSplit = splitBench(name, "pokemon/basic")(basic.features);
-    activeFeatures.push(basicSplit.active);
-    benchFeatures.push(basicSplit.bench);
+    pokemonFeatures.push(basic.features);
 
-    const speciesUnits = 32;
+    const speciesUnits = 64;
     const species = inputFeatures(
         name,
         "pokemon/species",
@@ -72,37 +71,19 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
         random,
     );
     inputs.push(species.input);
-    const speciesSplit = splitPokemon(
-        name,
-        "pokemon/species",
-        speciesUnits,
-    )(species.features);
-    activeFeatures.push(speciesSplit.active);
-    benchFeatures.push(speciesSplit.bench);
+    activeAndPokemonFeatures.push(species.features);
 
-    const typesUnits = 32;
+    const typesUnits = 64;
     const types = inputFeatures(name, "pokemon/types", typesUnits, random);
     inputs.push(types.input);
-    const typesSplit = splitPokemon(
-        name,
-        "pokemon/types",
-        typesUnits,
-    )(types.features);
-    activeFeatures.push(typesSplit.active);
-    benchFeatures.push(typesSplit.bench);
+    activeAndPokemonFeatures.push(types.features);
 
-    const statsUnits = 32;
+    const statsUnits = 64;
     const stats = inputFeatures(name, "pokemon/stats", statsUnits, random);
     inputs.push(stats.input);
-    const statsSplit = splitPokemon(
-        name,
-        "pokemon/stats",
-        statsUnits,
-    )(stats.features);
-    activeFeatures.push(statsSplit.active);
-    benchFeatures.push(statsSplit.bench);
+    activeAndPokemonFeatures.push(stats.features);
 
-    const abilityUnits = 32;
+    const abilityUnits = 64;
     const ability = inputFeatures(
         name,
         "pokemon/ability",
@@ -110,87 +91,121 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
         random,
     );
     inputs.push(ability.input);
-    const abilitySplit = splitPokemon(
-        name,
-        "pokemon/ability",
-        abilityUnits,
-    )(ability.features);
-    activeFeatures.push(abilitySplit.active);
-    benchFeatures.push(abilitySplit.bench);
+    activeAndPokemonFeatures.push(ability.features);
 
     const itemLabels = ["pokemon/item", "pokemon/last_item"];
     const item = inputFeaturesList(name, itemLabels, 64, random);
     inputs.push(...item.inputs);
-    const itemSplit = itemLabels.map((label, i) =>
-        splitBench(name, label)(item.features[i]),
-    );
-    activeFeatures.push(...itemSplit.map(split => split.active));
-    benchFeatures.push(...itemSplit.map(split => split.bench));
+    pokemonFeatures.push(...item.features);
 
-    const moveUnits = 32;
+    const moveUnits = 64;
     const moves = inputFeatures(name, "pokemon/moves", moveUnits, random);
-    const moveAttention = selfAttentionBlock(
+    inputs.push(moves.input);
+    let moveset = selfAttentionBlock(
         name,
         "pokemon/moves",
         4 /*heads*/,
-        8 /*headUnits*/,
+        16 /*headUnits*/,
         moveUnits /*units*/,
+        "_1",
         random,
     )(moves.features);
-    const moveset = poolingAttentionBlock(
+    moveset = selfAttentionBlock(
         name,
         "pokemon/moves",
         4 /*heads*/,
-        8 /*headUnits*/,
+        16 /*headUnits*/,
         moveUnits /*units*/,
+        "_2",
         random,
-    )(moveAttention);
-    const movesetSplit = splitPokemon(
+    )(moveset);
+    const movesetAggregate = poolingAttentionBlock(
         name,
         "pokemon/moves",
-        moveUnits,
+        4 /*heads*/,
+        16 /*headUnits*/,
+        moveUnits /*units*/,
+        random,
     )(moveset);
-    inputs.push(moves.input);
-    activeFeatures.push(movesetSplit.active);
-    benchFeatures.push(movesetSplit.bench);
+    activeAndPokemonFeatures.push(movesetAggregate);
 
     //#endregion
 
     //#region Aggregate pokemon features.
 
-    const activeUnits = 64;
-    const active = combinePokemon(
+    const activeAndPokemon = tf.layers
+        .concatenate({
+            name: `${name}/active_pokemon/concat`,
+            axis: -1,
+        })
+        .apply(activeAndPokemonFeatures) as tf.SymbolicTensor;
+    const activeAndPokemonSplit = splitActiveAndPokemon(
+        name,
+        "active_pokemon",
+        activeAndPokemon.shape[activeAndPokemon.shape.length - 1]!,
+    )(activeAndPokemon);
+
+    const pokemon = tf.layers
+        .concatenate({
+            name: `${name}/pokemon/concat`,
+            axis: -1,
+        })
+        .apply(pokemonFeatures) as tf.SymbolicTensor;
+    const pokemonSplit = splitPokemon(name, "pokemon")(pokemon);
+
+    const activeFeatures = [
+        activeVolatile.features,
+        activeAndPokemonSplit.active,
+        pokemonSplit.active,
+    ];
+    const activeUnits = 128;
+    let active = combinePokemon(
         name,
         "active",
         activeUnits,
         random,
     )(activeFeatures, activeAlive);
+    // Pre-flatten for later skip connections.
+    active = tf.layers
+        .flatten({name: `${name}/active/flatten`})
+        .apply(active) as tf.SymbolicTensor;
     globalFeatures.push(active);
 
-    const benchUnits = 64;
-    const bench = combinePokemon(
+    const benchFeatures = [activeAndPokemonSplit.bench, pokemonSplit.bench];
+    const benchUnits = 128;
+    let bench = combinePokemon(
         name,
         "bench",
         benchUnits,
         random,
     )(benchFeatures, benchAlive);
-    const benchAttention = selfAttentionBlock(
+    bench = selfAttentionBlock(
         name,
         "bench",
-        4 /*heads*/,
+        8 /*heads*/,
         16 /*headUnits*/,
         benchUnits /*units*/,
+        "_1",
+        random,
+    )(bench, benchAlive);
+    bench = selfAttentionBlock(
+        name,
+        "bench",
+        8 /*heads*/,
+        16 /*headUnits*/,
+        benchUnits /*units*/,
+        "_2",
         random,
     )(bench, benchAlive);
 
     const benchAggregate = poolingAttentionBlock(
         name,
         "bench",
-        4 /*heads*/,
-        8 /*headUnits*/,
+        8 /*heads*/,
+        16 /*headUnits*/,
         benchUnits /*units*/,
         random,
-    )(benchAttention);
+    )(bench);
     globalFeatures.push(benchAggregate);
 
     //#endregion
@@ -201,7 +216,11 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
 
     //#region Global feature connections.
 
-    const global = aggregateGlobal(name, "global", 128, random)(globalFeatures);
+    let global = aggregateGlobal(name, "global", 128, random)(globalFeatures);
+    // Emphasize active pokemon when choosing action values via skip connection.
+    global = tf.layers
+        .concatenate({name: `${name}/active_global/concat`})
+        .apply([global, active]) as tf.SymbolicTensor;
 
     //#endregion
 
@@ -215,8 +234,9 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
         // Note: Slicing through both teams and pokemon list to get first active
         // override traits, i.e. direct move features.
         {begin: [0, 0], size: [1, 1]},
+        128,
         random,
-    )(moveAttention, global);
+    )(moveset, global);
 
     const actionSwitch = actionValues(
         name,
@@ -224,12 +244,13 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
         teamSize - numActive,
         benchUnits,
         {begin: 0, size: 1},
+        128,
         random,
-    )(benchAttention, global);
+    )(bench, global);
 
     const advantage = combineAction(name, "action")([actionMove, actionSwitch]);
 
-    const value = stateValue(name, "state")(global);
+    const value = stateValue(name, "state", 128)(global);
 
     const q = dueling(name, "action")(advantage, value);
 
@@ -277,18 +298,10 @@ function inputFeatures(
     units: number,
     random?: Rng,
 ): InputFeatures {
-    const input = inputLayer(name, label);
-    let features = tf.layers
-        .dense({
-            name: `${name}/${label}/dense`,
-            units,
-            kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
-            biasInitializer: "zeros",
-        })
-        .apply(input) as tf.SymbolicTensor;
-    features = tf.layers
-        .leakyReLU({name: `${name}/${label}/leaky_relu`})
-        .apply(features) as tf.SymbolicTensor;
+    const {
+        inputs: [input],
+        features: [features],
+    } = inputFeaturesList(name, [label], units, random);
     return {input, features};
 }
 
@@ -314,19 +327,31 @@ function inputFeaturesList(
     random?: Rng,
 ): InputFeaturesList {
     const inputs = labels.map(label => inputLayer(name, label));
-    const denseLayer = tf.layers.dense({
-        name: `${name}/${labels[0]}/dense`,
+    const denseLayer1 = tf.layers.dense({
+        name: `${name}/${labels[0]}/dense_1`,
         units,
         kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
-    const activationLayer = tf.layers.leakyReLU({
-        name: `${name}/${labels[0]}/leaky_relu`,
+    const activationLayer1 = tf.layers.leakyReLU({
+        name: `${name}/${labels[0]}/leaky_relu_1`,
     });
-    const features = inputs.map(
-        input =>
-            activationLayer.apply(denseLayer.apply(input)) as tf.SymbolicTensor,
-    );
+    const denseLayer2 = tf.layers.dense({
+        name: `${name}/${labels[0]}/dense_2`,
+        units,
+        kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
+        biasInitializer: "zeros",
+    });
+    const activationLayer2 = tf.layers.leakyReLU({
+        name: `${name}/${labels[0]}/leaky_relu_2`,
+    });
+    const features = inputs.map(input => {
+        input = denseLayer1.apply(input) as tf.SymbolicTensor;
+        input = activationLayer1.apply(input) as tf.SymbolicTensor;
+        input = denseLayer2.apply(input) as tf.SymbolicTensor;
+        input = activationLayer2.apply(input) as tf.SymbolicTensor;
+        return input;
+    });
     return {inputs, features};
 }
 
@@ -343,7 +368,7 @@ function inputFeaturesList(
  * @param units Size of input features.
  * @returns A function to apply the split layers.
  */
-function splitPokemon(
+function splitActiveAndPokemon(
     name: string,
     label: string,
     units: number,
@@ -385,7 +410,7 @@ function splitPokemon(
  * @param label Name of module.
  * @returns A function to apply the split layers.
  */
-function splitBench(
+function splitPokemon(
     name: string,
     label: string,
 ): (
@@ -413,6 +438,7 @@ function splitBench(
  * @param heads Number of attention heads.
  * @param headUnits Size of each head.
  * @param units Size of input.
+ * @param suffix Name suffix for layers.
  * @param random Optional seeder for weight init.
  * @returns A function to apply the attention block and output the same shape as
  * input but with the feature dimension replaced with `units`.
@@ -423,36 +449,37 @@ function selfAttentionBlock(
     heads: number,
     headUnits: number,
     units: number,
+    suffix = "",
     random?: Rng,
 ): (
     features: tf.SymbolicTensor,
     mask?: tf.SymbolicTensor,
 ) => tf.SymbolicTensor {
     const attentionLayer = customLayers.setAttention({
-        name: `${name}/${label}/attention`,
+        name: `${name}/${label}/attention${suffix}`,
         heads,
         headUnits,
         units,
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
     });
     const attentionActivationLayer = tf.layers.leakyReLU({
-        name: `${name}/${label}/attention/leaky_relu`,
+        name: `${name}/${label}/attention${suffix}/leaky_relu`,
     });
     const attentionResidualLayer1 = tf.layers.add({
-        name: `${name}/${label}/attention/residual`,
+        name: `${name}/${label}/attention${suffix}/residual`,
     });
     const attentionDenseLayer = tf.layers.dense({
-        name: `${name}/${label}/attention/dense`,
+        name: `${name}/${label}/attention${suffix}/dense`,
         units,
     });
     const attentionDenseActivationLayer = tf.layers.leakyReLU({
-        name: `${name}/${label}/attention/dense/leaky_relu`,
+        name: `${name}/${label}/attention${suffix}/dense/leaky_relu`,
     });
     const attentionResidualLayer2 = tf.layers.add({
-        name: `${name}/${label}/attention/dense/residual`,
+        name: `${name}/${label}/attention${suffix}/dense/residual`,
     });
     const maskLayer = customLayers.mask({
-        name: `${name}/${label}/attention/dense/mask`,
+        name: `${name}/${label}/attention${suffix}/dense/mask`,
     });
     return function selfAttentionBlockImpl(features, mask) {
         let attention = attentionLayer.apply(
@@ -593,22 +620,33 @@ function aggregateGlobal(
         name: `${name}/${label}/concat`,
         axis: -1,
     });
-    const denseLayer = tf.layers.dense({
-        name: `${name}/${label}/dense`,
+    const denseLayer1 = tf.layers.dense({
+        name: `${name}/${label}/dense_1`,
         units,
         kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
-    const activationLayer = tf.layers.leakyReLU({
-        name: `${name}/${label}/leaky_relu`,
+    const activationLayer1 = tf.layers.leakyReLU({
+        name: `${name}/${label}/leaky_relu_1`,
+    });
+    const denseLayer2 = tf.layers.dense({
+        name: `${name}/${label}/dense_2`,
+        units,
+        kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
+        biasInitializer: "zeros",
+    });
+    const activationLayer2 = tf.layers.leakyReLU({
+        name: `${name}/${label}/leaky_relu_2`,
     });
     return function aggregateGlobalImpl(features) {
         const flattened = features.map(t =>
             t.rank === 2 ? t : (flattenLayer.apply(t) as tf.SymbolicTensor),
         );
         let combined = concatLayer.apply(flattened) as tf.SymbolicTensor;
-        combined = denseLayer.apply(combined) as tf.SymbolicTensor;
-        combined = activationLayer.apply(combined) as tf.SymbolicTensor;
+        combined = denseLayer1.apply(combined) as tf.SymbolicTensor;
+        combined = activationLayer1.apply(combined) as tf.SymbolicTensor;
+        combined = denseLayer2.apply(combined) as tf.SymbolicTensor;
+        combined = activationLayer2.apply(combined) as tf.SymbolicTensor;
         return combined;
     };
 }
@@ -619,19 +657,20 @@ function aggregateGlobal(
  * @param name Name of model.
  * @param label Name of module.
  * @param numActions Number of possible actions.
- * @param units Size of input features for each action.
+ * @param inputUnits Size of input features for each action.
  * @param sliceArgs Args for slicing the local feature tensor.
+ * @param units Hidden layer size.
  * @param random Optional seeder for weight init.
  * @returns A function to compute action values using the local input vector
- * (shape `[batch, N, U]`) as well as the aggregate global feature vector (shape
- * `[batch, G]`).
+ * (`[B, N, U]`) as well as the aggregate global feature vector (`[B, G]`).
  */
 function actionValues(
     name: string,
     label: string,
     numActions: number,
-    units: number,
+    inputUnits: number,
     sliceArgs: customLayers.SliceArgs,
+    units: number,
     random?: Rng,
 ): (local: tf.SymbolicTensor, global: tf.SymbolicTensor) => tf.SymbolicTensor {
     // Note: Should only consider actions for client's side (index 0).
@@ -641,7 +680,7 @@ function actionValues(
     });
     const localReshapeLayer = tf.layers.reshape({
         name: `${name}/${label}/local/reshape`,
-        targetShape: [numActions, units],
+        targetShape: [numActions, inputUnits],
     });
     const globalRepeatLayer = tf.layers.repeatVector({
         name: `${name}/${label}/global/repeat`,
@@ -651,8 +690,17 @@ function actionValues(
         name: `${name}/${label}/concat`,
         axis: -1,
     });
-    const denseLayer = tf.layers.dense({
-        name: `${name}/${label}/dense`,
+    const denseLayer1 = tf.layers.dense({
+        name: `${name}/${label}/dense_1`,
+        units,
+        kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
+        biasInitializer: "zeros",
+    });
+    const activationLayer = tf.layers.leakyReLU({
+        name: `${name}/${label}/leaky_relu`,
+    });
+    const denseLayer2 = tf.layers.dense({
+        name: `${name}/${label}/dense_2`,
         units: 1,
         activation: "linear",
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
@@ -667,7 +715,9 @@ function actionValues(
         local = localReshapeLayer.apply(local) as tf.SymbolicTensor;
         global = globalRepeatLayer.apply(global) as tf.SymbolicTensor;
         let values = concatLayer.apply([local, global]) as tf.SymbolicTensor;
-        values = denseLayer.apply(values) as tf.SymbolicTensor;
+        values = denseLayer1.apply(values) as tf.SymbolicTensor;
+        values = activationLayer.apply(values) as tf.SymbolicTensor;
+        values = denseLayer2.apply(values) as tf.SymbolicTensor;
         values = reshapeLayer.apply(values) as tf.SymbolicTensor;
         return values;
     };
@@ -696,23 +746,39 @@ function combineAction(
  *
  * @param name Name of model.
  * @param label Name of module.
+ * @param units Hidden layer size.
  * @param random Optional seeder for weight init.
  * @returns A function to compute the state value using global features.
  */
 function stateValue(
     name: string,
     label: string,
+    units: number,
     random?: Rng,
 ): (global: tf.SymbolicTensor) => tf.SymbolicTensor {
-    const denseLayer = tf.layers.dense({
-        name: `${name}/${label}/value`,
+    const denseLayer1 = tf.layers.dense({
+        name: `${name}/${label}/value/dense_1`,
+        units,
+        kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
+        biasInitializer: "zeros",
+    });
+    const activationLayer = tf.layers.leakyReLU({
+        name: `${name}/${label}/value/leaky_relu`,
+    });
+    const denseLayer2 = tf.layers.dense({
+        name: `${name}/${label}/value/dense_2`,
         units: 1,
         // Note: Reward in range [-1, 1].
         activation: "tanh",
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
-    return global => denseLayer.apply(global) as tf.SymbolicTensor;
+    return function stateValueImpl(features) {
+        features = denseLayer1.apply(features) as tf.SymbolicTensor;
+        features = activationLayer.apply(features) as tf.SymbolicTensor;
+        features = denseLayer2.apply(features) as tf.SymbolicTensor;
+        return features;
+    };
 }
 
 /**
