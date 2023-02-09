@@ -35,15 +35,11 @@ void (async function () {
         return;
     }
 
-    const logPath = join(config.paths.logs, "compare", config.compare.name);
-    const metricsPath = join(
-        config.paths.metrics,
-        "compare",
-        config.compare.name,
+    const logPath = await ensureDir(
+        join(config.paths.logs, "compare", config.compare.name),
     );
-    await Promise.all([logPath, metricsPath].map(ensureDir));
 
-    const models = new ModelWorker(config.tf.gpu, metricsPath);
+    const models = new ModelWorker(config.tf.gpu);
     try {
         for (const model of compareModels) {
             if (model === "random") {
