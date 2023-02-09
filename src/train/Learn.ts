@@ -94,8 +94,9 @@ export class Learn {
      */
     public step(step: number, batch: BatchTensorExperience): tf.Scalar {
         return tf.tidy(() => {
-            const preStep = process.hrtime.bigint();
-            const storeBatchMetrics = step % this.config.metricsInterval === 0;
+            const storeMetrics = step % this.config.metricsInterval === 0;
+
+            const preStep = storeMetrics ? process.hrtime.bigint() : undefined;
 
             const target = this.calculateTarget(
                 batch.reward,
@@ -104,28 +105,24 @@ export class Learn {
                 batch.done,
             );
 
-            const hookedInputs: {[name: string]: tf.Tensor1D[]} = {};
-            if (storeBatchMetrics) {
+            const hookedInputs: {[name: string]: tf.Tensor[]} = {};
+            if (storeMetrics) {
                 for (const layer of this.hookLayers) {
-                    layer.setCallHook(inputs =>
-                        tf.tidy(() => {
-                            if (!Array.isArray(inputs)) {
-                                inputs = [inputs];
+                    layer.setCallHook(inputs => {
+                        if (!Array.isArray(inputs)) {
+                            inputs = [inputs];
+                        }
+                        for (let i = 0; i < inputs.length; ++i) {
+                            // Only take one example out of the batch to prevent
+                            // excessive memory usage.
+                            const input = tf.keep(inputs[i].slice(0, 1));
+                            let name = `${layer.name}/input`;
+                            if (inputs.length > 1) {
+                                name += `/${i}`;
                             }
-                            for (let i = 0; i < inputs.length; ++i) {
-                                // Only take one example out of the batch to
-                                // prevent excessive memory usage.
-                                const input = tf.keep(
-                                    inputs[i].slice(0, 1).flatten(),
-                                );
-                                let name = `${layer.name}/input`;
-                                if (inputs.length > 1) {
-                                    name += `/${i}`;
-                                }
-                                (hookedInputs[name] ??= []).push(input);
-                            }
-                        }),
-                    );
+                            (hookedInputs[name] ??= []).push(input);
+                        }
+                    });
                 }
             }
 
@@ -135,19 +132,19 @@ export class Learn {
             );
             this.optimizer.applyGradients(grads);
 
-            const postStep = process.hrtime.bigint();
-            const updateMs = Number(postStep - preStep) / 1e6;
-            this.metrics?.scalar("update_ms", updateMs, step);
-            this.metrics?.scalar(
-                "update_throughput_s",
-                this.config.batchSize /
-                    (updateMs / 1e3) /*experiences per sec*/,
-                step,
-            );
+            if (storeMetrics) {
+                const postStep = process.hrtime.bigint();
+                const updateMs = Number((postStep - preStep!) / 1_000_000n);
+                this.metrics?.scalar("update_ms", updateMs, step);
+                this.metrics?.scalar(
+                    "update_throughput_s",
+                    this.config.batchSize /
+                        (updateMs / 1e3) /*experiences per sec*/,
+                    step,
+                );
 
-            this.metrics?.scalar("loss", loss, step);
+                this.metrics?.scalar("loss", loss, step);
 
-            if (storeBatchMetrics) {
                 this.metrics?.histogram("target", target, step);
                 target.dispose();
 
@@ -176,13 +173,16 @@ export class Learn {
                         Object.prototype.hasOwnProperty.call(hookedInputs, name)
                     ) {
                         const inputs = hookedInputs[name];
-                        const t = tf.concat1d(inputs);
+                        const t = tf.concat1d(inputs.map(i => i.flatten()));
                         this.metrics?.histogram(name, t, step);
                         t.dispose();
                         // Hooked inputs are tf.keep()'d so we have to dispose
                         // them manually.
                         tf.dispose(inputs);
                     }
+                }
+                for (const layer of this.hookLayers) {
+                    layer.clearCallHook();
                 }
 
                 for (const weights of this.variables) {
@@ -199,10 +199,6 @@ export class Learn {
                             step,
                         );
                     }
-                }
-
-                for (const layer of this.hookLayers) {
-                    layer.clearCallHook();
                 }
 
                 // Since some of the histograms can use a lot of data, this

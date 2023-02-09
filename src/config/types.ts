@@ -202,11 +202,16 @@ export interface LearnConfig {
     /** Step interval for updating the target network. */
     readonly targetInterval: number;
     /**
-     * Step interval for tracking expensive batch update model metrics such as
-     * histograms which can significanly slow down training. Must be divisible
-     * by {@link interval}.
+     * Step interval for tracking update metrics such as loss and
+     * gradient/weight histograms, which can significantly slow down training if
+     * collected too frequently. Must be divisible by {@link interval}.
      */
     readonly metricsInterval: number;
+    /**
+     * Whether to report loss to the main thread every {@link metricsInterval}
+     * steps.
+     */
+    readonly report?: boolean;
 }
 
 interface OptimizerConfigBase<T extends string> {
@@ -241,6 +246,11 @@ export interface EvalConfig {
     readonly pool: GamePoolConfig;
     /** Step interval for performing model evaluations. */
     readonly interval: number;
+    /**
+     * Whether to report game results to the main thread every {@link interval}
+     * steps. Otherwise, only errors are reported.
+     */
+    readonly report?: boolean;
 }
 
 /** Configuration for random number generators in the training script. */

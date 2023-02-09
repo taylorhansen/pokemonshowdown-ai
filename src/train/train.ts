@@ -118,7 +118,10 @@ export async function train(
             .run(
                 step,
                 callback &&
-                    (result =>
+                    (result => {
+                        if (!config.eval.report && !result.err) {
+                            return;
+                        }
                         callback({
                             type: "eval",
                             step,
@@ -130,9 +133,14 @@ export async function train(
                             ...(result.err && {
                                 err: serialize(result.err),
                             }),
-                        })),
+                        });
+                    }),
             )
-            .then(wlt => callback?.({type: "evalDone", step, wlt}));
+            .then(
+                wlt =>
+                    config.eval.report &&
+                    callback?.({type: "evalDone", step, wlt}),
+            );
 
     const logMemoryMetrics = (step: number) => {
         if (metrics) {
@@ -205,7 +213,12 @@ export async function train(
                             ),
                         ),
                     );
-                    [loss] = await lossTensor.data<"float32">();
+                    if (
+                        config.learn.report &&
+                        step % config.learn.metricsInterval === 0
+                    ) {
+                        [loss] = await lossTensor.data<"float32">();
+                    }
                     lossTensor.dispose();
                 }
                 callback?.({

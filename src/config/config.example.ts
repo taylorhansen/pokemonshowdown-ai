@@ -75,6 +75,7 @@ export const config: Config = {
             interval: 1,
             targetInterval: 500,
             metricsInterval: 100,
+            report: true,
         },
         eval: {
             numGames: 32,
@@ -84,6 +85,7 @@ export const config: Config = {
                 reduceLogs: true,
             },
             interval: 1000,
+            report: true,
         },
         seeds: {
             model: "abc",

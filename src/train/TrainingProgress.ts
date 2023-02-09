@@ -21,8 +21,9 @@ export class TrainingProgress {
     private readonly progressPadding =
         "Step / ".length +
         2 * this.stepPadding +
-        " loss=0.".length +
-        TrainingProgress.lossDigits +
+        (this.config.learn.report
+            ? " loss=0.".length + TrainingProgress.lossDigits
+            : 0) +
         " eta=00d00h00m00s".length +
         1;
     private startTime: number | undefined;
@@ -46,7 +47,9 @@ export class TrainingProgress {
         if (this.config.progress && this.config.steps) {
             this.progress = new ProgressBar(
                 this.logger.prefix +
-                    "Step :step/:total :bar loss=:loss eta=:est",
+                    `Step :step/:total :bar${
+                        this.config.learn.report ? " loss=:loss" : ""
+                    } eta=:est`,
                 {
                     total: this.config.steps,
                     head: ">",
@@ -103,7 +106,7 @@ export class TrainingProgress {
     private step(data: ModelTrainStep): void {
         if (this.progress) {
             let est: string;
-            if (!this.startTime) {
+            if (this.startTime === undefined) {
                 this.startTime = process.uptime();
                 est = "n/a";
             } else {
@@ -124,7 +127,7 @@ export class TrainingProgress {
                 loss: this.lastLoss,
                 est,
             });
-        } else {
+        } else if (this.config.learn.report && data.loss !== undefined) {
             this.logger
                 .addPrefix(this.stepPrefix(data.step))
                 .info(`Loss = ${data.loss}`);
@@ -159,6 +162,9 @@ export class TrainingProgress {
 
     /** Called after finishing an evaluation run. */
     private evalDone(data: ModelTrainEvalDone): void {
+        if (!this.config.eval.report) {
+            return;
+        }
         const logger = this.logger.addPrefix(this.stepPrefix(data.step));
         for (const vs in data.wlt) {
             if (Object.prototype.hasOwnProperty.call(data.wlt, vs)) {
