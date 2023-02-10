@@ -1,5 +1,11 @@
 import * as tf from "@tensorflow/tfjs";
+import {intToChoice} from "../../psbot/handlers/battle/agent";
 import {PredictResult} from "../port";
+import {
+    flattenedInputShapes,
+    modelInputNames,
+    modelInputShapes,
+} from "../shapes";
 
 /** State+callback entries for managing batched model predict requests. */
 export class PredictBatch {
@@ -11,7 +17,7 @@ export class PredictBatch {
      * inner array corresponds to each individual request that we're batching
      * (corresponds to {@link callbacks}).
      */
-    private readonly transposedInput: tf.Tensor[][] = [];
+    private readonly inputs: Float32Array[][] = modelInputShapes.map(() => []);
     /** Resolver callbacks for each request within the batch. */
     private readonly callbacks: ((result: PredictResult) => void)[] = [];
     /** Corresponding times that the requests were {@link add added}. */
@@ -26,76 +32,72 @@ export class PredictBatch {
     }
 
     /**
-     * Creates an empty PredictBatch.
-     *
-     * @param inputShapes Input shape that the batch must conform to. Should be
-     * an array of shapes (excluding the batch dimension) for each input that
-     * the model receives.
-     * @param autoDisposeInput Whether to automatically dispose input tensors
-     * after the batch request is resolved. Default true.
-     */
-    public constructor(
-        private readonly inputShapes: readonly (readonly number[])[],
-        private readonly autoDisposeInput = true,
-    ) {
-        for (let i = 0; i < inputShapes.length; ++i) {
-            this.transposedInput[i] = [];
-        }
-    }
-
-    /**
      * Adds a predict request to the batch.
      *
-     * @param inputs Tensors to use as inputs.
+     * @param inputs State data to use as inputs.
      * @param callback Called when the batch is executed and the corresponding
      * result is extracted.
      */
     public add(
-        input: tf.Tensor[],
+        inputs: Float32Array[],
         callback: (result: PredictResult) => void,
     ): void {
-        if (input.length !== this.transposedInput.length) {
+        if (inputs.length !== this.inputs.length) {
             throw new Error(
-                `Expected ${this.transposedInput.length} inputs but found ` +
-                    `${input.length}`,
+                `Expected ${this.inputs.length} inputs but found ` +
+                    `${inputs.length}`,
             );
         }
-        for (let i = 0; i < input.length; ++i) {
-            this.transposedInput[i].push(input[i]);
+        for (let i = 0; i < inputs.length; ++i) {
+            if (inputs[i].length !== flattenedInputShapes[i]) {
+                throw new Error(
+                    `Model input ${i} (${modelInputNames[i]}) requires ` +
+                        `${flattenedInputShapes[i]} elements but got ` +
+                        `${inputs[i].length}`,
+                );
+            }
+            this.inputs[i].push(inputs[i]);
         }
         this.callbacks.push(callback);
         this._times.push(process.hrtime.bigint());
     }
 
-    /** Converts input arrays into tensors. */
+    /** Converts input data into tensors. */
     public toTensors(): tf.Tensor[] {
-        return this.transposedInput.map(t => tf.stack(t));
+        return this.inputs.map((input, i) => {
+            const size = flattenedInputShapes[i];
+            const values = new Float32Array(input.length * size);
+            for (let j = 0; j < input.length; ++j) {
+                values.set(input[j], j * size);
+            }
+            return tf.tensor(
+                values,
+                [input.length, ...modelInputShapes[i]],
+                "float32",
+            );
+        });
     }
 
     /**
      * After executing the model using the {@link toTensors tensor form} of this
      * batch, use this method to resolve all the corresponding predict requests.
      */
-    public async resolve(results: tf.Tensor1D[]): Promise<void> {
-        if (this.length !== results.length) {
-            throw new Error(
-                `Mismatched results length: expected ${this.length}, got ` +
-                    `${results.length}`,
-            );
-        }
-        await Promise.all(
-            results.map(async (t, i) => {
-                try {
-                    this.callbacks[i]({output: await t.data<"float32">()});
-                } finally {
-                    if (this.autoDisposeInput) {
-                        for (const input of this.transposedInput) {
-                            input[i].dispose();
-                        }
-                    }
-                    t.dispose();
-                }
-            }),
+    public async resolve(results: tf.Tensor2D): Promise<void> {
+        tf.util.assertShapesMatch(
+            results.shape,
+            [this.length, intToChoice.length],
+            "Misshapen predict results:",
         );
+        const resultData = await results.data<"float32">();
+        for (let i = 0; i < this.callbacks.length; ++i) {
+            this.callbacks[i]({
+                output: Float32Array.from(
+                    resultData.subarray(
+                        i * intToChoice.length,
+                        (i + 1) * intToChoice.length,
+                    ),
+                ),
+            });
+        }
     }
 }

@@ -37,7 +37,7 @@ export const modelInputShapes: readonly (readonly number[])[] = [
 
 /** Flattened version of {@link modelInputShapes}. */
 export const flattenedInputShapes: readonly number[] = modelInputShapes.map(
-    shape => shape.reduce((a, s) => a * s, 1),
+    shape => shape.reduce((a, s) => a * s),
 );
 
 /**

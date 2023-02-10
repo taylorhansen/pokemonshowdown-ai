@@ -5,7 +5,7 @@
 import {intToChoice} from "../psbot/handlers/battle/agent";
 import {flattenedInputShapes, modelInputNames} from "./shapes";
 
-/** Assertions for model output data. */
+/** Assertions for model input data. */
 export function verifyInputData(data: Float32Array[]): void {
     for (let i = 0; i < data.length; ++i) {
         const arr = data[i];

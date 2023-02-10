@@ -4,8 +4,8 @@ import {MessageChannel, MessagePort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {ExperienceConfig} from "../config/types";
-import {TensorExperience} from "../game/experience/tensor";
-import {encodedStateToTensors, verifyModel} from "../model/model";
+import {Experience} from "../game/experience";
+import {verifyModel} from "../model/model";
 import {
     PredictMessage,
     PredictWorkerResult,
@@ -15,7 +15,6 @@ import {
     FinalizeMessage,
     FinalizeResult,
 } from "../model/port";
-import {modelInputShapes} from "../model/shapes";
 import {PredictBatch} from "../model/worker/PredictBatch";
 import {intToChoice} from "../psbot/handlers/battle/agent";
 import {RawPortResultError} from "../util/port/PortProtocol";
@@ -41,15 +40,12 @@ export class RolloutModel {
     private readonly events = new TypedEmitter<Events>();
 
     /** Current pending predict request batch. */
-    private predictBatch = new PredictBatch(
-        modelInputShapes,
-        false /*autoDisposeInput*/,
-    );
+    private predictBatch = new PredictBatch();
 
     /**
      * Stores experiences that haven't yet been emitted into the replay buffer.
      */
-    private experienceBuffer: TensorExperience[] = [];
+    private experienceBuffer: Experience[] = [];
 
     /**
      * Creates a RolloutModel object.
@@ -132,11 +128,10 @@ export class RolloutModel {
         msg: PredictMessage,
         ec: ExperienceContext,
     ): Promise<PredictWorkerResult> {
-        const state = encodedStateToTensors(msg.state);
-        ec.add(state, msg.choices, msg.lastAction, msg.reward);
+        ec.add(msg.state, msg.choices, msg.lastAction, msg.reward);
 
         const result = await new Promise<PredictResult>(res => {
-            this.predictBatch.add(state, res);
+            this.predictBatch.add(msg.state, res);
             this.events.emit(predictRequest);
         });
         return {
@@ -152,8 +147,7 @@ export class RolloutModel {
         msg: FinalizeMessage,
         ec: ExperienceContext,
     ): FinalizeResult {
-        const state = msg.state && encodedStateToTensors(msg.state);
-        ec.finalize(state, msg.lastAction, msg.reward);
+        ec.finalize(msg.state, msg.lastAction, msg.reward);
         return {
             type: "finalize",
             rid: msg.rid,
@@ -166,7 +160,7 @@ export class RolloutModel {
      * from the game thread pool, returning the generated experiences from each
      * request.
      */
-    public async step(): Promise<TensorExperience[]> {
+    public async step(): Promise<Experience[]> {
         while (this.predictBatch.length <= 0) {
             await new Promise<void>(res =>
                 this.events.once(predictRequest, res),
@@ -177,18 +171,16 @@ export class RolloutModel {
         await tf.nextFrame();
 
         const batch = this.predictBatch;
-        this.predictBatch = new PredictBatch(
-            modelInputShapes,
-            false /*autoDisposeInput*/,
-        );
+        this.predictBatch = new PredictBatch();
 
-        await batch.resolve(
-            tf.tidy(() =>
-                (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor)
-                    .as2D(batch.length, intToChoice.length)
-                    .unstack<tf.Tensor1D>(),
+        const results = tf.tidy(() =>
+            (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor).as2D(
+                batch.length,
+                intToChoice.length,
             ),
         );
+        await batch.resolve(results);
+        results.dispose();
 
         const exps = this.experienceBuffer;
         this.experienceBuffer = [];
@@ -199,14 +191,14 @@ export class RolloutModel {
 /** Tracks Experience generation for one side of a game. */
 class ExperienceContext {
     /** Contains last `steps-1` states. */
-    private readonly states: tf.Tensor[][] = [];
+    private readonly states: Float32Array[][] = [];
     /** Contains last `steps-1` actions. */
     private readonly actions: number[] = [];
     /** Contains last `steps-1` rewards. */
     private readonly rewards: number[] = [];
 
     /** Most recent state. */
-    private latestState: tf.Tensor[] | null = null;
+    private latestState: Float32Array[] | null = null;
 
     /**
      * Creates an ExperienceContext.
@@ -216,7 +208,7 @@ class ExperienceContext {
      */
     public constructor(
         private readonly config: ExperienceConfig,
-        private readonly callback: (exp: TensorExperience) => void,
+        private readonly callback: (exp: Experience) => void,
     ) {}
 
     /**
@@ -228,7 +220,7 @@ class ExperienceContext {
      * @param reward Net reward from state transition.
      */
     public add(
-        state: tf.Tensor[],
+        state: Float32Array[],
         choices: Uint8Array,
         action?: number,
         reward?: number,
@@ -271,11 +263,11 @@ class ExperienceContext {
 
         this.callback({
             state: lastState,
-            action: tf.scalar(lastAction, "int32"),
-            reward: tf.scalar(returns, "float32"),
-            nextState: state.map(t => t.clone()),
-            choices: tf.tensor1d(choices, "bool"),
-            done: tf.scalar(0),
+            action: lastAction,
+            reward: returns,
+            nextState: state,
+            choices,
+            done: false,
         });
     }
 
@@ -287,17 +279,12 @@ class ExperienceContext {
      * @param reward Final reward.
      */
     public finalize(
-        state?: tf.Tensor[],
+        state?: Float32Array[],
         action?: number,
         reward?: number,
     ): void {
         if (!state) {
             // Game was forced to end abruptly.
-            for (const s of this.states) {
-                for (const t of s) {
-                    t.dispose();
-                }
-            }
             return;
         }
 
@@ -312,14 +299,15 @@ class ExperienceContext {
             throw new Error("No last state");
         }
 
-        const exps: TensorExperience[] = [
+        const exps: Experience[] = [
             {
                 state: this.latestState,
-                action: tf.scalar(action, "int32"),
-                reward: tf.scalar(reward, "float32"),
+                action,
+                reward,
                 nextState: state,
-                choices: tf.zeros([intToChoice.length], "bool"),
-                done: tf.scalar(1),
+                // Note: Pre-filled with zeros.
+                choices: new Uint8Array(intToChoice.length),
+                done: true,
             },
         ];
 
@@ -333,11 +321,11 @@ class ExperienceContext {
 
             exps.push({
                 state: lastState,
-                action: tf.scalar(lastAction, "int32"),
-                reward: tf.scalar(returns, "float32"),
-                nextState: state.map(t => t.clone()),
-                choices: tf.zeros([intToChoice.length], "bool"),
-                done: tf.scalar(1),
+                action: lastAction,
+                reward: returns,
+                nextState: state,
+                choices: new Uint8Array(intToChoice.length),
+                done: true,
             });
         }
 

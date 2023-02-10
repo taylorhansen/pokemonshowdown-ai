@@ -1,9 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
-import {
-    BatchTensorExperience,
-    TensorExperience,
-} from "../game/experience/tensor";
-import {modelInputShapes} from "../model/shapes";
+import {Experience} from "../game/experience";
+import {BatchTensorExperience} from "../game/experience/tensor";
+import {flattenedInputShapes, modelInputShapes} from "../model/shapes";
 import {intToChoice} from "../psbot/handlers/battle/agent";
 import {Rng} from "../util/random";
 
@@ -12,16 +10,16 @@ export class ReplayBuffer {
     // Transpose and stack buffered experiences to make batching easier.
     private readonly states = Array.from(
         modelInputShapes,
-        () => new Array<tf.Tensor>(this.maxSize),
+        () => new Array<Float32Array>(this.maxSize),
     );
-    private readonly actions = new Array<tf.Scalar>(this.maxSize);
-    private readonly rewards = new Array<tf.Scalar>(this.maxSize);
+    private readonly actions = new Int32Array(this.maxSize);
+    private readonly rewards = new Float32Array(this.maxSize);
     private readonly nextStates = Array.from(
         modelInputShapes,
-        () => new Array<tf.Tensor>(this.maxSize),
+        () => new Array<Float32Array>(this.maxSize),
     );
-    private readonly choices = new Array<tf.Tensor1D>(this.maxSize);
-    private readonly dones = new Array<tf.Scalar>(this.maxSize);
+    private readonly choices = new Array<Uint8Array>(this.maxSize);
+    private readonly dones = new Float32Array(this.maxSize);
 
     private start = 0;
 
@@ -42,7 +40,7 @@ export class ReplayBuffer {
      * Adds a new Experience to the buffer. If full, the oldest one is
      * discarded.
      */
-    public add(exp: TensorExperience): void {
+    public add(exp: Experience): void {
         let i: number;
         if (this._length < this.maxSize) {
             i = this._length++;
@@ -54,19 +52,13 @@ export class ReplayBuffer {
         }
 
         for (let s = 0; s < modelInputShapes.length; ++s) {
-            this.states[s][i]?.dispose();
             this.states[s][i] = exp.state[s];
-            this.nextStates[s][i]?.dispose();
             this.nextStates[s][i] = exp.nextState[s];
         }
-        this.actions[i]?.dispose();
         this.actions[i] = exp.action;
-        this.rewards[i]?.dispose();
         this.rewards[i] = exp.reward;
-        this.choices[i]?.dispose();
         this.choices[i] = exp.choices;
-        this.dones[i]?.dispose();
-        this.dones[i] = exp.done;
+        this.dones[i] = Number(exp.done);
     }
 
     /**
@@ -86,46 +78,41 @@ export class ReplayBuffer {
             );
         }
         // Knuth's algorithm for sampling without replacement.
-        const states = Array.from(
-            modelInputShapes,
-            () => new Array<tf.Tensor>(size),
+        const states = flattenedInputShapes.map(
+            n => new Float32Array(size * n),
         );
-        const actions = new Array<tf.Scalar>(size);
-        const rewards = new Array<tf.Scalar>(size);
-        const nextStates = Array.from(
-            modelInputShapes,
-            () => new Array<tf.Tensor>(size),
+        const actions = new Int32Array(size);
+        const rewards = new Float32Array(size);
+        const nextStates = flattenedInputShapes.map(
+            n => new Float32Array(size * n),
         );
-        const choices = new Array<tf.Tensor1D>(size);
-        const dones = new Array<tf.Scalar>(size);
+        const choices = new Uint8Array(size * intToChoice.length);
+        const dones = new Float32Array(size);
         for (let t = 0, m = 0; m < size; ++t) {
             if ((this._length - t) * random() < size - m) {
-                for (let s = 0; s < modelInputShapes.length; ++s) {
-                    states[s][m] = this.states[s][t];
-                    nextStates[s][m] = this.nextStates[s][t];
+                for (let s = 0; s < flattenedInputShapes.length; ++s) {
+                    const flatShape = flattenedInputShapes[s];
+                    states[s].set(this.states[s][t], m * flatShape);
+                    nextStates[s].set(this.nextStates[s][t], m * flatShape);
                 }
                 actions[m] = this.actions[t];
                 rewards[m] = this.rewards[t];
-                choices[m] = this.choices[t];
+                choices.set(this.choices[t], m * intToChoice.length);
                 dones[m] = this.dones[t];
                 ++m;
             }
         }
         return tf.tidy(() => ({
-            state: modelInputShapes.map((_, s) => tf.stack(states[s])),
-            action: tf.stack(actions).as1D(),
-            reward: tf.stack(rewards).as1D(),
-            nextState: modelInputShapes.map((_, s) => tf.stack(nextStates[s])),
-            choices: tf.stack(choices).as2D(size, intToChoice.length),
-            done: tf.stack(dones).as1D(),
+            state: modelInputShapes.map((shape, i) =>
+                tf.tensor(states[i], [size, ...shape], "float32"),
+            ),
+            action: tf.tensor1d(actions, "int32"),
+            reward: tf.tensor1d(rewards, "float32"),
+            nextState: modelInputShapes.map((shape, i) =>
+                tf.tensor(nextStates[i], [size, ...shape], "float32"),
+            ),
+            choices: tf.tensor2d(choices, [size, intToChoice.length], "bool"),
+            done: tf.tensor1d(dones, "float32"),
         }));
-    }
-
-    /** Disposes tensors left in the buffer. */
-    public dispose(): void {
-        tf.dispose(this.states);
-        tf.dispose(this.actions);
-        tf.dispose(this.rewards);
-        tf.dispose(this.nextStates);
     }
 }

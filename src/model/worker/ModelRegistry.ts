@@ -6,14 +6,13 @@ import {BatchPredictConfig} from "../../config/types";
 import {intToChoice} from "../../psbot/handlers/battle/agent";
 import {setTimeoutNs} from "../../util/nanosecond";
 import {RawPortResultError} from "../../util/port/PortProtocol";
-import {encodedStateToTensors, verifyModel} from "../model";
+import {verifyModel} from "../model";
 import {
     ModelPortMessage,
     PredictMessage,
     PredictResult,
     PredictWorkerResult,
 } from "../port/ModelPortProtocol";
-import {modelInputShapes} from "../shapes";
 import {Metrics} from "./Metrics";
 import {PredictBatch} from "./PredictBatch";
 
@@ -45,7 +44,7 @@ export class ModelRegistry {
     private readonly predictSize: number[] = [];
 
     /** Current pending predict request batch. */
-    private predictBatch = new PredictBatch(modelInputShapes);
+    private predictBatch = new PredictBatch();
     /**
      * Resolves once the current batch timer expires, returning true if
      * {@link cancelTimer} is called.
@@ -218,7 +217,7 @@ export class ModelRegistry {
         }
 
         const result = new Promise<PredictResult>(res =>
-            this.predictBatch.add(encodedStateToTensors(msg.state), res),
+            this.predictBatch.add(msg.state, res),
         );
         await this.checkPredictBatch();
         return await result;
@@ -264,19 +263,19 @@ export class ModelRegistry {
         }
 
         const batch = this.predictBatch;
-        this.predictBatch = new PredictBatch(modelInputShapes);
+        this.predictBatch = new PredictBatch();
         this.events.emit(predictReady);
 
         const startTime = process.hrtime.bigint();
+        const results = tf.tidy(() =>
+            (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor).as2D(
+                batch.length,
+                intToChoice.length,
+            ),
+        );
         await (this.predictPromise = batch
-            .resolve(
-                tf.tidy(() =>
-                    (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor)
-                        .as2D(batch.length, intToChoice.length)
-                        .unstack<tf.Tensor1D>(),
-                ),
-            )
-            .finally(() => (this.predictPromise = null)));
+            .resolve(results)
+            .finally(() => (results.dispose(), (this.predictPromise = null))));
         const endTime = process.hrtime.bigint();
 
         if (this.isLocked) {

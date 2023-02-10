@@ -264,7 +264,6 @@ export async function train(
         await evaluate.close();
     } finally {
         await Promise.all([rollout.terminate(), evaluate.terminate()]);
-        replayBuffer.dispose();
         learn.cleanup();
         for (const m of [rolloutModel, evalModel, prevModel]) {
             m.unload();
