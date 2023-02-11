@@ -62,7 +62,8 @@ export class ReplayBuffer {
     }
 
     /**
-     * Samples a batch of experiences from the buffer with replacement.
+     * Samples a batch of experiences from the buffer without replacement. The
+     * buffer is unchanged afterwards.
      *
      * @param size Size of sample.
      * @param random Controlled random.
