@@ -65,10 +65,8 @@ export const config: Config = {
         },
         learn: {
             optimizer: {
-                type: "rmsprop",
-                learningRate: 1e-4,
-                decay: 0.95,
-                momentum: 0,
+                type: "adam",
+                learningRate: 1e-5,
             },
             batchSize: 32,
             target: "double",
