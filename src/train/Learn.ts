@@ -206,10 +206,6 @@ export class Learn {
                         );
                     }
                 }
-
-                // Since some of the histograms can use a lot of data, this
-                // prevents buffer buildup over multiple learn steps.
-                Metrics.flush();
             }
 
             return loss;
@@ -291,6 +287,28 @@ export class Learn {
             q = tf.sum(tf.mul(q, mask), -1);
             return tf.losses.meanSquaredError(target, q);
         });
+    }
+
+    /**
+     * Logs optimizer weights.
+     *
+     * For some reason this method has to be async which is why it's separate
+     * from {@link step}.
+     *
+     * @param step Step number.
+     */
+    public async logOptimizerWeights(step: number): Promise<void> {
+        if (!this.metrics) {
+            return;
+        }
+        for (const weight of await this.optimizer.getWeights()) {
+            const name = `opt/${weight.name}`;
+            if (weight.tensor.size === 1) {
+                this.metrics.scalar(name, weight.tensor.asScalar(), step);
+            } else {
+                this.metrics.histogram(name, weight.tensor, step);
+            }
+        }
     }
 
     /** Cleans up dangling variables. */

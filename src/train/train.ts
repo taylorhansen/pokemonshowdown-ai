@@ -204,20 +204,21 @@ export async function train(
 
                 let loss: number | undefined;
                 if (step % config.learn.interval === 0) {
-                    const lossTensor = tf.tidy(() =>
-                        learn.step(
-                            step,
-                            replayBuffer.sample(
-                                config.learn.batchSize,
-                                bufferRandom,
-                            ),
-                        ),
+                    const batch = replayBuffer.sample(
+                        config.learn.batchSize,
+                        bufferRandom,
                     );
-                    if (
-                        config.learn.report &&
-                        step % config.learn.metricsInterval === 0
-                    ) {
-                        [loss] = await lossTensor.data<"float32">();
+                    const lossTensor = learn.step(step, batch);
+                    tf.dispose(batch);
+                    if (step % config.learn.metricsInterval === 0) {
+                        await learn.logOptimizerWeights(step);
+
+                        // Prevent buffer buildup from large histograms.
+                        Metrics.flush();
+
+                        if (config.learn.report) {
+                            [loss] = await lossTensor.data<"float32">();
+                        }
                     }
                     lossTensor.dispose();
                 }
