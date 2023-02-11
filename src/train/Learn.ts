@@ -75,6 +75,12 @@ export class Learn {
                     config.decay,
                     config.momentum,
                 );
+            case "adam":
+                return tf.train.adam(
+                    config.learningRate,
+                    config.beta1,
+                    config.beta2,
+                );
             default: {
                 const unsupported: never = config;
                 throw new Error(

@@ -235,8 +235,18 @@ export interface RmsPropConfig extends OptimizerConfigBase<"rmsprop"> {
     readonly momentum?: number;
 }
 
+/** Configuration for Adam optimizer. */
+export interface AdamConfig extends OptimizerConfigBase<"adam"> {
+    /** Learning rate for gradient descent. */
+    readonly learningRate?: number;
+    /** Exponential decay rate for the 1st moment estimates. */
+    readonly beta1?: number;
+    /** Exponential decay rate for the 2nd moment estimates. */
+    readonly beta2?: number;
+}
+
 /** Configuration for the neural network optimizer. */
-export type OptimizerConfig = SgdConfig | RmsPropConfig;
+export type OptimizerConfig = SgdConfig | RmsPropConfig | AdamConfig;
 
 /** Configuration for the evaluation process. */
 export interface EvalConfig {
