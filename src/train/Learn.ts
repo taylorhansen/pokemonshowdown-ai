@@ -301,13 +301,19 @@ export class Learn {
         if (!this.metrics) {
             return;
         }
-        for (const weight of await this.optimizer.getWeights()) {
-            const name = `opt/${weight.name}`;
-            if (weight.tensor.size === 1) {
-                this.metrics.scalar(name, weight.tensor.asScalar(), step);
-            } else {
-                this.metrics.histogram(name, weight.tensor, step);
+        // Have to do this manually since tf.tidy() doesn't support async.
+        tf.engine().startScope("logOptimizerWeights");
+        try {
+            for (const weight of await this.optimizer.getWeights()) {
+                const name = `opt/${weight.name}`;
+                if (weight.tensor.size === 1) {
+                    this.metrics.scalar(name, weight.tensor.asScalar(), step);
+                } else {
+                    this.metrics.histogram(name, weight.tensor, step);
+                }
             }
+        } finally {
+            tf.engine().endScope("logOptimizerWeights");
         }
     }
 
