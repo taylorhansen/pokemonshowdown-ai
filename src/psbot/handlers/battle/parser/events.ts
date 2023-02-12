@@ -517,7 +517,7 @@ handlersImpl["|move|"] = async function (ctx) {
     const from =
         event.kwArgs.from && Protocol.parseEffect(event.kwArgs.from, toIdName);
 
-    if (!from || from.name === "lockedmove") {
+    if (!from || ["lockedmove", "pursuit"].includes(from.name)) {
         mon.volatile.resetSingleMove();
         // Consume focuspunch status if applicable.
         mon.volatile.focus = false;

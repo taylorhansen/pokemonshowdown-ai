@@ -859,6 +859,22 @@ export const test = () =>
                 expect(mon.volatile.lastMove).to.equal("tackle");
             });
 
+            it("Should still set last move if from pursuit", async function () {
+                const mon = sh.initActive("p1");
+                expect(mon.moveset.get("pursuit")).to.be.null;
+                expect(mon.volatile.lastMove).to.be.null;
+                sh.initActive("p2");
+
+                await ph.handle(
+                    moveEvent("p1", "pursuit", {
+                        from: toEffectName("pursuit", "move"),
+                    }),
+                );
+                await ph.return();
+                expect(mon.moveset.get("pursuit")).to.be.null;
+                expect(mon.volatile.lastMove).to.equal("pursuit");
+            });
+
             describe("multi-turn move", function () {
                 describe("rampage move", function () {
                     it("Should start rampage move status", async function () {
