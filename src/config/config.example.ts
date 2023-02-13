@@ -45,6 +45,7 @@ export const config: Config = {
             timeoutNs: 10_000_000n /*10ms*/,
         },
         model: {
+            dueling: true,
             dist: 51,
         },
         rollout: {

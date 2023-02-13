@@ -102,6 +102,8 @@ export interface BatchPredictConfig {
 
 /** Configuration for the neural network model. */
 export interface ModelConfig {
+    /** Whether to use dueling network architecture. */
+    dueling?: boolean;
     /**
      * If defined, creates a distributional Q network instead of a regular one,
      * with the number specifying the number of atoms with which to construct

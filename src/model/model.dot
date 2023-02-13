@@ -232,8 +232,8 @@ digraph model {
         active_global_concat:e -> value_dense:w
     }
 
-    subgraph cluster_dueling {
-        label = "Dueling\nTotal Parameters = 835,043"
+    subgraph cluster_nodist {
+        label = "No Distribution (option)"
 
         subgraph cluster_dueling_action {
             label = "Action Advantage"
@@ -248,35 +248,49 @@ digraph model {
             action_switch_adv:e -> adv:w
         }
 
-        subgraph cluster_dueling_value {
-            label = "State Value"
+        subgraph cluster_nodist_nodueling {
+            label = "No Dueling (option)"
 
-            v [label="Dense(1) + tanh\n(1)"]
+            q [label="Tanh\n(9)"]
+            output [style=filled label="Action\n(9)"]
 
-            value_dense:e -> v:w
-
-            adv -> v [style=invis]
+            adv:e -> q:w
+            q:e -> output:w
         }
 
-        adv_centered [label="Sub Mean\n(9)"]
-        q [label="Add\n(9)"]
-        dueling_output [style=filled label="Action\n(9)"]
+        subgraph cluster_nodist_dueling {
+            label = "Dueling (option)"
 
-        adv:e -> adv_centered:w
-        adv_centered:e -> q:w
-        v:e -> q:w
-        q:e -> dueling_output:w
+            subgraph cluster_dueling_value {
+                label = "State Value"
+
+                v [label="Dense(1)\n(1)"]
+
+                value_dense:e -> v:w
+            }
+
+            adv_centered [label="Sub Mean\n(9)"]
+            q_dueling [label="Add\n(9)"]
+            q_dueling_tanh [label="Tanh\n(9)"]
+            dueling_output [style=filled label="Action\n(9)"]
+
+            adv:e -> adv_centered:w
+            adv_centered:e -> q_dueling:w
+            v:e -> q_dueling:w
+            q_dueling:e -> q_dueling_tanh:w
+            q_dueling_tanh:e -> dueling_output:w
+        }
     }
 
     subgraph cluster_dist {
-        label = "Distributional + Dueling\nExample with atoms = 51\nTotal parameters = 854,393"
+        label = "Distributional RL (option)\nAtoms = A"
 
-        subgraph cluster_dueling_action {
+        subgraph cluster_dist_action {
             label = "Action Advantage Dist"
 
-            action_move_adv_logits [label="Dense(51)\n(4x51)"]
-            action_switch_adv_logits [label="Dense(51)\n(5x51)"]
-            adv_logits [label="Concat\n(9x51)"]
+            action_move_adv_logits [label="Dense(A)\n(4xA)"]
+            action_switch_adv_logits [label="Dense(A)\n(5xA)"]
+            adv_logits [label="Concat\n(9xA)"]
 
             action_move_dense:e -> action_move_adv_logits:w
             action_switch_dense:e -> action_switch_adv_logits:w
@@ -284,25 +298,39 @@ digraph model {
             action_switch_adv_logits:e -> adv_logits:w
         }
 
-        subgraph cluster_dueling_value {
-            label = "State Value Dist"
+        subgraph cluster_dist_nodueling {
+            label = "No Dueling (option)"
 
-            v_logits [label="Dense(51) + Reshape\n(1x51)"]
+            q_dist [label="Softmax\n(9xA)"]
+            dist_output [style=filled label="Action Dist\n(9xA)"]
 
-            value_dense:e -> v_logits:w
-
-            adv_logits -> v_logits [style=invis]
+            adv_logits:e -> q_dist:w
+            q_dist:e -> dist_output:w
         }
 
-        adv_centered_logits [label="Sub Mean\n(9x51)"]
-        q_logits [label="Add\n(9x51)"]
-        q_dist [label="Softmax\n(9x51)"]
-        dist_dueling_output [style=filled label="Action Dist\n(9x51)"]
+        subgraph cluster_dist_dueling {
+            label = "Dueling (option)"
 
-        adv_logits:e -> adv_centered_logits:w
-        adv_centered_logits:e -> q_logits:w
-        v_logits:e -> q_logits:w
-        q_logits:e -> q_dist:w
-        q_dist:e -> dist_dueling_output:w
+            subgraph cluster_dist_value {
+                label = "State Value Dist"
+
+                v_logits [label="Dense(A) + Reshape\n(1xA)"]
+
+                value_dense:e -> v_logits:w
+
+                adv_logits -> v_logits [style=invis]
+            }
+
+            adv_centered_logits [label="Sub Mean\n(9xA)"]
+            q_logits [label="Add\n(9xA)"]
+            q_dist_dueling [label="Softmax\n(9xA)"]
+            dist_dueling_output [style=filled label="Action Dist\n(9xA)"]
+
+            adv_logits:e -> adv_centered_logits:w
+            adv_centered_logits:e -> q_logits:w
+            v_logits:e -> q_logits:w
+            q_logits:e -> q_dist_dueling:w
+            q_dist_dueling:e -> dist_dueling_output:w
+        }
     }
 }

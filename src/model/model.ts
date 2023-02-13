@@ -268,15 +268,20 @@ export function createModel(
         .concatenate({name: `${name}/action/concat`, axis: 1})
         .apply([actionMove, actionSwitch]) as tf.SymbolicTensor;
 
-    const value = stateValue({
-        name,
-        label: "state",
-        units: 128,
-        ...(config?.dist && {atoms: config.dist}),
-        ...(random && {random}),
-    })(global);
+    let q: tf.SymbolicTensor;
+    if (!config?.dueling) {
+        q = qValue(name, "action", config?.dist)(advantage);
+    } else {
+        const value = stateValue({
+            name,
+            label: "state",
+            units: 128,
+            ...(config.dist && {atoms: config.dist}),
+            ...(random && {random}),
+        })(global);
 
-    const q = dueling(name, "action", config?.dist)(advantage, value);
+        q = qDueling(name, "action", config.dist)(advantage, value);
+    }
 
     //#endregion
 
@@ -821,8 +826,6 @@ function stateValue({
     const denseLayer2 = tf.layers.dense({
         name: `${name}/${label}/value/dense_2`,
         units: atoms ?? 1,
-        // Reward in range [-1, 1].
-        activation: atoms ? "linear" : "tanh",
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
@@ -844,7 +847,7 @@ function stateValue({
 }
 
 /**
- * Creates a layer that computes Q-value from action advantages and state value.
+ * Creates a layer that computes the Q-value from action advantages.
  *
  * @param name Name of model.
  * @param label Name of module.
@@ -854,7 +857,34 @@ function stateValue({
  * the value distribution.
  * @returns A function to compute the Q-values.
  */
-function dueling(
+function qValue(
+    name: string,
+    label: string,
+    atoms?: number,
+): (advantage: tf.SymbolicTensor) => tf.SymbolicTensor {
+    const activationLayer = atoms
+        ? tf.layers.softmax({name: `${name}/${label}/softmax`, axis: -1})
+        : tf.layers.activation({
+              // Reward in range [-1, 1].
+              name: `${name}/${label}/tanh`,
+              activation: "tanh",
+          });
+    return advantage => activationLayer.apply(advantage) as tf.SymbolicTensor;
+}
+
+/**
+ * Creates a layer that computes Q-value from action advantages and state value
+ * using a dueling architecture.
+ *
+ * @param name Name of model.
+ * @param label Name of module.
+ * @param atoms If defined, the function will compute the softmax value
+ * distribution for each action rather than a single value per action. The
+ * number specifies the number of atoms with which to construct the support of
+ * the value distribution.
+ * @returns A function to compute the Q-values.
+ */
+function qDueling(
     name: string,
     label: string,
     atoms?: number,
