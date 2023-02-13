@@ -57,7 +57,7 @@ async function handle(msg: ModelMessage): Promise<void> {
                 }
                 const model = msg.url
                     ? await tf.loadLayersModel(msg.url)
-                    : createModel(msg.name, msg.seed);
+                    : createModel(msg.name, msg.config, msg.seed);
                 try {
                     models.set(
                         msg.name,

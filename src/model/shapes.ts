@@ -2,7 +2,6 @@
  * @file Specifies the input/output shapes of the model. Safe to import in
  * non-tf threads.
  */
-import {intToChoice} from "../psbot/handlers/battle/agent";
 import * as encoders from "../psbot/handlers/battle/ai/encoder/encoders";
 import {Moveset} from "../psbot/handlers/battle/state/Moveset";
 import {Team} from "../psbot/handlers/battle/state/Team";
@@ -69,9 +68,3 @@ export const modelInputShapesMap: {
 } = Object.fromEntries(
     modelInputNames.map((name, i) => [name, modelInputShapes[i]]),
 );
-
-/** Output shape for the model, without the batch dimension. */
-export const modelOutputShape = [intToChoice.length];
-
-/** Output name for the model. */
-export const modelOutputName = "action";

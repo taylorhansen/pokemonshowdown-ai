@@ -1,18 +1,27 @@
 /** @file Defines the model and a few utilities for interacting with it. */
 import * as tf from "@tensorflow/tfjs";
+import {ModelConfig} from "../config/types";
+import * as rewards from "../game/rewards";
+import {intToChoice} from "../psbot/handlers/battle/agent";
 import {Rng, rng} from "../util/random";
 import * as customLayers from "./custom_layers";
 import {
     modelInputNames,
     modelInputShapes,
     modelInputShapesMap,
-    modelOutputName,
-    modelOutputShape,
     numActive,
     numMoves,
     numTeams,
     teamSize,
 } from "./shapes";
+
+/** Metadata added to model upon {@link createModel creation}. */
+export interface ModelMetadata {
+    /** Config used to create the model. */
+    config?: ModelConfig;
+    /** Random seed used for weight init. */
+    seed?: string;
+}
 
 /**
  * Creates a default model for training.
@@ -21,8 +30,13 @@ import {
  * @param config Additional config options.
  * @param seed Seed for the random number generater to use for kernel
  * initializers.
+ * @see {@link ModelMetadata} for additional info added to the model afterwards.
  */
-export function createModel(name: string, seed?: string): tf.LayersModel {
+export function createModel(
+    name: string,
+    config?: ModelConfig,
+    seed?: string,
+): tf.LayersModel {
     const random = seed ? rng(seed) : undefined;
 
     // Note: Must be in order of modelInputShapes.
@@ -226,37 +240,52 @@ export function createModel(name: string, seed?: string): tf.LayersModel {
 
     //#region Output.
 
-    const actionMove = actionValues(
+    const actionMove = actionValue({
         name,
-        "action/move",
-        numMoves,
-        moveUnits,
+        label: "action/move",
+        numActions: numMoves,
+        inputDim: moveUnits,
         // Note: Slicing through both teams and pokemon list to get first active
         // override traits, i.e. direct move features.
-        {begin: [0, 0], size: [1, 1]},
-        128,
-        random,
-    )(moveset, global);
+        sliceArgs: {begin: [0, 0], size: [1, 1]},
+        units: 128,
+        ...(config?.dist && {atoms: config.dist}),
+        ...(random && {random}),
+    })(moveset, global);
 
-    const actionSwitch = actionValues(
+    const actionSwitch = actionValue({
         name,
-        "action/switch",
-        teamSize - numActive,
-        benchUnits,
-        {begin: 0, size: 1},
-        128,
-        random,
-    )(bench, global);
+        label: "action/switch",
+        numActions: teamSize - numActive,
+        inputDim: benchUnits,
+        sliceArgs: {begin: 0, size: 1},
+        units: 128,
+        ...(config?.dist && {atoms: config.dist}),
+        ...(random && {random}),
+    })(bench, global);
 
-    const advantage = combineAction(name, "action")([actionMove, actionSwitch]);
+    const advantage = tf.layers
+        .concatenate({name: `${name}/action/concat`, axis: 1})
+        .apply([actionMove, actionSwitch]) as tf.SymbolicTensor;
 
-    const value = stateValue(name, "state", 128)(global);
+    const value = stateValue({
+        name,
+        label: "state",
+        units: 128,
+        ...(config?.dist && {atoms: config.dist}),
+        ...(random && {random}),
+    })(global);
 
-    const q = dueling(name, "action")(advantage, value);
+    const q = dueling(name, "action", config?.dist)(advantage, value);
 
     //#endregion
 
     const model = tf.model({name, inputs, outputs: [q]});
+    const metadata: ModelMetadata = {
+        ...(config && {config}),
+        ...(seed && {seed}),
+    };
+    model.setUserDefinedMetadata(metadata);
     verifyModel(model);
     return model;
 }
@@ -651,28 +680,51 @@ function aggregateGlobal(
     };
 }
 
+/** Args for {@link actionValue}. */
+interface ActionValueArgs {
+    /** Name of model. */
+    name: string;
+    /** Name of module. */
+    label: string;
+    /** Number of possible actions. */
+    numActions: number;
+    /** Size of input features for each action. */
+    inputDim: number;
+    /** Args for slicing the local feature tensor. */
+    sliceArgs: customLayers.SliceArgs;
+    /** Hidden layer size. */
+    units: number;
+    /**
+     * If defined, the function will compute a pre-softmax value distribution
+     * for each action rather than a single value per action. The number
+     * specifies the number of atoms with which to construct the support of the
+     * value distribution.
+     */
+    atoms?: number;
+    /** Optional seeder for weight init. */
+    random?: Rng;
+}
+
 /**
- * Creates a layer that computes the value of each action.
+ * Creates a layer that computes a value for each action.
  *
- * @param name Name of model.
- * @param label Name of module.
- * @param numActions Number of possible actions.
- * @param inputUnits Size of input features for each action.
- * @param sliceArgs Args for slicing the local feature tensor.
- * @param units Hidden layer size.
- * @param random Optional seeder for weight init.
- * @returns A function to compute action values using the local input vector
- * (`[B, N, U]`) as well as the aggregate global feature vector (`[B, G]`).
+ * Takes a local input feature vector of shape `[B, N, U]` as well as the
+ * aggregate global feature vector of shape `[B, G]` and computes the advantage
+ * of each of the `N` actions, of shape `[B, N]`.
  */
-function actionValues(
-    name: string,
-    label: string,
-    numActions: number,
-    inputUnits: number,
-    sliceArgs: customLayers.SliceArgs,
-    units: number,
-    random?: Rng,
-): (local: tf.SymbolicTensor, global: tf.SymbolicTensor) => tf.SymbolicTensor {
+function actionValue({
+    name,
+    label,
+    numActions,
+    inputDim,
+    sliceArgs,
+    units,
+    atoms,
+    random,
+}: ActionValueArgs): (
+    local: tf.SymbolicTensor,
+    global: tf.SymbolicTensor,
+) => tf.SymbolicTensor {
     // Note: Should only consider actions for client's side (index 0).
     const localSliceLayer = customLayers.slice({
         name: `${name}/${label}/local/slice`,
@@ -680,7 +732,7 @@ function actionValues(
     });
     const localReshapeLayer = tf.layers.reshape({
         name: `${name}/${label}/local/reshape`,
-        targetShape: [numActions, inputUnits],
+        targetShape: [numActions, inputDim],
     });
     const globalRepeatLayer = tf.layers.repeatVector({
         name: `${name}/${label}/global/repeat`,
@@ -701,15 +753,17 @@ function actionValues(
     });
     const denseLayer2 = tf.layers.dense({
         name: `${name}/${label}/dense_2`,
-        units: 1,
+        units: atoms ?? 1,
         activation: "linear",
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
-    const reshapeLayer = tf.layers.reshape({
-        name: `${name}/${label}/reshape`,
-        targetShape: [numActions],
-    });
+    const reshapeLayer = atoms
+        ? undefined
+        : tf.layers.reshape({
+              name: `${name}/${label}/reshape`,
+              targetShape: [numActions],
+          });
     return function actionValuesImpl(local, global) {
         local = localSliceLayer.apply(local) as tf.SymbolicTensor;
         local = localReshapeLayer.apply(local) as tf.SymbolicTensor;
@@ -718,44 +772,43 @@ function actionValues(
         values = denseLayer1.apply(values) as tf.SymbolicTensor;
         values = activationLayer.apply(values) as tf.SymbolicTensor;
         values = denseLayer2.apply(values) as tf.SymbolicTensor;
-        values = reshapeLayer.apply(values) as tf.SymbolicTensor;
+        values = (reshapeLayer?.apply(values) as tf.SymbolicTensor) ?? values;
         return values;
     };
 }
 
-/**
- * Creates a layer that concatenates multiple action outputs.
- *
- * @param name Name of model.
- * @param label Name of module.
- * @returns A function that applies the concat layer. Combines last dimension.
- */
-function combineAction(
-    name: string,
-    label: string,
-): (actions: tf.SymbolicTensor[]) => tf.SymbolicTensor {
-    const concatLayer = tf.layers.concatenate({
-        name: `${name}/${label}/concat`,
-        axis: -1,
-    });
-    return actions => concatLayer.apply(actions) as tf.SymbolicTensor;
+/** Args for {@link stateValue}. */
+interface StateValueArgs {
+    /** Name of model. */
+    name: string;
+    /** Name of module. */
+    label: string;
+    /** Hidden layer size. */
+    units: number;
+    /**
+     * If defined, the function will compute a pre-softmax value distribution
+     * for the state rather than a single value. The number specifies the
+     * number of atoms with which to construct the support of the value
+     * distribution.
+     */
+    atoms?: number;
+    /** Optional seeder for weight init. */
+    random?: Rng;
 }
 
 /**
  * Creates a layer that computes the value of the state.
  *
- * @param name Name of model.
- * @param label Name of module.
- * @param units Hidden layer size.
- * @param random Optional seeder for weight init.
- * @returns A function to compute the state value using global features.
+ * @returns A function to compute the state value distribution using global
+ * features.
  */
-function stateValue(
-    name: string,
-    label: string,
-    units: number,
-    random?: Rng,
-): (global: tf.SymbolicTensor) => tf.SymbolicTensor {
+function stateValue({
+    name,
+    label,
+    units,
+    atoms,
+    random,
+}: StateValueArgs): (global: tf.SymbolicTensor) => tf.SymbolicTensor {
     const denseLayer1 = tf.layers.dense({
         name: `${name}/${label}/value/dense_1`,
         units,
@@ -767,49 +820,70 @@ function stateValue(
     });
     const denseLayer2 = tf.layers.dense({
         name: `${name}/${label}/value/dense_2`,
-        units: 1,
-        // Note: Reward in range [-1, 1].
-        activation: "tanh",
+        units: atoms ?? 1,
+        // Reward in range [-1, 1].
+        activation: atoms ? "linear" : "tanh",
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
+    // Ensure broadcast with dueling.
+    const reshapeLayer = atoms
+        ? tf.layers.reshape({
+              name: `${name}/${label}/value/reshape`,
+              targetShape: [1, atoms],
+          })
+        : undefined;
     return function stateValueImpl(features) {
         features = denseLayer1.apply(features) as tf.SymbolicTensor;
         features = activationLayer.apply(features) as tf.SymbolicTensor;
         features = denseLayer2.apply(features) as tf.SymbolicTensor;
+        features =
+            (reshapeLayer?.apply(features) as tf.SymbolicTensor) ?? features;
         return features;
     };
 }
 
 /**
- * Creates a layer that computes Q-values from action advantages and state
- * value.
+ * Creates a layer that computes Q-value from action advantages and state value.
  *
  * @param name Name of model.
  * @param label Name of module.
+ * @param atoms If defined, the function will compute the softmax value
+ * distribution for each action rather than a single value per action. The
+ * number specifies the number of atoms with which to construct the support of
+ * the value distribution.
  * @returns A function to compute the Q-values.
  */
 function dueling(
     name: string,
     label: string,
+    atoms?: number,
 ): (
     advantage: tf.SymbolicTensor,
     value: tf.SymbolicTensor,
 ) => tf.SymbolicTensor {
     const meanAdvLayer = customLayers.mean({
         name: `${name}/${label}/mean`,
-        axis: -1,
+        axis: 1,
+        // Ensure broadcast with dueling.
         keepDims: true,
     });
     const advSubLayer = customLayers.sub({name: `${name}/${label}/sub`});
     const qAddLayer = tf.layers.add({name: `${name}/${label}/add`});
+    const softmaxLayer = atoms
+        ? tf.layers.softmax({
+              name: `${name}/${label}/softmax`,
+              axis: -1,
+          })
+        : undefined;
     return function duelingImpl(advantage, value) {
         const meanAdv = meanAdvLayer.apply(advantage) as tf.SymbolicTensor;
-        const centeredAdv = advSubLayer.apply([
+        advantage = advSubLayer.apply([
             advantage,
             meanAdv,
         ]) as tf.SymbolicTensor;
-        const q = qAddLayer.apply([centeredAdv, value]) as tf.SymbolicTensor;
+        let q = qAddLayer.apply([advantage, value]) as tf.SymbolicTensor;
+        q = (softmaxLayer?.apply(q) as tf.SymbolicTensor) ?? q;
         return q;
     };
 }
@@ -821,8 +895,11 @@ function dueling(
  * @throws Error if invalid input/output shapes.
  */
 export function verifyModel(model: tf.LayersModel): void {
+    const metadata = model.getUserDefinedMetadata() as
+        | ModelMetadata
+        | undefined;
     validateInput(model.input);
-    validateOutput(model.output);
+    validateOutput(model.output, metadata);
 }
 
 /** Ensures that the model input shape is valid. */
@@ -838,66 +915,49 @@ function validateInput(input: tf.SymbolicTensor | tf.SymbolicTensor[]): void {
     }
     for (let i = 0; i < modelInputShapes.length; ++i) {
         const {shape} = input[i];
-        const expectedShape = [null, ...modelInputShapes[i]];
-        let invalid: boolean | undefined;
-        if (shape.length !== expectedShape.length) {
-            invalid = true;
-        } else {
-            for (let j = 0; j < expectedShape.length; ++j) {
-                if (shape[j] !== expectedShape[j]) {
-                    invalid = true;
-                    break;
-                }
-            }
-        }
-        if (invalid) {
+        if (shape[0] !== null) {
             throw new Error(
-                `Expected input ${i} (${modelInputNames[i]}) to have shape ` +
-                    `${JSON.stringify(expectedShape)} but found ` +
-                    `${JSON.stringify(shape)}`,
+                `Input ${i} (${modelInputNames[i]}) is missing batch dimension`,
             );
         }
+        tf.util.assertShapesMatch(
+            [...modelInputShapes[i]],
+            shape.slice(1) as number[],
+            `Input ${i} (${modelInputNames[i]}) expected vs actual:`,
+        );
     }
 }
 
 /** Ensures that the model output shape is valid. */
-function validateOutput(output: tf.SymbolicTensor | tf.SymbolicTensor[]): void {
+function validateOutput(
+    output: tf.SymbolicTensor | tf.SymbolicTensor[],
+    metadata?: ModelMetadata,
+): void {
     if (Array.isArray(output)) {
-        throw new Error("Model output must not be an array");
-    }
-    const expectedShape = [null, ...modelOutputShape];
-    for (let i = 0; i < expectedShape.length; ++i) {
-        if (output.shape[i] !== expectedShape[i]) {
-            throw new Error(
-                `Expected output (${modelOutputName}) to have shape ` +
-                    `${JSON.stringify(expectedShape)} but found ` +
-                    `${JSON.stringify(output.shape)}`,
-            );
+        if (output.length !== 1) {
+            throw new Error(`Expected 1 output but got ${output.length}`);
         }
+        [output] = output;
     }
+    const {shape} = output;
+    if (shape[0] !== null) {
+        throw new Error("Output is missing batch dimension");
+    }
+    tf.util.assertShapesMatch(
+        metadata?.config?.dist
+            ? [intToChoice.length, metadata.config.dist /*atoms*/]
+            : [intToChoice.length],
+        output.shape.slice(1) as number[],
+        "Output expected vs actual:",
+    );
 }
 
 /**
- * Converts the data lists into tensors
+ * Creates a tensor for the support of the Q value distribution. Used for
+ * distributional RL.
  *
- * @param includeBatchDim Whether to include an extra 1 dimension in the first
- * axis for the batch. Default false.
+ * @param atoms Number of atoms used to represent the distribution.
  */
-export function encodedStateToTensors(
-    arr: Float32Array[],
-    includeBatchDim?: boolean,
-): tf.Tensor[] {
-    if (arr.length !== modelInputShapes.length) {
-        throw new Error(
-            `Expected ${modelInputShapes.length} inputs but found ` +
-                `${arr.length}`,
-        );
-    }
-    return modelInputShapes.map((shape, i) =>
-        tf.tensor(
-            arr[i],
-            includeBatchDim ? [1, ...shape] : [...shape],
-            "float32",
-        ),
-    );
+export function createSupport(atoms: number): tf.Tensor1D {
+    return tf.linspace(rewards.min, rewards.max, atoms);
 }

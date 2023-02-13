@@ -3,10 +3,9 @@ import {MessageChannel, MessagePort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {BatchPredictConfig} from "../../config/types";
-import {intToChoice} from "../../psbot/handlers/battle/agent";
 import {setTimeoutNs} from "../../util/nanosecond";
 import {RawPortResultError} from "../../util/port/PortProtocol";
-import {verifyModel} from "../model";
+import {createSupport, ModelMetadata, verifyModel} from "../model";
 import {
     ModelPortMessage,
     PredictMessage,
@@ -44,7 +43,7 @@ export class ModelRegistry {
     private readonly predictSize: number[] = [];
 
     /** Current pending predict request batch. */
-    private predictBatch = new PredictBatch();
+    private predictBatch: PredictBatch;
     /**
      * Resolves once the current batch timer expires, returning true if
      * {@link cancelTimer} is called.
@@ -59,11 +58,19 @@ export class ModelRegistry {
     private predictPromise: Promise<unknown> | null = null;
 
     /**
+     * Support of the Q value distribution. Used for distributional RL if
+     * configured.
+     */
+    private readonly support?: tf.Tensor;
+
+    /**
      * Creates a ModelRegistry.
      *
      * @param name Name of the model.
      * @param model Neural network object.
      * @param config Configuration for batching predict requests.
+     * @param support Reference to the support of the Q value distribution, of
+     * shape `[1, 1, atoms]`.
      */
     public constructor(
         public readonly name: string,
@@ -71,6 +78,19 @@ export class ModelRegistry {
         private readonly config: BatchPredictConfig,
     ) {
         verifyModel(model);
+
+        const metadata = model.getUserDefinedMetadata() as
+            | ModelMetadata
+            | undefined;
+        if (metadata?.config?.dist) {
+            this.support = createSupport(metadata.config.dist).reshape([
+                1,
+                1,
+                metadata.config.dist,
+            ]);
+        }
+        this.predictBatch = new PredictBatch(this.support);
+
         this.events.setMaxListeners(config.maxSize);
     }
 
@@ -80,6 +100,7 @@ export class ModelRegistry {
             port.close();
         }
         this.model.dispose();
+        this.support?.dispose();
     }
 
     /** Locks the model under a scope name and step number. */
@@ -263,15 +284,12 @@ export class ModelRegistry {
         }
 
         const batch = this.predictBatch;
-        this.predictBatch = new PredictBatch();
+        this.predictBatch = new PredictBatch(this.support);
         this.events.emit(predictReady);
 
         const startTime = process.hrtime.bigint();
-        const results = tf.tidy(() =>
-            (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor).as2D(
-                batch.length,
-                intToChoice.length,
-            ),
+        const results = tf.tidy(
+            () => this.model.predictOnBatch(batch.toTensors()) as tf.Tensor,
         );
         await (this.predictPromise = batch
             .resolve(results)

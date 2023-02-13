@@ -1,7 +1,12 @@
 import {resolve} from "path";
 import {deserialize} from "v8";
 import {MessagePort, Worker} from "worker_threads";
-import {BatchPredictConfig, PathsConfig, TrainConfig} from "../../config/types";
+import {
+    BatchPredictConfig,
+    ModelConfig,
+    PathsConfig,
+    TrainConfig,
+} from "../../config/types";
 import {WorkerPort} from "../../util/worker/WorkerPort";
 import {ModelProtocol, ModelTrainData, ModelWorkerData} from "./ModelProtocol";
 
@@ -52,6 +57,7 @@ export class ModelWorker {
         name: string,
         batchConfig: BatchPredictConfig,
         url?: string,
+        config?: ModelConfig,
         seed?: string,
     ): Promise<string> {
         return await new Promise((res, rej) =>
@@ -62,6 +68,7 @@ export class ModelWorker {
                     name,
                     predict: batchConfig,
                     ...(url && {url}),
+                    ...(config && {config}),
                     ...(seed && {seed}),
                 },
                 [],

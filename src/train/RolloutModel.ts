@@ -5,7 +5,7 @@ import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {ExperienceConfig} from "../config/types";
 import {Experience} from "../game/experience";
-import {verifyModel} from "../model/model";
+import {createSupport, ModelMetadata, verifyModel} from "../model/model";
 import {
     PredictMessage,
     PredictWorkerResult,
@@ -40,12 +40,18 @@ export class RolloutModel {
     private readonly events = new TypedEmitter<Events>();
 
     /** Current pending predict request batch. */
-    private predictBatch = new PredictBatch();
+    private predictBatch: PredictBatch;
 
     /**
      * Stores experiences that haven't yet been emitted into the replay buffer.
      */
     private experienceBuffer: Experience[] = [];
+
+    /**
+     * Support of the Q value distribution. Used for distributional RL if
+     * configured.
+     */
+    private readonly support?: tf.Tensor;
 
     /**
      * Creates a RolloutModel object.
@@ -61,6 +67,18 @@ export class RolloutModel {
         private readonly config: ExperienceConfig,
     ) {
         verifyModel(model);
+
+        const metadata = model.getUserDefinedMetadata() as
+            | ModelMetadata
+            | undefined;
+        if (metadata?.config?.dist) {
+            this.support = createSupport(metadata.config.dist).reshape([
+                1,
+                1,
+                metadata.config.dist,
+            ]);
+        }
+        this.predictBatch = new PredictBatch(this.support);
     }
 
     /** Safely closes ports. */
@@ -68,6 +86,7 @@ export class RolloutModel {
         for (const [port] of this.ports) {
             port.close();
         }
+        this.support?.dispose();
     }
 
     /**
@@ -171,13 +190,10 @@ export class RolloutModel {
         await tf.nextFrame();
 
         const batch = this.predictBatch;
-        this.predictBatch = new PredictBatch();
+        this.predictBatch = new PredictBatch(this.support);
 
-        const results = tf.tidy(() =>
-            (this.model.predictOnBatch(batch.toTensors()) as tf.Tensor).as2D(
-                batch.length,
-                intToChoice.length,
-            ),
+        const results = tf.tidy(
+            () => this.model.predictOnBatch(batch.toTensors()) as tf.Tensor,
         );
         await batch.resolve(results);
         results.dispose();

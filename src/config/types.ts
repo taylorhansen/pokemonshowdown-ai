@@ -58,6 +58,8 @@ export interface TrainConfig {
     readonly steps?: number;
     /** Batch predict config for models outside the learning step. */
     readonly batchPredict: BatchPredictConfig;
+    /** Model config. */
+    readonly model: ModelConfig;
     /** Rollout config. */
     readonly rollout: RolloutConfig;
     /** Experience config. */
@@ -98,26 +100,15 @@ export interface BatchPredictConfig {
     readonly timeoutNs: bigint;
 }
 
-/**
- * Configuration for the model's pooling architecture for certain unordered
- * inputs.
- */
-export interface ModelAggregateConfig {
-    /** Type of pooling scheme to use. */
-    readonly type: ModelAggregateType;
-    /** Whether to include an attention model before the aggregate operation. */
-    readonly attention?: boolean;
+/** Configuration for the neural network model. */
+export interface ModelConfig {
+    /**
+     * If defined, creates a distributional Q network instead of a regular one,
+     * with the number specifying the number of atoms with which to construct
+     * the support of the reward distribution.
+     */
+    dist?: number;
 }
-
-/**
- * Type of pooling scheme to use for unordered input.
- *
- * * `"sum"` - Add all the features together elementwise.
- * * `"mean"` - Average features. Note that dead or zeroed-out inputs are
- * included in the average.
- * * `"max"` - Take the maximum of each feature.
- */
-export type ModelAggregateType = "sum" | "mean" | "max";
 
 /** Configuration for the rollout process. */
 export interface RolloutConfig {

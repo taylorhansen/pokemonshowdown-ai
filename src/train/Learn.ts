@@ -1,6 +1,8 @@
 import * as tf from "@tensorflow/tfjs";
 import {ExperienceConfig, LearnConfig, OptimizerConfig} from "../config/types";
 import {BatchTensorExperience} from "../game/experience/tensor";
+import * as rewards from "../game/rewards";
+import {createSupport, ModelMetadata, verifyModel} from "../model/model";
 import {Metrics} from "../model/worker/Metrics";
 import {intToChoice} from "../psbot/handlers/battle/agent";
 
@@ -25,11 +27,26 @@ export class Learn {
             ),
         );
 
-    /** Scale for TD target value. */
+    /** Exponential decay scale for TD target. */
     private readonly tdScale = tf.scalar(
         this.expConfig.rewardDecay ** this.expConfig.steps,
         "float32",
     );
+
+    /**
+     * Support of the Q value distribution. Used for distributional RL if
+     * configured.
+     */
+    private readonly support?: tf.Tensor;
+    /** Support distribution with reward decay applied. Shape `[1, atoms]`. */
+    private readonly scaledSupport?: tf.Tensor;
+    /** Difference between each atom within the support. */
+    private readonly atomDiff?: tf.Scalar;
+    /**
+     * Indices within the batch dimension. Used for batch projections of TD
+     * target distribution. Shape `[batch, atoms, 1]`.
+     */
+    private readonly batchIndices?: tf.Tensor;
 
     /**
      * Creates a Learn object.
@@ -48,6 +65,28 @@ export class Learn {
         private readonly config: LearnConfig,
         private readonly expConfig: ExperienceConfig,
     ) {
+        verifyModel(model);
+
+        const metadata = model.getUserDefinedMetadata() as
+            | ModelMetadata
+            | undefined;
+        if (metadata?.config?.dist) {
+            this.support = createSupport(metadata.config.dist).reshape([
+                1,
+                metadata.config.dist,
+            ]);
+            this.scaledSupport = tf.mul(this.support, this.tdScale);
+            this.atomDiff = tf.scalar(
+                (rewards.max - rewards.min) / (metadata.config.dist - 1),
+                "float32",
+            );
+            this.batchIndices = tf
+                .range(0, this.config.batchSize, 1, "int32")
+                .expandDims(-1)
+                .broadcastTo([this.config.batchSize, metadata.config.dist])
+                .expandDims(-1);
+        }
+
         // Log initial weights.
         for (const weights of this.variables) {
             if (weights.size === 1) {
@@ -213,7 +252,7 @@ export class Learn {
     }
 
     /**
-     * Calculates TD target for an experience batch.
+     * Calculates the TD target for an experience batch.
      *
      * @param reward Reward tensor of shape `[batch]`.
      * @param nextState Tensors for next state, of shape `[batch, Ns...]`.
@@ -221,7 +260,8 @@ export class Learn {
      * `[batch, Nc]`.
      * @param done Terminal state indicator for next state, float of shape
      * `[batch]`.
-     * @returns Temporal difference target, of shape `[batch]`.
+     * @returns Temporal difference target of shape `[batch]`, or
+     * `[batch, atoms]` if configured for distributional RL.
      */
     private calculateTarget(
         reward: tf.Tensor,
@@ -229,43 +269,103 @@ export class Learn {
         choices: tf.Tensor,
         done: tf.Tensor,
     ): tf.Tensor {
-        if (!Number.isFinite(this.expConfig.steps)) {
+        if (!this.support && !Number.isFinite(this.expConfig.steps)) {
+            // TD target reduces to Monte Carlo returns.
             return reward;
         }
         return tf.tidy(() => {
-            let targetQ: tf.Tensor;
-            if (!this.config.target) {
+            const targetModel = this.config.target
+                ? this.targetModel
+                : this.model;
+            let targetQ = targetModel.predictOnBatch(nextState) as tf.Tensor;
+            let q: tf.Tensor;
+            if (this.config.target !== "double") {
                 // Vanilla DQN TD target: r + gamma * max_a(Q(s', a))
-                let q = this.model.predictOnBatch(nextState) as tf.Tensor;
-                // Also prevent illegal actions from influencing the value
-                // function.
-                q = tf.where(choices, q, -Infinity);
-                targetQ = tf.max(q, -1);
-                targetQ = tf.where(tf.isFinite(targetQ), targetQ, 0);
+                // Or with target net: r + gamma * max_a(Qt(s', a))
+                q = targetQ;
             } else {
-                targetQ = this.targetModel.predictOnBatch(
-                    nextState,
-                ) as tf.Tensor;
-                if (this.config.target !== "double") {
-                    // TD target with target net: r + gamma * max_a(Qt(s', a))
-                    targetQ = tf.where(choices, targetQ, -Infinity);
-                    targetQ = tf.max(targetQ, -1);
-                    targetQ = tf.where(tf.isFinite(targetQ), targetQ, 0);
+                // Double Q target: r + gamma * Qt(s', argmax_a(Q(s', a)))
+                q = this.model.predictOnBatch(nextState) as tf.Tensor;
+            }
+            if (this.support) {
+                // Distributional RL.
+                // Take the mean of the Q distribution to get the expectation of
+                // the Q value.
+                q = tf.sum(tf.mul(q, this.support), -1);
+            }
+            q = tf.where(choices, q, -Infinity);
+
+            // Extract the Q-values (or distribution) of the best action from
+            // the next state.
+            const action = tf.argMax(q, -1);
+            let actionMask = tf.oneHot(action, intToChoice.length);
+            if (this.support) {
+                actionMask = tf.expandDims(actionMask, -1);
+            }
+            targetQ = tf.sum(tf.mul(targetQ, actionMask), 1);
+
+            if (this.support) {
+                // Calculate support of TD target distribution for later
+                // projection.
+                let targetSupport: tf.Tensor;
+                if (!Number.isFinite(this.expConfig.steps)) {
+                    // TD target reduces to Monte Carlo returns.
+                    targetSupport = tf.broadcastTo(tf.expandDims(reward, -1), [
+                        this.config.batchSize,
+                        this.support.size,
+                    ]);
                 } else {
-                    // Double Q target: r + gamma * Qt(s', argmax_a(Q(s', a)))
-                    let q = this.model.predictOnBatch(nextState) as tf.Tensor;
-                    q = tf.where(choices, q, -Infinity);
-                    const action = tf.argMax(q, -1);
-                    const actionMask = tf.oneHot(action, intToChoice.length);
-                    targetQ = tf.sum(tf.mul(targetQ, actionMask), -1);
+                    targetSupport = tf.mul(
+                        this.scaledSupport!,
+                        tf.sub(1, done).expandDims(-1),
+                    );
+                    targetSupport = tf.add(
+                        targetSupport,
+                        reward.expandDims(-1),
+                    );
                 }
+                targetSupport = tf.clipByValue(
+                    targetSupport,
+                    rewards.min,
+                    rewards.max,
+                );
+                // Interpolated float index for projection.
+                const realIndex = tf.div(
+                    tf.sub(targetSupport, rewards.min),
+                    this.atomDiff!,
+                );
+                // Project TD target distribution onto the support of the
+                // Q-value distribution.
+                const lo = tf.floor(realIndex);
+                const hi = tf.ceil(realIndex);
+                return tf.add(
+                    tf.scatterND(
+                        tf.concat(
+                            [
+                                this.batchIndices!,
+                                lo.cast("int32").expandDims(-1),
+                            ],
+                            -1,
+                        ),
+                        tf.mul(targetQ, tf.sub(hi, realIndex)),
+                        [this.config.batchSize, this.support.size],
+                    ),
+                    tf.scatterND(
+                        tf.concat(
+                            [
+                                this.batchIndices!,
+                                hi.cast("int32").expandDims(-1),
+                            ],
+                            -1,
+                        ),
+                        tf.mul(targetQ, tf.sub(realIndex, lo)),
+                        [this.config.batchSize, this.support.size],
+                    ),
+                );
             }
 
-            // Also mask out q values of terminal states.
-            targetQ = tf.mul(targetQ, tf.sub(1, done));
-
-            const target = tf.add(reward, tf.mul(this.tdScale, targetQ));
-            return target;
+            // Apply n-step TD target normally.
+            return tf.add(reward, tf.mul(this.tdScale, targetQ));
         });
     }
 
@@ -274,7 +374,8 @@ export class Learn {
      *
      * @param state Tensors for state, of shape `[batch, Ns...]`.
      * @param action Action ids for each state, int of shape `[batch]`.
-     * @param target TD target of shape `[batch]`.
+     * @param target TD target of shape `[batch]`, or `[batch, atoms]` if
+     * configured for distributional RL.
      */
     private loss(
         state: tf.Tensor[],
@@ -282,10 +383,19 @@ export class Learn {
         target: tf.Tensor,
     ): tf.Scalar {
         return tf.tidy("loss", () => {
+            // Extract Q-value of best action from current state.
             let q = this.model.predictOnBatch(state) as tf.Tensor;
-            const mask = tf.oneHot(action, intToChoice.length);
-            q = tf.sum(tf.mul(q, mask), -1);
-            return tf.losses.meanSquaredError(target, q);
+            let actionMask = tf.oneHot(action, intToChoice.length);
+            if (this.support) {
+                actionMask = tf.expandDims(actionMask, -1);
+            }
+            q = tf.sum(tf.mul(q, actionMask), 1);
+            if (this.support) {
+                // Cross-entropy loss for distributional RL.
+                return tf.mean(tf.neg(tf.sum(tf.mul(tf.log(q), target), -1)));
+            }
+            // Mean squared error for value-based RL.
+            return tf.mean(tf.squaredDifference(target, q));
         });
     }
 
@@ -319,8 +429,11 @@ export class Learn {
 
     /** Cleans up dangling variables. */
     public cleanup(): void {
-        this.tdScale.dispose();
         this.optimizer.dispose();
-        Metrics.flush();
+        this.tdScale.dispose();
+        this.support?.dispose();
+        this.scaledSupport?.dispose();
+        this.atomDiff?.dispose();
+        this.batchIndices?.dispose();
     }
 }

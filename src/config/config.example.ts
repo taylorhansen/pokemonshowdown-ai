@@ -44,6 +44,9 @@ export const config: Config = {
             maxSize: numThreads,
             timeoutNs: 10_000_000n /*10ms*/,
         },
+        model: {
+            dist: 51,
+        },
         rollout: {
             pool: {
                 numThreads,

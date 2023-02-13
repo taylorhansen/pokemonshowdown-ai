@@ -1,5 +1,5 @@
 digraph model {
-    label = "Model\nTotal Parameters = 835,043"
+    label = "Model"
     node [shape=rect]
     rankdir = LR
     splines = polyline
@@ -199,13 +199,11 @@ digraph model {
             action_move_slice [label="Slice + Reshape\n(4x64)"]
             action_move_concat [label="Concat\n(4x448)"]
             action_move_dense [label="Dense(128) + Leaky ReLU\n(4x128)"]
-            action_move_q [label="Dense(1) + Reshape\n(4)"]
 
             pokemon_moves_attention:e -> action_move_slice:w
             action_move_slice:e -> action_move_concat:w
             active_global_concat:e -> action_move_concat:sw [label="\n\n(tiled x4)"]
             action_move_concat:e -> action_move_dense:w
-            action_move_dense:e -> action_move_q:w
 
             global_concat -> action_move_slice [style=invis]
         }
@@ -216,52 +214,95 @@ digraph model {
             action_switch_slice [label="Slice + Reshape\n(5x128)"]
             action_switch_concat [label="Concat\n(5x512)"]
             action_switch_dense [label="Dense(128) + Leaky ReLU\n(5x128)"]
-            action_switch_q [label="Dense(1) + Reshape\n(5)"]
 
             bench_attention:e -> action_switch_slice:w
             action_switch_slice:e -> action_switch_concat:w
             active_global_concat:e -> action_switch_concat:sw [label="(tiled x5)"]
             action_switch_concat:e -> action_switch_dense:w
-            action_switch_dense:e -> action_switch_q:w
 
             active_global_concat -> action_switch_slice [style=invis]
         }
-
-        q [label="Concat\n(9)"]
-
-        action_move_q:e -> q:w
-        action_switch_q:e -> q:w
     }
 
     subgraph cluster_value {
-        label = "Value"
+        label = "State"
 
         value_dense [label="Dense(128) + Leaky ReLU\n(128)"]
-        v [label="Dense(1) + tanh\n(1)"]
 
         active_global_concat:e -> value_dense:w
-        value_dense:e -> v:w
-
-        q -> v [style=invis]
     }
 
     subgraph cluster_dueling {
-        label = "Dueling"
+        label = "Dueling\nTotal Parameters = 835,043"
 
-        q_centered [label="Sub Mean\n(9)"]
-        a [label="Add\n(9)"]
+        subgraph cluster_dueling_action {
+            label = "Action Advantage"
 
-        q:e -> q_centered:w
-        q_centered:e -> a:w
-        v:e -> a:w
+            action_move_adv [label="Dense(1) + Reshape\n(4)"]
+            action_switch_adv [label="Dense(1) + Reshape\n(5)"]
+            adv [label="Concat\n(9)"]
+
+            action_move_dense:e -> action_move_adv:w
+            action_switch_dense:e -> action_switch_adv:w
+            action_move_adv:e -> adv:w
+            action_switch_adv:e -> adv:w
+        }
+
+        subgraph cluster_dueling_value {
+            label = "State Value"
+
+            v [label="Dense(1) + tanh\n(1)"]
+
+            value_dense:e -> v:w
+
+            adv -> v [style=invis]
+        }
+
+        adv_centered [label="Sub Mean\n(9)"]
+        q [label="Add\n(9)"]
+        dueling_output [style=filled label="Action\n(9)"]
+
+        adv:e -> adv_centered:w
+        adv_centered:e -> q:w
+        v:e -> q:w
+        q:e -> dueling_output:w
     }
 
-    subgraph cluster_output {
-        label = "Output"
+    subgraph cluster_dist {
+        label = "Distributional + Dueling\nExample with atoms = 51\nTotal parameters = 854,393"
 
-        node [style=filled]
-        output [label="Action\n(9)"]
+        subgraph cluster_dueling_action {
+            label = "Action Advantage Dist"
 
-        a:e -> output:w
+            action_move_adv_logits [label="Dense(51)\n(4x51)"]
+            action_switch_adv_logits [label="Dense(51)\n(5x51)"]
+            adv_logits [label="Concat\n(9x51)"]
+
+            action_move_dense:e -> action_move_adv_logits:w
+            action_switch_dense:e -> action_switch_adv_logits:w
+            action_move_adv_logits:e -> adv_logits:w
+            action_switch_adv_logits:e -> adv_logits:w
+        }
+
+        subgraph cluster_dueling_value {
+            label = "State Value Dist"
+
+            v_logits [label="Dense(51) + Reshape\n(1x51)"]
+
+            value_dense:e -> v_logits:w
+
+            adv_logits -> v_logits [style=invis]
+        }
+
+        adv_centered_logits [label="Sub Mean\n(9x51)"]
+        q_logits [label="Add\n(9x51)"]
+        q_dist [label="Softmax\n(9x51)"]
+        dist_dueling_output [style=filled label="Action Dist\n(9x51)"]
+
+        adv_logits:e -> adv_centered_logits:w
+        adv_centered_logits:e -> q_logits:w
+        v_logits:e -> q_logits:w
+        q_logits:e -> q_dist:w
+        q_dist:e -> dist_dueling_output:w
     }
 }

@@ -26,6 +26,11 @@ The attention and pooling mechanisms are inspired from the
 [original](https://arxiv.org/abs/1706.03762) attention mechanism for processing
 unordered set-based data rather than natural language.
 
+The model also supports [distributional](https://arxiv.org/abs/1707.06887)
+reinforcemenet learning, where single action values, representing the
+expectation (mean) of the Q-values, are each replaced with discrete probability
+distributions.
+
 ## Worker
 
 The [worker](worker/ModelWorker.ts) is the thread that manages all the

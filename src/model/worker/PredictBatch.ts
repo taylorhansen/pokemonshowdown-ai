@@ -32,6 +32,14 @@ export class PredictBatch {
     }
 
     /**
+     * Creates a PredictBatch.
+     *
+     * @param support Reference to the support of the Q value distribution, of
+     * shape `[1, 1, atoms]`. Used for distributional RL if configured.
+     */
+    public constructor(private readonly support?: tf.Tensor) {}
+
+    /**
      * Adds a predict request to the batch.
      *
      * @param inputs State data to use as inputs.
@@ -82,13 +90,21 @@ export class PredictBatch {
      * After executing the model using the {@link toTensors tensor form} of this
      * batch, use this method to resolve all the corresponding predict requests.
      */
-    public async resolve(results: tf.Tensor2D): Promise<void> {
+    public async resolve(results: tf.Tensor): Promise<void> {
         tf.util.assertShapesMatch(
+            this.support
+                ? [this.length, intToChoice.length, this.support.size]
+                : [this.length, intToChoice.length],
             results.shape,
-            [this.length, intToChoice.length],
             "Misshapen predict results:",
         );
+
+        if (this.support) {
+            results = tf.tidy(() => tf.sum(tf.mul(results, this.support!), -1));
+        }
         const resultData = await results.data<"float32">();
+        results.dispose();
+
         for (let i = 0; i < this.callbacks.length; ++i) {
             this.callbacks[i]({
                 output: Float32Array.from(

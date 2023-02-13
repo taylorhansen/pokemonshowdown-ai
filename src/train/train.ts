@@ -270,6 +270,7 @@ export async function train(
             m.unload();
         }
         targetModel.dispose();
+        Metrics.flush();
     }
     if (paths?.models) {
         await model.save(pathToFileUrl(paths.models));

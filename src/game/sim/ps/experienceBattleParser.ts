@@ -9,6 +9,7 @@ import {
 } from "../../../psbot/handlers/battle/ai/encoder";
 import {BattleParser} from "../../../psbot/handlers/battle/parser/BattleParser";
 import {ExperienceBattleAgent} from "../../experience";
+import * as rewards from "../../rewards";
 
 /**
  * Wraps a BattleParser to track rewards/decisions and emit Experience objects.
@@ -80,7 +81,13 @@ export function experienceBattleParser<
                                 break;
                             case "win":
                                 // Add win/loss reward.
-                                reward += r.value.args[1] === username ? 1 : -1;
+                                reward +=
+                                    r.value.args[1] === username
+                                        ? rewards.win
+                                        : rewards.lose;
+                                break;
+                            case "tie":
+                                reward += rewards.tie;
                                 break;
                             default:
                         }
