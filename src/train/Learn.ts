@@ -365,7 +365,14 @@ export class Learn {
             }
 
             // Apply n-step TD target normally.
-            return tf.add(reward, tf.mul(this.tdScale, targetQ));
+            targetQ = tf.mul(targetQ, tf.sub(1, done));
+            // Technically clipping isn't necessary due to the current algorithm
+            // only providing reward on game-over, just a consistency check.
+            return tf.clipByValue(
+                tf.add(reward, tf.mul(this.tdScale, targetQ)),
+                rewards.min,
+                rewards.max,
+            );
         });
     }
 
