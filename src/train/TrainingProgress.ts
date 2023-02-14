@@ -165,15 +165,10 @@ export class TrainingProgress {
         if (!this.config.eval.report) {
             return;
         }
-        const logger = this.logger.addPrefix(this.stepPrefix(data.step));
-        for (const vs in data.wlt) {
-            if (Object.prototype.hasOwnProperty.call(data.wlt, vs)) {
-                const wlt = data.wlt[vs];
-                logger
-                    .addPrefix(`Evaluate(${vs}): `)
-                    .info(`${wlt.win}-${wlt.loss}-${wlt.tie}`);
-            }
-        }
+        this.logger
+            .addPrefix(this.stepPrefix(data.step))
+            .addPrefix(`Evaluate(${data.opponent}): `)
+            .info(`${data.win}-${data.loss}-${data.tie}`);
     }
 
     /** Log prefix with step number. */

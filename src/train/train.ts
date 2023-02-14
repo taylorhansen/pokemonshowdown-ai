@@ -114,33 +114,30 @@ export async function train(
         },
     );
     const runEval = async (step: number) =>
-        await evaluate
-            .run(
-                step,
-                callback &&
-                    (result => {
-                        if (!config.eval.report && !result.err) {
-                            return;
-                        }
-                        callback({
-                            type: "eval",
-                            step,
-                            id: result.id,
-                            agents: result.agents,
-                            ...(result.winner !== undefined && {
-                                winner: result.winner,
-                            }),
-                            ...(result.err && {
-                                err: serialize(result.err),
-                            }),
-                        });
-                    }),
-            )
-            .then(
-                wlt =>
-                    config.eval.report &&
-                    callback?.({type: "evalDone", step, wlt}),
-            );
+        await evaluate.run(
+            step,
+            callback &&
+                (gameResult => {
+                    if (!config.eval.report && !gameResult.err) {
+                        return;
+                    }
+                    callback({
+                        type: "eval",
+                        step,
+                        id: gameResult.id,
+                        agents: gameResult.agents,
+                        ...(gameResult.winner !== undefined && {
+                            winner: gameResult.winner,
+                        }),
+                        ...(gameResult.err && {
+                            err: serialize(gameResult.err),
+                        }),
+                    });
+                }),
+            callback && config.eval.report
+                ? result => callback({type: "evalDone", step, ...result})
+                : undefined,
+        );
 
     const logMemoryMetrics = (step: number) => {
         if (metrics) {

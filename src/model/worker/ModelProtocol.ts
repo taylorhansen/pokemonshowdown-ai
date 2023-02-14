@@ -7,6 +7,7 @@ import {
     TrainConfig,
 } from "../../config/types";
 import {SimResult} from "../../game/sim/playGame";
+import {EvalResult} from "../../train/Evaluate";
 import {PortMessageBase, PortResultBase} from "../../util/port/PortProtocol";
 import {WorkerProtocol} from "../../util/worker/WorkerProtocol";
 
@@ -136,14 +137,15 @@ export interface ModelTrainEval<TSerialized = true>
     err?: TSerialized extends true ? Buffer : Error;
 }
 
-/** Notification that the current evaluation run has been completed. */
-export interface ModelTrainEvalDone extends ModelTrainDataBase<"evalDone"> {
+/**
+ * Notification that the current evaluation run has been completed for one of
+ * the opponents.
+ */
+export interface ModelTrainEvalDone
+    extends ModelTrainDataBase<"evalDone">,
+        Readonly<EvalResult> {
     /** Step number when eval started. */
     readonly step: number;
-    /** Result counts for each opponent. */
-    readonly wlt: {
-        readonly [vs: string]: {win: number; loss: number; tie: number};
-    };
 }
 
 /** Data for events that get reported during training. */

@@ -10,6 +10,20 @@ import {
 import {Metrics} from "../model/worker/Metrics";
 import {ModelRegistry} from "../model/worker/ModelRegistry";
 
+/** Result of playing evaluation games against an opponent. */
+export interface EvalResult {
+    /** Name of opponent. */
+    opponent: string;
+    /** Number of won games against opponent. */
+    win: number;
+    /** Number of lost games against opponent. */
+    loss: number;
+    /** Number of ties against opponent. */
+    tie: number;
+    /** Total number of games against opponent. */
+    total: number;
+}
+
 /**
  * Encapsulates the evaluation step of training, where the model plays games
  * against baselines and previous versions to track improvement over time.
@@ -56,55 +70,54 @@ export class Evaluate {
      * Runs the evaluation step on the current model versions.
      *
      * @param step Current learning step.
-     * @param callback Called for each game result.
+     * @param gameCallback Called for each game result.
+     * @param callback Called for each opponent after completing games.
      */
     public async run(
         step: number,
-        callback?: (result: GamePoolResult) => void,
-    ): Promise<{[vs: string]: {win: number; loss: number; tie: number}}> {
-        const wlts: {
-            [vs: string]: {win: number; loss: number; tie: number};
-        } = {};
-        await this.games.run(this.genArgs(step), result => {
-            const wlt = (wlts[result.agents[1]] ??= {
+        gameCallback?: (result: GamePoolResult) => void,
+        callback?: (result: EvalResult) => void,
+    ): Promise<void> {
+        const results: {[vs: string]: EvalResult} = {};
+        await this.games.run(this.genArgs(step), gameResult => {
+            const [, vs] = gameResult.agents;
+            const result = (results[vs] ??= {
+                opponent: vs,
                 win: 0,
                 loss: 0,
                 tie: 0,
+                total: 0,
             });
-            if (result.winner === 0) {
-                ++wlt.win;
-            } else if (result.winner === 1) {
-                ++wlt.loss;
+            ++result.total;
+            if (gameResult.winner === 0) {
+                ++result.win;
+            } else if (gameResult.winner === 1) {
+                ++result.loss;
             } else {
-                ++wlt.tie;
+                ++result.tie;
             }
-            callback?.(result);
-        });
-
-        if (this.metrics) {
-            for (const vs in wlts) {
-                if (Object.prototype.hasOwnProperty.call(wlts, vs)) {
-                    const wlt = wlts[vs];
-                    const total = wlt.win + wlt.loss + wlt.tie;
-                    this.metrics?.scalar(
-                        `vs_${vs}/win_rate`,
-                        wlt.win / total,
+            gameCallback?.(gameResult);
+            if (result.total >= this.config.numGames) {
+                callback?.(result);
+                if (this.metrics) {
+                    this.metrics.scalar(
+                        `${vs}/win_avg`,
+                        result.win / result.total,
                         step,
                     );
-                    this.metrics?.scalar(
-                        `vs_${vs}/loss_rate`,
-                        wlt.loss / total,
+                    this.metrics.scalar(
+                        `${vs}/loss_avg`,
+                        result.loss / result.total,
                         step,
                     );
-                    this.metrics?.scalar(
-                        `vs_${vs}/tie_rate`,
-                        wlt.tie / total,
+                    this.metrics.scalar(
+                        `${vs}/tie_avg`,
+                        result.tie / result.total,
                         step,
                     );
                 }
             }
-        }
-        return wlts;
+        });
     }
 
     /** Generates game configs for the thread pool. */
