@@ -6,7 +6,7 @@ import {BattleAgent} from "../../psbot/handlers/battle/agent";
  */
 export interface Experience {
     /** State in which the action was taken. Flattened array data. */
-    state: Float32Array[];
+    state: readonly Float32Array[];
     /** Id of the action that was taken. */
     action: number;
     /**
@@ -14,7 +14,7 @@ export interface Experience {
      */
     reward: number;
     /** Resultant state from action. */
-    nextState: Float32Array[];
+    nextState: readonly Float32Array[];
     /** Binary choice legality data for the {@link nextState next state}. */
     choices: Uint8Array;
     /** Marks {@link nextState} as a terminal state so it won't be processed. */
