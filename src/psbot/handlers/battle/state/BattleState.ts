@@ -16,9 +16,9 @@ export interface ReadonlyBattleState {
     readonly ourSide?: SideID;
 
     /** Gets a team. Throws if invalid. */
-    readonly getTeam: (side: SideID) => Team;
+    readonly getTeam: (side: SideID) => ReadonlyTeam;
     /** Gets a team. Returns `undefined` if invalid. */
-    readonly tryGetTeam: (side: SideID) => Team | undefined;
+    readonly tryGetTeam: (side: SideID) => ReadonlyTeam | undefined;
 
     /**
      * Encodes all state data into a string.
