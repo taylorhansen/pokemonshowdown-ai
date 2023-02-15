@@ -58,10 +58,16 @@ const gameStream = new stream.Writable({
                         const agentRandom = config.exploit.seed
                             ? rng(config.exploit.seed)
                             : undefined;
+                        const {moveOnly} = config.exploit;
                         return {
                             name: config.name,
                             agent: async (state, choices) =>
-                                await randomAgent(state, choices, agentRandom),
+                                await randomAgent(
+                                    state,
+                                    choices,
+                                    moveOnly,
+                                    agentRandom,
+                                ),
                             ...(config.seed && {seed: config.seed}),
                         };
                     }

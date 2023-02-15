@@ -4,6 +4,7 @@ import {
     GameArgsGenOptions,
     GameArgsGenSeeders,
     GamePipeline,
+    GamePoolAgentConfig,
     GamePoolArgs,
     GamePoolResult,
 } from "../game/pool";
@@ -144,17 +145,16 @@ export class Evaluate {
             ...(this.config.pool.reduceLogs && {reduceLogs: true}),
             ...(this.seeders && {seeders: this.seeders}),
         };
-
-        yield* GamePipeline.genArgs({
-            ...opts,
-            opponent: {
+        const opponents: GamePoolAgentConfig[] = [
+            {
                 name: "previous",
                 exploit: {type: "model", model: this.prevModel.name},
             },
-        });
-        yield* GamePipeline.genArgs({
-            ...opts,
-            opponent: {name: "random", exploit: {type: "random"}},
-        });
+            {name: "random", exploit: {type: "random"}},
+            {name: "randmove", exploit: {type: "random", moveOnly: true}},
+        ];
+        for (const opponent of opponents) {
+            yield* GamePipeline.genArgs({...opts, opponent});
+        }
     }
 }

@@ -116,7 +116,7 @@ export class ModelPort {
 
             if (explore && random() < explore.factor) {
                 logger?.debug("Exploring");
-                await randomAgent(state, choices, random);
+                await randomAgent(state, choices, false /*moveOnly*/, random);
             }
             return info;
         };

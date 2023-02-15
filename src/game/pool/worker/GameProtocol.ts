@@ -77,6 +77,8 @@ export interface RandomAgentExploitConfig
     extends AgentExploitConfigBase<"random"> {
     /** Seed for choosing random actions. */
     readonly seed?: string;
+    /** Whether to prefer moves in random actions. */
+    readonly moveOnly?: true;
 }
 
 /** Config describing how the agent should behave when exploiting reward. */
