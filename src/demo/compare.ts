@@ -10,6 +10,7 @@ import {
     GameArgsGenSeeders,
     GamePipeline,
 } from "../game/pool";
+import {AgentExploitConfig} from "../game/pool/worker";
 import {ModelWorker} from "../model/worker";
 import {estimateEta} from "../util/eta";
 import {formatUptime} from "../util/format";
@@ -18,6 +19,14 @@ import {Verbose} from "../util/logging/Verbose";
 import {ensureDir} from "../util/paths/ensureDir";
 import {pathToFileUrl} from "../util/paths/pathToFileUrl";
 import {seeder} from "../util/random";
+
+const specialModels: {
+    readonly [m: string]: AgentExploitConfig<false /*TWithModelPort*/>;
+} = {
+    random: {type: "random"},
+    randmove: {type: "random", moveOnly: true},
+    damage: {type: "random", moveOnly: "damage"},
+};
 
 void (async function () {
     const compareModels = [...new Set(config.compare.models)];
@@ -42,7 +51,7 @@ void (async function () {
     const models = new ModelWorker(config.tf.gpu);
     try {
         for (const model of compareModels) {
-            if (model === "random") {
+            if (Object.prototype.hasOwnProperty.call(specialModels, model)) {
                 continue;
             }
 
@@ -125,10 +134,7 @@ void (async function () {
                     agentConfig: {
                         name: model,
                         // Note: Random seeds filled in by playGames().
-                        exploit:
-                            model === "random"
-                                ? {type: "random"}
-                                : {type: "model", model},
+                        exploit: specialModels[model] ?? {type: "model", model},
                     },
                     requestModelPort: async modelName =>
                         await models.subscribe(modelName),
@@ -144,10 +150,10 @@ void (async function () {
                         opponent: {
                             name: opp,
                             // Note: Random seeds filled in by provided seeders.
-                            exploit:
-                                opp === "random"
-                                    ? {type: "random"}
-                                    : {type: "model", model: opp},
+                            exploit: specialModels[opp] ?? {
+                                type: "model",
+                                model: opp,
+                            },
                         },
                     });
                 }

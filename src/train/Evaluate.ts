@@ -152,6 +152,7 @@ export class Evaluate {
             },
             {name: "random", exploit: {type: "random"}},
             {name: "randmove", exploit: {type: "random", moveOnly: true}},
+            {name: "damage", exploit: {type: "random", moveOnly: "damage"}},
         ];
         for (const opponent of opponents) {
             yield* GamePipeline.genArgs({...opts, opponent});

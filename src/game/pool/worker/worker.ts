@@ -5,6 +5,7 @@ import {ModelPort} from "../../../model/port";
 import {RawPortResultError} from "../../../util/port/PortProtocol";
 import {rng} from "../../../util/random";
 import {WorkerClosed} from "../../../util/worker/WorkerProtocol";
+import {maxDamage} from "../../agent/maxDamage";
 import {randomAgent} from "../../agent/random";
 import {playGame, SimArgsAgent} from "../../sim/playGame";
 import {
@@ -61,13 +62,22 @@ const gameStream = new stream.Writable({
                         const {moveOnly} = config.exploit;
                         return {
                             name: config.name,
-                            agent: async (state, choices) =>
-                                await randomAgent(
-                                    state,
-                                    choices,
-                                    moveOnly,
-                                    agentRandom,
-                                ),
+                            agent:
+                                moveOnly === "damage"
+                                    ? async (state, choices, logger) =>
+                                          await maxDamage(
+                                              state,
+                                              choices,
+                                              logger,
+                                              agentRandom,
+                                          )
+                                    : async (state, choices) =>
+                                          await randomAgent(
+                                              state,
+                                              choices,
+                                              moveOnly,
+                                              agentRandom,
+                                          ),
                             ...(config.seed && {seed: config.seed}),
                         };
                     }

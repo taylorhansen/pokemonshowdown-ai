@@ -155,7 +155,7 @@ export class GamePipeline {
             ...config,
             exploit:
                 config.exploit.type === "random" && exploreSeedRandom
-                    ? {type: "random", seed: exploreSeedRandom()}
+                    ? {...config.exploit, seed: exploreSeedRandom()}
                     : config.exploit,
             ...(config.explore &&
                 exploreSeedRandom && {

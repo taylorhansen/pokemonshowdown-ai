@@ -104,7 +104,13 @@ export const config: Config = {
     },
     compare: {
         name: "latest-original-random",
-        models: ["train", "train/checkpoints/episode-0", "random"],
+        models: [
+            "train",
+            "train/checkpoints/episode-0",
+            "damage",
+            "randmove",
+            "random",
+        ],
         numGames: 256,
         threshold: 0.55,
         batchPredict: {

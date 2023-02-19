@@ -131,7 +131,10 @@ export async function startPsBattle(
 
         const handler = new handlerCtor({
             username: options.players[id].name,
-            ...options.players[id],
+            agent: options.players[id].agent,
+            ...(options.players[id].parser && {
+                parser: options.players[id].parser,
+            }),
             sender,
             logger: innerLog.addPrefix("BattleHandler: "),
         });

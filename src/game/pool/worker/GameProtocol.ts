@@ -77,8 +77,12 @@ export interface RandomAgentExploitConfig
     extends AgentExploitConfigBase<"random"> {
     /** Seed for choosing random actions. */
     readonly seed?: string;
-    /** Whether to prefer moves in random actions. */
-    readonly moveOnly?: true;
+    /**
+     * Whether to prefer moves in random actions. If `"damage"`, also
+     * prioritizes moves with the most expected damage against the opposing
+     * active pokemon.
+     */
+    readonly moveOnly?: true | "damage";
 }
 
 /** Config describing how the agent should behave when exploiting reward. */
