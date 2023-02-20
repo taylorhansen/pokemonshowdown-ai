@@ -46,11 +46,11 @@ export function createModel(
 
     const globalFeatures: tf.SymbolicTensor[] = [];
 
-    const roomStatus = inputFeatures(name, "room/status", 32, random);
+    const roomStatus = inputFeatures(name, "room/status", 64, random);
     inputs.push(roomStatus.input);
     globalFeatures.push(roomStatus.features);
 
-    const teamStatus = inputFeatures(name, "team/status", 32, random);
+    const teamStatus = inputFeatures(name, "team/status", 64, random);
     inputs.push(teamStatus.input);
     globalFeatures.push(teamStatus.features);
 
@@ -63,7 +63,7 @@ export function createModel(
     // For [2,6,X] features where active traits are not overridden.
     const pokemonFeatures: tf.SymbolicTensor[] = [];
 
-    const activeVolatile = inputFeatures(name, "active/volatile", 64, random);
+    const activeVolatile = inputFeatures(name, "active/volatile", 128, random);
     inputs.push(activeVolatile.input);
 
     const aliveInput = inputLayer(name, "pokemon/alive");
@@ -73,11 +73,11 @@ export function createModel(
         "pokemon/alive",
     )(aliveInput);
 
-    const basic = inputFeatures(name, "pokemon/basic", 32, random);
+    const basic = inputFeatures(name, "pokemon/basic", 128, random);
     inputs.push(basic.input);
     pokemonFeatures.push(basic.features);
 
-    const speciesUnits = 64;
+    const speciesUnits = 128;
     const species = inputFeatures(
         name,
         "pokemon/species",
@@ -87,17 +87,17 @@ export function createModel(
     inputs.push(species.input);
     activeAndPokemonFeatures.push(species.features);
 
-    const typesUnits = 64;
+    const typesUnits = 128;
     const types = inputFeatures(name, "pokemon/types", typesUnits, random);
     inputs.push(types.input);
     activeAndPokemonFeatures.push(types.features);
 
-    const statsUnits = 64;
+    const statsUnits = 128;
     const stats = inputFeatures(name, "pokemon/stats", statsUnits, random);
     inputs.push(stats.input);
     activeAndPokemonFeatures.push(stats.features);
 
-    const abilityUnits = 64;
+    const abilityUnits = 128;
     const ability = inputFeatures(
         name,
         "pokemon/ability",
@@ -108,18 +108,18 @@ export function createModel(
     activeAndPokemonFeatures.push(ability.features);
 
     const itemLabels = ["pokemon/item", "pokemon/last_item"];
-    const item = inputFeaturesList(name, itemLabels, 64, random);
+    const item = inputFeaturesList(name, itemLabels, 128, random);
     inputs.push(...item.inputs);
     pokemonFeatures.push(...item.features);
 
-    const moveUnits = 64;
+    const moveUnits = 128;
     const moves = inputFeatures(name, "pokemon/moves", moveUnits, random);
     inputs.push(moves.input);
     let moveset = selfAttentionBlock(
         name,
         "pokemon/moves",
         4 /*heads*/,
-        16 /*headUnits*/,
+        32 /*headUnits*/,
         moveUnits /*units*/,
         "_1",
         random,
@@ -128,7 +128,7 @@ export function createModel(
         name,
         "pokemon/moves",
         4 /*heads*/,
-        16 /*headUnits*/,
+        32 /*headUnits*/,
         moveUnits /*units*/,
         "_2",
         random,
@@ -137,7 +137,7 @@ export function createModel(
         name,
         "pokemon/moves",
         4 /*heads*/,
-        16 /*headUnits*/,
+        32 /*headUnits*/,
         moveUnits /*units*/,
         random,
     )(moveset);
@@ -172,7 +172,7 @@ export function createModel(
         activeAndPokemonSplit.active,
         pokemonSplit.active,
     ];
-    const activeUnits = 128;
+    const activeUnits = 256;
     let active = combinePokemon(
         name,
         "active",
@@ -186,7 +186,7 @@ export function createModel(
     globalFeatures.push(active);
 
     const benchFeatures = [activeAndPokemonSplit.bench, pokemonSplit.bench];
-    const benchUnits = 128;
+    const benchUnits = 256;
     let bench = combinePokemon(
         name,
         "bench",
@@ -197,7 +197,7 @@ export function createModel(
         name,
         "bench",
         8 /*heads*/,
-        16 /*headUnits*/,
+        32 /*headUnits*/,
         benchUnits /*units*/,
         "_1",
         random,
@@ -206,7 +206,7 @@ export function createModel(
         name,
         "bench",
         8 /*heads*/,
-        16 /*headUnits*/,
+        32 /*headUnits*/,
         benchUnits /*units*/,
         "_2",
         random,
@@ -216,7 +216,7 @@ export function createModel(
         name,
         "bench",
         8 /*heads*/,
-        16 /*headUnits*/,
+        32 /*headUnits*/,
         benchUnits /*units*/,
         random,
     )(bench);
@@ -230,7 +230,7 @@ export function createModel(
 
     //#region Global feature connections.
 
-    let global = aggregateGlobal(name, "global", 128, random)(globalFeatures);
+    let global = aggregateGlobal(name, "global", 256, random)(globalFeatures);
     // Emphasize active pokemon when choosing action values via skip connection.
     global = tf.layers
         .concatenate({name: `${name}/active_global/concat`})
@@ -248,7 +248,7 @@ export function createModel(
         // Note: Slicing through both teams and pokemon list to get first active
         // override traits, i.e. direct move features.
         sliceArgs: {begin: [0, 0], size: [1, 1]},
-        units: 128,
+        units: 256,
         ...(config?.dist && {atoms: config.dist}),
         ...(random && {random}),
     })(moveset, global);
@@ -259,7 +259,7 @@ export function createModel(
         numActions: teamSize - numActive,
         inputDim: benchUnits,
         sliceArgs: {begin: 0, size: 1},
-        units: 128,
+        units: 256,
         ...(config?.dist && {atoms: config.dist}),
         ...(random && {random}),
     })(bench, global);
@@ -275,7 +275,7 @@ export function createModel(
         const value = stateValue({
             name,
             label: "state",
-            units: 128,
+            units: 256,
             ...(config.dist && {atoms: config.dist}),
             ...(random && {random}),
         })(global);

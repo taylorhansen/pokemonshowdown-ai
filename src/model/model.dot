@@ -69,17 +69,17 @@ digraph model {
     subgraph cluster_encoder {
         label = "Individual Encoders"
 
-        room_status_dense [label = "2 x (Dense(32) + Leaky ReLU)\n(32)"]
-        team_status_dense [label = "2 x (Dense(32) + Leaky ReLU)\n(2x32)"]
-        active_volatile_dense [label = "2 x (Dense(64) + Leaky ReLU)\n(2x1x64)"]
-        pokemon_basic_dense [label="2 x (Dense(32) + Leaky ReLU)\n(2x6x32)"]
-        pokemon_species_dense [label="2 x (Dense(64) + Leaky ReLU)\n(2x7x64)"]
-        pokemon_types_dense [label="2 x (Dense(64) + Leaky ReLU)\n(2x7x64)"]
-        pokemon_stats_dense [label="2 x (Dense(64) + Leaky ReLU)\n(2x7x64)"]
-        pokemon_ability_dense [label="2 x (Dense(64) + Leaky ReLU)\n(2x7x64)"]
-        pokemon_item_dense [label="2 x (Dense(64) + Leaky ReLU)\n(2x6x64)"]
-        pokemon_last_item_dense [label="2 x (Dense(64) + Leaky ReLU)\n(2x6x64)"]
-        pokemon_moves_dense [label="2 x (Dense(64) + Leaky ReLU)\n(2x7x4x64)"]
+        room_status_dense [label = "2 x (Dense(64) + Leaky ReLU)\n(64)"]
+        team_status_dense [label = "2 x (Dense(64) + Leaky ReLU)\n(2x64)"]
+        active_volatile_dense [label = "2 x (Dense(128) + Leaky ReLU)\n(2x1x128)"]
+        pokemon_basic_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x6x128)"]
+        pokemon_species_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
+        pokemon_types_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
+        pokemon_stats_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
+        pokemon_ability_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
+        pokemon_item_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x6x128)"]
+        pokemon_last_item_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x6x128)"]
+        pokemon_moves_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x4x128)"]
 
         room_status:e -> room_status_dense:w
         team_status:e -> team_status_dense:w
@@ -100,8 +100,8 @@ digraph model {
     subgraph cluster_move {
         label = "Move Features"
 
-        pokemon_moves_attention [label="2 x SAB(4,16,64)\n(2x7x4x64)"]
-        pokemon_moves_aggregate [label="PMA(4,16,64)\n(2x7x64)"]
+        pokemon_moves_attention [label="2 x SAB(4,32,128)\n(2x7x4x128)"]
+        pokemon_moves_aggregate [label="PMA(4,32,128)\n(2x7x128)"]
 
         pokemon_moves_dense:s -> pokemon_moves_attention:n
         pokemon_moves_attention:e -> pokemon_moves_aggregate:w
@@ -112,10 +112,10 @@ digraph model {
     subgraph cluster_split {
         label = "Active/Bench Split"
 
-        active_and_pokemon_concat [label="Concat\n(2x7x320)"]
-        active_and_pokemon_split [label="Split + Reshape\n(2x1x640), (2x5x320)"]
-        pokemon_concat [label="Concat\n(2x6x160)"]
-        pokemon_split [label="Split\n(2x1x160), (2x5x160)"]
+        active_and_pokemon_concat [label="Concat\n(2x7x640)"]
+        active_and_pokemon_split [label="Split + Reshape\n(2x1x1280), (2x5x640)"]
+        pokemon_concat [label="Concat\n(2x6x384)"]
+        pokemon_split [label="Split\n(2x1x384), (2x5x384)"]
         alive_split [label="Split\n(2x1), (2x5)"]
 
         pokemon_species_dense:e -> active_and_pokemon_concat:w
@@ -134,10 +134,10 @@ digraph model {
     subgraph cluster_active {
         label = "Active Features"
 
-        active_concat [label="Concat\n(2x1x864)"]
-        active_dense [label="Dense(128) + Leaky ReLU\n(2x1x128)"]
-        active_mask [label="Mask\n(2x1x128)"]
-        active_flatten [label="Flatten\n(256)"]
+        active_concat [label="Concat\n(2x1x1792)"]
+        active_dense [label="Dense(256) + Leaky ReLU\n(2x1x256)"]
+        active_mask [label="Mask\n(2x1x256)"]
+        active_flatten [label="Flatten\n(512)"]
 
         active_volatile_dense:e -> active_concat:w
         active_and_pokemon_split:se -> active_concat:w
@@ -151,9 +151,9 @@ digraph model {
     subgraph cluster_bench {
         label = "Bench Features"
 
-        bench_concat [label="Concat\n(2x5x480)"]
-        bench_dense [label="Dense(128) + Leaky ReLU\n(2x1x128)"]
-        bench_mask [label="Mask\n(2x5x128)"]
+        bench_concat [label="Concat\n(2x5x1024)"]
+        bench_dense [label="Dense(256) + Leaky ReLU\n(2x1x256)"]
+        bench_mask [label="Mask\n(2x5x256)"]
 
         active_and_pokemon_split:e -> bench_concat:w
         pokemon_split:e ->  bench_concat:w
@@ -166,8 +166,8 @@ digraph model {
     subgraph cluster_bench_aggregate {
         label = "Bench Aggregate"
 
-        bench_attention [label="SAB(8,16,128)\n(2x5x128)"]
-        bench_aggregate [label="PMA(8,16,128\n(2x128)"]
+        bench_attention [label="SAB(8,32,256)\n(2x5x256)"]
+        bench_aggregate [label="PMA(8,32,256)\n(2x256)"]
 
         bench_mask:e -> bench_attention:w
         bench_attention:e -> bench_aggregate:w
@@ -177,9 +177,9 @@ digraph model {
     subgraph cluster_global {
         label = "Global"
 
-        global_concat [label="Flatten + Concat\n(608)"]
-        global_dense [label="2 x (Dense(128) + Leaky RelU)\n(128)"]
-        active_global_concat [label="Concat\n(384)"]
+        global_concat [label="Flatten + Concat\n(1216)"]
+        global_dense [label="2 x (Dense(256) + Leaky RelU)\n(256)"]
+        active_global_concat [label="Concat\n(768)"]
 
         room_status_dense:e ->  global_concat:w
         team_status_dense:e -> global_concat:w
@@ -196,9 +196,9 @@ digraph model {
         subgraph cluster_action_move {
             label = "Move"
 
-            action_move_slice [label="Slice + Reshape\n(4x64)"]
-            action_move_concat [label="Concat\n(4x448)"]
-            action_move_dense [label="Dense(128) + Leaky ReLU\n(4x128)"]
+            action_move_slice [label="Slice + Reshape\n(4x128)"]
+            action_move_concat [label="Concat\n(4x896)"]
+            action_move_dense [label="Dense(256) + Leaky ReLU\n(4x256)"]
 
             pokemon_moves_attention:e -> action_move_slice:w
             action_move_slice:e -> action_move_concat:w
@@ -211,9 +211,9 @@ digraph model {
         subgraph cluster_action_switch {
             label = "Switch"
 
-            action_switch_slice [label="Slice + Reshape\n(5x128)"]
-            action_switch_concat [label="Concat\n(5x512)"]
-            action_switch_dense [label="Dense(128) + Leaky ReLU\n(5x128)"]
+            action_switch_slice [label="Slice + Reshape\n(5x256)"]
+            action_switch_concat [label="Concat\n(5x1024)"]
+            action_switch_dense [label="Dense(256) + Leaky ReLU\n(5x256)"]
 
             bench_attention:e -> action_switch_slice:w
             action_switch_slice:e -> action_switch_concat:w
@@ -227,7 +227,7 @@ digraph model {
     subgraph cluster_value {
         label = "State"
 
-        value_dense [label="Dense(128) + Leaky ReLU\n(128)"]
+        value_dense [label="Dense(256) + Leaky ReLU\n(256)"]
 
         active_global_concat:e -> value_dense:w
     }
@@ -321,7 +321,7 @@ digraph model {
                 adv_logits -> v_logits [style=invis]
             }
 
-            adv_centered_logits [label="Sub Mean\n(9xA)"]
+            adv_centered_logits [label="Sub Mean\nOver Actions\n(9xA)"]
             q_logits [label="Add\n(9xA)"]
             q_dist_dueling [label="Softmax\n(9xA)"]
             dist_dueling_output [style=filled label="Action Dist\n(9xA)"]
