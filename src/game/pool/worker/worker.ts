@@ -21,6 +21,9 @@ if (!parentPort) {
     throw new Error("No parent port!");
 }
 
+// Used for debugging.
+Error.stackTraceLimit = Infinity;
+
 // Stream mostly used for buffering capability.
 // Note: Any errors in handling specific requests get wrapped and sent to the
 // calling thread. If something very bad happens, the AsyncPort/WorkerPort that

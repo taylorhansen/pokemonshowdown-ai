@@ -18,12 +18,12 @@ if (!parentPort) {
     throw new Error("No parent port!");
 }
 
+// Make sure we're using the right TF backend.
+const modelWorkerData = workerData as ModelWorkerData;
+importTfn(modelWorkerData.gpu);
+
 // Used for debugging.
 Error.stackTraceLimit = Infinity;
-
-// Make sure we're using the right TF backend.
-const {gpu} = workerData as ModelWorkerData;
-importTfn(gpu);
 
 tf.enableProdMode();
 

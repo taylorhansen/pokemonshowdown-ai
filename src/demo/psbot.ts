@@ -35,7 +35,7 @@ void (async function () {
         bot.setAvatar(config.psbot.avatar);
     }
 
-    const models = new ModelWorker(config.tf.gpu);
+    const models = new ModelWorker("psbot", config.tf.gpu);
     const model = await models.load(
         "model",
         config.psbot.batchPredict,

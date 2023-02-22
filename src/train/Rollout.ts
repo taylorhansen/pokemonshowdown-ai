@@ -54,7 +54,7 @@ export class Rollout {
         private readonly logPath?: string,
         private readonly seeders?: RolloutSeeders,
     ) {
-        this.games = new GamePipeline(config.pool);
+        this.games = new GamePipeline(`${name}/rollout`, config.pool);
         this.exploration = {factor: config.policy.exploration};
     }
 

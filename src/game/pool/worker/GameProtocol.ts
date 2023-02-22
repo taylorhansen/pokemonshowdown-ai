@@ -8,6 +8,8 @@ import {PlayArgs} from "../GamePool";
 
 /** Typings for the `workerData` object given to the game worker. */
 export interface GameWorkerData {
+    /** Name of the worker for logging/debugging. */
+    readonly name: string;
     /**
      * Maximum amount of turns until the game is considered a tie. Games can go
      * on forever if this is not set and both players only decide to switch.

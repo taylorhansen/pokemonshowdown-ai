@@ -54,7 +54,7 @@ export class Evaluate {
         private readonly logPath?: string,
         private readonly seeders?: GameArgsGenSeeders,
     ) {
-        this.games = new GamePipeline(config.pool);
+        this.games = new GamePipeline(`${name}/eval`, config.pool);
     }
 
     /** Closes game threads. */

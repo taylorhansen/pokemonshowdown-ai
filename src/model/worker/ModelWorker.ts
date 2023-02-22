@@ -1,6 +1,6 @@
 import {resolve} from "path";
 import {deserialize} from "v8";
-import {MessagePort, Worker} from "worker_threads";
+import {MessagePort, ResourceLimits, Worker} from "worker_threads";
 import {
     BatchPredictConfig,
     ModelConfig,
@@ -24,16 +24,27 @@ export class ModelWorker {
     /**
      * Creates a ModelWorker.
      *
+     * @param Name of worker for logging/debugging.
      * @param gpu Whether to enable GPU support. Default `false`.
      * @param metricsPath Path to store metrics in.
+     * @param resourceLimits Optional resource constraints for the worker.
      */
-    public constructor(gpu = false, metricsPath?: string) {
+    public constructor(
+        name: string,
+        gpu = false,
+        metricsPath?: string,
+        resourceLimits?: ResourceLimits,
+    ) {
         const workerData: ModelWorkerData = {
+            name,
             ...(gpu && {gpu: true}),
             ...(metricsPath && {metricsPath}),
         };
         this.workerPort = new WorkerPort(
-            new Worker(workerScriptPath, {workerData}),
+            new Worker(workerScriptPath, {
+                workerData,
+                ...(resourceLimits && {resourceLimits}),
+            }),
         );
     }
 

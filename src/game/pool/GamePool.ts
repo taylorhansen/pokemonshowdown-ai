@@ -79,16 +79,19 @@ export class GamePool {
     /**
      * Creates a GamePool.
      *
+     * @param name Name prefix for threads.
      * @param config Config for creating the thread pool.
      */
-    public constructor(config: GamePoolConfig) {
+    public constructor(name: string, config: GamePoolConfig) {
         this.pool = new ThreadPool(
             config.numThreads,
             workerScriptPath,
             GameWorker,
-            () => ({
+            i => ({
+                name: `${name}-${i}`,
                 ...(config.maxTurns && {maxTurns: config.maxTurns}),
             }) /*workerData*/,
+            config.resourceLimits,
         );
     }
 

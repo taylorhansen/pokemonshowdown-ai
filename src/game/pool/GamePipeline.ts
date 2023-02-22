@@ -57,10 +57,11 @@ export class GamePipeline {
     /**
      * Creates a GamePipeline.
      *
+     * @param name Name prefix for threads.
      * @param config Thread pool config.
      */
-    public constructor(config: GamePoolConfig) {
-        this.pool = new GamePool(config);
+    public constructor(name: string, config: GamePoolConfig) {
+        this.pool = new GamePool(name, config);
     }
 
     /**

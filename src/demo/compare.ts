@@ -48,7 +48,7 @@ void (async function () {
         join(config.paths.logs, "compare", config.compare.name),
     );
 
-    const models = new ModelWorker(config.tf.gpu);
+    const models = new ModelWorker("compare", config.tf.gpu);
     try {
         for (const model of compareModels) {
             if (Object.prototype.hasOwnProperty.call(specialModels, model)) {
@@ -160,7 +160,7 @@ void (async function () {
             }
         };
 
-        const games = new GamePipeline(config.compare.pool);
+        const games = new GamePipeline("compare", config.compare.pool);
         try {
             const startTime = process.uptime();
             await games.run(genArgs(), result => {

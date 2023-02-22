@@ -13,6 +13,8 @@ import {WorkerProtocol} from "../../util/worker/WorkerProtocol";
 
 /** Typings for the `workerData` object given to the model worker. */
 export interface ModelWorkerData {
+    /** Name of the worker for logging/debugging. */
+    name: string;
     /** Whether to enable GPU support. */
     gpu?: boolean;
     /** Path to store metrics in. */

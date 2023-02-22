@@ -1,3 +1,4 @@
+import {ResourceLimits} from "worker_threads";
 import {Verbose} from "../util/logging/Verbose";
 
 /** Config typings. */
@@ -84,6 +85,8 @@ export interface TrainConfig {
     readonly progress?: boolean;
     /** Verbosity level for logging. Default highest. */
     readonly verbose?: Verbose;
+    /** Optional resource constraints for the TF thread. */
+    readonly resourceLimits?: ResourceLimits;
 }
 
 /**
@@ -141,6 +144,8 @@ export interface GamePoolConfig {
      * Note that if a game encounters an error then it will always log to disk.
      */
     readonly reduceLogs?: boolean;
+    /** Optional resource constraints for the game threads. */
+    readonly resourceLimits?: ResourceLimits;
 }
 
 /** Configuration for the exploration policy during the rollout phase. */

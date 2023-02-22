@@ -53,6 +53,7 @@ export const config: Config = {
                 numThreads,
                 maxTurns,
                 reduceLogs: true,
+                resourceLimits: {maxOldGenerationSizeMb: 512},
             },
             policy: {
                 exploration: 1.0,
@@ -85,6 +86,7 @@ export const config: Config = {
                 numThreads,
                 maxTurns,
                 reduceLogs: true,
+                resourceLimits: {maxOldGenerationSizeMb: 256},
             },
             interval: 1000,
             report: true,
@@ -101,6 +103,7 @@ export const config: Config = {
         checkpointInterval: 1000,
         progress: true,
         verbose: Verbose.Info,
+        resourceLimits: {maxOldGenerationSizeMb: 1024},
     },
     compare: {
         name: "latest-original-random",

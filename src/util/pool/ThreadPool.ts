@@ -1,4 +1,4 @@
-import {Worker} from "worker_threads";
+import {ResourceLimits, Worker} from "worker_threads";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {WorkerPort} from "../worker/WorkerPort";
 import {WorkerProtocol} from "../worker/WorkerProtocol";
@@ -69,12 +69,14 @@ export class ThreadPool<
      * @param workerData Function that generates data for each worker being
      * created. If a worker has to be restarted, the same instance of the
      * generated worker data will be passed back to it.
+     * @param resourceLimits Optional resource constraints for the thread.
      */
     public constructor(
         public readonly numThreads: number,
         private readonly scriptPath: string,
         private readonly workerPortCtor: new (worker: Worker) => TWorker,
-        workerData: () => PromiseLike<TWorkerData> | TWorkerData,
+        workerData: (i: number) => TWorkerData,
+        resourceLimits?: ResourceLimits,
     ) {
         if (numThreads <= 0) {
             throw new Error(
@@ -84,9 +86,7 @@ export class ThreadPool<
         this.workerEvents.setMaxListeners(this.numThreads);
 
         for (let i = 0; i < this.numThreads; ++i) {
-            void (async () => await workerData?.())().then(data =>
-                this.addWorker(data),
-            );
+            this.addWorker(workerData?.(i), resourceLimits);
         }
     }
 
@@ -182,9 +182,16 @@ export class ThreadPool<
      * Adds a new worker to the pool.
      *
      * @param workerData Optional data to pass to the worker.
+     * @param resourceLimits Optional resource constraints for the thread.
      */
-    private addWorker(workerData: TWorkerData): void {
-        const worker = new Worker(this.scriptPath, {workerData});
+    private addWorker(
+        workerData: TWorkerData,
+        resourceLimits?: ResourceLimits,
+    ): void {
+        const worker = new Worker(this.scriptPath, {
+            workerData,
+            ...(resourceLimits && {resourceLimits}),
+        });
         const port = new this.workerPortCtor(worker);
         worker.on("error", err => {
             // Broadcast error for logging if possible.

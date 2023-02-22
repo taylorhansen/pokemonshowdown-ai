@@ -35,7 +35,12 @@ void (async function () {
     await Promise.all([modelPath, logPath, metricsPath].map(ensureDir));
 
     /** Manages the worker thread for Tensorflow ops. */
-    const models = new ModelWorker(config.tf.gpu, metricsPath);
+    const models = new ModelWorker(
+        "train",
+        config.tf.gpu,
+        metricsPath,
+        config.train.resourceLimits,
+    );
 
     // Create or load neural network.
     let model: string;
