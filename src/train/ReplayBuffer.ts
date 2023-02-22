@@ -2,11 +2,15 @@ import * as tf from "@tensorflow/tfjs";
 import {Experience} from "../game/experience";
 import {BatchTensorExperience} from "../game/experience/tensor";
 import {flattenedInputShapes, modelInputShapes} from "../model/shapes";
+import {Metrics} from "../model/worker/Metrics";
 import {intToChoice} from "../psbot/handlers/battle/agent";
 import {Rng} from "../util/random";
 
 /** Experience replay buffer, implemented as a circular buffer. */
 export class ReplayBuffer {
+    /** Metrics logger. */
+    private readonly metrics = Metrics.get(`${this.name}/replay`);
+
     // Transpose and stack buffered experiences to make batching easier.
     private readonly states = Array.from(
         modelInputShapes,
@@ -32,9 +36,13 @@ export class ReplayBuffer {
     /**
      * Creates a ReplayBuffer.
      *
+     * @param name Module name for logging.
      * @param maxSize Size of the buffer.
      */
-    public constructor(public readonly maxSize: number) {}
+    public constructor(
+        public readonly name: string,
+        public readonly maxSize: number,
+    ) {}
 
     /**
      * Adds a new Experience to the buffer. If full, the oldest one is
@@ -115,5 +123,34 @@ export class ReplayBuffer {
             choices: tf.tensor2d(choices, [size, intToChoice.length], "bool"),
             done: tf.tensor1d(dones, "float32"),
         }));
+    }
+
+    /** Logs metrics for the replay buffer. */
+    public logMetrics(step: number): void {
+        if (!this.metrics) {
+            return;
+        }
+        this.metrics.scalar("length", this._length, step);
+
+        let realLen = 0;
+        const unique = new Set<Float32Array>();
+        for (const a of this.states[0]) {
+            if (a !== undefined) {
+                unique.add(a);
+                ++realLen;
+            }
+        }
+        if (this._length !== realLen) {
+            // Probably should never happen?
+            this.metrics.scalar("real_len", realLen, step);
+        }
+        for (const a of this.nextStates[0]) {
+            if (a !== undefined) {
+                unique.add(a);
+            }
+        }
+        // Measure of the amount of sharing between state/next-state vectors.
+        this.metrics.scalar("unique", unique.size, step);
+        unique.clear();
     }
 }

@@ -140,14 +140,27 @@ export async function train(
         );
 
     const logMemoryMetrics = (step: number) => {
-        if (metrics) {
-            const memory = tf.memory();
-            metrics.scalar("memory/num_bytes", memory.numBytes, step);
-            metrics.scalar("memory/num_tensors", memory.numTensors, step);
+        if (!metrics) {
+            return;
         }
+
+        const tfMem = tf.memory();
+        metrics.scalar("memory/tf_num_bytes", tfMem.numBytes, step);
+        metrics.scalar("memory/tf_num_tensors", tfMem.numTensors, step);
+
+        const mem = process.memoryUsage();
+        metrics.scalar("memory/rss", mem.rss, step);
+        // Note: All stats except rss apply only to this thread.
+        metrics.scalar("memory/heap_used", mem.heapUsed, step);
+        metrics.scalar("memory/heap_total", mem.heapTotal, step);
+        metrics.scalar("memory/external", mem.external, step);
+        metrics.scalar("memory/array_buffers", mem.arrayBuffers, step);
     };
 
-    const replayBuffer = new ReplayBuffer(config.experience.bufferSize);
+    const replayBuffer = new ReplayBuffer(
+        "train",
+        config.experience.bufferSize,
+    );
     const bufferRandom = config.seeds?.learn
         ? rng(config.seeds.learn)
         : undefined;
@@ -180,6 +193,7 @@ export async function train(
         evalModel.lock("train", step);
         prevModel.lock("train", step);
 
+        replayBuffer.logMetrics(step);
         logMemoryMetrics(step);
 
         lastEval = runEval(step);
@@ -209,6 +223,8 @@ export async function train(
                     tf.dispose(batch);
                     if (step % config.learn.metricsInterval === 0) {
                         await learn.logOptimizerWeights(step);
+                        replayBuffer.logMetrics(step);
+                        logMemoryMetrics(step);
 
                         // Prevent buffer buildup from large histograms.
                         Metrics.flush();
@@ -226,7 +242,6 @@ export async function train(
                 });
 
                 rollout.step(step);
-                logMemoryMetrics(step);
 
                 if (step % config.learn.targetInterval === 0) {
                     targetModel.setWeights(model.getWeights());
