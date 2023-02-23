@@ -1,16 +1,21 @@
 import {workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
-import {importTfn} from "../../util/tfn";
+import {importTfn, Tfn} from "../../util/tfn";
 import {ModelWorkerData} from "./ModelProtocol";
 
-const {gpu, metricsPath} = workerData as ModelWorkerData;
-const tfn = importTfn(gpu);
+const modelWorkerData = workerData as ModelWorkerData;
+
+let writer: ReturnType<Tfn["node"]["summaryFileWriter"]> | undefined;
+if (modelWorkerData?.metricsPath) {
+    const tfn = importTfn(modelWorkerData.gpu);
+    writer = tfn.node.summaryFileWriter(
+        modelWorkerData.metricsPath,
+        100 /*maxQueue*/,
+    );
+}
 
 /** Used for writing model summary metrics to Tensorboard. */
 export class Metrics {
-    private static readonly writer = metricsPath
-        ? tfn.node.summaryFileWriter(metricsPath, 100 /*maxQueue*/)
-        : null;
     private static readonly instances = new Map<string, Metrics>();
 
     private constructor(public readonly name: string) {}
@@ -20,7 +25,7 @@ export class Metrics {
      * {@link ModelWorkerData.logPath} is not set.
      */
     public static get(name: string): Metrics | null {
-        if (!Metrics.writer) {
+        if (!writer) {
             return null;
         }
         let m = Metrics.instances.get(name);
@@ -32,14 +37,14 @@ export class Metrics {
 
     /** Flushes the log writer. */
     public static flush(): void {
-        Metrics.writer?.flush();
+        writer?.flush();
     }
 
-    private static ensureWriter(): NonNullable<(typeof Metrics)["writer"]> {
-        if (!Metrics.writer) {
+    private static ensureWriter(): NonNullable<typeof writer> {
+        if (!writer) {
             throw new Error("No metrics writer available");
         }
-        return Metrics.writer;
+        return writer;
     }
 
     /** Logs a scalar value. */
