@@ -124,6 +124,7 @@ export const config: Config = {
             numThreads,
             maxTurns: 100,
             reduceLogs: true,
+            resourceLimits: {maxOldGenerationSizeMb: 256},
         },
         seeds: {
             battle: "stu",
