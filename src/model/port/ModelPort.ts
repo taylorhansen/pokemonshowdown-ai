@@ -165,6 +165,9 @@ export class ModelPort {
                     ...(lastAction !== undefined && {lastAction}),
                     ...(reward !== undefined && {reward}),
                 },
+                // Since state vectors are somewhat large (~40k floats) and are
+                // sent very frequently, a buffer transfer can lighten the load
+                // somewhat.
                 [...state.map(a => a.buffer), choices.buffer],
                 result =>
                     result.type === "error" ? rej(result.err) : res(result),

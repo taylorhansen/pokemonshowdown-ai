@@ -103,14 +103,7 @@ export class RolloutModel {
             "message",
             (msg: ModelPortMessage) =>
                 void this.handle(msg, ec)
-                    .then(result => {
-                        port1.postMessage(
-                            result,
-                            result.type === "predict"
-                                ? [result.output.buffer]
-                                : [],
-                        );
-                    })
+                    .then(result => port1.postMessage(result))
                     .catch(err => {
                         const result: RawPortResultError = {
                             type: "error",

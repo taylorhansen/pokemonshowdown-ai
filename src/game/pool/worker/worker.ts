@@ -40,14 +40,14 @@ const gameStream = new stream.Writable({
         const transferList: TransferListItem[] = [];
         const modelPorts: ModelPort[] = [];
         try {
-            const experiencePorts: {[name: string]: ModelPort} = {};
+            const experiencePorts = new Map<string, ModelPort>();
             const agents = msg.agents.map<SimArgsAgent>(config => {
                 switch (config.exploit.type) {
                     case "model": {
                         const modelPort = new ModelPort(config.exploit.port);
                         modelPorts.push(modelPort);
                         if (config.emitExperience) {
-                            experiencePorts[config.name] = modelPort;
+                            experiencePorts.set(config.name, modelPort);
                         }
                         return {
                             name: config.name,
@@ -104,17 +104,10 @@ const gameStream = new stream.Writable({
                     ...(msg.play.onlyLogOnError && {onlyLogOnError: true}),
                     ...(msg.play.seed && {seed: msg.play.seed}),
                 },
-                async (name, state, action, reward) => {
-                    if (
-                        !Object.prototype.hasOwnProperty.call(
-                            experiencePorts,
-                            name,
-                        )
-                    ) {
-                        return;
-                    }
-                    await experiencePorts[name].finalize(state, action, reward);
-                },
+                async (name, state, action, reward) =>
+                    await experiencePorts
+                        .get(name)
+                        ?.finalize(state, action, reward),
             );
 
             result = {
@@ -140,6 +133,7 @@ const gameStream = new stream.Writable({
             for (const port of modelPorts) {
                 port.close();
             }
+            modelPorts.length = 0;
         }
         parentPort!.postMessage(result, transferList);
         callback();

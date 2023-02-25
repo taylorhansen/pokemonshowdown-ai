@@ -205,15 +205,9 @@ export class ModelRegistry {
             (msg: ModelPortMessage) =>
                 msg.type === "predict" &&
                 void this.predict(msg)
-                    .then(prediction => {
-                        const result: PredictWorkerResult = {
-                            type: "predict",
-                            rid: msg.rid,
-                            done: true,
-                            ...prediction,
-                        };
-                        port1.postMessage(result, [result.output.buffer]);
-                    })
+                    // Note: Prediction buffers can't be transfered since they
+                    // each share a slice of it within the batched prediction.
+                    .then(result => port1.postMessage(result))
                     .catch(err => {
                         const result: RawPortResultError = {
                             type: "error",
@@ -232,7 +226,7 @@ export class ModelRegistry {
      * Queues a prediction for the neural network. Can be called multiple times
      * while other predict requests are still queued.
      */
-    private async predict(msg: PredictMessage): Promise<PredictResult> {
+    private async predict(msg: PredictMessage): Promise<PredictWorkerResult> {
         while (this.predictBatch.length >= this.config.maxSize) {
             await new Promise<void>(res => this.events.once(predictReady, res));
         }
@@ -241,7 +235,12 @@ export class ModelRegistry {
             this.predictBatch.add(msg.state, res),
         );
         await this.checkPredictBatch();
-        return await result;
+        return {
+            type: "predict",
+            rid: msg.rid,
+            done: true,
+            ...(await result),
+        };
     }
 
     /**

@@ -46,7 +46,8 @@ export class GamePoolStream extends Transform {
         // Wait for all queued games to finish, then the stream can safely
         // close.
         void (async () => {
-            await Promise.allSettled(this.gamePromises);
+            await Promise.allSettled([...this.gamePromises]);
+            this.gamePromises.clear();
             callback();
         })();
     }

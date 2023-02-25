@@ -107,11 +107,9 @@ export class PredictBatch {
 
         for (let i = 0; i < this.callbacks.length; ++i) {
             this.callbacks[i]({
-                output: Float32Array.from(
-                    resultData.subarray(
-                        i * intToChoice.length,
-                        (i + 1) * intToChoice.length,
-                    ),
+                output: resultData.subarray(
+                    i * intToChoice.length,
+                    (i + 1) * intToChoice.length,
                 ),
             });
         }
