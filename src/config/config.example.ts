@@ -76,8 +76,8 @@ export const config: Config = {
             batchSize: 32,
             target: "double",
             interval: 1,
-            targetInterval: 500,
-            metricsInterval: 100,
+            targetInterval: 512,
+            metricsInterval: 128,
             report: true,
         },
         eval: {
