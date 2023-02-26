@@ -20,12 +20,11 @@ export class Learn {
         w => w.read() as tf.Variable,
     );
     /** Used for logging inputs during loss calcs. */
-    private readonly hookLayers: readonly tf.layers.Layer[] =
-        this.model.layers.filter(l =>
-            ["Dense", "SetAttention", "PoolingAttention"].includes(
-                l.getClassName(),
-            ),
-        );
+    private readonly hookLayers = this.model.layers.filter(l =>
+        ["Dense", "SetAttention", "PoolingAttention"].includes(
+            l.getClassName(),
+        ),
+    );
 
     /** Exponential decay scale for TD target. */
     private readonly tdScale = tf.scalar(
@@ -160,7 +159,7 @@ export class Learn {
                         for (let i = 0; i < inputs.length; ++i) {
                             // Only take one example out of the batch to prevent
                             // excessive memory usage.
-                            const input = tf.keep(inputs[i].slice(0, 1));
+                            const input = tf.keep(tf.slice(inputs[i], 0, 1));
                             let name = `${layer.name}/input`;
                             if (inputs.length > 1) {
                                 name += `/${i}`;
@@ -218,7 +217,9 @@ export class Learn {
                         Object.prototype.hasOwnProperty.call(hookedInputs, name)
                     ) {
                         const inputs = hookedInputs[name];
-                        const t = tf.concat1d(inputs.map(i => i.flatten()));
+                        const t = tf.tidy(() =>
+                            tf.concat1d(inputs.map(i => i.flatten())),
+                        );
                         this.metrics?.histogram(name, t, step);
                         t.dispose();
                         // Hooked inputs are tf.keep()'d so we have to dispose
@@ -246,6 +247,7 @@ export class Learn {
                     }
                 }
             }
+            tf.dispose(grads);
 
             return loss;
         });
@@ -293,7 +295,9 @@ export class Learn {
                 // the Q value.
                 q = tf.sum(tf.mul(q, this.support), -1);
             }
-            q = tf.where(choices, q, -Infinity);
+            // Large negative number to prevent Q values of illegal actions from
+            // being chosen.
+            q = tf.where(choices, q, -1e9);
 
             // Extract the Q-values (or distribution) of the best action from
             // the next state.
@@ -437,6 +441,8 @@ export class Learn {
     /** Cleans up dangling variables. */
     public cleanup(): void {
         this.optimizer.dispose();
+        this.variables.length = 0;
+        this.hookLayers.length = 0;
         this.tdScale.dispose();
         this.support?.dispose();
         this.scaledSupport?.dispose();
