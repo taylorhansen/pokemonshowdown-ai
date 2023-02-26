@@ -4,6 +4,7 @@ import {
     numActive,
     numTeams,
     teamSize,
+    totalInputSize,
 } from "../../../../../model/shapes";
 import {alloc} from "../../../../../util/buf";
 import * as dex from "../../dex";
@@ -38,7 +39,15 @@ import {
  * @see {@link encodeState} to fill the arrays with encoded data.
  */
 export function allocEncodedState(mode?: "shared" | "unsafe"): Float32Array[] {
-    return flattenedInputShapes.map(size => alloc(size, mode));
+    const result: Float32Array[] = [];
+    const arr = alloc(totalInputSize, mode);
+    let offset = 0;
+    for (const size of flattenedInputShapes) {
+        const newOffset = offset + size;
+        result.push(new Float32Array(arr.subarray(offset, newOffset)));
+        offset = newOffset;
+    }
+    return result;
 }
 
 // Factored-out encoders for multiple encodeState() calls.

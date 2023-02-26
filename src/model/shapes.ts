@@ -39,6 +39,9 @@ export const flattenedInputShapes: readonly number[] = modelInputShapes.map(
     shape => shape.reduce((a, s) => a * s),
 );
 
+/** Total size of the input. Derived from {@link modelInputShapes}. */
+export const totalInputSize = flattenedInputShapes.reduce((a, b) => a + b);
+
 /**
  * Input names for the model.
  *
