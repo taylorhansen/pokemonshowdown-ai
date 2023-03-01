@@ -85,7 +85,17 @@ export class Rollout {
      * for the next learning step.
      */
     public step(step: number): void {
-        this.metrics?.scalar("exploration", this.exploration.factor, step);
+        if (this.metrics && step % this.config.metricsInterval === 0) {
+            this.metrics.scalar("exploration", this.exploration.factor, step);
+            if (this.numGames > 0) {
+                this.metrics.scalar("total_games", this.numGames, step);
+                this.metrics.scalar(
+                    "tie_ratio",
+                    this.numTies / this.numGames,
+                    step,
+                );
+            }
+        }
 
         this.exploration.factor =
             this.config.policy.exploration -
@@ -95,15 +105,6 @@ export class Rollout {
                 this.config.policy.interpolate;
         if (this.exploration.factor < this.config.policy.minExploration) {
             this.exploration.factor = this.config.policy.minExploration;
-        }
-
-        if (this.numGames > 0) {
-            this.metrics?.scalar("total_games", this.numGames, step);
-            this.metrics?.scalar(
-                "tie_ratio",
-                this.numTies / this.numGames,
-                step,
-            );
         }
     }
 

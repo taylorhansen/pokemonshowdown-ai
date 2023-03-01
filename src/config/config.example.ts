@@ -61,12 +61,14 @@ export const config: Config = {
                 interpolate: maxTurns * 2 * 25,
             },
             prev: 0.1,
+            metricsInterval: 1000,
         },
         experience: {
             rewardDecay: 0.99,
             steps: 1,
             bufferSize: maxTurns * 2 * 25 /*enough for at least 25 games*/,
             prefill: maxTurns * 2 * numThreads /*at least one complete game*/,
+            metricsInterval: 1000,
         },
         learn: {
             optimizer: {
@@ -75,10 +77,11 @@ export const config: Config = {
             },
             batchSize: 32,
             target: "double",
-            interval: 1,
+            interval: 2,
             targetInterval: 512,
+            histogramInterval: 1028,
             metricsInterval: 128,
-            report: true,
+            reportInterval: 32,
         },
         eval: {
             numGames: 32,
@@ -101,6 +104,7 @@ export const config: Config = {
         },
         savePreviousVersions: true,
         checkpointInterval: 1000,
+        metricsInterval: 1000,
         progress: true,
         verbose: Verbose.Info,
         resourceLimits: {maxOldGenerationSizeMb: 1024},

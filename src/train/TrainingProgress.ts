@@ -21,7 +21,7 @@ export class TrainingProgress {
     private readonly progressPadding =
         "Step / ".length +
         2 * this.stepPadding +
-        (this.config.learn.report
+        (this.config.learn.reportInterval
             ? " loss=0.".length + TrainingProgress.lossDigits
             : 0) +
         " eta=00d00h00m00s".length +
@@ -48,7 +48,7 @@ export class TrainingProgress {
             this.progress = new ProgressBar(
                 this.logger.prefix +
                     `Step :step/:total :bar${
-                        this.config.learn.report ? " loss=:loss" : ""
+                        this.config.learn.reportInterval ? " loss=:loss" : ""
                     } eta=:est`,
                 {
                     total: this.config.steps,
@@ -127,7 +127,10 @@ export class TrainingProgress {
                 loss: this.lastLoss,
                 est,
             });
-        } else if (this.config.learn.report && data.loss !== undefined) {
+        } else if (
+            this.config.learn.reportInterval &&
+            data.loss !== undefined
+        ) {
             this.logger
                 .addPrefix(this.stepPrefix(data.step))
                 .info(`Loss = ${data.loss}`);

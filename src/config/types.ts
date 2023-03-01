@@ -81,6 +81,11 @@ export interface TrainConfig {
      * is defined. Omit to not store checkpoints.
      */
     readonly checkpointInterval?: number;
+    /**
+     * Step interval for miscellaneous metrics, currently just memory usage. Set
+     * to zero to disable.
+     */
+    readonly metricsInterval: number;
     /** Whether to display a progress bar if {@link steps} is also defined. */
     readonly progress?: boolean;
     /** Verbosity level for logging. Default highest. */
@@ -128,6 +133,11 @@ export interface RolloutConfig {
      * The previous version is defined by the last {@link EvalConfig eval} step.
      */
     readonly prev: number;
+    /**
+     * Step interval for tracking metrics such as exploration rate and game
+     * stats.
+     */
+    readonly metricsInterval: number;
 }
 
 /** Configuration for the thread pool for playing games. */
@@ -182,6 +192,8 @@ export interface ExperienceConfig {
      * be at least as big as the {@link LearnConfig.batchSize batch size}.
      */
     readonly prefill: number;
+    /** Step interval for logging replay buffer metrics to TensorBoard. */
+    readonly metricsInterval: number;
 }
 
 /** Configuration for the learning process. */
@@ -197,19 +209,30 @@ export interface LearnConfig {
     readonly target: boolean | "double";
     /** Step interval for sampling a batch and updating the network. */
     readonly interval: number;
-    /** Step interval for updating the target network. */
+    /**
+     * Step interval for updating the target network. Should be much larger than
+     * {@link interval}, and also preferably divisible by it to ensure an equal
+     * number of gradient updates before each target network update.
+     */
     readonly targetInterval: number;
     /**
-     * Step interval for tracking update metrics such as loss and
-     * gradient/weight histograms, which can significantly slow down training if
-     * collected too frequently. Must be divisible by {@link interval}.
+     * Step interval for logging expensive gradient/weight histograms and
+     * timing stats, which can significantly slow down training and burden
+     * memory if collected too frequently. Must be divisible by
+     * {@link interval}.
+     */
+    readonly histogramInterval: number;
+    /**
+     * Step interval for logging loss metrics to TensorBoard. Must be divisible
+     * by {@link interval}.
      */
     readonly metricsInterval: number;
     /**
-     * Whether to report loss to the main thread every {@link metricsInterval}
-     * steps.
+     * Step interval for reporting the loss to the main thread for inclusion in
+     * the console progress bar (if {@link TrainConfig.progress enabled}). Must
+     * be divisible by {@link interval}.
      */
-    readonly report?: boolean;
+    readonly reportInterval?: number;
 }
 
 interface OptimizerConfigBase<T extends string> {

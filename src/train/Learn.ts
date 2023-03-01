@@ -87,17 +87,23 @@ export class Learn {
         }
 
         // Log initial weights.
-        for (const weights of this.variables) {
-            if (weights.size === 1) {
-                const weightScalar = weights.asScalar();
-                this.metrics?.scalar(
-                    `${weights.name}/weights`,
-                    weightScalar,
-                    0,
-                );
-                tf.dispose(weightScalar);
-            } else {
-                this.metrics?.histogram(`${weights.name}/weights`, weights, 0);
+        if (this.metrics && config.histogramInterval) {
+            for (const weights of this.variables) {
+                if (weights.size === 1) {
+                    const weightScalar = weights.asScalar();
+                    this.metrics.scalar(
+                        `${weights.name}/weights`,
+                        weightScalar,
+                        0,
+                    );
+                    tf.dispose(weightScalar);
+                } else {
+                    this.metrics.histogram(
+                        `${weights.name}/weights`,
+                        weights,
+                        0,
+                    );
+                }
             }
         }
     }
@@ -138,9 +144,14 @@ export class Learn {
      */
     public step(step: number, batch: BatchTensorExperience): tf.Scalar {
         return tf.tidy(() => {
-            const storeMetrics = step % this.config.metricsInterval === 0;
+            const storeHistMetrics =
+                this.metrics && step % this.config.histogramInterval === 0;
+            const storeMetrics =
+                this.metrics && step % this.config.metricsInterval === 0;
 
-            const preStep = storeMetrics ? process.hrtime.bigint() : undefined;
+            const preStep = storeHistMetrics
+                ? process.hrtime.bigint()
+                : undefined;
 
             const target = this.calculateTarget(
                 batch.reward,
@@ -150,7 +161,7 @@ export class Learn {
             );
 
             const hookedInputs: {[name: string]: tf.Tensor[]} = {};
-            if (storeMetrics) {
+            if (storeHistMetrics) {
                 for (const layer of this.hookLayers) {
                     layer.setCallHook(inputs => {
                         if (!Array.isArray(inputs)) {
@@ -176,33 +187,31 @@ export class Learn {
             );
             this.optimizer.applyGradients(grads);
 
-            if (storeMetrics) {
+            if (storeHistMetrics) {
                 const postStep = process.hrtime.bigint();
                 const updateMs = Number((postStep - preStep!) / 1_000_000n);
-                this.metrics?.scalar("update_ms", updateMs, step);
-                this.metrics?.scalar(
+                this.metrics!.scalar("update_ms", updateMs, step);
+                this.metrics!.scalar(
                     "update_throughput_s",
                     this.config.batchSize /
                         (updateMs / 1e3) /*experiences per sec*/,
                     step,
                 );
 
-                this.metrics?.scalar("loss", loss, step);
-
-                this.metrics?.histogram("target", target, step);
+                this.metrics!.histogram("target", target, step);
                 target.dispose();
 
                 for (const name in grads) {
                     if (Object.prototype.hasOwnProperty.call(grads, name)) {
                         const grad = grads[name];
                         if (grad.size === 1) {
-                            this.metrics?.scalar(
+                            this.metrics!.scalar(
                                 `${name}/grads`,
                                 grad.asScalar(),
                                 step,
                             );
                         } else {
-                            this.metrics?.histogram(
+                            this.metrics!.histogram(
                                 `${name}/grads`,
                                 grad,
                                 step,
@@ -220,7 +229,7 @@ export class Learn {
                         const t = tf.tidy(() =>
                             tf.concat1d(inputs.map(i => i.flatten())),
                         );
-                        this.metrics?.histogram(name, t, step);
+                        this.metrics!.histogram(name, t, step);
                         t.dispose();
                         // Hooked inputs are tf.keep()'d so we have to dispose
                         // them manually.
@@ -233,13 +242,13 @@ export class Learn {
 
                 for (const weights of this.variables) {
                     if (weights.size === 1) {
-                        this.metrics?.scalar(
+                        this.metrics!.scalar(
                             `${weights.name}/weights`,
                             weights.asScalar(),
                             step,
                         );
                     } else {
-                        this.metrics?.histogram(
+                        this.metrics!.histogram(
                             `${weights.name}/weights`,
                             weights,
                             step,
@@ -248,6 +257,10 @@ export class Learn {
                 }
             }
             tf.dispose(grads);
+
+            if (storeMetrics) {
+                this.metrics!.scalar("loss", loss, step);
+            }
 
             return loss;
         });

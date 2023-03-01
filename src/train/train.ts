@@ -68,8 +68,10 @@ export async function train(
     );
     const targetModel = await cloneModel(model);
 
-    evalModel.lock("train", 0 /*step*/);
-    prevModel.lock("train", 0);
+    if (config.eval.interval) {
+        evalModel.lock("train", 0 /*step*/);
+        prevModel.lock("train", 0);
+    }
 
     const seeders: GameArgsGenSeeders | undefined = config.seeds && {
         ...(config.seeds.battle && {battle: seeder(config.seeds.battle)}),
@@ -144,9 +146,7 @@ export async function train(
             return;
         }
 
-        const tfMem = tf.memory();
-        metrics.scalar("memory/tf_num_bytes", tfMem.numBytes, step);
-        metrics.scalar("memory/tf_num_tensors", tfMem.numTensors, step);
+        global.gc?.();
 
         const mem = process.memoryUsage();
         metrics.scalar("memory/rss", mem.rss, step);
@@ -155,6 +155,10 @@ export async function train(
         metrics.scalar("memory/heap_total", mem.heapTotal, step);
         metrics.scalar("memory/external", mem.external, step);
         metrics.scalar("memory/array_buffers", mem.arrayBuffers, step);
+
+        const tfMem = tf.memory();
+        metrics.scalar("memory/tf_num_bytes", tfMem.numBytes, step);
+        metrics.scalar("memory/tf_num_tensors", tfMem.numTensors, step);
     };
 
     const replayBuffer = new ReplayBuffer(
@@ -178,8 +182,12 @@ export async function train(
     let lastEval: Promise<unknown> | undefined;
     try {
         let step = 0;
-        evalModel.unlock();
-        prevModel.unlock();
+        if (config.eval.interval) {
+            lastEval = runEval(step);
+            // Suppress unhandled exception warnings since we'll be awaiting
+            // this promise later.
+            lastEval.catch(() => {});
+        }
 
         let i = 0;
         while (i < config.experience.prefill) {
@@ -190,16 +198,12 @@ export async function train(
             }
         }
 
-        evalModel.lock("train", step);
-        prevModel.lock("train", step);
-
-        replayBuffer.logMetrics(step);
-        logMemoryMetrics(step);
-
-        lastEval = runEval(step);
-        // Suppress unhandled exception warnings since we'll be awaiting this
-        // promise later.
-        lastEval.catch(() => {});
+        if (config.experience.metricsInterval) {
+            replayBuffer.logMetrics(step);
+        }
+        if (config.metricsInterval) {
+            logMemoryMetrics(step);
+        }
 
         await saveCheckpoint?.(step);
 
@@ -213,6 +217,12 @@ export async function train(
 
                 replayBuffer.add(exp);
 
+                if (step % config.experience.metricsInterval === 0) {
+                    replayBuffer.logMetrics(step);
+                }
+
+                rollout.step(step);
+
                 let loss: number | undefined;
                 if (step % config.learn.interval === 0) {
                     const batch = replayBuffer.sample(
@@ -221,27 +231,28 @@ export async function train(
                     );
                     const lossTensor = learn.step(step, batch);
                     tf.dispose(batch);
+
+                    if (
+                        config.learn.reportInterval &&
+                        step % config.learn.reportInterval === 0
+                    ) {
+                        [loss] = await lossTensor.data<"float32">();
+                    }
+
+                    lossTensor.dispose();
+
                     if (step % config.learn.metricsInterval === 0) {
                         await learn.logOptimizerWeights(step);
-                        replayBuffer.logMetrics(step);
-                        logMemoryMetrics(step);
-
-                        // Prevent buffer buildup from large histograms.
+                        // Prevent memory buildup from large histograms built by
+                        // the learner.
                         Metrics.flush();
-
-                        if (config.learn.report) {
-                            [loss] = await lossTensor.data<"float32">();
-                        }
                     }
-                    lossTensor.dispose();
                 }
                 callback?.({
                     type: "step",
                     step,
                     ...(loss !== undefined && {loss}),
                 });
-
-                rollout.step(step);
 
                 if (step % config.learn.targetInterval === 0) {
                     targetModel.setWeights(model.getWeights());
@@ -265,6 +276,10 @@ export async function train(
                     step % config.checkpointInterval === 0
                 ) {
                     await saveCheckpoint?.(step);
+                }
+
+                if (step % config.metricsInterval === 0) {
+                    logMemoryMetrics(step);
                 }
 
                 // Async yield to allow for evaluate step to run in parallel.
