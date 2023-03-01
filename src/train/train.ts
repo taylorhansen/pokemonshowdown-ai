@@ -44,14 +44,10 @@ export async function train(
             void (await Promise.all(
                 [
                     modelUrl,
-                    ...(checkpointsPath
-                        ? [
-                              checkpointsPath.then(p =>
-                                  pathToFileUrl(join(p, `step-${step}`)),
-                              ),
-                          ]
-                        : []),
-                ].map(async url => await model.save(await url)),
+                    checkpointsPath?.then(p =>
+                        pathToFileUrl(join(p, `step-${step}`)),
+                    ),
+                ].map(async url => url && (await model.save(await url))),
             ));
     }
 
@@ -102,6 +98,13 @@ export async function train(
         config.learn,
         config.experience,
     );
+
+    // Log initial weights.
+    if (config.learn.histogramInterval) {
+        learn.logWeights(0 /*step*/);
+        // Prevent memory buildup from several large histograms.
+        Metrics.flush();
+    }
 
     const evaluate = new Evaluate(
         "train",
@@ -205,7 +208,9 @@ export async function train(
             logMemoryMetrics(step);
         }
 
-        await saveCheckpoint?.(step);
+        if (config.checkpointInterval) {
+            await saveCheckpoint?.(step);
+        }
 
         ++step;
         while (!config.steps || step < config.steps) {
@@ -232,27 +237,23 @@ export async function train(
                     const lossTensor = learn.step(step, batch);
                     tf.dispose(batch);
 
-                    if (
-                        config.learn.reportInterval &&
-                        step % config.learn.reportInterval === 0
-                    ) {
+                    if (step % config.learn.reportInterval === 0) {
                         [loss] = await lossTensor.data<"float32">();
                     }
 
                     lossTensor.dispose();
-
-                    if (step % config.learn.metricsInterval === 0) {
-                        await learn.logOptimizerWeights(step);
-                        // Prevent memory buildup from large histograms built by
-                        // the learner.
-                        Metrics.flush();
-                    }
                 }
+
                 callback?.({
                     type: "step",
                     step,
                     ...(loss !== undefined && {loss}),
                 });
+
+                if (step % config.learn.histogramInterval === 0) {
+                    learn.logWeights(step);
+                    Metrics.flush();
+                }
 
                 if (step % config.learn.targetInterval === 0) {
                     targetModel.setWeights(model.getWeights());
@@ -271,10 +272,7 @@ export async function train(
                     lastEval = runEval(step);
                     lastEval.catch(() => {});
                 }
-                if (
-                    config.checkpointInterval &&
-                    step % config.checkpointInterval === 0
-                ) {
+                if (step % config.checkpointInterval === 0) {
                     await saveCheckpoint?.(step);
                 }
 
@@ -288,12 +286,14 @@ export async function train(
                 ++step;
             }
         }
-        await lastEval;
+        await Promise.all([rollout.terminate(), lastEval]);
         await evaluate.close();
     } finally {
         await Promise.all([rollout.terminate(), evaluate.terminate()]);
         learn.cleanup();
-        for (const m of [rolloutModel, evalModel, prevModel]) {
+        rolloutModel.unload();
+        for (const m of [evalModel, prevModel]) {
+            m.unlock();
             m.unload();
         }
         targetModel.dispose();

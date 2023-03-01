@@ -78,13 +78,13 @@ export const config: Config = {
             batchSize: 32,
             target: "double",
             interval: 2,
-            targetInterval: 512,
-            histogramInterval: 1028,
-            metricsInterval: 128,
-            reportInterval: 32,
+            targetInterval: 500,
+            metricsInterval: 100,
+            histogramInterval: 1000,
+            reportInterval: 100,
         },
         eval: {
-            numGames: 32,
+            numGames: 100,
             pool: {
                 numThreads,
                 maxTurns,
@@ -112,13 +112,15 @@ export const config: Config = {
     compare: {
         name: "latest-original-random",
         models: [
+            // Previously-trained agent models.
             "train",
-            "train/checkpoints/episode-0",
+            "train/checkpoints/step-0",
+            // Custom baseline agents.
             "damage",
             "randmove",
             "random",
         ],
-        numGames: 256,
+        numGames: 1000,
         threshold: 0.55,
         batchPredict: {
             maxSize: numThreads,

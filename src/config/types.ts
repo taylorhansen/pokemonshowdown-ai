@@ -73,14 +73,16 @@ export interface TrainConfig {
     readonly seeds?: TrainSeedConfig;
     /**
      * Whether to save model checkpoints as separate versions. If false, only
-     * the latest model version will be saved.
+     * the latest model version will be saved. Applies every
+     * {@link checkpointInterval} steps.
      */
     readonly savePreviousVersions?: boolean;
     /**
      * Step interval for saving model checkpoints if {@link PathsConfig.models}
-     * is defined. Omit to not store checkpoints.
+     * is defined. Set to zero to disable. Still always saves the latest version
+     * of the model on the last step.
      */
-    readonly checkpointInterval?: number;
+    readonly checkpointInterval: number;
     /**
      * Step interval for miscellaneous metrics, currently just memory usage. Set
      * to zero to disable.
@@ -135,7 +137,7 @@ export interface RolloutConfig {
     readonly prev: number;
     /**
      * Step interval for tracking metrics such as exploration rate and game
-     * stats.
+     * stats. Set to zero to disable.
      */
     readonly metricsInterval: number;
 }
@@ -192,7 +194,10 @@ export interface ExperienceConfig {
      * be at least as big as the {@link LearnConfig.batchSize batch size}.
      */
     readonly prefill: number;
-    /** Step interval for logging replay buffer metrics to TensorBoard. */
+    /**
+     * Step interval for logging replay buffer metrics to TensorBoard. Set to
+     * zero to disable.
+     */
     readonly metricsInterval: number;
 }
 
@@ -216,23 +221,22 @@ export interface LearnConfig {
      */
     readonly targetInterval: number;
     /**
-     * Step interval for logging expensive gradient/weight histograms and
-     * timing stats, which can significantly slow down training and burden
-     * memory if collected too frequently. Must be divisible by
-     * {@link interval}.
-     */
-    readonly histogramInterval: number;
-    /**
      * Step interval for logging loss metrics to TensorBoard. Must be divisible
-     * by {@link interval}.
+     * by {@link interval}. Set to zero to disable.
      */
     readonly metricsInterval: number;
     /**
+     * Step interval for logging expensive weight histograms, which can
+     * significantly slow down training and burden memory if collected too
+     * frequently. Set to zero to disable.
+     */
+    readonly histogramInterval: number;
+    /**
      * Step interval for reporting the loss to the main thread for inclusion in
      * the console progress bar (if {@link TrainConfig.progress enabled}). Must
-     * be divisible by {@link interval}.
+     * be divisible by {@link interval}. Set to zero to disable.
      */
-    readonly reportInterval?: number;
+    readonly reportInterval: number;
 }
 
 interface OptimizerConfigBase<T extends string> {
@@ -275,7 +279,10 @@ export interface EvalConfig {
     readonly numGames: number;
     /** Game pool config. */
     readonly pool: GamePoolConfig;
-    /** Step interval for performing model evaluations. */
+    /**
+     * Step interval for performing model evaluations and logging stats to
+     * TensorBoard. Set to zero to disable.
+     */
     readonly interval: number;
     /**
      * Whether to report game results to the main thread every {@link interval}

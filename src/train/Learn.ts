@@ -19,12 +19,6 @@ export class Learn {
     private readonly variables = this.model.trainableWeights.map(
         w => w.read() as tf.Variable,
     );
-    /** Used for logging inputs during loss calcs. */
-    private readonly hookLayers = this.model.layers.filter(l =>
-        ["Dense", "SetAttention", "PoolingAttention"].includes(
-            l.getClassName(),
-        ),
-    );
 
     /** Exponential decay scale for TD target. */
     private readonly tdScale = tf.scalar(
@@ -70,41 +64,27 @@ export class Learn {
             | ModelMetadata
             | undefined;
         if (metadata?.config?.dist) {
-            this.support = createSupport(metadata.config.dist).reshape([
-                1,
-                metadata.config.dist,
-            ]);
+            this.support = tf.tidy(() =>
+                createSupport(metadata.config!.dist!).reshape([
+                    1,
+                    metadata.config!.dist!,
+                ]),
+            );
             this.scaledSupport = tf.mul(this.support, this.tdScale);
             this.atomDiff = tf.scalar(
                 (rewards.max - rewards.min) / (metadata.config.dist - 1),
                 "float32",
             );
-            this.batchIndices = tf
-                .range(0, this.config.batchSize, 1, "int32")
-                .expandDims(-1)
-                .broadcastTo([this.config.batchSize, metadata.config.dist])
-                .expandDims(-1);
-        }
-
-        // Log initial weights.
-        if (this.metrics && config.histogramInterval) {
-            for (const weights of this.variables) {
-                if (weights.size === 1) {
-                    const weightScalar = weights.asScalar();
-                    this.metrics.scalar(
-                        `${weights.name}/weights`,
-                        weightScalar,
-                        0,
-                    );
-                    tf.dispose(weightScalar);
-                } else {
-                    this.metrics.histogram(
-                        `${weights.name}/weights`,
-                        weights,
-                        0,
-                    );
-                }
-            }
+            this.batchIndices = tf.tidy(() =>
+                tf
+                    .range(0, this.config.batchSize, 1, "int32")
+                    .expandDims(-1)
+                    .broadcastTo([
+                        this.config.batchSize,
+                        metadata.config!.dist!,
+                    ])
+                    .expandDims(-1),
+            );
         }
     }
 
@@ -144,14 +124,10 @@ export class Learn {
      */
     public step(step: number, batch: BatchTensorExperience): tf.Scalar {
         return tf.tidy(() => {
-            const storeHistMetrics =
-                this.metrics && step % this.config.histogramInterval === 0;
             const storeMetrics =
                 this.metrics && step % this.config.metricsInterval === 0;
 
-            const preStep = storeHistMetrics
-                ? process.hrtime.bigint()
-                : undefined;
+            const preStep = storeMetrics ? process.hrtime.bigint() : undefined;
 
             const target = this.calculateTarget(
                 batch.reward,
@@ -160,34 +136,15 @@ export class Learn {
                 batch.done,
             );
 
-            const hookedInputs: {[name: string]: tf.Tensor[]} = {};
-            if (storeHistMetrics) {
-                for (const layer of this.hookLayers) {
-                    layer.setCallHook(inputs => {
-                        if (!Array.isArray(inputs)) {
-                            inputs = [inputs];
-                        }
-                        for (let i = 0; i < inputs.length; ++i) {
-                            // Only take one example out of the batch to prevent
-                            // excessive memory usage.
-                            const input = tf.keep(tf.slice(inputs[i], 0, 1));
-                            let name = `${layer.name}/input`;
-                            if (inputs.length > 1) {
-                                name += `/${i}`;
-                            }
-                            (hookedInputs[name] ??= []).push(input);
-                        }
-                    });
-                }
-            }
-
             const {value: loss, grads} = this.optimizer.computeGradients(
                 () => this.loss(batch.state, batch.action, target),
                 this.variables,
             );
+            target.dispose();
             this.optimizer.applyGradients(grads);
+            tf.dispose(grads);
 
-            if (storeHistMetrics) {
+            if (storeMetrics) {
                 const postStep = process.hrtime.bigint();
                 const updateMs = Number((postStep - preStep!) / 1_000_000n);
                 this.metrics!.scalar("update_ms", updateMs, step);
@@ -198,67 +155,6 @@ export class Learn {
                     step,
                 );
 
-                this.metrics!.histogram("target", target, step);
-                target.dispose();
-
-                for (const name in grads) {
-                    if (Object.prototype.hasOwnProperty.call(grads, name)) {
-                        const grad = grads[name];
-                        if (grad.size === 1) {
-                            this.metrics!.scalar(
-                                `${name}/grads`,
-                                grad.asScalar(),
-                                step,
-                            );
-                        } else {
-                            this.metrics!.histogram(
-                                `${name}/grads`,
-                                grad,
-                                step,
-                            );
-                        }
-                        grad.dispose();
-                    }
-                }
-
-                for (const name in hookedInputs) {
-                    if (
-                        Object.prototype.hasOwnProperty.call(hookedInputs, name)
-                    ) {
-                        const inputs = hookedInputs[name];
-                        const t = tf.tidy(() =>
-                            tf.concat1d(inputs.map(i => i.flatten())),
-                        );
-                        this.metrics!.histogram(name, t, step);
-                        t.dispose();
-                        // Hooked inputs are tf.keep()'d so we have to dispose
-                        // them manually.
-                        tf.dispose(inputs);
-                    }
-                }
-                for (const layer of this.hookLayers) {
-                    layer.clearCallHook();
-                }
-
-                for (const weights of this.variables) {
-                    if (weights.size === 1) {
-                        this.metrics!.scalar(
-                            `${weights.name}/weights`,
-                            weights.asScalar(),
-                            step,
-                        );
-                    } else {
-                        this.metrics!.histogram(
-                            `${weights.name}/weights`,
-                            weights,
-                            step,
-                        );
-                    }
-                }
-            }
-            tf.dispose(grads);
-
-            if (storeMetrics) {
                 this.metrics!.scalar("loss", loss, step);
             }
 
@@ -423,31 +319,26 @@ export class Learn {
         });
     }
 
-    /**
-     * Logs optimizer weights.
-     *
-     * For some reason this method has to be async which is why it's separate
-     * from {@link step}.
-     *
-     * @param step Step number.
-     */
-    public async logOptimizerWeights(step: number): Promise<void> {
+    /** Logs model weight histograms. */
+    public logWeights(step: number): void {
         if (!this.metrics) {
             return;
         }
-        // Have to do this manually since tf.tidy() doesn't support async.
-        tf.engine().startScope("logOptimizerWeights");
-        try {
-            for (const weight of await this.optimizer.getWeights()) {
-                const name = `opt/${weight.name}`;
-                if (weight.tensor.size === 1) {
-                    this.metrics.scalar(name, weight.tensor.asScalar(), step);
-                } else {
-                    this.metrics.histogram(name, weight.tensor, step);
-                }
+
+        for (const weights of this.variables) {
+            if (weights.size === 1) {
+                this.metrics.scalar(
+                    `${weights.name}/weights`,
+                    weights.asScalar(),
+                    step,
+                );
+            } else {
+                this.metrics.histogram(
+                    `${weights.name}/weights`,
+                    weights,
+                    step,
+                );
             }
-        } finally {
-            tf.engine().endScope("logOptimizerWeights");
         }
     }
 
@@ -455,7 +346,6 @@ export class Learn {
     public cleanup(): void {
         this.optimizer.dispose();
         this.variables.length = 0;
-        this.hookLayers.length = 0;
         this.tdScale.dispose();
         this.support?.dispose();
         this.scaledSupport?.dispose();
