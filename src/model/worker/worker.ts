@@ -20,7 +20,7 @@ if (!parentPort) {
 
 // Make sure we're using the right TF backend.
 const modelWorkerData = workerData as ModelWorkerData;
-importTfn(modelWorkerData.gpu);
+importTfn(modelWorkerData?.gpu);
 
 // Used for debugging.
 Error.stackTraceLimit = Infinity;

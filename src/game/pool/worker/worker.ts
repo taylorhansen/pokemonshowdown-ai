@@ -97,7 +97,7 @@ const gameStream = new stream.Writable({
             const gameResult = await playGame(
                 {
                     agents,
-                    ...(gameWorkerData.maxTurns && {
+                    ...(gameWorkerData?.maxTurns && {
                         maxTurns: gameWorkerData.maxTurns,
                     }),
                     ...(msg.play.logPath && {logPath: msg.play.logPath}),
