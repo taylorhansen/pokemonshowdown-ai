@@ -12,6 +12,7 @@ export const test = () =>
             steps: 1,
             bufferSize: 100,
             prefill: 100,
+            metricsInterval: 0,
         };
 
         const exps: Experience[] = [];
