@@ -85,7 +85,7 @@ void (async function () {
                     logger.prefix.length -
                     "Games / ".length -
                     2 * gamesPadding -
-                    " eta=00h00m00s".length -
+                    " eta=0d00h00m00s".length -
                     1,
             },
         );
