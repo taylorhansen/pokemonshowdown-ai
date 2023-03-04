@@ -81,7 +81,7 @@ export class ModelPort {
                 encodeState(stateData, state);
                 verifyInputData(stateData);
 
-                const choiceData = new Uint8Array(intToChoice.length);
+                const choiceData = new Float32Array(intToChoice.length);
                 for (const c of choices) {
                     choiceData[choiceIds[c]] = 1;
                 }
@@ -151,7 +151,7 @@ export class ModelPort {
     /** Requests a prediction from the neural network. */
     private async predict(
         state: Float32Array[],
-        choices: Uint8Array,
+        choices: Float32Array,
         lastAction?: number,
         reward?: number,
     ): Promise<PredictResult> {

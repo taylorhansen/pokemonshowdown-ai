@@ -21,6 +21,28 @@ export const test = () =>
             exps.length = 0;
         });
 
+        const states = [
+            [new Float32Array([0])],
+            [new Float32Array([1])],
+            [new Float32Array([2])],
+            [new Float32Array([3])],
+            [new Float32Array([4])],
+            [new Float32Array([5])],
+            [new Float32Array([6])],
+        ] as const;
+        const emptyChoice = new Float32Array(intToChoice.length).fill(0);
+        const choices = [
+            emptyChoice.slice().fill(1, 0, 1),
+            emptyChoice.slice().fill(1, 1, 2),
+            emptyChoice.slice().fill(1, 2, 3),
+            emptyChoice.slice().fill(1, 3, 4),
+            emptyChoice.slice().fill(1, 4, 5),
+            emptyChoice.slice().fill(1, 5, 6),
+            emptyChoice.slice().fill(1, 6, 7),
+        ] as const;
+        const actions = [0, 1, 2, 3, 4, 5] as const;
+        const rewards = [0, 1, 2, 3, 4, 5] as const;
+
         it("Should be empty at first", function () {
             void new ExperienceContext(baseConfig, expCallback);
             expect(exps).to.have.lengthOf(0);
@@ -87,28 +109,6 @@ export const test = () =>
                 "No last reward provided",
             );
         });
-
-        const states = [
-            [new Float32Array([0])],
-            [new Float32Array([1])],
-            [new Float32Array([2])],
-            [new Float32Array([3])],
-            [new Float32Array([4])],
-            [new Float32Array([5])],
-            [new Float32Array([6])],
-        ] as const;
-        const emptyChoice = new Uint8Array(intToChoice.length).fill(0);
-        const choices = [
-            emptyChoice.slice().fill(1, 0, 1),
-            emptyChoice.slice().fill(1, 1, 2),
-            emptyChoice.slice().fill(1, 2, 3),
-            emptyChoice.slice().fill(1, 3, 4),
-            emptyChoice.slice().fill(1, 4, 5),
-            emptyChoice.slice().fill(1, 5, 6),
-            emptyChoice.slice().fill(1, 6, 7),
-        ] as const;
-        const actions = [0, 1, 2, 3, 4, 5] as const;
-        const rewards = [0, 1, 2, 3, 4, 5] as const;
 
         describe("steps = 1", function () {
             it("Should emit experience after 1st transition", function () {

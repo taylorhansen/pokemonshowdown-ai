@@ -35,7 +35,7 @@ export class ExperienceContext {
      */
     public add(
         state: readonly Float32Array[],
-        choices: Uint8Array,
+        choices: Float32Array,
         action?: number,
         reward?: number,
     ): void {
@@ -120,7 +120,7 @@ export class ExperienceContext {
                 reward,
                 nextState: state,
                 // Note: Pre-filled with zeros.
-                choices: new Uint8Array(intToChoice.length),
+                choices: new Float32Array(intToChoice.length),
                 done: true,
             },
         ];
@@ -138,7 +138,7 @@ export class ExperienceContext {
                 action: lastAction,
                 reward: returns,
                 nextState: state,
-                choices: new Uint8Array(intToChoice.length),
+                choices: new Float32Array(intToChoice.length),
                 done: true,
             });
         }

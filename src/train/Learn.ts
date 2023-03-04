@@ -167,7 +167,7 @@ export class Learn {
      *
      * @param reward Reward tensor of shape `[batch]`.
      * @param nextState Tensors for next state, of shape `[batch, Ns...]`.
-     * @param choices Choice legality mask for next state, bool of shape
+     * @param choices Choice legality mask for next state, float of shape
      * `[batch, Nc]`.
      * @param done Terminal state indicator for next state, float of shape
      * `[batch]`.
@@ -206,7 +206,7 @@ export class Learn {
             }
             // Large negative number to prevent Q values of illegal actions from
             // being chosen.
-            q = tf.where(choices, q, -1e9);
+            q = tf.add(q, tf.mul(tf.sub(1, choices), -1e9));
 
             // Extract the Q-values (or distribution) of the best action from
             // the next state.

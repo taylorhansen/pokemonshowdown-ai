@@ -22,7 +22,7 @@ export class ReplayBuffer {
         modelInputShapes,
         () => new Array<Float32Array>(this.maxSize),
     ) as readonly Float32Array[][];
-    private readonly choices = new Array<Uint8Array>(this.maxSize);
+    private readonly choices = new Array<Float32Array>(this.maxSize);
     private readonly dones = new Float32Array(this.maxSize);
 
     private start = 0;
