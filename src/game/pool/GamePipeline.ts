@@ -138,7 +138,7 @@ export class GamePipeline {
                         logPath: join(logPath, `game-${id}-${opponent.name}`),
                     }),
                     ...(reduceLogs &&
-                        Math.log2(id) % 1 !== 0 && {onlyLogOnError: true}),
+                        Math.log10(id) % 1 !== 0 && {onlyLogOnError: true}),
                     seed: generatePsPrngSeed(battleRandom),
                     ...(experienceConfig && {experienceConfig}),
                 },
