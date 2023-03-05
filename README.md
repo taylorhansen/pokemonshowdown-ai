@@ -20,6 +20,8 @@ _Me (left) vs a model (right) that was trained over ~16k games against itself_
 
 ## Build Instructions
 
+Make sure you have at least Node 16 (LTS) installed.
+
 ```sh
 # Download the repository.
 git clone https://github.com/taylorhansen/pokemonshowdown-ai
