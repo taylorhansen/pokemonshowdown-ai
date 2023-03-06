@@ -49,6 +49,9 @@ export interface PsGameResult extends Omit<SimResult, "agents" | "winner"> {
 /** Temp log file template. */
 const template = "psbattle-XXXXXX";
 
+/** Timeout for promises that aren't resolving. Used to catch rare bugs. */
+const timeoutMs = 60e3 * 60;
+
 /** Runs a simulated PS battle. */
 export async function startPsBattle(
     options: GameOptions,
@@ -168,7 +171,7 @@ export async function startPsBattle(
                         }
                         await wrapTimeout(
                             async () => await handler.handle(e as RoomEvent),
-                            60e3 /*60s*/,
+                            timeoutMs,
                         );
                     }
                 } catch (e) {
@@ -185,7 +188,7 @@ export async function startPsBattle(
                             } else {
                                 await handler.finish();
                             }
-                        }, 60e3 /*60s*/);
+                        }, timeoutMs);
                     } catch (e) {
                         if (loopErr !== e) {
                             logError(innerLog, battleStream, e as Error);
