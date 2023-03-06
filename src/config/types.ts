@@ -289,6 +289,12 @@ export interface EvalConfig {
      * steps. Otherwise, only errors are reported.
      */
     readonly report?: boolean;
+    /**
+     * Whether to run the evaluation step synchronously, otherwise runs in
+     * parallel with the rollout and learn steps. Setting this to true can help
+     * with controlling CPU or GPU usage.
+     */
+    readonly sync?: boolean;
 }
 
 /** Configuration for random number generators in the training script. */

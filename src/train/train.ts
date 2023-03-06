@@ -187,9 +187,13 @@ export async function train(
         let step = 0;
         if (config.eval.interval) {
             lastEval = runEval(step);
-            // Suppress unhandled exception warnings since we'll be awaiting
-            // this promise later.
-            lastEval.catch(() => {});
+            if (config.eval.sync) {
+                await lastEval;
+            } else {
+                // Suppress unhandled exception warnings since we'll be awaiting
+                // this promise later.
+                lastEval.catch(() => {});
+            }
         }
 
         let i = 0;
@@ -270,7 +274,11 @@ export async function train(
                     prevModel.lock("train", step);
 
                     lastEval = runEval(step);
-                    lastEval.catch(() => {});
+                    if (config.eval.sync) {
+                        await lastEval;
+                    } else {
+                        lastEval.catch(() => {});
+                    }
                 }
                 if (step % config.checkpointInterval === 0) {
                     await saveCheckpoint?.(step);
