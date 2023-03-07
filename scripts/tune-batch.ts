@@ -27,14 +27,14 @@ const model = createModel(
 tf.tidy(() => void model.predictOnBatch(makeState(1)));
 
 function makeBatch(batchSize: number): BatchTensorExperience {
-    return {
+    return tf.tidy(() => ({
         state: makeState(batchSize),
         action: tf.randomUniform([batchSize], 0, intToChoice.length, "int32"),
         reward: tf.randomStandardNormal([batchSize]),
         nextState: makeState(batchSize),
         choices: tf.randomUniform([batchSize, intToChoice.length]).less(0.9),
         done: tf.randomUniform([batchSize]).less(0.1).cast("float32"),
-    };
+    }));
 }
 
 function makeState(batchSize: number): tf.Tensor[] {
