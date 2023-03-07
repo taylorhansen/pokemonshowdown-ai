@@ -94,6 +94,7 @@ export const config: Config = {
                 resourceLimits: {maxOldGenerationSizeMb: 256},
             },
             interval: 1000,
+            predictMetricsInterval: 2000,
             report: true,
         },
         seeds: {

@@ -64,7 +64,7 @@ export async function train(
     );
     const targetModel = await cloneModel(model);
 
-    if (config.eval.interval) {
+    if (config.eval.interval && config.eval.predictMetricsInterval) {
         evalModel.lock("train", 0 /*step*/);
         prevModel.lock("train", 0);
     }
@@ -270,8 +270,10 @@ export async function train(
                     prevModel.unlock();
                     prevModel.model.setWeights(evalModel.model.getWeights());
                     evalModel.model.setWeights(model.getWeights());
-                    evalModel.lock("train", step);
-                    prevModel.lock("train", step);
+                    if (step % config.eval.predictMetricsInterval === 0) {
+                        evalModel.lock("train", step);
+                        prevModel.lock("train", step);
+                    }
 
                     lastEval = runEval(step);
                     if (config.eval.sync) {

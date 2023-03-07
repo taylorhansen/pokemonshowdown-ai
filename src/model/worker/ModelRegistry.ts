@@ -141,7 +141,6 @@ export class ModelRegistry {
                     "predict_latency_ms",
                     predictLatency,
                     this.scopeStep!,
-                    100 /*buckets*/,
                 );
                 // TODO: Use median instead, more robust to outliers.
                 this.scopeMetrics?.scalar(
@@ -161,7 +160,6 @@ export class ModelRegistry {
                     "predict_request_latency_ms",
                     predictRequestLatency,
                     this.scopeStep!,
-                    100 /*buckets*/,
                 );
                 this.scopeMetrics?.scalar(
                     "predict_request_latency_ms/mean",
@@ -177,7 +175,6 @@ export class ModelRegistry {
                     "predict_size",
                     predictSize,
                     this.scopeStep!,
-                    this.config.maxSize /*buckets*/,
                 );
                 this.scopeMetrics?.scalar(
                     "predict_size/mean",

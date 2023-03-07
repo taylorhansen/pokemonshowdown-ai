@@ -285,6 +285,11 @@ export interface EvalConfig {
      */
     readonly interval: number;
     /**
+     * Step interval for recording batch predict metrics during the evaluate
+     * step. Must be divisible by {@link interval}.
+     */
+    readonly predictMetricsInterval: number;
+    /**
      * Whether to report game results to the main thread every {@link interval}
      * steps. Otherwise, only errors are reported.
      */
