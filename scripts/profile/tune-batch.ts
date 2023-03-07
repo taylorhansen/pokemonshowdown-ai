@@ -35,15 +35,17 @@ void (async function () {
             tf.dispose(model.predictOnBatch(batch.state)),
         );
 
-        const learn = new Learn(
-            "tune-batch",
-            model,
-            model,
-            {...config.train.learn, batchSize},
-            config.train.experience,
-        );
-        await profile("learn", batchSize, () => learn.step(1, batch).dispose());
-        learn.cleanup();
+        await profile("learn", batchSize, () => {
+            const learn = new Learn(
+                "tune-batch",
+                model,
+                model,
+                {...config.train.learn, batchSize},
+                config.train.experience,
+            );
+            learn.step(1, batch).dispose();
+            learn.cleanup();
+        });
 
         tf.dispose(batch);
         logMemoryStats();
