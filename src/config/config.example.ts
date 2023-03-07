@@ -86,6 +86,8 @@ export const config: Config = {
         eval: {
             numGames: 100,
             pool: {
+                // Note: Increasing numThreads beyond your CPU's real thread
+                // count can speed up the evaluate step but can burden memory.
                 numThreads,
                 maxTurns,
                 reduceLogs: true,
