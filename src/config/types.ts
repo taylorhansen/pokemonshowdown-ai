@@ -286,7 +286,7 @@ export interface EvalConfig {
     readonly interval: number;
     /**
      * Step interval for recording batch predict metrics during the evaluate
-     * step. Must be divisible by {@link interval}.
+     * step. Must be divisible by {@link interval}. Set to zero to disable.
      */
     readonly predictMetricsInterval: number;
     /**

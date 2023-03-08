@@ -268,8 +268,11 @@ export async function train(
 
                     evalModel.unlock();
                     prevModel.unlock();
+                    Metrics.flush();
+
                     prevModel.model.setWeights(evalModel.model.getWeights());
                     evalModel.model.setWeights(model.getWeights());
+
                     if (step % config.eval.predictMetricsInterval === 0) {
                         evalModel.lock("train", step);
                         prevModel.lock("train", step);

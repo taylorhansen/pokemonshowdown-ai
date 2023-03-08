@@ -116,6 +116,9 @@ export class ModelRegistry {
         this.scopeName = name;
         this.scopeStep = step;
         this.scopeMetrics = Metrics.get(`${name}/model/${this.name}`);
+        this.predictLatency.length = 0;
+        this.predictRequestLatency.length = 0;
+        this.predictSize.length = 0;
     }
 
     /**
@@ -149,6 +152,7 @@ export class ModelRegistry {
                     this.scopeStep!,
                 );
                 this.predictLatency.length = 0;
+                predictLatency.dispose();
             }
 
             if (this.predictRequestLatency.length > 0) {
@@ -167,6 +171,7 @@ export class ModelRegistry {
                     this.scopeStep!,
                 );
                 this.predictRequestLatency.length = 0;
+                predictRequestLatency.dispose();
             }
 
             if (this.predictSize.length > 0) {
@@ -182,6 +187,7 @@ export class ModelRegistry {
                     this.scopeStep!,
                 );
                 this.predictSize.length = 0;
+                predictSize.dispose();
             }
         });
         this.scopeName = null;
