@@ -31,8 +31,13 @@ const logger = new Logger(
 void (async function () {
     const modelPath = join(config.paths.models, config.train.name);
     const logPath = join(config.paths.logs, config.train.name);
-    const metricsPath = join(config.paths.metrics, config.train.name);
-    await Promise.all([modelPath, logPath, metricsPath].map(ensureDir));
+    const metricsPath =
+        config.paths.metrics && join(config.paths.metrics, config.train.name);
+    await Promise.all(
+        [modelPath, logPath, metricsPath].flatMap(async p =>
+            p ? [await ensureDir(p)] : [],
+        ),
+    );
 
     /** Manages the worker thread for Tensorflow ops. */
     const models = new ModelWorker(
@@ -81,7 +86,11 @@ void (async function () {
         await models.train(
             model,
             config.train,
-            {models: modelPath, logs: logPath, metrics: metricsPath},
+            {
+                models: modelPath,
+                logs: logPath,
+                ...(metricsPath && {metrics: metricsPath}),
+            },
             data => trainProgress.callback(data),
         );
     } catch (e) {
