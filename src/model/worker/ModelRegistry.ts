@@ -134,65 +134,67 @@ export class ModelRegistry {
         if (!this.isLocked) {
             return;
         }
-        tf.tidy(() => {
-            if (this.predictLatency.length > 0) {
-                const predictLatency = tf.tensor1d(
-                    this.predictLatency,
-                    "float32",
-                );
-                this.scopeMetrics?.histogram(
-                    "predict_latency_ms",
-                    predictLatency,
-                    this.scopeStep!,
-                );
-                // TODO: Use median instead, more robust to outliers.
-                this.scopeMetrics?.scalar(
-                    "predict_latency_ms/mean",
-                    tf.mean(predictLatency).asScalar(),
-                    this.scopeStep!,
-                );
-                this.predictLatency.length = 0;
-                predictLatency.dispose();
-            }
+        if (this.scopeMetrics) {
+            tf.tidy(() => {
+                if (this.predictLatency.length > 0) {
+                    const predictLatency = tf.tensor1d(
+                        this.predictLatency,
+                        "float32",
+                    );
+                    this.scopeMetrics!.histogram(
+                        "predict_latency_ms",
+                        predictLatency,
+                        this.scopeStep!,
+                    );
+                    // TODO: Use median instead, more robust to outliers.
+                    this.scopeMetrics!.scalar(
+                        "predict_latency_ms/mean",
+                        tf.mean(predictLatency).asScalar(),
+                        this.scopeStep!,
+                    );
+                    predictLatency.dispose();
+                }
 
-            if (this.predictRequestLatency.length > 0) {
-                const predictRequestLatency = tf.tensor1d(
-                    this.predictRequestLatency,
-                    "float32",
-                );
-                this.scopeMetrics?.histogram(
-                    "predict_request_latency_ms",
-                    predictRequestLatency,
-                    this.scopeStep!,
-                );
-                this.scopeMetrics?.scalar(
-                    "predict_request_latency_ms/mean",
-                    tf.mean(predictRequestLatency).asScalar(),
-                    this.scopeStep!,
-                );
-                this.predictRequestLatency.length = 0;
-                predictRequestLatency.dispose();
-            }
+                if (this.predictRequestLatency.length > 0) {
+                    const predictRequestLatency = tf.tensor1d(
+                        this.predictRequestLatency,
+                        "float32",
+                    );
+                    this.scopeMetrics!.histogram(
+                        "predict_request_latency_ms",
+                        predictRequestLatency,
+                        this.scopeStep!,
+                    );
+                    this.scopeMetrics!.scalar(
+                        "predict_request_latency_ms/mean",
+                        tf.mean(predictRequestLatency).asScalar(),
+                        this.scopeStep!,
+                    );
+                    predictRequestLatency.dispose();
+                }
 
-            if (this.predictSize.length > 0) {
-                const predictSize = tf.tensor1d(this.predictSize, "int32");
-                this.scopeMetrics?.histogram(
-                    "predict_size",
-                    predictSize,
-                    this.scopeStep!,
-                );
-                this.scopeMetrics?.scalar(
-                    "predict_size/mean",
-                    tf.mean(predictSize).asScalar(),
-                    this.scopeStep!,
-                );
-                this.predictSize.length = 0;
-                predictSize.dispose();
-            }
-        });
+                if (this.predictSize.length > 0) {
+                    const predictSize = tf.tensor1d(this.predictSize, "int32");
+                    this.scopeMetrics!.histogram(
+                        "predict_size",
+                        predictSize,
+                        this.scopeStep!,
+                    );
+                    this.scopeMetrics!.scalar(
+                        "predict_size/mean",
+                        tf.mean(predictSize).asScalar(),
+                        this.scopeStep!,
+                    );
+                    predictSize.dispose();
+                }
+            });
+        }
         this.scopeName = null;
         this.scopeStep = null;
         this.scopeMetrics = null;
+        this.predictLatency.length = 0;
+        this.predictRequestLatency.length = 0;
+        this.predictSize.length = 0;
     }
 
     /**
