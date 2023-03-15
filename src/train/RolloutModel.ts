@@ -71,11 +71,13 @@ export class RolloutModel {
             | ModelMetadata
             | undefined;
         if (metadata?.config?.dist) {
-            this.support = createSupport(metadata.config.dist).reshape([
-                1,
-                1,
-                metadata.config.dist,
-            ]);
+            this.support = tf.tidy(() =>
+                createSupport(metadata.config!.dist!).reshape([
+                    1,
+                    1,
+                    metadata.config!.dist!,
+                ]),
+            );
         }
         this.predictBatch = new PredictBatch(this.support);
     }

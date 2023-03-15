@@ -279,8 +279,12 @@ export async function train(
                     }
 
                     lastEval = runEval(step);
+
                     if (config.eval.sync) {
                         await lastEval;
+                        evalModel.unlock();
+                        prevModel.unlock();
+                        Metrics.flush();
                     } else {
                         lastEval.catch(() => {});
                     }
@@ -301,12 +305,14 @@ export async function train(
         }
         await Promise.all([rollout.terminate(), lastEval]);
         await evaluate.close();
+        for (const m of [evalModel, prevModel]) {
+            m.unlock();
+        }
     } finally {
         await Promise.all([rollout.terminate(), evaluate.terminate()]);
         learn.cleanup();
         rolloutModel.unload();
         for (const m of [evalModel, prevModel]) {
-            m.unlock();
             m.unload();
         }
         targetModel.dispose();

@@ -69,8 +69,6 @@ export class ModelRegistry {
      * @param name Name of the model.
      * @param model Neural network object.
      * @param config Configuration for batching predict requests.
-     * @param support Reference to the support of the Q value distribution, of
-     * shape `[1, 1, atoms]`.
      */
     public constructor(
         public readonly name: string,
@@ -83,11 +81,13 @@ export class ModelRegistry {
             | ModelMetadata
             | undefined;
         if (metadata?.config?.dist) {
-            this.support = createSupport(metadata.config.dist).reshape([
-                1,
-                1,
-                metadata.config.dist,
-            ]);
+            this.support = tf.tidy(() =>
+                createSupport(metadata.config!.dist!).reshape([
+                    1,
+                    1,
+                    metadata.config!.dist!,
+                ]),
+            );
         }
         this.predictBatch = new PredictBatch(this.support);
 
@@ -96,6 +96,7 @@ export class ModelRegistry {
 
     /** Safely closes ports and disposes the model. */
     public unload(): void {
+        this.unlock(false /*storeMetrics*/);
         for (const port of this.ports) {
             port.close();
         }
@@ -130,11 +131,11 @@ export class ModelRegistry {
     }
 
     /** Unlocks the scope and compiles summary logs. */
-    public unlock(): void {
+    public unlock(storeMetrics = true): void {
         if (!this.isLocked) {
             return;
         }
-        if (this.scopeMetrics) {
+        if (storeMetrics && this.scopeMetrics) {
             tf.tidy(() => {
                 if (this.predictLatency.length > 0) {
                     const predictLatency = tf.tensor1d(
