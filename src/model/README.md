@@ -28,8 +28,8 @@ unordered set-based data rather than natural language.
 
 The model also supports [distributional](https://arxiv.org/abs/1707.06887)
 reinforcemenet learning, where single action values, representing the
-expectation (mean) of the Q-values, are each replaced with discrete probability
-distributions.
+expectation (mean) of the Q-values, are each replaced with probability
+distributions in order to better model variance and uncertainty.
 
 ## Worker
 
