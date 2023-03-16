@@ -6,6 +6,7 @@ import * as tf from "@tensorflow/tfjs";
 import {config} from "../../src/config";
 import {createModel} from "../../src/model/model";
 import {Learn} from "../../src/train/Learn";
+import {formatUptime} from "../../src/util/format";
 import {importTfn} from "../../src/util/tfn";
 import {logMemoryStats, makeBatch, profile} from "./util";
 
@@ -32,17 +33,25 @@ const learn = new Learn(
     config.train.experience,
 );
 
+function step(i: number) {
+    const batch = makeBatch(config.train.learn.batchSize);
+    learn.step(i, batch).dispose();
+    tf.dispose(batch);
+}
+
 void (async function () {
     logMemoryStats();
-    for (let i = 1; i <= 10; ++i) {
-        await profile("learn", config.train.learn.batchSize, () => {
-            const batch = makeBatch(config.train.learn.batchSize);
-            learn.step(i, batch).dispose();
-            tf.dispose(batch);
-        });
-        logMemoryStats();
+    for (let i = 0; i <= 100_000; ++i) {
+        if (i % 10_000 === 0) {
+            console.log(`${i}: ${formatUptime(process.uptime())}`);
+            await profile("learn", config.train.learn.batchSize, () => step(i));
+            logMemoryStats();
+        } else {
+            step(i);
+        }
     }
 })().finally(() => {
     learn.cleanup();
     model.dispose();
+    console.log("Uptime: " + formatUptime(process.uptime()));
 });
