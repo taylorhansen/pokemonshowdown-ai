@@ -19,7 +19,7 @@ export function importTfn(gpu = false): Tfn {
         importGpu = gpu;
     } else if (importGpu !== gpu) {
         throw new Error(
-            `tfImport was previously called with gpu=${importGpu} but is ` +
+            `importTfn was previously called with gpu=${importGpu} but is ` +
                 `now being called with gpu=${gpu}`,
         );
     }
