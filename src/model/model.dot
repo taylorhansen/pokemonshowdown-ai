@@ -1,5 +1,5 @@
 digraph model {
-    label = "Model"
+    label = "Model\n Example with dueling + distributional architecture (atoms = 51)\nTotal parameters = 2,610,841"
     node [shape=rect]
     rankdir = LR
     splines = polyline
@@ -69,17 +69,17 @@ digraph model {
     subgraph cluster_encoder {
         label = "Individual Encoders"
 
-        room_status_dense [label = "2 x (Dense(64) + Leaky ReLU)\n(64)"]
-        team_status_dense [label = "2 x (Dense(64) + Leaky ReLU)\n(2x64)"]
-        active_volatile_dense [label = "2 x (Dense(128) + Leaky ReLU)\n(2x1x128)"]
-        pokemon_basic_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x6x128)"]
-        pokemon_species_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
-        pokemon_types_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
-        pokemon_stats_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
-        pokemon_ability_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x128)"]
-        pokemon_item_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x6x128)"]
-        pokemon_last_item_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x6x128)"]
-        pokemon_moves_dense [label="2 x (Dense(128) + Leaky ReLU)\n(2x7x4x128)"]
+        room_status_dense [label = "Dense(64) + Leaky ReLU\n(64)"]
+        team_status_dense [label = "Dense(64) + Leaky ReLU)\n(2x64)"]
+        active_volatile_dense [label = "Dense(128) + Leaky ReLU\n(2x1x128)"]
+        pokemon_basic_dense [label="Dense(128) + Leaky ReLU\n(2x6x128)"]
+        pokemon_species_dense [label="Dense(128) + Leaky ReLU\n(2x7x128)"]
+        pokemon_types_dense [label="Dense(128) + Leaky ReLU\n(2x7x128)"]
+        pokemon_stats_dense [label="Dense(128) + Leaky ReLU\n(2x7x128)"]
+        pokemon_ability_dense [label="Dense(128) + Leaky ReLU\n(2x7x128)"]
+        pokemon_item_dense [label="Dense(128) + Leaky ReLU\n(2x6x128)"]
+        pokemon_last_item_dense [label="Dense(128) + Leaky ReLU\n(2x6x128)"]
+        pokemon_moves_dense [label="Dense(128) + Leaky ReLU\n(2x7x4x128)"]
 
         room_status:e -> room_status_dense:w
         team_status:e -> team_status_dense:w
@@ -100,7 +100,7 @@ digraph model {
     subgraph cluster_move {
         label = "Move Features"
 
-        pokemon_moves_attention [label="2 x SAB(4,32,128)\n(2x7x4x128)"]
+        pokemon_moves_attention [label="SAB(4,32,128)\n(2x7x4x128)"]
         pokemon_moves_aggregate [label="PMA(4,32,128)\n(2x7x128)"]
 
         pokemon_moves_dense:s -> pokemon_moves_attention:n
@@ -178,7 +178,7 @@ digraph model {
         label = "Global"
 
         global_concat [label="Flatten + Concat\n(1216)"]
-        global_dense [label="2 x (Dense(256) + Leaky RelU)\n(256)"]
+        global_dense [label="Dense(256) + Leaky RelU\n(256)"]
         active_global_concat [label="Concat\n(768)"]
 
         room_status_dense:e ->  global_concat:w
@@ -187,7 +187,7 @@ digraph model {
         bench_aggregate:e -> global_concat:w
         global_concat:e -> global_dense:w
         global_dense:e -> active_global_concat:w
-        active_flatten:e -> active_global_concat:w [label="(skip)"]
+        active_flatten:e -> active_global_concat:w [label="(residual)"]
     }
 
     subgraph cluster_action {
@@ -202,7 +202,7 @@ digraph model {
 
             pokemon_moves_attention:e -> action_move_slice:w
             action_move_slice:e -> action_move_concat:w
-            active_global_concat:e -> action_move_concat:sw [label="\n\n(tiled x4)"]
+            active_global_concat:e -> action_move_concat:nw [label="(tiled x4)"]
             action_move_concat:e -> action_move_dense:w
 
             global_concat -> action_move_slice [style=invis]
@@ -217,7 +217,7 @@ digraph model {
 
             bench_attention:e -> action_switch_slice:w
             action_switch_slice:e -> action_switch_concat:w
-            active_global_concat:e -> action_switch_concat:sw [label="(tiled x5)"]
+            active_global_concat:e -> action_switch_concat:nw [label="(tiled x5)"]
             action_switch_concat:e -> action_switch_dense:w
 
             active_global_concat -> action_switch_slice [style=invis]
@@ -232,65 +232,15 @@ digraph model {
         active_global_concat:e -> value_dense:w
     }
 
-    subgraph cluster_nodist {
-        label = "No Distribution (option)"
-
-        subgraph cluster_dueling_action {
-            label = "Action Advantage"
-
-            action_move_adv [label="Dense(1) + Reshape\n(4)"]
-            action_switch_adv [label="Dense(1) + Reshape\n(5)"]
-            adv [label="Concat\n(9)"]
-
-            action_move_dense:e -> action_move_adv:w
-            action_switch_dense:e -> action_switch_adv:w
-            action_move_adv:e -> adv:w
-            action_switch_adv:e -> adv:w
-        }
-
-        subgraph cluster_nodist_nodueling {
-            label = "No Dueling (option)"
-
-            q [label="Tanh\n(9)"]
-            output [style=filled label="Action\n(9)"]
-
-            adv:e -> q:w
-            q:e -> output:w
-        }
-
-        subgraph cluster_nodist_dueling {
-            label = "Dueling (option)"
-
-            subgraph cluster_dueling_value {
-                label = "State Value"
-
-                v [label="Dense(1)\n(1)"]
-
-                value_dense:e -> v:w
-            }
-
-            adv_centered [label="Sub Mean\n(9)"]
-            q_dueling [label="Add\n(9)"]
-            q_dueling_tanh [label="Tanh\n(9)"]
-            dueling_output [style=filled label="Action\n(9)"]
-
-            adv:e -> adv_centered:w
-            adv_centered:e -> q_dueling:w
-            v:e -> q_dueling:w
-            q_dueling:e -> q_dueling_tanh:w
-            q_dueling_tanh:e -> dueling_output:w
-        }
-    }
-
     subgraph cluster_dist {
-        label = "Distributional RL (option)\nAtoms = A"
+        label = "Distributional (atoms = 51)"
 
         subgraph cluster_dist_action {
             label = "Action Advantage Dist"
 
-            action_move_adv_logits [label="Dense(A)\n(4xA)"]
-            action_switch_adv_logits [label="Dense(A)\n(5xA)"]
-            adv_logits [label="Concat\n(9xA)"]
+            action_move_adv_logits [label="Dense(51)\n(4x51)"]
+            action_switch_adv_logits [label="Dense(51)\n(5x51)"]
+            adv_logits [label="Concat\n(9x51)"]
 
             action_move_dense:e -> action_move_adv_logits:w
             action_switch_dense:e -> action_switch_adv_logits:w
@@ -298,33 +248,23 @@ digraph model {
             action_switch_adv_logits:e -> adv_logits:w
         }
 
-        subgraph cluster_dist_nodueling {
-            label = "No Dueling (option)"
-
-            q_dist [label="Softmax\n(9xA)"]
-            dist_output [style=filled label="Action Dist\n(9xA)"]
-
-            adv_logits:e -> q_dist:w
-            q_dist:e -> dist_output:w
-        }
-
         subgraph cluster_dist_dueling {
-            label = "Dueling (option)"
+            label = "Dueling"
 
             subgraph cluster_dist_value {
                 label = "State Value Dist"
 
-                v_logits [label="Dense(A) + Reshape\n(1xA)"]
+                v_logits [label="Dense(51) + Reshape\n(1x51)"]
 
                 value_dense:e -> v_logits:w
 
                 adv_logits -> v_logits [style=invis]
             }
 
-            adv_centered_logits [label="Sub Mean\nOver Actions\n(9xA)"]
-            q_logits [label="Add\n(9xA)"]
-            q_dist_dueling [label="Softmax\n(9xA)"]
-            dist_dueling_output [style=filled label="Action Dist\n(9xA)"]
+            adv_centered_logits [label="Sub Mean\nOver Actions\n(9x51)"]
+            q_logits [label="Add\n(9x51)"]
+            q_dist_dueling [label="Softmax\n(9x51)"]
+            dist_dueling_output [style=filled label="Action Dist\n(9x51)"]
 
             adv_logits:e -> adv_centered_logits:w
             adv_centered_logits:e -> q_logits:w

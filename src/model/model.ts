@@ -115,24 +115,14 @@ export function createModel(
     const moveUnits = 128;
     const moves = inputFeatures(name, "pokemon/moves", moveUnits, random);
     inputs.push(moves.input);
-    let moveset = selfAttentionBlock(
+    const moveset = selfAttentionBlock(
         name,
         "pokemon/moves",
         4 /*heads*/,
         32 /*headUnits*/,
         moveUnits /*units*/,
-        "_1",
         random,
     )(moves.features);
-    moveset = selfAttentionBlock(
-        name,
-        "pokemon/moves",
-        4 /*heads*/,
-        32 /*headUnits*/,
-        moveUnits /*units*/,
-        "_2",
-        random,
-    )(moveset);
     const movesetAggregate = poolingAttentionBlock(
         name,
         "pokemon/moves",
@@ -199,16 +189,6 @@ export function createModel(
         8 /*heads*/,
         32 /*headUnits*/,
         benchUnits /*units*/,
-        "_1",
-        random,
-    )(bench, benchAlive);
-    bench = selfAttentionBlock(
-        name,
-        "bench",
-        8 /*heads*/,
-        32 /*headUnits*/,
-        benchUnits /*units*/,
-        "_2",
         random,
     )(bench, benchAlive);
 
@@ -270,7 +250,7 @@ export function createModel(
 
     let q: tf.SymbolicTensor;
     if (!config?.dueling) {
-        q = qValue(name, "action", config?.dist)(advantage);
+        q = advantage;
     } else {
         const value = stateValue({
             name,
@@ -280,8 +260,9 @@ export function createModel(
             ...(random && {random}),
         })(global);
 
-        q = qDueling(name, "action", config.dist)(advantage, value);
+        q = qDueling(name, "action")(advantage, value);
     }
+    q = qValue(name, "q_val", config?.dist)(q);
 
     //#endregion
 
@@ -361,29 +342,18 @@ function inputFeaturesList(
     random?: Rng,
 ): InputFeaturesList {
     const inputs = labels.map(label => inputLayer(name, label));
-    const denseLayer1 = tf.layers.dense({
-        name: `${name}/${labels[0]}/dense_1`,
+    const denseLayer = tf.layers.dense({
+        name: `${name}/${labels[0]}/dense`,
         units,
         kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
-    const activationLayer1 = tf.layers.leakyReLU({
-        name: `${name}/${labels[0]}/leaky_relu_1`,
-    });
-    const denseLayer2 = tf.layers.dense({
-        name: `${name}/${labels[0]}/dense_2`,
-        units,
-        kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
-        biasInitializer: "zeros",
-    });
-    const activationLayer2 = tf.layers.leakyReLU({
-        name: `${name}/${labels[0]}/leaky_relu_2`,
+    const activationLayer = tf.layers.leakyReLU({
+        name: `${name}/${labels[0]}/leaky_relu`,
     });
     const features = inputs.map(input => {
-        input = denseLayer1.apply(input) as tf.SymbolicTensor;
-        input = activationLayer1.apply(input) as tf.SymbolicTensor;
-        input = denseLayer2.apply(input) as tf.SymbolicTensor;
-        input = activationLayer2.apply(input) as tf.SymbolicTensor;
+        input = denseLayer.apply(input) as tf.SymbolicTensor;
+        input = activationLayer.apply(input) as tf.SymbolicTensor;
         return input;
     });
     return {inputs, features};
@@ -472,7 +442,6 @@ function splitPokemon(
  * @param heads Number of attention heads.
  * @param headUnits Size of each head.
  * @param units Size of input.
- * @param suffix Name suffix for layers.
  * @param random Optional seeder for weight init.
  * @returns A function to apply the attention block and output the same shape as
  * input but with the feature dimension replaced with `units`.
@@ -483,37 +452,36 @@ function selfAttentionBlock(
     heads: number,
     headUnits: number,
     units: number,
-    suffix = "",
     random?: Rng,
 ): (
     features: tf.SymbolicTensor,
     mask?: tf.SymbolicTensor,
 ) => tf.SymbolicTensor {
     const attentionLayer = customLayers.setAttention({
-        name: `${name}/${label}/attention${suffix}`,
+        name: `${name}/${label}/attention`,
         heads,
         headUnits,
         units,
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
     });
     const attentionActivationLayer = tf.layers.leakyReLU({
-        name: `${name}/${label}/attention${suffix}/leaky_relu`,
+        name: `${name}/${label}/attention/leaky_relu`,
     });
     const attentionResidualLayer1 = tf.layers.add({
-        name: `${name}/${label}/attention${suffix}/residual`,
+        name: `${name}/${label}/attention/residual`,
     });
     const attentionDenseLayer = tf.layers.dense({
-        name: `${name}/${label}/attention${suffix}/dense`,
+        name: `${name}/${label}/attention/dense`,
         units,
     });
     const attentionDenseActivationLayer = tf.layers.leakyReLU({
-        name: `${name}/${label}/attention${suffix}/dense/leaky_relu`,
+        name: `${name}/${label}/attention/dense/leaky_relu`,
     });
     const attentionResidualLayer2 = tf.layers.add({
-        name: `${name}/${label}/attention${suffix}/dense/residual`,
+        name: `${name}/${label}/attention/dense/residual`,
     });
     const maskLayer = customLayers.mask({
-        name: `${name}/${label}/attention${suffix}/dense/mask`,
+        name: `${name}/${label}/attention/dense/mask`,
     });
     return function selfAttentionBlockImpl(features, mask) {
         let attention = attentionLayer.apply(
@@ -654,33 +622,22 @@ function aggregateGlobal(
         name: `${name}/${label}/concat`,
         axis: -1,
     });
-    const denseLayer1 = tf.layers.dense({
-        name: `${name}/${label}/dense_1`,
+    const denseLayer = tf.layers.dense({
+        name: `${name}/${label}/dense`,
         units,
         kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
-    const activationLayer1 = tf.layers.leakyReLU({
-        name: `${name}/${label}/leaky_relu_1`,
-    });
-    const denseLayer2 = tf.layers.dense({
-        name: `${name}/${label}/dense_2`,
-        units,
-        kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
-        biasInitializer: "zeros",
-    });
-    const activationLayer2 = tf.layers.leakyReLU({
-        name: `${name}/${label}/leaky_relu_2`,
+    const activationLayer = tf.layers.leakyReLU({
+        name: `${name}/${label}/leaky_relu`,
     });
     return function aggregateGlobalImpl(features) {
         const flattened = features.map(t =>
             t.rank === 2 ? t : (flattenLayer.apply(t) as tf.SymbolicTensor),
         );
         let combined = concatLayer.apply(flattened) as tf.SymbolicTensor;
-        combined = denseLayer1.apply(combined) as tf.SymbolicTensor;
-        combined = activationLayer1.apply(combined) as tf.SymbolicTensor;
-        combined = denseLayer2.apply(combined) as tf.SymbolicTensor;
-        combined = activationLayer2.apply(combined) as tf.SymbolicTensor;
+        combined = denseLayer.apply(combined) as tf.SymbolicTensor;
+        combined = activationLayer.apply(combined) as tf.SymbolicTensor;
         return combined;
     };
 }
@@ -763,12 +720,12 @@ function actionValue({
         kernelInitializer: tf.initializers.glorotNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
-    const reshapeLayer = atoms
-        ? undefined
-        : tf.layers.reshape({
-              name: `${name}/${label}/reshape`,
-              targetShape: [numActions],
-          });
+    const reshapeLayer =
+        !atoms &&
+        tf.layers.reshape({
+            name: `${name}/${label}/reshape`,
+            targetShape: [numActions],
+        });
     return function actionValuesImpl(local, global) {
         local = localSliceLayer.apply(local) as tf.SymbolicTensor;
         local = localReshapeLayer.apply(local) as tf.SymbolicTensor;
@@ -777,7 +734,9 @@ function actionValue({
         values = denseLayer1.apply(values) as tf.SymbolicTensor;
         values = activationLayer.apply(values) as tf.SymbolicTensor;
         values = denseLayer2.apply(values) as tf.SymbolicTensor;
-        values = (reshapeLayer?.apply(values) as tf.SymbolicTensor) ?? values;
+        if (reshapeLayer) {
+            values = reshapeLayer.apply(values) as tf.SymbolicTensor;
+        }
         return values;
     };
 }
@@ -873,21 +832,17 @@ function qValue(
 }
 
 /**
- * Creates a layer that computes Q-value from action advantages and state value
- * using a dueling architecture.
+ * Creates a layer that adds dueling Q network logic before applying the
+ * {@link qValue} layer.
  *
  * @param name Name of model.
  * @param label Name of module.
- * @param atoms If defined, the function will compute the softmax value
- * distribution for each action rather than a single value per action. The
- * number specifies the number of atoms with which to construct the support of
- * the value distribution.
- * @returns A function to compute the Q-values.
+ * @returns A function to compute the Q-values from action advantages and state
+ * value using a dueling architecture.
  */
 function qDueling(
     name: string,
     label: string,
-    atoms?: number,
 ): (
     advantage: tf.SymbolicTensor,
     value: tf.SymbolicTensor,
@@ -900,21 +855,13 @@ function qDueling(
     });
     const advSubLayer = customLayers.sub({name: `${name}/${label}/sub`});
     const qAddLayer = tf.layers.add({name: `${name}/${label}/add`});
-    const softmaxLayer = atoms
-        ? tf.layers.softmax({
-              name: `${name}/${label}/softmax`,
-              axis: -1,
-          })
-        : undefined;
     return function duelingImpl(advantage, value) {
         const meanAdv = meanAdvLayer.apply(advantage) as tf.SymbolicTensor;
         advantage = advSubLayer.apply([
             advantage,
             meanAdv,
         ]) as tf.SymbolicTensor;
-        let q = qAddLayer.apply([advantage, value]) as tf.SymbolicTensor;
-        q = (softmaxLayer?.apply(q) as tf.SymbolicTensor) ?? q;
-        return q;
+        return qAddLayer.apply([advantage, value]) as tf.SymbolicTensor;
     };
 }
 
