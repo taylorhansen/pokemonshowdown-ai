@@ -1,61 +1,15 @@
-import {serialize} from "v8";
-import {MessageChannel, MessagePort} from "worker_threads";
+import {MessagePort} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
-import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
 import {BatchPredictConfig} from "../../config/types";
-import {setTimeoutNs} from "../../util/nanosecond";
-import {RawPortResultError} from "../../util/port/PortProtocol";
+import {intToChoice} from "../../psbot/handlers/battle/agent";
 import {createSupport, ModelMetadata, verifyModel} from "../model";
-import {
-    ModelPortMessage,
-    PredictMessage,
-    PredictResult,
-    PredictWorkerResult,
-} from "../port/ModelPortProtocol";
-import {Metrics} from "./Metrics";
-import {PredictBatch} from "./PredictBatch";
-
-/** Event for when the model is able to take more batch predict requests. */
-const predictReady = Symbol("predictReady");
-
-/** Defines events that the ModelRegistry implements. */
-interface Events extends ListenerSignature<{[predictReady]: true}> {
-    /** When the model is ready to take another batch prediction. */
-    readonly [predictReady]: () => void;
-}
+import {flattenedInputShapes, modelInputShapes} from "../shapes";
+import {BatchPredict} from "./BatchPredict";
 
 /** Manages a neural network registry. */
 export class ModelRegistry {
-    /** Currently held game worker ports. */
-    private readonly ports = new Set<MessagePort>();
-    /** Event manager for throttling batch predict requests. */
-    private readonly events = new TypedEmitter<Events>();
-
-    private scopeName: string | null = null;
-    private scopeStep: number | null = null;
-    /** Metrics logger for the current scope. */
-    private scopeMetrics: Metrics | null = null;
-    /** Time it takes for the model to process a batch, in milliseconds. */
-    private readonly predictLatency: number[] = [];
-    /** Time it takes for requests to arrive at the model, in milliseconds. */
-    private readonly predictRequestLatency: number[] = [];
-    /** Number of requests getting batched and sent to the model at once. */
-    private readonly predictSize: number[] = [];
-
-    /** Current pending predict request batch. */
-    private predictBatch: PredictBatch;
-    /**
-     * Resolves once the current batch timer expires, returning true if
-     * {@link cancelTimer} is called.
-     */
-    private timeoutPromise: Promise<boolean> | null = null;
-    /**
-     * Function to cancel the current batch predict timer and resolve
-     * {@link timeoutPromise}.
-     */
-    private cancelTimer: (() => void) | null = null;
-    /** Promise to finish the current batch predict request. */
-    private predictPromise: Promise<unknown> | null = null;
+    /** Batch predict profiles attached to this model. */
+    private readonly profiles = new Map<string, BatchPredict>();
 
     /**
      * Support of the Q value distribution. Used for distributional RL if
@@ -68,12 +22,10 @@ export class ModelRegistry {
      *
      * @param name Name of the model.
      * @param model Neural network object.
-     * @param config Configuration for batching predict requests.
      */
     public constructor(
         public readonly name: string,
         public readonly model: tf.LayersModel,
-        private readonly config: BatchPredictConfig,
     ) {
         verifyModel(model);
 
@@ -89,224 +41,124 @@ export class ModelRegistry {
                 ]),
             );
         }
-        this.predictBatch = new PredictBatch(this.support);
-
-        this.events.setMaxListeners(config.maxSize);
     }
 
     /** Safely closes ports and disposes the model. */
-    public unload(): void {
-        this.unlock(false /*storeMetrics*/);
-        for (const port of this.ports) {
-            port.close();
+    public unload(disposeModel = true): void {
+        for (const [, profile] of this.profiles) {
+            profile.destroy();
         }
-        this.model.dispose();
         this.support?.dispose();
-    }
-
-    /** Locks the model under a scope name and step number. */
-    public lock(name: string, step: number): void {
-        if (this.scopeName === name && this.scopeStep === step) {
-            return;
+        if (disposeModel) {
+            this.model.dispose();
         }
-        if (this.isLocked) {
-            throw new Error(
-                `Already locked under scope '${name}' (step=${step})`,
-            );
-        }
-        this.scopeName = name;
-        this.scopeStep = step;
-        this.scopeMetrics = Metrics.get(`${name}/model/${this.name}`);
-        this.predictLatency.length = 0;
-        this.predictRequestLatency.length = 0;
-        this.predictSize.length = 0;
     }
 
     /**
-     * Whether {@link lock} was called and {@link unlock} hasn't yet been
-     * called.
-     */
-    public get isLocked(): boolean {
-        return this.scopeName !== null && this.scopeStep !== null;
-    }
-
-    /** Unlocks the scope and compiles summary logs. */
-    public unlock(storeMetrics = true): void {
-        if (!this.isLocked) {
-            return;
-        }
-        if (storeMetrics && this.scopeMetrics) {
-            tf.tidy(() => {
-                if (this.predictLatency.length > 0) {
-                    const predictLatency = tf.tensor1d(
-                        this.predictLatency,
-                        "float32",
-                    );
-                    this.scopeMetrics!.histogram(
-                        "predict_latency_ms",
-                        predictLatency,
-                        this.scopeStep!,
-                    );
-                    // TODO: Use median instead, more robust to outliers.
-                    this.scopeMetrics!.scalar(
-                        "predict_latency_ms/mean",
-                        tf.mean(predictLatency).asScalar(),
-                        this.scopeStep!,
-                    );
-                    predictLatency.dispose();
-                }
-
-                if (this.predictRequestLatency.length > 0) {
-                    const predictRequestLatency = tf.tensor1d(
-                        this.predictRequestLatency,
-                        "float32",
-                    );
-                    this.scopeMetrics!.histogram(
-                        "predict_request_latency_ms",
-                        predictRequestLatency,
-                        this.scopeStep!,
-                    );
-                    this.scopeMetrics!.scalar(
-                        "predict_request_latency_ms/mean",
-                        tf.mean(predictRequestLatency).asScalar(),
-                        this.scopeStep!,
-                    );
-                    predictRequestLatency.dispose();
-                }
-
-                if (this.predictSize.length > 0) {
-                    const predictSize = tf.tensor1d(this.predictSize, "int32");
-                    this.scopeMetrics!.histogram(
-                        "predict_size",
-                        predictSize,
-                        this.scopeStep!,
-                    );
-                    this.scopeMetrics!.scalar(
-                        "predict_size/mean",
-                        tf.mean(predictSize).asScalar(),
-                        this.scopeStep!,
-                    );
-                    predictSize.dispose();
-                }
-            });
-        }
-        this.scopeName = null;
-        this.scopeStep = null;
-        this.scopeMetrics = null;
-        this.predictLatency.length = 0;
-        this.predictRequestLatency.length = 0;
-        this.predictSize.length = 0;
-    }
-
-    /**
-     * Indicates that a game worker is subscribing to a model.
+     * Configures and attaches a batch predict profile onto this model.
      *
-     * @returns A port for queueing predictions that the game worker will use.
+     * @param name Name of the profile.
+     * @param config Batch predict config.
      */
-    public subscribe(): MessagePort {
-        const {port1, port2} = new MessageChannel();
-        this.ports.add(port1);
-        port1.on(
-            "message",
-            (msg: ModelPortMessage) =>
-                msg.type === "predict" &&
-                void this.predict(msg)
-                    // Note: Prediction buffers can't be transfered since they
-                    // each share a slice of it within the batched prediction.
-                    .then(result => port1.postMessage(result))
-                    .catch(err => {
-                        const result: RawPortResultError = {
-                            type: "error",
-                            rid: msg.rid,
-                            done: true,
-                            err: serialize(err),
-                        };
-                        port1.postMessage(result, [result.err.buffer]);
-                    }),
-        );
-        port1.on("close", () => this.ports.delete(port1));
-        return port2;
-    }
-
-    /**
-     * Queues a prediction for the neural network. Can be called multiple times
-     * while other predict requests are still queued.
-     */
-    private async predict(msg: PredictMessage): Promise<PredictWorkerResult> {
-        while (this.predictBatch.length >= this.config.maxSize) {
-            await new Promise<void>(res => this.events.once(predictReady, res));
-        }
-
-        const result = new Promise<PredictResult>(res =>
-            this.predictBatch.add(msg.state, res),
-        );
-        await this.checkPredictBatch();
-        return {
-            type: "predict",
-            rid: msg.rid,
-            done: true,
-            ...(await result),
-        };
-    }
-
-    /**
-     * Checks batch size and timer to see if the predict batch should be
-     * executed.
-     */
-    private async checkPredictBatch(): Promise<void> {
-        if (this.predictBatch.length >= this.config.maxSize) {
-            // Full batch.
-            await this.executeBatch();
-            return;
-        }
-        if (this.timeoutPromise) {
-            return;
-        }
-
-        // Setup batch timer.
-        this.timeoutPromise = new Promise<boolean>(
-            res =>
-                (this.cancelTimer = setTimeoutNs(res, this.config.timeoutNs)),
-        ).finally(() => {
-            this.timeoutPromise = null;
-            this.cancelTimer = null;
-        });
-        if (!(await this.timeoutPromise)) {
-            // Batch timer expired on its own.
-            await this.executeBatch();
-        }
-    }
-
-    /** Flushes the predict buffer and executes the batch. */
-    private async executeBatch(): Promise<void> {
-        if (this.predictBatch.length <= 0) {
-            return;
-        }
-        this.cancelTimer?.();
-
-        if (this.predictPromise) {
-            await this.predictPromise;
-        }
-
-        const batch = this.predictBatch;
-        this.predictBatch = new PredictBatch(this.support);
-        this.events.emit(predictReady);
-
-        const startTime = process.hrtime.bigint();
-        const results = tf.tidy(
-            () => this.model.predictOnBatch(batch.toTensors()) as tf.Tensor,
-        );
-        await (this.predictPromise = batch
-            .resolve(results)
-            .finally(() => (results.dispose(), (this.predictPromise = null))));
-        const endTime = process.hrtime.bigint();
-
-        if (this.isLocked) {
-            this.predictLatency.push(Number(endTime - startTime) / 1e6 /*ms*/);
-            this.predictRequestLatency.push(
-                ...batch.times.map(t => Number(startTime - t) / 1e6),
+    public configure(name: string, config: BatchPredictConfig): BatchPredict {
+        if (this.profiles.has(name)) {
+            throw new Error(
+                `Batch predict profile '${name}' for model '${this.name}' ` +
+                    "already exists",
             );
-            this.predictSize.push(batch.length);
         }
+        const profile = new BatchPredict(name, this, config);
+        this.profiles.set(name, profile);
+        return profile;
+    }
+
+    /** Removes an attached batch predict profile. */
+    public deconfigure(name: string): void {
+        const profile = this.profiles.get(name);
+        if (!profile) {
+            throw new Error(
+                `Batch predict profile '${name}' for model '${this.name}' ` +
+                    "doesn't exist",
+            );
+        }
+        profile.destroy();
+        this.profiles.delete(name);
+    }
+
+    /**
+     * Executes a batched prediction on the model.
+     *
+     * @param inputs Pre-batch stacked encoded state data inputs. The outer
+     * length of the array should be the number of inputs and the inner length
+     * should be the size of the batch.
+     * @returns The Q-value outputs of each action for each requested inference.
+     */
+    public async predictOnBatch(
+        inputs: Float32Array[][],
+    ): Promise<Float32Array[]> {
+        if (inputs.length !== modelInputShapes.length) {
+            throw new Error(
+                `Expected ${modelInputShapes.length} inputs but found ` +
+                    `${inputs.length}`,
+            );
+        }
+        const results = tf.tidy(() => {
+            const stateTensors = inputs.map((input, i) => {
+                const size = flattenedInputShapes[i];
+                const values = new Float32Array(input.length * size);
+                for (let j = 0; j < input.length; ++j) {
+                    values.set(input[j], j * size);
+                }
+                return tf.tensor(
+                    values,
+                    [input.length, ...modelInputShapes[i]],
+                    "float32",
+                );
+            });
+
+            const output = this.model.predictOnBatch(stateTensors) as tf.Tensor;
+            tf.dispose(stateTensors);
+
+            if (this.support) {
+                // Distributional RL: Take the expectation (mean) of the Q-value
+                // probability distribution.
+                tf.util.assertShapesMatch(
+                    [inputs[0].length, intToChoice.length, this.support.size],
+                    output.shape,
+                    "Misshaped predict results:",
+                );
+                return tf.sum(tf.mul(output, this.support), -1);
+            }
+            tf.util.assertShapesMatch(
+                [inputs[0].length, intToChoice.length],
+                output.shape,
+                "Misshaped predict results:",
+            );
+            return output;
+        });
+        const resultData = await results.data<"float32">();
+        results.dispose();
+        return Array.from({length: inputs[0].length}, (_, i) =>
+            resultData.subarray(
+                i * intToChoice.length,
+                (i + 1) * intToChoice.length,
+            ),
+        );
+    }
+
+    /**
+     * Creates a unique message port for requesting predictions from one of the
+     * configured batch predict profiles. Requests from multiple ports are
+     * batched and executed as one inference. Obeys the ModelPort protocol.
+     */
+    public subscribe(name: string): MessagePort {
+        const profile = this.profiles.get(name);
+        if (!profile) {
+            throw new Error(
+                `Model '${this.name}' has no batch predict profile under ` +
+                    `name '${name}'`,
+            );
+        }
+        return profile.subscribe();
     }
 }

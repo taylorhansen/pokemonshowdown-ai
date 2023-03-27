@@ -1,8 +1,15 @@
 import {resolve} from "path";
+import {isArrayBuffer} from "util/types";
 import {MessagePort} from "worker_threads";
 import {PRNGSeed} from "@pkmn/sim";
-import {ExperienceConfig, GamePoolConfig} from "../../config/types";
+import type * as tf from "@tensorflow/tfjs";
+import {
+    BatchPredictConfig,
+    ExperienceConfig,
+    GamePoolConfig,
+} from "../../config/types";
 import {ThreadPool} from "../../util/pool/ThreadPool";
+import {Experience} from "../experience";
 import {SimResult} from "../sim/playGame";
 import {
     GameAgentConfig,
@@ -16,17 +23,10 @@ export interface GamePoolArgs {
     /** Unique identifier for logging. */
     readonly id: number;
     /** Config for the models that will play against each other. */
-    readonly agents: readonly [GamePoolAgentConfig, GamePoolAgentConfig];
-    /** Used to request model ports for the game workers. */
-    readonly requestModelPort: (
-        name: string,
-    ) => MessagePort | Promise<MessagePort>;
+    readonly agents: readonly [GameAgentConfig, GameAgentConfig];
     /** Args for starting the game. */
     readonly play: PlayArgs;
 }
-
-/** Config for {@link GamePool.add} agents. */
-export type GamePoolAgentConfig = GameAgentConfig<false /*TWithModelPort*/>;
 
 /** Args for starting a game. */
 export interface PlayArgs {
@@ -48,8 +48,6 @@ export interface PlayArgs {
      * omitted, experience is discarded.
      */
     readonly experienceConfig?: ExperienceConfig;
-    /** Path to store Experiences for this game, or discard if omitted. */
-    readonly expPath?: string;
 }
 
 /** {@link GamePool} stream output type. */
@@ -90,18 +88,76 @@ export class GamePool {
             i => ({
                 name: `${name}-${i}`,
                 ...(config.maxTurns && {maxTurns: config.maxTurns}),
+                ...(config.tf && {tf: config.tf}),
             }) /*workerData*/,
             config.resourceLimits,
         );
     }
 
     /**
-     * Queues a game to be played.
+     * Makes each game thread register a unique port for requesting inferences
+     * during games. Any changes to the model after calling this method are
+     * already reflected through the port.
+     *
+     * @param name Name under which to refer to the port during calls to
+     * {@link add}.
+     * @param modelPort Function to create a unique message port that will be
+     * held by one of the game pool workers. Must implement the ModelPort
+     * protocol.
+     */
+    public async registerModelPort(
+        name: string,
+        modelPort: () => MessagePort | Promise<MessagePort>,
+    ): Promise<void> {
+        await this.pool.map(
+            async port =>
+                await port.load(name, {type: "port", port: await modelPort()}),
+        );
+    }
+
+    /**
+     * Makes each game thread load a serialized TensorFlow model for making
+     * inferences during games. This can be called multiple times to update the
+     * version of the model being stored in each of the game threads.
+     *
+     * @param name Name under which to refer to the model during calls to
+     * {@link add}.
+     * @param artifact Serialized TensorFlow model artifacts.
+     * @param config Batch predict config for the model on each thread.
+     */
+    public async loadModel(
+        name: string,
+        artifact: tf.io.ModelArtifacts,
+        config: BatchPredictConfig,
+    ): Promise<void> {
+        // Convert to shared buffers for broadcasting to multiple workers
+        // without excessive copying.
+        for (const key of [
+            "modelTopology",
+            "weightData",
+        ] as (keyof tf.io.ModelArtifacts)[]) {
+            const buf = artifact[key];
+            if (isArrayBuffer(buf)) {
+                const sharedBuf = new SharedArrayBuffer(buf.byteLength);
+                new Float32Array(sharedBuf).set(new Float32Array(buf));
+                artifact = {...artifact, [key]: sharedBuf};
+            }
+        }
+
+        await this.pool.map(
+            async port =>
+                await port.load(name, {type: "artifact", artifact, config}),
+        );
+    }
+
+    /**
+     * Launches a game and awaits the result.
+     *
+     * In order to launch several parallel games, this should be called multiple
+     * times without awaiting, then deferring the await step until later.
      *
      * @param args Game args.
      * @param callback Called when a worker has been assigned to the game.
-     * @param experienceCallback Callback to handle generated Experience objects
-     * if the game is configured for it.
      * @returns A Promise to get the results of the game. Also wraps and returns
      * any errors.
      */
@@ -113,7 +169,7 @@ export class GamePool {
         const port = await this.pool.takePort();
         try {
             callback?.();
-            return await port.playGame(args);
+            return await port.play(args);
         } catch (e) {
             return {
                 id: args.id,
@@ -122,6 +178,40 @@ export class GamePool {
             };
         } finally {
             this.pool.givePort(port);
+        }
+    }
+
+    /**
+     * Collects generated experience from game workers if any games and agents
+     * were configured for it.
+     */
+    public async *collectExperience(): AsyncGenerator<Experience> {
+        const portExps: {res: () => void; exp: Experience[]}[] = [];
+        let notifyExp: (() => void) | null = null;
+
+        void this.pool.mapAsync(async port => {
+            while (!this.pool.isClosed) {
+                const exp = await port.collect();
+                if (exp.length > 0) {
+                    await new Promise<void>(res => {
+                        portExps.push({res, exp});
+                        notifyExp?.();
+                    });
+                }
+            }
+            notifyExp?.();
+        });
+        while (!this.pool.isClosed) {
+            if (portExps.length <= 0) {
+                await new Promise<void>(res => (notifyExp = res)).finally(
+                    () => (notifyExp = null),
+                );
+            }
+            const exps = portExps.map(({res, exp}) => (res(), exp)).flat();
+            portExps.length = 0;
+            for (const exp of exps) {
+                yield exp;
+            }
         }
     }
 

@@ -11,7 +11,7 @@ import {ReadonlyBattleState} from "../state";
  * @param debugRankings If true, the returned BattleAgent will also return a
  * debug string displaying the evaluation of each choice.
  */
-export function maxAgent<TArgs extends unknown[] = []>(
+export function createMaxAgent<TArgs extends unknown[] = []>(
     evaluator: (
         state: ReadonlyBattleState,
         choices: readonly Choice[],
@@ -19,7 +19,7 @@ export function maxAgent<TArgs extends unknown[] = []>(
     ) => Float32Array | Promise<Float32Array>,
     debugRankings?: boolean,
 ): BattleAgent<string | undefined, TArgs> {
-    return async function (
+    return async function maxAgent(
         state: ReadonlyBattleState,
         choices: Choice[],
         logger?: Logger,

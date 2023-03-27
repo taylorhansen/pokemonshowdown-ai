@@ -1,8 +1,8 @@
 import "mocha";
 import {expect} from "chai";
-import {ExperienceConfig} from "../config/types";
-import {Experience} from "../game/experience";
-import {intToChoice} from "../psbot/handlers/battle/agent";
+import {ExperienceConfig} from "../../config/types";
+import {Choice, intToChoice} from "../../psbot/handlers/battle/agent";
+import {Experience} from "./Experience";
 import {ExperienceContext} from "./ExperienceContext";
 
 export const test = () =>
@@ -16,7 +16,8 @@ export const test = () =>
         };
 
         const exps: Experience[] = [];
-        const expCallback = (exp: Experience) => void exps.push(exp);
+        // eslint-disable-next-line @typescript-eslint/require-await
+        const expCallback = async (exp: Experience) => void exps.push(exp);
         beforeEach("Clear experience buffer", function () {
             exps.length = 0;
         });
@@ -30,16 +31,25 @@ export const test = () =>
             [new Float32Array([5])],
             [new Float32Array([6])],
         ] as const;
-        const emptyChoice = new Float32Array(intToChoice.length).fill(0);
-        const choices = [
-            emptyChoice.slice().fill(1, 0, 1),
-            emptyChoice.slice().fill(1, 1, 2),
-            emptyChoice.slice().fill(1, 2, 3),
-            emptyChoice.slice().fill(1, 3, 4),
-            emptyChoice.slice().fill(1, 4, 5),
-            emptyChoice.slice().fill(1, 5, 6),
-            emptyChoice.slice().fill(1, 6, 7),
-        ] as const;
+        const choices: readonly (readonly Choice[])[] = [
+            ["move 1"],
+            ["move 2"],
+            ["move 3"],
+            ["move 4"],
+            ["switch 2"],
+            ["switch 3"],
+            ["switch 4"],
+        ];
+        const emptyEncodedChoice = new Float32Array(intToChoice.length).fill(0);
+        const encodedChoices: Float32Array[] = [
+            emptyEncodedChoice.slice().fill(1, 0, 1),
+            emptyEncodedChoice.slice().fill(1, 1, 2),
+            emptyEncodedChoice.slice().fill(1, 2, 3),
+            emptyEncodedChoice.slice().fill(1, 3, 4),
+            emptyEncodedChoice.slice().fill(1, 4, 5),
+            emptyEncodedChoice.slice().fill(1, 5, 6),
+            emptyEncodedChoice.slice().fill(1, 6, 7),
+        ];
         const actions = [0, 1, 2, 3, 4, 5] as const;
         const rewards = [0, 1, 2, 3, 4, 5] as const;
 
@@ -48,79 +58,82 @@ export const test = () =>
             expect(exps).to.have.lengthOf(0);
         });
 
-        it("Should throw if no action provided on next state", function () {
+        it("Should throw if no action provided on next state", async function () {
             const ctx = new ExperienceContext(baseConfig, expCallback);
             expect(exps).to.have.lengthOf(0);
 
-            ctx.add(states[0], choices[0]);
+            await ctx.add(states[0], choices[0]);
             expect(exps).to.have.lengthOf(0);
 
-            expect(() => ctx.add(states[1], choices[1])).to.throw(
+            await expect(
+                ctx.add(states[1], choices[1]),
+            ).to.eventually.be.rejectedWith(
                 Error,
                 "Predict requests after first must include previous action",
             );
         });
 
-        it("Should throw if no reward provided on next state", function () {
+        it("Should throw if no reward provided on next state", async function () {
             const ctx = new ExperienceContext(baseConfig, expCallback);
             expect(exps).to.have.lengthOf(0);
 
-            ctx.add(states[0], choices[0]);
+            await ctx.add(states[0], choices[0]);
             expect(exps).to.have.lengthOf(0);
 
-            expect(() => ctx.add(states[1], choices[1], rewards[0])).to.throw(
+            await expect(
+                ctx.add(states[1], choices[1], rewards[0]),
+            ).to.eventually.be.rejectedWith(
                 Error,
                 "Predict requests after first must include previous reward",
             );
         });
 
-        it("Should throw if no last state on game-over", function () {
+        it("Should throw if no last state on game-over", async function () {
             const ctx = new ExperienceContext(baseConfig, expCallback);
             expect(exps).to.have.lengthOf(0);
 
-            expect(() => ctx.finalize(states[0])).to.throw(
+            await expect(ctx.finalize(states[0])).to.eventually.be.rejectedWith(
                 Error,
                 "No last state",
             );
         });
 
-        it("Should throw if no action provided on game-over", function () {
+        it("Should throw if no action provided on game-over", async function () {
             const ctx = new ExperienceContext(baseConfig, expCallback);
             expect(exps).to.have.lengthOf(0);
 
-            ctx.add(states[0], choices[0]);
+            await ctx.add(states[0], choices[0]);
             expect(exps).to.have.lengthOf(0);
 
-            expect(() => ctx.finalize(states[1])).to.throw(
+            await expect(ctx.finalize(states[1])).to.eventually.be.rejectedWith(
                 Error,
                 "No last action provided",
             );
         });
 
-        it("Should throw if no reward provided on game-over", function () {
+        it("Should throw if no reward provided on game-over", async function () {
             const ctx = new ExperienceContext(baseConfig, expCallback);
             expect(exps).to.have.lengthOf(0);
 
-            ctx.add(states[0], choices[0]);
+            await ctx.add(states[0], choices[0]);
             expect(exps).to.have.lengthOf(0);
 
-            expect(() => ctx.finalize(states[1], actions[0])).to.throw(
-                Error,
-                "No last reward provided",
-            );
+            await expect(
+                ctx.finalize(states[1], actions[0]),
+            ).to.eventually.be.rejectedWith(Error, "No last reward provided");
         });
 
         describe("steps = 1", function () {
-            it("Should emit experience after 1st transition", function () {
+            it("Should emit experience after 1st transition", async function () {
                 const ctx = new ExperienceContext(baseConfig, expCallback);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[0], choices[0]);
+                await ctx.add(states[0], choices[0]);
                 expect(exps).to.have.lengthOf(0);
 
                 const expectedExps: Experience[] = [];
                 for (let i = 1; i < states.length; ++i) {
-                    ctx.add(
+                    await ctx.add(
                         states[i],
                         choices[i],
                         actions[i - 1],
@@ -131,40 +144,40 @@ export const test = () =>
                         action: actions[i - 1],
                         reward: rewards[i - 1],
                         nextState: states[i],
-                        choices: choices[i],
+                        choices: encodedChoices[i],
                         done: false,
                     });
                     expect(exps).to.have.deep.members(expectedExps);
                 }
             });
 
-            it("Should emit experience on game-over", function () {
+            it("Should emit experience on game-over", async function () {
                 const ctx = new ExperienceContext(baseConfig, expCallback);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[0], choices[0]);
+                await ctx.add(states[0], choices[0]);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.finalize(states[1], actions[0], rewards[0]);
+                await ctx.finalize(states[1], actions[0], rewards[0]);
                 const exp: Experience = {
                     state: states[0],
                     action: actions[0],
                     reward: rewards[0],
                     nextState: states[1],
-                    choices: emptyChoice,
+                    choices: emptyEncodedChoice,
                     done: true,
                 };
                 expect(exps).to.have.deep.members([exp]);
             });
 
-            it("Should not emit experience on forced game-over", function () {
+            it("Should not emit experience on forced game-over", async function () {
                 const ctx = new ExperienceContext(baseConfig, expCallback);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[0], choices[0]);
+                await ctx.add(states[0], choices[0]);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.finalize();
+                await ctx.finalize();
                 expect(exps).to.have.lengthOf(0);
             });
         });
@@ -175,18 +188,20 @@ export const test = () =>
                 steps: 2,
             };
 
-            function testExps(ctx: ExperienceContext): Experience[] {
+            async function testExps(
+                ctx: ExperienceContext,
+            ): Promise<Experience[]> {
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[0], choices[0]);
+                await ctx.add(states[0], choices[0]);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[1], choices[1], actions[0], rewards[0]);
+                await ctx.add(states[1], choices[1], actions[0], rewards[0]);
                 expect(exps).to.have.lengthOf(0);
 
                 const expectedExps: Experience[] = [];
                 for (let i = 2; i < states.length - 1; ++i) {
-                    ctx.add(
+                    await ctx.add(
                         states[i],
                         choices[i],
                         actions[i - 1],
@@ -199,7 +214,7 @@ export const test = () =>
                             rewards[i - 2] +
                             config.rewardDecay * rewards[i - 1],
                         nextState: states[i],
-                        choices: choices[i],
+                        choices: encodedChoices[i],
                         done: false,
                     });
                     expect(exps).to.have.deep.members(expectedExps);
@@ -208,12 +223,12 @@ export const test = () =>
                 return expectedExps;
             }
 
-            it("Should emit experience after 2 transitions and on game-over", function () {
+            it("Should emit experience after 2 transitions and on game-over", async function () {
                 const ctx = new ExperienceContext(config, expCallback);
-                const expectedExps = testExps(ctx);
+                const expectedExps = await testExps(ctx);
 
                 const i = states.length - 1;
-                ctx.finalize(states[i], actions[i - 1], rewards[i - 1]);
+                await ctx.finalize(states[i], actions[i - 1], rewards[i - 1]);
                 expectedExps.push(
                     {
                         state: states[i - 2],
@@ -222,7 +237,7 @@ export const test = () =>
                             rewards[i - 2] +
                             config.rewardDecay * rewards[i - 1],
                         nextState: states[i],
-                        choices: emptyChoice,
+                        choices: emptyEncodedChoice,
                         done: true,
                     },
                     {
@@ -230,18 +245,18 @@ export const test = () =>
                         action: actions[i - 1],
                         reward: rewards[i - 1],
                         nextState: states[i],
-                        choices: emptyChoice,
+                        choices: emptyEncodedChoice,
                         done: true,
                     },
                 );
                 expect(exps).to.have.deep.members(expectedExps);
             });
 
-            it("Should not emit experience on forced game-over", function () {
+            it("Should not emit experience on forced game-over", async function () {
                 const ctx = new ExperienceContext(config, expCallback);
-                const expectedExps = testExps(ctx);
+                const expectedExps = await testExps(ctx);
 
-                ctx.finalize();
+                await ctx.finalize();
                 expect(exps).to.have.deep.members(expectedExps);
             });
         });
@@ -252,24 +267,26 @@ export const test = () =>
                 steps: 4,
             };
 
-            function testExps(ctx: ExperienceContext): Experience[] {
+            async function testExps(
+                ctx: ExperienceContext,
+            ): Promise<Experience[]> {
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[0], choices[0]);
+                await ctx.add(states[0], choices[0]);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[1], choices[1], actions[0], rewards[0]);
+                await ctx.add(states[1], choices[1], actions[0], rewards[0]);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[2], choices[2], actions[1], rewards[1]);
+                await ctx.add(states[2], choices[2], actions[1], rewards[1]);
                 expect(exps).to.have.lengthOf(0);
 
-                ctx.add(states[3], choices[3], actions[2], rewards[2]);
+                await ctx.add(states[3], choices[3], actions[2], rewards[2]);
                 expect(exps).to.have.lengthOf(0);
 
                 const expectedExps: Experience[] = [];
                 for (let i = 4; i < states.length - 1; ++i) {
-                    ctx.add(
+                    await ctx.add(
                         states[i],
                         choices[i],
                         actions[i - 1],
@@ -285,7 +302,7 @@ export const test = () =>
                             config.rewardDecay ** 2 * rewards[i - 2] +
                             config.rewardDecay ** 3 * rewards[i - 1],
                         nextState: states[i],
-                        choices: choices[i],
+                        choices: encodedChoices[i],
                         done: false,
                     });
                     expect(exps).to.have.deep.members(expectedExps);
@@ -294,12 +311,12 @@ export const test = () =>
                 return expectedExps;
             }
 
-            it("Should emit experience after 4 transitions and on game-over", function () {
+            it("Should emit experience after 4 transitions and on game-over", async function () {
                 const ctx = new ExperienceContext(config, expCallback);
-                const expectedExps = testExps(ctx);
+                const expectedExps = await testExps(ctx);
 
                 const i = states.length - 1;
-                ctx.finalize(states[i], actions[i - 1], rewards[i - 1]);
+                await ctx.finalize(states[i], actions[i - 1], rewards[i - 1]);
                 expectedExps.push(
                     {
                         state: states[i - 4],
@@ -310,7 +327,7 @@ export const test = () =>
                             config.rewardDecay ** 2 * rewards[i - 2] +
                             config.rewardDecay ** 3 * rewards[i - 1],
                         nextState: states[i],
-                        choices: emptyChoice,
+                        choices: emptyEncodedChoice,
                         done: true,
                     },
                     {
@@ -321,7 +338,7 @@ export const test = () =>
                             config.rewardDecay * rewards[i - 2] +
                             config.rewardDecay ** 2 * rewards[i - 1],
                         nextState: states[i],
-                        choices: emptyChoice,
+                        choices: emptyEncodedChoice,
                         done: true,
                     },
                     {
@@ -331,7 +348,7 @@ export const test = () =>
                             rewards[i - 2] +
                             config.rewardDecay * rewards[i - 1],
                         nextState: states[i],
-                        choices: emptyChoice,
+                        choices: emptyEncodedChoice,
                         done: true,
                     },
                     {
@@ -339,18 +356,18 @@ export const test = () =>
                         action: actions[i - 1],
                         reward: rewards[i - 1],
                         nextState: states[i],
-                        choices: emptyChoice,
+                        choices: emptyEncodedChoice,
                         done: true,
                     },
                 );
                 expect(exps).to.have.deep.members(expectedExps);
             });
 
-            it("Should not emit experience on forced game-over", function () {
+            it("Should not emit experience on forced game-over", async function () {
                 const ctx = new ExperienceContext(config, expCallback);
-                const expectedExps = testExps(ctx);
+                const expectedExps = await testExps(ctx);
 
-                ctx.finalize();
+                await ctx.finalize();
                 expect(exps).to.have.deep.members(expectedExps);
             });
         });

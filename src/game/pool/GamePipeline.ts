@@ -1,26 +1,24 @@
 import {join} from "path";
 import {pipeline} from "stream/promises";
 import {MessagePort} from "worker_threads";
-import {GamePoolConfig, ExperienceConfig} from "../../config/types";
-import {generatePsPrngSeed, rng, Rng, Seeder} from "../../util/random";
+import type * as tf from "@tensorflow/tfjs";
 import {
-    GamePool,
-    GamePoolAgentConfig,
-    GamePoolArgs,
-    GamePoolResult,
-} from "./GamePool";
+    GamePoolConfig,
+    ExperienceConfig,
+    BatchPredictConfig,
+} from "../../config/types";
+import {generatePsPrngSeed, rng, Rng, Seeder} from "../../util/random";
+import {Experience} from "../experience";
+import {GamePool, GamePoolArgs, GamePoolResult} from "./GamePool";
 import {GamePoolStream} from "./GamePoolStream";
+import {GameAgentConfig} from "./worker";
 
 /** Options for generating game configs. */
 export interface GameArgsGenOptions {
     /** Config for the agent. */
-    readonly agentConfig: GamePoolAgentConfig;
+    readonly agentConfig: GameAgentConfig;
     /** Config for the opponent agent. */
-    readonly opponent: GamePoolAgentConfig;
-    /** Used to request model ports for the game workers. */
-    readonly requestModelPort: (
-        name: string,
-    ) => MessagePort | Promise<MessagePort>;
+    readonly opponent: GameAgentConfig;
     /** Number of games to play. Omit to play indefinitely. */
     readonly numGames?: number;
     /** Path to the folder to store game logs in. Omit to not store logs. */
@@ -81,6 +79,40 @@ export class GamePipeline {
     }
 
     /**
+     * Makes each game thread register a unique port for requesting inferences
+     * during games.
+     *
+     * @param name Name under which to refer to the port during calls to
+     * {@link add}.
+     * @param modelPort Function to create a unique message port that will be
+     * held by one of the game pool workers. Must implement the ModelPort
+     * protocol.
+     */
+    public async registerModelPort(
+        name: string,
+        modelPort: () => MessagePort | Promise<MessagePort>,
+    ): Promise<void> {
+        return await this.pool.registerModelPort(name, modelPort);
+    }
+
+    /**
+     * Makes each game thread load a serialized TensorFlow model for making
+     * inferences during games. Can be called multiple times to reload the
+     * model with new weights.
+     *
+     * @param name Name under which to refer to the model during games.
+     * @param artifact Serialized TensorFlow model artifacts.
+     * @param config Batch predict config for the model on each thread.
+     */
+    public async loadModel(
+        name: string,
+        artifact: tf.io.ModelArtifacts,
+        config: BatchPredictConfig,
+    ): Promise<void> {
+        return await this.pool.loadModel(name, artifact, config);
+    }
+
+    /**
      * Starts the game pipeline. Can be called multiple times.
      *
      * @param genArgs Generator for game configs.
@@ -104,11 +136,19 @@ export class GamePipeline {
         );
     }
 
+    /**
+     * Collects generated experience from game workers if any games and agents
+     * were configured for it. Should be called frequently since workers can
+     * buffer or block otherwise.
+     */
+    public async *collectExperience(): AsyncGenerator<Experience> {
+        yield* this.pool.collectExperience();
+    }
+
     /** Generates game configs to feed into a game thread pool. */
     public static *genArgs({
         agentConfig,
         opponent,
-        requestModelPort,
         numGames,
         logPath,
         reduceLogs,
@@ -132,7 +172,6 @@ export class GamePipeline {
                         teamRandom,
                     ),
                 ],
-                requestModelPort,
                 play: {
                     ...(logPath !== undefined && {
                         logPath: join(logPath, `game-${id}-${opponent.name}`),
@@ -148,10 +187,10 @@ export class GamePipeline {
 
     /** Fills in random seeds for agent configs. */
     private static buildAgent(
-        config: GamePoolAgentConfig,
+        config: GameAgentConfig,
         exploreSeedRandom?: Seeder,
         teamRandom?: Rng,
-    ): GamePoolAgentConfig {
+    ): GameAgentConfig {
         return {
             ...config,
             exploit:

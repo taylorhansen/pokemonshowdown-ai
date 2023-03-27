@@ -7,8 +7,6 @@ export interface Config {
     readonly psbot: PsBotConfig;
     /** Paths config. */
     readonly paths: PathsConfig;
-    /** TensorFlow config. */
-    readonly tf: TensorflowConfig;
     /** Training config. */
     readonly train: TrainConfig;
     /** Model comparison script config. */
@@ -27,12 +25,44 @@ export interface PsBotConfig {
     readonly loginUrl: string;
     /** Websocket route to the PS server used for actual play. */
     readonly websocketRoute: string;
+    /** TensorFlow config. */
+    readonly tf: TensorflowConfig;
     /** Name of the model to serve. */
     readonly model: string;
     /** Batch predict config for the model. */
     readonly batchPredict: BatchPredictConfig;
     /** Verbosity level for logging. Default highest. */
     readonly verbose?: Verbose;
+}
+
+/** Configuration for the TensorFlow instance. */
+export interface TensorflowConfig {
+    /** Backend to use. */
+    readonly backend: TfBackendConfig;
+    /**
+     * If {@link backend} is `tensorflow`, whether to use CUDA (requires a
+     * compatible GPU).
+     */
+    readonly gpu?: boolean;
+    /**
+     * If {@link backend} is `wasm`, limits the amount of threads used by the TF
+     * instance.
+     */
+    readonly numThreads?: number;
+}
+
+/** Config for selecting the TF backend on the current thread. */
+export type TfBackendConfig = "cpu" | "tensorflow" | "wasm";
+
+/** Configuration for batching several parallel inferences into one. */
+export interface BatchPredictConfig {
+    /** Maximum size of a batch. */
+    readonly maxSize: number;
+    /**
+     * Max amount of time to wait until the next batch should be processed, in
+     * nanoseconds.
+     */
+    readonly timeoutNs: bigint;
 }
 
 /** Paths to various directories. */
@@ -48,20 +78,14 @@ export interface PathsConfig {
     readonly metrics?: string;
 }
 
-/** Configuration for TensorFlow. */
-export interface TensorflowConfig {
-    /** Whether to use the GPU. */
-    readonly gpu: boolean;
-}
-
 /** Configuration for the training process. */
 export interface TrainConfig {
     /** Name of the training run under which to store logs. */
     readonly name: string;
+    /** TensorFlow config for the learner instance. */
+    readonly tf: TensorflowConfig;
     /** Number of learning steps. Omit or set to zero to train indefinitely. */
     readonly steps?: number;
-    /** Batch predict config for models outside the learning step. */
-    readonly batchPredict: BatchPredictConfig;
     /** Model config. */
     readonly model: ModelConfig;
     /** Rollout config. */
@@ -99,20 +123,6 @@ export interface TrainConfig {
     readonly resourceLimits?: ResourceLimits;
 }
 
-/**
- * Configuration for batch predict. This is for configuring how the main neural
- * network should handle making predictions for the multiple parallel games.
- */
-export interface BatchPredictConfig {
-    /** Maximum size of a batch. */
-    readonly maxSize: number;
-    /**
-     * Max amount of time to wait until the next batch should be processed, in
-     * nanoseconds.
-     */
-    readonly timeoutNs: bigint;
-}
-
 /** Configuration for the neural network model. */
 export interface ModelConfig {
     /** Whether to use dueling network architecture. */
@@ -131,19 +141,41 @@ export interface RolloutConfig {
     readonly pool: GamePoolConfig;
     /** Exploration policy config. */
     readonly policy: PolicyConfig;
+    /** Config for serving the current main model. */
+    readonly serve: ModelServeConfig;
+    /** Config for serving the previous model. */
+    readonly servePrev: ModelServeConfig;
     /**
      * Fraction of self-play games that should by played against the model's
      * previous version rather than itself.
      *
      * The previous version is defined by the last {@link EvalConfig eval} step.
      */
-    readonly prev: number;
+    readonly prevRatio: number;
     /**
      * Step interval for tracking metrics such as exploration rate and game
      * stats. Set to zero to disable.
      */
     readonly metricsInterval: number;
 }
+
+/** Config for batching several predict requests on one thread. */
+export interface ModelServeConfigBatched extends BatchPredictConfig {
+    readonly type: "batched";
+}
+
+/**
+ * Config for running inferences on each thread that uses the model
+ * independently.
+ */
+export interface ModelServeConfigDistributed extends BatchPredictConfig {
+    readonly type: "distributed";
+}
+
+/** Configuration for serving a model. */
+export type ModelServeConfig =
+    | ModelServeConfigBatched
+    | ModelServeConfigDistributed;
 
 /** Configuration for the thread pool for playing games. */
 export interface GamePoolConfig {
@@ -161,6 +193,11 @@ export interface GamePoolConfig {
     readonly reduceLogs?: boolean;
     /** Optional resource constraints for the game threads. */
     readonly resourceLimits?: ResourceLimits;
+    /**
+     * Tensorflow config for the rollout threads. Required if a related
+     * {@link ModelServeConfig} has `type="distributed"`.
+     */
+    readonly tf?: TensorflowConfig;
 }
 
 /** Configuration for the exploration policy during the rollout phase. */
@@ -282,6 +319,10 @@ export interface EvalConfig {
     readonly numGames: number;
     /** Game pool config. */
     readonly pool: GamePoolConfig;
+    /** Config for serving the frozen evaluation model. */
+    readonly serve: ModelServeConfig;
+    /** Config for serving the previous model. */
+    readonly servePrev: ModelServeConfig;
     /**
      * Step interval for performing model evaluations and logging stats to
      * TensorBoard. Set to zero to disable.
@@ -325,6 +366,8 @@ export interface TrainSeedConfig {
 export interface CompareConfig {
     /** Name of the training run under which to store logs. */
     readonly name: string;
+    /** TensorFlow config. */
+    readonly tf: TensorflowConfig;
     /**
      * Models to compare from the {@link PathsConfig.models} directory. Can also
      * use the string `"random"` to refer to a custom randomly-playing opponent.
@@ -343,7 +386,7 @@ export interface CompareConfig {
      * them (rather than a tie) if it was a close match.
      */
     readonly threshold: number;
-    /** Batch predict config. */
+    /** Batch predict config for loaded models. */
     readonly batchPredict: BatchPredictConfig;
     /** Game pool config. */
     readonly pool: GamePoolConfig;

@@ -12,14 +12,15 @@ import {ExperienceBattleAgent} from "../../experience";
 import * as rewards from "../../rewards";
 
 /**
- * Wraps a BattleParser to track rewards/decisions and emit Experience objects.
+ * Wraps a BattleParser to track rewards/decisions and emit experience data.
  *
- * Returned wrapper requires an {@link ExperienceAgent}.
+ * Returned wrapper requires an {@link ExperienceBattleAgent}.
  *
  * @template TArgs Parser arguments.
  * @template TResult Parser return type.
  * @param parser Parser function to wrap.
- * @param callback Callback for processing the final state transition.
+ * @param finalExpCallback Callback for processing the final state transition
+ * for experience generation.
  * @param username Client's username to parse game-over reward.
  * @param maxTurns Configured turn limit.
  * @returns The wrapped BattleParser function.
@@ -29,7 +30,7 @@ export function experienceBattleParser<
     TResult = unknown,
 >(
     parser: BattleParser<BattleAgent, TArgs, TResult>,
-    callback: (
+    finalExpCallback: (
         state?: Float32Array[],
         action?: number,
         reward?: number,
@@ -111,12 +112,12 @@ export function experienceBattleParser<
             encodeState(stateData, ctx.state);
             const lastAction = choiceIds[lastChoice];
             ctx.logger.debug(`Finalizing experience: reward = ${reward}`);
-            await callback(stateData, lastAction, reward);
+            await finalExpCallback(stateData, lastAction, reward);
         } else {
             // Game result was forced, so the previous experience was actually
             // the final one.
             ctx.logger.debug("Finalizing experience: forced game over");
-            await callback();
+            await finalExpCallback();
         }
         return result;
     };

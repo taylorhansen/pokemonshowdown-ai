@@ -1,22 +1,38 @@
 import {workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
-import {importTfn} from "../../util/tfn";
+import {TensorflowConfig} from "../../config/types";
+import {importTfn, Tfn} from "../../util/importTf";
 import {ModelWorkerData} from "./ModelProtocol";
 
 const modelWorkerData = workerData as ModelWorkerData;
 
+type Writer = ReturnType<Tfn["node"]["summaryFileWriter"]>;
+
 /** Used for writing model summary metrics to Tensorboard. */
 export class Metrics {
-    private static readonly writer = modelWorkerData?.metricsPath
-        ? importTfn(modelWorkerData.gpu).node.summaryFileWriter(
-              modelWorkerData.metricsPath,
-              100 /*maxQueue*/,
-          )
-        : null;
+    private static writer: Writer | null = null;
 
     private static readonly instances = new Map<string, Metrics>();
 
     private constructor(public readonly name: string) {}
+
+    /**
+     * Configures the metrics writer.
+     *
+     * @param path Path to store metrics in.
+     * @param config Config used to configure TF instance.
+     */
+    public static configure(path: string, config: TensorflowConfig): void {
+        if (config.backend !== "tensorflow") {
+            throw new Error(
+                "Metrics can only be configured using node ('tensorflow') " +
+                    "backend",
+            );
+        }
+        Metrics.writer = importTfn(
+            modelWorkerData.tf.gpu,
+        ).node.summaryFileWriter(path, 100 /*maxQueue*/);
+    }
 
     /**
      * Gets a Metrics object for the given name. Returns null if
@@ -38,9 +54,9 @@ export class Metrics {
         Metrics.writer?.flush();
     }
 
-    private static ensureWriter(): NonNullable<typeof Metrics.writer> {
+    private static ensureWriter(): Writer {
         if (!Metrics.writer) {
-            throw new Error("Metrics path not configured");
+            throw new Error("Metrics not configured");
         }
         return Metrics.writer;
     }

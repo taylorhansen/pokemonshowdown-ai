@@ -1,8 +1,10 @@
+import {isArrayBuffer} from "util/types";
 import {deserialize} from "v8";
 import {Worker} from "worker_threads";
 import {WorkerPort} from "../../../util/worker/WorkerPort";
+import {Experience} from "../../experience";
 import {GamePoolArgs, GamePoolResult} from "../GamePool";
-import {GameProtocol, GameAgentConfig, GamePlay} from "./GameProtocol";
+import {GameProtocol, GameLoadModel} from "./GameProtocol";
 
 /** Wraps a GamePool worker to provide Promise functionality. */
 export class GameWorker {
@@ -28,61 +30,81 @@ export class GameWorker {
         await this.workerPort.terminate();
     }
 
-    /** Queues a game for the worker. */
-    public async playGame(args: GamePoolArgs): Promise<GamePoolResult> {
-        const msg: GamePlay = {
-            type: "play",
-            rid: this.workerPort.nextRid(),
-            agents: await Promise.all(
-                args.agents.map(async agentConfig => ({
-                    name: agentConfig.name,
-                    exploit:
-                        agentConfig.exploit.type === "model"
-                            ? {
-                                  type: "model",
-                                  // Resolve model ids into usable model ports.
-                                  port: await args.requestModelPort(
-                                      agentConfig.exploit.model,
-                                  ),
-                              }
-                            : agentConfig.exploit,
-                    ...(agentConfig.explore && {explore: agentConfig.explore}),
-                    ...(agentConfig.emitExperience && {emitExperience: true}),
-                    ...(agentConfig.seed && {seed: agentConfig.seed}),
-                })) as [Promise<GameAgentConfig>, Promise<GameAgentConfig>],
+    /**
+     * Loads and registers a model for inference during games. If loaded in
+     * `artifact` mode, this method can be called multiple times to update the
+     * version of the model stored on each thread, otherwise in `port` mode, any
+     * changes to the model are already reflected through the port.
+     *
+     * @param name Name under which to refer to the model during calls to
+     * {@link play}.
+     * @param model Config for loading the model.
+     */
+    public async load(name: string, model: GameLoadModel): Promise<void> {
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"load">(
+                {type: "load", rid: this.workerPort.nextRid(), name, model},
+                model.type === "port"
+                    ? [model.port]
+                    : model.type === "artifact"
+                    ? [
+                          model.artifact.modelTopology,
+                          model.artifact.weightData,
+                      ].flatMap(ab => (isArrayBuffer(ab) ? [ab] : []))
+                    : [],
+                result => (result.type === "error" ? rej(result.err) : res()),
             ),
-            play: args.play,
-        };
+        );
+    }
 
+    /** Launches a game and awaits the result. */
+    public async play(args: GamePoolArgs): Promise<GamePoolResult> {
         return await new Promise(res =>
             this.workerPort.postMessage<"play">(
-                msg,
-                msg.agents.flatMap(config =>
-                    config.exploit.type === "model"
-                        ? [config.exploit.port]
-                        : [],
-                ),
-                workerResult => {
-                    let result: GamePoolResult;
-                    if (workerResult.type === "error") {
-                        result = {
-                            id: args.id,
-                            agents: [args.agents[0].name, args.agents[1].name],
-                            err: workerResult.err,
-                        };
-                    } else {
-                        result = {
-                            id: args.id,
-                            agents: workerResult.agents,
-                            winner: workerResult.winner,
-                            // Manually deserialize game error.
-                            ...(workerResult.err && {
-                                err: deserialize(workerResult.err) as Error,
-                            }),
-                        };
-                    }
-                    res(result);
+                {
+                    type: "play",
+                    rid: this.workerPort.nextRid(),
+                    agents: args.agents,
+                    play: args.play,
                 },
+                [] /*transferList*/,
+                result =>
+                    result.type === "error"
+                        ? res({
+                              id: args.id,
+                              agents: [
+                                  args.agents[0].name,
+                                  args.agents[1].name,
+                              ],
+                              err: result.err,
+                          })
+                        : res({
+                              id: args.id,
+                              agents: result.agents,
+                              winner: result.winner,
+                              // Manually deserialize game error.
+                              ...(result.err && {
+                                  err: deserialize(result.err) as Error,
+                              }),
+                          }),
+            ),
+        );
+    }
+
+    /**
+     * Collects generated experience from the game worker if the currently
+     * running game and any agents were configured for it. Should be called
+     * frequently since the worker can buffer or block otherwise.
+     */
+    public async collect(): Promise<Experience[]> {
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"collect">(
+                {type: "collect", rid: this.workerPort.nextRid()},
+                [] /*transferList*/,
+                result =>
+                    result.type === "error"
+                        ? rej(result.err)
+                        : res(result.experience),
             ),
         );
     }

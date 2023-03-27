@@ -13,8 +13,7 @@ export class GamePoolStream extends Transform {
     /**
      * Creates a GamePoolStream.
      *
-     * @param pool GamePool to wrap. This object should own `pool` until it gets
-     * destroyed.
+     * @param pool GamePool to wrap.
      */
     public constructor(private readonly pool: GamePool) {
         super({objectMode: true, highWaterMark: 1});
@@ -25,14 +24,14 @@ export class GamePoolStream extends Transform {
         encoding: BufferEncoding,
         callback: TransformCallback,
     ): void {
-        // Queue a game, passing errors and queueing the next one once a port
-        // has been assigned.
+        // Queue a game, then queueing the next game once a port has been
+        // assigned and the game starts.
         const gamePromise = (async () => {
             try {
                 this.push(await this.pool.add(args, callback));
             } catch (err) {
-                // Generally add() should swallow/wrap errors, but if anything
-                // happens outside of that then the stream should crash.
+                // Generally add() should swallow/wrap errors, otherwise fail
+                // loudly.
                 this.emit("error", err);
             }
         })();

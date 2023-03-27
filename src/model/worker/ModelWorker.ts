@@ -5,6 +5,7 @@ import {
     BatchPredictConfig,
     ModelConfig,
     PathsConfig,
+    TensorflowConfig,
     TrainConfig,
 } from "../../config/types";
 import {WorkerPort} from "../../util/worker/WorkerPort";
@@ -26,18 +27,19 @@ export class ModelWorker {
      *
      * @param Name of worker for logging/debugging.
      * @param gpu Whether to enable GPU support. Default `false`.
+     * @param config Config for the Tensorflow instance.
      * @param metricsPath Path to store metrics in.
      * @param resourceLimits Optional resource constraints for the worker.
      */
     public constructor(
         name: string,
-        gpu = false,
+        config: TensorflowConfig,
         metricsPath?: string,
         resourceLimits?: ResourceLimits,
     ) {
         const workerData: ModelWorkerData = {
             name,
-            ...(gpu && {gpu: true}),
+            tf: config,
             ...(metricsPath && {metricsPath}),
         };
         this.workerPort = new WorkerPort(
@@ -57,7 +59,6 @@ export class ModelWorker {
      * Loads and registers a neural network.
      *
      * @param name Name by which to refer to the model.
-     * @param batchConfig Options for batching predict requests.
      * @param url URL to load from. If omitted, creates a default model.
      * @param config Config for creating the model when `url` is omitted.
      * @param seed Seed for the random number generator when initializing the
@@ -66,7 +67,6 @@ export class ModelWorker {
      */
     public async load(
         name: string,
-        batchConfig: BatchPredictConfig,
         url?: string,
         config?: ModelConfig,
         seed?: string,
@@ -77,7 +77,6 @@ export class ModelWorker {
                     type: "load",
                     rid: this.workerPort.nextRid(),
                     name,
-                    predict: batchConfig,
                     ...(url && {url}),
                     ...(config && {config}),
                     ...(seed && {seed}),
@@ -170,17 +169,56 @@ export class ModelWorker {
     }
 
     /**
+     * Configures and attaches a batch predict profile to the model. Use with
+     * {@link subscribe} to handle multiple parallel predict requests.
+     *
+     * @param model Name of the model.
+     * @param profile Name of the new batch predict profile to associate with
+     * the model.
+     * @param config Batch predict config.
+     */
+    public async configure(
+        model: string,
+        profile: string,
+        config: BatchPredictConfig,
+    ): Promise<void> {
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"configure">(
+                {
+                    type: "configure",
+                    rid: this.workerPort.nextRid(),
+                    model,
+                    profile,
+                    config,
+                },
+                [],
+                result => (result.type === "error" ? rej(result.err) : res()),
+            ),
+        );
+    }
+
+    /**
      * Requests a unique access port from a neural network. Closing the port
      * will remove this link.
      *
      * @param model Name of the model.
+     * @param profile Name of the batch predict profile associated with the
+     * model.
      * @returns A MessagePort that implements the ModelPort protocol.
      * @see ModelPort
      */
-    public async subscribe(model: string): Promise<MessagePort> {
+    public async subscribe(
+        model: string,
+        profile: string,
+    ): Promise<MessagePort> {
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"subscribe">(
-                {type: "subscribe", rid: this.workerPort.nextRid(), model},
+                {
+                    type: "subscribe",
+                    rid: this.workerPort.nextRid(),
+                    model,
+                    profile,
+                },
                 [],
                 result =>
                     result.type === "error"

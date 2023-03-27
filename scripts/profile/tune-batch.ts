@@ -9,22 +9,22 @@ import * as tf from "@tensorflow/tfjs";
 import {config} from "../../src/config";
 import {createModel} from "../../src/model/model";
 import {Learn} from "../../src/train/Learn";
-import {importTfn} from "../../src/util/tfn";
+import {importTf} from "../../src/util/importTf";
 import {logMemoryStats, makeBatch, makeState, profile} from "./util";
 
 Error.stackTraceLimit = Infinity;
 
-importTfn(config.tf.gpu);
-
-const model = createModel(
-    "tune-batch",
-    config.train.model,
-    config.train.seeds?.model,
-);
-// Gpu warmup.
-tf.tidy(() => void model.predictOnBatch(makeState(1)));
-
 void (async function () {
+    await importTf(config.train.tf);
+
+    const model = createModel(
+        "tune-batch",
+        config.train.model,
+        config.train.seeds?.model,
+    );
+    // Gpu warmup.
+    tf.tidy(() => void model.predictOnBatch(makeState(1)));
+
     logMemoryStats();
 
     const batchSizes = Array.from({length: 16}, (_, i) => 2 ** i);

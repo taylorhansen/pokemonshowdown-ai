@@ -1,8 +1,11 @@
 /** @file Defines the protocol typings for GameWorkers. */
 import {MessagePort} from "worker_threads";
 import {PRNGSeed} from "@pkmn/sim";
+import type * as tf from "@tensorflow/tfjs";
+import {BatchPredictConfig, TensorflowConfig} from "../../../config/types";
 import {PortMessageBase, PortResultBase} from "../../../util/port/PortProtocol";
 import {WorkerProtocol} from "../../../util/worker/WorkerProtocol";
+import {Experience} from "../../experience";
 import {SimResult} from "../../sim/playGame";
 import {PlayArgs} from "../GamePool";
 
@@ -15,11 +18,19 @@ export interface GameWorkerData {
      * on forever if this is not set and both players only decide to switch.
      */
     readonly maxTurns?: number;
+    /**
+     * Tensorflow config for the game thread. Required if a
+     * {@link GameLoadMessage} intends to send model artifacts.
+     */
+    readonly tf?: TensorflowConfig;
 }
 
 /** GameWorker request protocol typings. */
-export interface GameProtocol extends WorkerProtocol<"play"> {
-    play: {message: GamePlay; result: GamePlayResult};
+export interface GameProtocol
+    extends WorkerProtocol<"load" | "play" | "collect"> {
+    load: {message: GameLoadMessage; result: GameLoadResult};
+    play: {message: GamePlayMessage; result: GamePlayResult};
+    collect: {message: GameCollectMessage; result: GameCollectResult};
 }
 
 /** The types of requests that can be made to the game worker. */
@@ -31,20 +42,55 @@ export type GameMessage = GameProtocol[GameRequestType]["message"];
 /** Base interface for game worker messages. */
 type GameMessageBase<T extends GameRequestType> = PortMessageBase<T>;
 
+/** Loads and registers a model for inference during games. */
+export interface GameLoadMessage extends GameMessageBase<"load"> {
+    /** Name under which to reference the model. */
+    readonly name: string;
+    /** Config for loading the model. */
+    readonly model: GameLoadModel;
+}
+
+interface GameLoadModelBase<T extends string> {
+    readonly type: T;
+}
+
+/** Load model by reconstructing it on the worker's main memory. */
+export interface GameLoadModelArtifact extends GameLoadModelBase<"artifact"> {
+    /**
+     * Serialized model topology and weights to reconstruct the model on this
+     * worker.
+     */
+    readonly artifact: tf.io.ModelArtifacts;
+    /** Config for batching predictions on this thread. */
+    readonly config: BatchPredictConfig;
+}
+
+/** Register model by accessing a port into a dedicated thread. */
+export interface GameLoadModelPort extends GameLoadModelBase<"port"> {
+    /**
+     * Handle for requesting predictions from a model hosted in a separate
+     * service such as a dedicated thread.
+     */
+    readonly port: MessagePort;
+}
+
+/** Config for loading and registering models for a game worker. */
+export type GameLoadModel = GameLoadModelArtifact | GameLoadModelPort;
+
 /** Game request message format. */
-export interface GamePlay extends GameMessageBase<"play"> {
+export interface GamePlayMessage extends GameMessageBase<"play"> {
     /** Model ports that will play against each other. */
-    readonly agents: [GameAgentConfig, GameAgentConfig];
+    readonly agents: readonly [GameAgentConfig, GameAgentConfig];
     /** Args for starting the game. */
     readonly play: PlayArgs;
 }
 
 /** Config for game worker agents. */
-export interface GameAgentConfig<TWithModelPort extends boolean = true> {
+export interface GameAgentConfig {
     /** Name of agent. Must be different from opponent(s). */
     readonly name: string;
     /** Exploitation policy. */
-    readonly exploit: AgentExploitConfig<TWithModelPort>;
+    readonly exploit: AgentExploitConfig;
     /** Exploration policy. */
     readonly explore?: AgentExploreConfig;
     /** Whether to emit Experience objs after each decision. */
@@ -58,25 +104,16 @@ interface AgentExploitConfigBase<T extends string> {
 }
 
 /** Exploit using a neural network model. */
-export type ModelAgentExploitConfig<TWithModelPort extends boolean = true> =
-    AgentExploitConfigBase<"model"> &
-        (TWithModelPort extends true
-            ? {
-                  /**
-                   * Port that uses the `ModelPort` protocol for interfacing
-                   * with a model.
-                   */
-                  readonly port: MessagePort;
-              }
-            : // Used in top-level before assigning a unique port for the game.
-              {
-                  /** Model name from the {@link ModelWorker}. */
-                  readonly model: string;
-              });
+export interface AgentExploitModel extends AgentExploitConfigBase<"model"> {
+    /**
+     * Name of the model to use. Must be registered from previous
+     * {@link GameLoadMessage}.
+     */
+    readonly model: string;
+}
 
 /** Exploit using a random agent. */
-export interface RandomAgentExploitConfig
-    extends AgentExploitConfigBase<"random"> {
+export interface AgentExploitRandom extends AgentExploitConfigBase<"random"> {
     /** Seed for choosing random actions. */
     readonly seed?: string;
     /**
@@ -88,9 +125,7 @@ export interface RandomAgentExploitConfig
 }
 
 /** Config describing how the agent should behave when exploiting reward. */
-export type AgentExploitConfig<TWithModelPort extends boolean = true> =
-    | ModelAgentExploitConfig<TWithModelPort>
-    | RandomAgentExploitConfig;
+export type AgentExploitConfig = AgentExploitModel | AgentExploitRandom;
 
 /** Config for agent exploration. */
 export interface AgentExploreConfig {
@@ -103,11 +138,20 @@ export interface AgentExploreConfig {
     readonly seed?: string;
 }
 
+/** Collects buffered experience from the worker. */
+export type GameCollectMessage = GameMessageBase<"collect">;
+
 /** Types of messages that the GamePool can receive. */
 export type GameResult = GameProtocol[GameRequestType]["result"];
 
 /** Base interface for game worker message results. */
 type GameResultBase<T extends GameRequestType> = PortResultBase<T>;
+
+/** Result of loading model. */
+export interface GameLoadResult extends GameResultBase<"load"> {
+    /** @override */
+    readonly done: true;
+}
 
 /** Result of a game after it has been completed and processed by the worker. */
 export interface GamePlayResult
@@ -119,6 +163,14 @@ export interface GamePlayResult
      * serialized into a Buffer.
      */
     err?: Buffer;
+    /** @override */
+    done: true;
+}
+
+/** Result of collecting bufferd experience from the worker. */
+export interface GameCollectResult extends GameResultBase<"collect"> {
+    /** Experience collected from the worker. */
+    experience: Experience[];
     /** @override */
     done: true;
 }

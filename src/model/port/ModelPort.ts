@@ -1,17 +1,17 @@
+import {isArrayBuffer} from "util/types";
 import {MessagePort} from "worker_threads";
-import {randomAgent} from "../../game/agent/random";
+import {createGreedyAgent} from "../../game/agent/greedy";
 import {ExperienceBattleAgent} from "../../game/experience";
 import {AgentExploreConfig} from "../../game/pool/worker";
+import {AgentExperienceCallback} from "../../game/pool/worker/GameModel";
 import {verifyInputData, verifyOutputData} from "../../model/verify";
-import {choiceIds, intToChoice} from "../../psbot/handlers/battle/agent";
 import {
     allocEncodedState,
     encodeState,
 } from "../../psbot/handlers/battle/ai/encoder";
-import {maxAgent} from "../../psbot/handlers/battle/ai/maxAgent";
+import {dedup} from "../../util/dedup";
 import {WrappedError} from "../../util/errors/WrappedError";
 import {AsyncPort, ProtocolResultRaw} from "../../util/port/AsyncPort";
-import {rng} from "../../util/random";
 import {ModelPortProtocol, PredictResult} from "./ModelPortProtocol";
 
 /**
@@ -63,112 +63,55 @@ export class ModelPort {
     }
 
     /**
-     * Creates a BattleAgent from this port.
+     * Creates a BattleAgent from this port with optional experience support.
      *
      * @param explore Exploration policy config.
+     * @param expCallback Callback for handling generated experience data.
      * @param debugRankings If true, the returned BattleAgent will also return a
-     * debug string displaying the output of each choice.
+     * debug string displaying the value of each choice.
      */
     public getAgent(
         explore?: AgentExploreConfig,
+        expCallback?: AgentExperienceCallback,
         debugRankings?: boolean,
     ): ExperienceBattleAgent<string | undefined> {
-        const random = explore?.seed ? rng(explore.seed) : Math.random;
-
-        const greedyAgent = maxAgent(
+        return createGreedyAgent(
             async (state, choices, lastAction?: number, reward?: number) => {
-                const stateData = allocEncodedState();
+                const stateData = allocEncodedState(
+                    // Since experience is sent through a different protocol, we
+                    // use a shared buffer to prevent copying on the second
+                    // transfer of state data.
+                    expCallback && "shared",
+                );
                 encodeState(stateData, state);
                 verifyInputData(stateData);
 
-                const choiceData = new Float32Array(intToChoice.length);
-                for (const c of choices) {
-                    choiceData[choiceIds[c]] = 1;
-                }
+                await expCallback?.(stateData, choices, lastAction, reward);
 
-                const result = await this.predict(
-                    stateData,
-                    choiceData,
-                    lastAction,
-                    reward,
-                );
+                const result = await this.predict(stateData);
                 verifyOutputData(result.output);
 
                 return result.output;
             },
+            explore,
             debugRankings,
-        );
-
-        return async function modelPortAgent(
-            state,
-            choices,
-            logger,
-            lastAction,
-            reward,
-        ) {
-            const info = await greedyAgent(
-                state,
-                choices,
-                logger,
-                lastAction,
-                reward,
-            );
-
-            if (explore && random() < explore.factor) {
-                logger?.debug("Exploring");
-                await randomAgent(state, choices, false /*moveOnly*/, random);
-            }
-            return info;
-        };
-    }
-
-    /**
-     * Finalizes game experience generation.
-     * @param state Final state.
-     * @param lastAction Last action taken before arriving at state.
-     * @param reward Final reward.
-     */
-    public async finalize(
-        state?: Float32Array[],
-        lastAction?: number,
-        reward?: number,
-    ): Promise<void> {
-        return await new Promise((res, rej) =>
-            this.asyncPort.postMessage<"finalize">(
-                {
-                    type: "finalize",
-                    rid: this.asyncPort.nextRid(),
-                    ...(state && {state}),
-                    ...(lastAction !== undefined && {lastAction}),
-                    ...(reward !== undefined && {reward}),
-                },
-                state?.map(a => a.buffer) ?? [],
-                result => (result.type === "error" ? rej(result.err) : res()),
-            ),
         );
     }
 
     /** Requests a prediction from the neural network. */
-    private async predict(
-        state: Float32Array[],
-        choices: Float32Array,
-        lastAction?: number,
-        reward?: number,
-    ): Promise<PredictResult> {
+    private async predict(state: Float32Array[]): Promise<PredictResult> {
         return await new Promise((res, rej) =>
             this.asyncPort.postMessage<"predict">(
                 {
                     type: "predict",
                     rid: this.asyncPort.nextRid(),
                     state,
-                    choices,
-                    ...(lastAction !== undefined && {lastAction}),
-                    ...(reward !== undefined && {reward}),
                 },
-                // Since state vectors are somewhat large (~40k floats) and are
-                // sent very frequently, a buffer transfer can lighten the load
-                // somewhat.
-                [...state.map(a => a.buffer), choices.buffer],
+                dedup(
+                    state.flatMap(a =>
+                        isArrayBuffer(a.buffer) ? [a.buffer] : [],
+                    ),
+                ),
                 result =>
                     result.type === "error" ? rej(result.err) : res(result),
             ),

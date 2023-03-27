@@ -49,6 +49,11 @@ export class ThreadPool<
     TTypes extends string,
     TWorkerData = unknown,
 > {
+    /** Whether the thread pool has been {@link close closed}. */
+    public get isClosed(): boolean {
+        return this.ports.size <= 0;
+    }
+
     /** Used for managing worker events. */
     private readonly workerEvents = new TypedEmitter<WorkerEvents>();
     /** Complete worker port pool. */
@@ -100,7 +105,7 @@ export class ThreadPool<
      * of outstanding calls to this method by the {@link numThreads}.
      */
     public async takePort(): Promise<TWorker> {
-        if (this.ports.size <= 0) {
+        if (this.isClosed) {
             throw new Error("ThreadPool is closed");
         }
 
@@ -119,7 +124,7 @@ export class ThreadPool<
      * pool.
      */
     public givePort(port: TWorker): void {
-        if (this.ports.size <= 0) {
+        if (this.isClosed) {
             // Pass silently in case we're in an invalid state, since throwing
             // here could overshadow another more important error.
             return;
@@ -157,6 +162,23 @@ export class ThreadPool<
         }
 
         await Promise.all(closePromises);
+    }
+
+    /** Applies a function onto each worker. Bypasses {@link takePort} lock. */
+    public async map<T>(f: (port: TWorker) => Promise<T>): Promise<T[]> {
+        return await Promise.all(this.mapAsync(f));
+    }
+
+    /**
+     * Applies a function onto each worker without sync step. Bypasses
+     * {@link takePort} lock.
+     */
+    public mapAsync<T>(f: (port: TWorker) => Promise<T>): Promise<T>[] {
+        const promises: Promise<T>[] = [];
+        for (const port of this.ports) {
+            promises.push(f(port));
+        }
+        return promises;
     }
 
     /**

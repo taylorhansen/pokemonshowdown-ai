@@ -4,12 +4,14 @@ import {
     GameArgsGenOptions,
     GameArgsGenSeeders,
     GamePipeline,
-    GamePoolAgentConfig,
     GamePoolArgs,
     GamePoolResult,
 } from "../game/pool";
+import {GameAgentConfig} from "../game/pool/worker";
+import {BatchPredict} from "../model/worker/BatchPredict";
 import {Metrics} from "../model/worker/Metrics";
 import {ModelRegistry} from "../model/worker/ModelRegistry";
+import {serializeModel} from "../util/model";
 
 /** Result of playing evaluation games against an opponent. */
 export interface EvalResult {
@@ -35,6 +37,11 @@ export class Evaluate {
     /** Used to manage eval game threads. */
     private readonly games: GamePipeline;
 
+    /** Batch predict profile for eval model. */
+    private profile?: BatchPredict;
+    /** Batch predict profile for previous model. */
+    private prevProfile?: BatchPredict;
+
     /**
      * Creates an Evaluate object.
      *
@@ -57,14 +64,73 @@ export class Evaluate {
         this.games = new GamePipeline(`${name}/eval`, config.pool);
     }
 
+    /** Ensures models are loaded onto the game workers. */
+    public async ready(): Promise<void> {
+        await Promise.all(
+            [
+                [this.model, this.config.serve, "profile"] as const,
+                [this.prevModel, this.config.servePrev, "prevProfile"] as const,
+            ].map(async ([model, serve, field]) => {
+                switch (serve.type) {
+                    case "batched":
+                        this[field] = model.configure("eval", serve);
+                        await this.games.registerModelPort(model.name, () =>
+                            model.subscribe("eval"),
+                        );
+                        break;
+                    case "distributed":
+                        await this.games.loadModel(
+                            model.name,
+                            await serializeModel(model.model),
+                            serve,
+                        );
+                        break;
+                }
+            }),
+        );
+    }
+
+    /** Reloads any models that are stored on game workers. */
+    public async reload(): Promise<void> {
+        await Promise.all(
+            [
+                [this.model, this.config.serve] as const,
+                [this.prevModel, this.config.servePrev] as const,
+            ].map(async ([model, serve]) => {
+                if (serve.type !== "distributed") {
+                    return;
+                }
+                await this.games.loadModel(
+                    model.name,
+                    await serializeModel(model.model),
+                    serve,
+                );
+            }),
+        );
+    }
+
     /** Closes game threads. */
     public async close(): Promise<void> {
+        this.closeProfiles();
         return await this.games.close();
     }
 
     /** Force-closes game threads. */
     public async terminate(): Promise<void> {
+        this.closeProfiles();
         return await this.games.terminate();
+    }
+
+    /** Closes batch predict profiles. */
+    private closeProfiles(): void {
+        if (this.profile) {
+            this.model.deconfigure("eval");
+            this.profile = undefined;
+        }
+        if (this.prevProfile) {
+            this.prevModel.deconfigure("eval");
+            this.prevProfile = undefined;
+        }
     }
 
     /**
@@ -79,6 +145,11 @@ export class Evaluate {
         gameCallback?: (result: GamePoolResult) => void,
         callback?: (result: EvalResult) => void,
     ): Promise<void> {
+        if (step % this.config.predictMetricsInterval === 0) {
+            this.profile?.startMetrics("train", step);
+            this.prevProfile?.startMetrics("train", step);
+        }
+
         const results: {[vs: string]: EvalResult} = {};
         await this.games.run(this.genArgs(step), gameResult => {
             const [, vs] = gameResult.agents;
@@ -119,6 +190,9 @@ export class Evaluate {
                 }
             }
         });
+
+        this.profile?.endMetrics();
+        this.prevProfile?.endMetrics();
     }
 
     /** Generates game configs for the thread pool. */
@@ -128,16 +202,6 @@ export class Evaluate {
                 name: "evaluate",
                 exploit: {type: "model", model: this.model.name},
             },
-            requestModelPort: (model: string) => {
-                switch (model) {
-                    case this.model.name:
-                        return this.model.subscribe();
-                    case this.prevModel.name:
-                        return this.prevModel.subscribe();
-                    default:
-                        throw new Error(`Invalid model name '${model}'`);
-                }
-            },
             numGames: this.config.numGames,
             ...(this.logPath !== undefined && {
                 logPath: join(this.logPath, `step-${step}`),
@@ -145,7 +209,7 @@ export class Evaluate {
             ...(this.config.pool.reduceLogs && {reduceLogs: true}),
             ...(this.seeders && {seeders: this.seeders}),
         };
-        const opponents: GamePoolAgentConfig[] = [
+        const opponents: GameAgentConfig[] = [
             {
                 name: "previous",
                 exploit: {type: "model", model: this.prevModel.name},

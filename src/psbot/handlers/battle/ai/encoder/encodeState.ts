@@ -44,7 +44,7 @@ export function allocEncodedState(mode?: "shared" | "unsafe"): Float32Array[] {
     let offset = 0;
     for (const size of flattenedInputShapes) {
         const newOffset = offset + size;
-        result.push(new Float32Array(arr.subarray(offset, newOffset)));
+        result.push(arr.subarray(offset, newOffset));
         offset = newOffset;
     }
     return result;

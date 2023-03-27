@@ -42,7 +42,7 @@ void (async function () {
     /** Manages the worker thread for Tensorflow ops. */
     const models = new ModelWorker(
         "train",
-        config.tf.gpu,
+        config.train.tf,
         metricsPath,
         config.train.resourceLimits,
     );
@@ -54,17 +54,12 @@ void (async function () {
         const resumeLoadUrl = pathToFileUrl(join(resumeFolder, "model.json"));
         logger.info("Loading model: " + resumeFolder);
         try {
-            model = await models.load(
-                "model",
-                config.train.batchPredict,
-                resumeLoadUrl,
-            );
+            model = await models.load("model", resumeLoadUrl);
         } catch (e) {
             logger.error(`${e}`);
             logger.info("Creating default model instead");
             model = await models.load(
                 "model",
-                config.train.batchPredict,
                 undefined /*url*/,
                 config.train.model,
                 config.train.seeds?.model,
@@ -74,7 +69,6 @@ void (async function () {
         logger.info("Creating default model");
         model = await models.load(
             "model",
-            config.train.batchPredict,
             undefined /*url*/,
             config.train.model,
             config.train.seeds?.model,

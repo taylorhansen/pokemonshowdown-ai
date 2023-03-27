@@ -14,7 +14,6 @@ import {Evaluate} from "./Evaluate";
 import {Learn} from "./Learn";
 import {ReplayBuffer} from "./ReplayBuffer";
 import {Rollout} from "./Rollout";
-import {RolloutModel} from "./RolloutModel";
 
 /**
  * Main training loop.
@@ -51,23 +50,13 @@ export async function train(
             ));
     }
 
-    const rolloutModel = new RolloutModel("rollout", model, config.experience);
+    const rolloutModel = new ModelRegistry("rollout", model);
     const [evalModel, prevModel] = await Promise.all(
         ["eval", "prev"].map(
-            async name =>
-                new ModelRegistry(
-                    name,
-                    await cloneModel(model),
-                    config.batchPredict,
-                ),
+            async name => new ModelRegistry(name, await cloneModel(model)),
         ),
     );
     const targetModel = await cloneModel(model);
-
-    if (config.eval.interval && config.eval.predictMetricsInterval) {
-        evalModel.lock("train", 0 /*step*/);
-        prevModel.lock("train", 0);
-    }
 
     const seeders: GameArgsGenSeeders | undefined = config.seeds && {
         ...(config.seeds.battle && {battle: seeder(config.seeds.battle)}),
@@ -80,6 +69,7 @@ export async function train(
         rolloutModel,
         prevModel,
         config.rollout,
+        config.experience,
         paths?.logs ? join(paths.logs, "rollout") : undefined,
         seeders && {
             ...(seeders.battle && {battle: seeder(seeders.battle())}),
@@ -102,8 +92,6 @@ export async function train(
     // Log initial weights.
     if (config.learn.histogramInterval) {
         learn.logWeights(0 /*step*/);
-        // Prevent memory buildup from several large histograms.
-        Metrics.flush();
     }
 
     const evaluate = new Evaluate(
@@ -144,25 +132,23 @@ export async function train(
                 : undefined,
         );
 
-    const logMemoryMetrics = (step: number) => {
-        if (!metrics) {
-            return;
-        }
+    const logMemoryMetrics =
+        metrics &&
+        ((step: number) => {
+            global.gc?.();
 
-        global.gc?.();
+            const mem = process.memoryUsage();
+            metrics.scalar("memory/rss", mem.rss, step);
+            // Note: All stats except rss apply only to this thread.
+            metrics.scalar("memory/heap_used", mem.heapUsed, step);
+            metrics.scalar("memory/heap_total", mem.heapTotal, step);
+            metrics.scalar("memory/external", mem.external, step);
+            metrics.scalar("memory/array_buffers", mem.arrayBuffers, step);
 
-        const mem = process.memoryUsage();
-        metrics.scalar("memory/rss", mem.rss, step);
-        // Note: All stats except rss apply only to this thread.
-        metrics.scalar("memory/heap_used", mem.heapUsed, step);
-        metrics.scalar("memory/heap_total", mem.heapTotal, step);
-        metrics.scalar("memory/external", mem.external, step);
-        metrics.scalar("memory/array_buffers", mem.arrayBuffers, step);
-
-        const tfMem = tf.memory();
-        metrics.scalar("memory/tf_num_bytes", tfMem.numBytes, step);
-        metrics.scalar("memory/tf_num_tensors", tfMem.numTensors, step);
-    };
+            const tfMem = tf.memory();
+            metrics.scalar("memory/tf_num_bytes", tfMem.numBytes, step);
+            metrics.scalar("memory/tf_num_tensors", tfMem.numTensors, step);
+        });
 
     const replayBuffer = new ReplayBuffer(
         "train",
@@ -172,7 +158,9 @@ export async function train(
         ? rng(config.seeds.learn)
         : undefined;
 
-    void rollout.run(
+    await Promise.all([rollout.ready(), evaluate.ready()]);
+
+    const expGen = rollout.run(
         callback &&
             (result =>
                 callback({
@@ -198,18 +186,19 @@ export async function train(
 
         let i = 0;
         while (i < config.experience.prefill) {
-            const exps = await rolloutModel.step();
-            for (const exp of exps) {
-                replayBuffer.add(exp);
-                ++i;
+            const r = await expGen.next();
+            if (r.done) {
+                throw new Error("Experience stream ended");
             }
+            replayBuffer.add(r.value);
+            ++i;
         }
 
         if (config.experience.metricsInterval) {
             replayBuffer.logMetrics(step);
         }
         if (config.metricsInterval) {
-            logMemoryMetrics(step);
+            logMemoryMetrics?.(step);
         }
 
         if (config.checkpointInterval) {
@@ -218,100 +207,82 @@ export async function train(
 
         ++step;
         while (!config.steps || step < config.steps) {
-            const exps = await rolloutModel.step();
-            for (const exp of exps) {
-                if (config.steps && step > config.steps) {
-                    break;
-                }
-
-                replayBuffer.add(exp);
-
-                if (step % config.experience.metricsInterval === 0) {
-                    replayBuffer.logMetrics(step);
-                }
-
-                rollout.step(step);
-
-                let loss: number | undefined;
-                if (step % config.learn.interval === 0) {
-                    const batch = replayBuffer.sample(
-                        config.learn.batchSize,
-                        bufferRandom,
-                    );
-                    const lossTensor = learn.step(step, batch);
-                    tf.dispose(batch);
-
-                    if (step % config.learn.reportInterval === 0) {
-                        [loss] = await lossTensor.data<"float32">();
-                    }
-
-                    lossTensor.dispose();
-                }
-
-                callback?.({
-                    type: "step",
-                    step,
-                    ...(loss !== undefined && {loss}),
-                });
-
-                if (step % config.learn.histogramInterval === 0) {
-                    learn.logWeights(step);
-                    Metrics.flush();
-                }
-
-                if (step % config.learn.targetInterval === 0) {
-                    targetModel.setWeights(model.getWeights());
-                }
-
-                if (step % config.eval.interval === 0) {
-                    await lastEval;
-
-                    evalModel.unlock();
-                    prevModel.unlock();
-                    Metrics.flush();
-
-                    prevModel.model.setWeights(evalModel.model.getWeights());
-                    evalModel.model.setWeights(model.getWeights());
-
-                    if (step % config.eval.predictMetricsInterval === 0) {
-                        evalModel.lock("train", step);
-                        prevModel.lock("train", step);
-                    }
-
-                    lastEval = runEval(step);
-
-                    if (config.eval.sync) {
-                        await lastEval;
-                        evalModel.unlock();
-                        prevModel.unlock();
-                        Metrics.flush();
-                    } else {
-                        lastEval.catch(() => {});
-                    }
-                }
-                if (step % config.checkpointInterval === 0) {
-                    await saveCheckpoint?.(step);
-                }
-
-                if (step % config.metricsInterval === 0) {
-                    logMemoryMetrics(step);
-                }
-
-                // Async yield to allow for evaluate step to run in parallel.
-                await tf.nextFrame();
-
-                ++step;
+            const r = await expGen.next();
+            if (r.done) {
+                throw new Error("Experience stream ended");
             }
+            replayBuffer.add(r.value);
+
+            if (step % config.experience.metricsInterval === 0) {
+                replayBuffer.logMetrics(step);
+            }
+
+            rollout.step(step);
+
+            let loss: number | undefined;
+            if (step % config.learn.interval === 0) {
+                const batch = replayBuffer.sample(
+                    config.learn.batchSize,
+                    bufferRandom,
+                );
+                const lossTensor = learn.step(step, batch);
+                tf.dispose(batch);
+
+                if (step % config.learn.reportInterval === 0) {
+                    [loss] = await lossTensor.data<"float32">();
+                }
+
+                lossTensor.dispose();
+
+                // TODO: Add a separate interval config for this.
+                await rollout.reload("rollout");
+            }
+
+            callback?.({
+                type: "step",
+                step,
+                ...(loss !== undefined && {loss}),
+            });
+
+            if (step % config.learn.histogramInterval === 0) {
+                learn.logWeights(step);
+            }
+
+            if (step % config.learn.targetInterval === 0) {
+                targetModel.setWeights(model.getWeights());
+            }
+
+            if (step % config.eval.interval === 0) {
+                await lastEval;
+
+                prevModel.model.setWeights(evalModel.model.getWeights());
+                evalModel.model.setWeights(model.getWeights());
+                await Promise.all([rollout.reload("prev"), evaluate.reload()]);
+
+                lastEval = runEval(step);
+
+                if (config.eval.sync) {
+                    await lastEval;
+                } else {
+                    lastEval.catch(() => {});
+                }
+            }
+            if (step % config.checkpointInterval === 0) {
+                await saveCheckpoint?.(step);
+            }
+
+            if (step % config.metricsInterval === 0) {
+                logMemoryMetrics?.(step);
+            }
+
+            ++step;
         }
         await Promise.all([rollout.terminate(), lastEval]);
         await evaluate.close();
-        for (const m of [evalModel, prevModel]) {
-            m.unlock();
-        }
     } finally {
         await Promise.all([rollout.terminate(), evaluate.terminate()]);
         learn.cleanup();
-        rolloutModel.unload();
+        rolloutModel.unload(false /*disposeModel*/);
         for (const m of [evalModel, prevModel]) {
             m.unload();
         }

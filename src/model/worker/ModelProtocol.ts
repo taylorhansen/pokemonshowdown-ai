@@ -4,6 +4,7 @@ import {
     BatchPredictConfig,
     ModelConfig,
     PathsConfig,
+    TensorflowConfig,
     TrainConfig,
 } from "../../config/types";
 import {SimResult} from "../../game/sim/playGame";
@@ -15,18 +16,21 @@ import {WorkerProtocol} from "../../util/worker/WorkerProtocol";
 export interface ModelWorkerData {
     /** Name of the worker for logging/debugging. */
     name: string;
-    /** Whether to enable GPU support. */
-    gpu?: boolean;
+    /** Config for the Tensorflow instance. */
+    tf: TensorflowConfig;
     /** Path to store metrics in. */
     metricsPath?: string;
 }
 
 /** ModelWorker request protocol typings. */
 export interface ModelProtocol
-    extends WorkerProtocol<"load" | "unload" | "train" | "subscribe"> {
+    extends WorkerProtocol<
+        "load" | "unload" | "train" | "configure" | "subscribe"
+    > {
     load: {message: ModelLoadMessage; result: ModelLoadResult};
     unload: {message: ModelUnloadMessage; result: ModelUnloadResult};
     train: {message: ModelTrainMessage; result: ModelTrainResult};
+    configure: {message: ModelConfigureMessage; result: ModelConfigureResult};
     subscribe: {message: ModelSubscribeMessage; result: ModelSubscribeResult};
 }
 
@@ -43,8 +47,6 @@ type ModelMessageBase<T extends ModelRequestType> = PortMessageBase<T>;
 export interface ModelLoadMessage extends ModelMessageBase<"load"> {
     /** Name by which to refer to the model. */
     readonly name: string;
-    /** Config for batch predict worker. */
-    readonly predict: BatchPredictConfig;
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
     /** Config for creating the model if {@link url} is omitted. */
@@ -72,10 +74,22 @@ export interface ModelTrainMessage extends ModelMessageBase<"train"> {
     readonly paths?: Partial<PathsConfig>;
 }
 
+/** Configures and attaches a batch predict profile to the model. */
+export interface ModelConfigureMessage extends ModelMessageBase<"configure"> {
+    /** Name of the model. */
+    readonly model: string;
+    /** Name of the new batch predict profile to associate with the model. */
+    readonly profile: string;
+    /** Batch predict config. */
+    readonly config: BatchPredictConfig;
+}
+
 /** Requests a game worker port from a registered model. */
 export interface ModelSubscribeMessage extends ModelMessageBase<"subscribe"> {
     /** Name of the model. */
     readonly model: string;
+    /** Name of the batch predict profile associated with the model. */
+    readonly profile: string;
 }
 
 /** The types of results that can be given to the model worker. */
@@ -172,10 +186,15 @@ interface ModelTrainResultDone extends ModelResultBase<"train"> {
 /** Result of training a model. */
 export type ModelTrainResult = ModelTrainResultWithData | ModelTrainResultDone;
 
-/** Result of requesting a game worker port. */
-export interface ModelSubscribeResult extends ModelResultBase<"subscribe"> {
+export interface ModelConfigureResult extends ModelResultBase<"configure"> {
     /** @override */
     done: true;
+}
+
+/** Result of requesting a game worker port. */
+export interface ModelSubscribeResult extends ModelResultBase<"subscribe"> {
     /** Port for requesting predictions from a model. */
     port: MessagePort;
+    /** @override */
+    done: true;
 }

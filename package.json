@@ -69,6 +69,7 @@
     "@pkmn/randoms": "^0.7.29",
     "@pkmn/sim": "^0.7.29",
     "@tensorflow/tfjs": "^4.3.0",
+    "@tensorflow/tfjs-backend-wasm": "^4.3.0",
     "@tensorflow/tfjs-node": "^4.3.0",
     "@tensorflow/tfjs-node-gpu": "^4.3.0",
     "long": "^5.2.1",

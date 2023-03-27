@@ -1,4 +1,5 @@
-import {RolloutConfig} from "../config/types";
+import {ExperienceConfig, RolloutConfig} from "../config/types";
+import {Experience} from "../game/experience";
 import {
     GameArgsGenOptions,
     GameArgsGenSeeders,
@@ -6,10 +7,11 @@ import {
     GamePoolArgs,
     GamePoolResult,
 } from "../game/pool";
+import {BatchPredict} from "../model/worker/BatchPredict";
 import {Metrics} from "../model/worker/Metrics";
 import {ModelRegistry} from "../model/worker/ModelRegistry";
+import {serializeModel} from "../util/model";
 import {rng, Seeder} from "../util/random";
-import {RolloutModel} from "./RolloutModel";
 
 /** Seeders for {@link Rollout}. */
 export interface RolloutSeeders extends GameArgsGenSeeders {
@@ -27,6 +29,11 @@ export class Rollout {
     /** Used to manage rollout game threads. */
     private readonly games: GamePipeline;
 
+    /** Batch predict profile for rollout model. */
+    private profile?: BatchPredict;
+    /** Batch predict profile for previous model. */
+    private prevProfile?: BatchPredict;
+
     /** Current exploration factor for the agent. */
     private readonly exploration: {factor: number};
     /** Counter for number of games played for the training run. */
@@ -42,15 +49,17 @@ export class Rollout {
      * @param prevModel Previous model version that will sometimes play against
      * the main model.
      * @param config Configuration for the rollout step.
+     * @param expConfig Config for generating experience.
      * @param logPath Path to the folder to store games logs in. Omit to not
      * store logs.
      * @param seeders Random seed generators.
      */
     public constructor(
         public readonly name: string,
-        private readonly rolloutModel: RolloutModel,
+        private readonly model: ModelRegistry,
         private readonly prevModel: ModelRegistry,
         private readonly config: RolloutConfig,
+        private readonly expConfig: ExperienceConfig,
         private readonly logPath?: string,
         private readonly seeders?: RolloutSeeders,
     ) {
@@ -58,26 +67,84 @@ export class Rollout {
         this.exploration = {factor: config.policy.exploration};
     }
 
+    /** Ensures models are loaded onto the game workers. */
+    public async ready(): Promise<void> {
+        await Promise.all(
+            [
+                [this.model, this.config.serve, "profile"] as const,
+                [this.prevModel, this.config.servePrev, "prevProfile"] as const,
+            ].map(async ([model, serve, field]) => {
+                switch (serve.type) {
+                    case "batched":
+                        this[field] = model.configure("rollout", serve);
+                        await this.games.registerModelPort(model.name, () =>
+                            model.subscribe("rollout"),
+                        );
+                        break;
+                    case "distributed":
+                        await this.games.loadModel(
+                            model.name,
+                            await serializeModel(model.model),
+                            serve,
+                        );
+                        break;
+                }
+            }),
+        );
+    }
+
+    /** Reloads any models that are stored on game workers. */
+    public async reload(which?: string): Promise<void> {
+        await Promise.all(
+            [
+                [this.model, this.config.serve] as const,
+                [this.prevModel, this.config.servePrev] as const,
+            ].map(async ([model, serve]) => {
+                if (serve.type !== "distributed") {
+                    return;
+                }
+                if (which && model.name !== which) {
+                    return;
+                }
+                await this.games.loadModel(
+                    model.name,
+                    await serializeModel(model.model),
+                    serve,
+                );
+            }),
+        );
+    }
+
     /** Force-closes game threads. */
     public async terminate(): Promise<void> {
+        if (this.profile) {
+            this.model.deconfigure("rollout");
+            this.profile = undefined;
+        }
+        if (this.prevProfile) {
+            this.prevModel.deconfigure("rollout");
+            this.prevProfile = undefined;
+        }
         return await this.games.terminate();
     }
 
     /**
-     * Runs the rollout stage.
+     * Runs the rollout stage and collects experience from game workers.
      *
      * @param callback Called for each game result.
      */
-    public async run(
+    public async *run(
         callback?: (result: GamePoolResult) => void,
-    ): Promise<void> {
-        await this.games.run(this.genArgs(), result => {
+    ): AsyncGenerator<Experience> {
+        const p = this.games.run(this.genArgs(), result => {
             ++this.numGames;
             if (result.winner === undefined) {
                 ++this.numTies;
             }
             callback?.(result);
         });
+        yield* this.games.collectExperience();
+        await p;
     }
 
     /**
@@ -113,7 +180,7 @@ export class Rollout {
         const opts: GameArgsGenOptions = {
             agentConfig: {
                 name: "rollout",
-                exploit: {type: "model", model: this.rolloutModel.name},
+                exploit: {type: "model", model: this.model.name},
                 // Use object reference so that step() updates with the new rate
                 // for newly-created games
                 explore: this.exploration,
@@ -121,22 +188,13 @@ export class Rollout {
             },
             opponent: {
                 name: "self",
-                exploit: {type: "model", model: this.rolloutModel.name},
+                exploit: {type: "model", model: this.model.name},
                 explore: this.exploration,
                 emitExperience: true,
             },
-            requestModelPort: (model: string) => {
-                switch (model) {
-                    case this.rolloutModel.name:
-                        return this.rolloutModel.subscribe();
-                    case this.prevModel.name:
-                        return this.prevModel.subscribe();
-                    default:
-                        throw new Error(`Invalid model name '${model}'`);
-                }
-            },
             ...(this.logPath !== undefined && {logPath: this.logPath}),
             ...(this.config.pool.reduceLogs && {reduceLogs: true}),
+            ...(this.expConfig && {experienceConfig: this.expConfig}),
             ...(this.seeders && {seeders: this.seeders}),
         };
         const gen = GamePipeline.genArgs(opts);
@@ -152,7 +210,7 @@ export class Rollout {
 
         const random = rng(this.seeders?.rollout?.());
         while (true) {
-            if (random() < this.config.prev) {
+            if (random() < this.config.prevRatio) {
                 yield prevGen.next().value;
             } else {
                 yield gen.next().value;

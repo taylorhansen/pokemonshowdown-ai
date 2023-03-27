@@ -1,6 +1,10 @@
-import {ExperienceConfig} from "../config/types";
-import {Experience} from "../game/experience";
-import {intToChoice} from "../psbot/handlers/battle/agent";
+import {ExperienceConfig} from "../../config/types";
+import {
+    Choice,
+    choiceIds,
+    intToChoice,
+} from "../../psbot/handlers/battle/agent";
+import {Experience} from "./Experience";
 
 /** Tracks Experience generation for one side of a game. */
 export class ExperienceContext {
@@ -22,7 +26,7 @@ export class ExperienceContext {
      */
     public constructor(
         private readonly config: ExperienceConfig,
-        private readonly callback: (exp: Experience) => void,
+        private readonly callback: (exp: Experience[]) => Promise<void>,
     ) {}
 
     /**
@@ -33,12 +37,12 @@ export class ExperienceContext {
      * @param action Action used to get to state.
      * @param reward Net reward from state transition.
      */
-    public add(
+    public async add(
         state: readonly Float32Array[],
-        choices: Float32Array,
+        choices: readonly Choice[],
         action?: number,
         reward?: number,
-    ): void {
+    ): Promise<void> {
         if (!this.latestState) {
             // First decision doesn't have past action/reward yet.
             this.latestState = state;
@@ -54,6 +58,11 @@ export class ExperienceContext {
             throw new Error(
                 "Predict requests after first must include previous reward",
             );
+        }
+
+        const choiceData = new Float32Array(intToChoice.length);
+        for (const c of choices) {
+            choiceData[choiceIds[c]] = 1;
         }
 
         this.states.push(this.latestState);
@@ -75,14 +84,16 @@ export class ExperienceContext {
         }
         this.rewards.shift();
 
-        this.callback({
-            state: lastState,
-            action: lastAction,
-            reward: returns,
-            nextState: state,
-            choices,
-            done: false,
-        });
+        await this.callback([
+            {
+                state: lastState,
+                action: lastAction,
+                reward: returns,
+                nextState: state,
+                choices: choiceData,
+                done: false,
+            },
+        ]);
     }
 
     /**
@@ -92,11 +103,11 @@ export class ExperienceContext {
      * @param action Action before final state.
      * @param reward Final reward.
      */
-    public finalize(
+    public async finalize(
         state?: readonly Float32Array[],
         action?: number,
         reward?: number,
-    ): void {
+    ): Promise<void> {
         if (!state) {
             // Game was forced to end abruptly.
             return;
@@ -143,9 +154,7 @@ export class ExperienceContext {
             });
         }
 
-        // Preserve experience order.
-        while (exps.length > 0) {
-            this.callback(exps.pop()!);
-        }
+        // Note reverse to preserve experience order.
+        await this.callback(exps.reverse());
     }
 }

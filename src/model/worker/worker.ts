@@ -3,9 +3,10 @@ import {serialize} from "v8";
 import {parentPort, TransferListItem, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {train} from "../../train/train";
+import {importTf} from "../../util/importTf";
 import {RawPortResultError} from "../../util/port/PortProtocol";
-import {importTfn} from "../../util/tfn";
 import {createModel} from "../model";
+import {Metrics} from "./Metrics";
 import {
     ModelMessage,
     ModelResult,
@@ -18,14 +19,16 @@ if (!parentPort) {
     throw new Error("No parent port!");
 }
 
-// Make sure we're using the right TF backend.
-const modelWorkerData = workerData as ModelWorkerData;
-importTfn(modelWorkerData?.gpu);
-
 // Used for debugging.
 Error.stackTraceLimit = Infinity;
 
 tf.enableProdMode();
+
+const modelWorkerData = workerData as ModelWorkerData;
+if (modelWorkerData.metricsPath) {
+    Metrics.configure(modelWorkerData.metricsPath, modelWorkerData.tf);
+}
+const tfPromise = importTf(modelWorkerData.tf);
 
 /** Maps model name to their registry objects. */
 const models = new Map<string, ModelRegistry>();
@@ -44,6 +47,8 @@ function getRegistry(model: string): ModelRegistry {
 }
 
 async function handle(msg: ModelMessage): Promise<void> {
+    await tfPromise;
+
     const {rid} = msg;
     let result: ModelResult | RawPortResultError;
     const transferList: TransferListItem[] = [];
@@ -59,10 +64,7 @@ async function handle(msg: ModelMessage): Promise<void> {
                     ? await tf.loadLayersModel(msg.url)
                     : createModel(msg.name, msg.config, msg.seed);
                 try {
-                    models.set(
-                        msg.name,
-                        new ModelRegistry(msg.name, model, msg.predict),
-                    );
+                    models.set(msg.name, new ModelRegistry(msg.name, model));
                 } catch (e) {
                     model.dispose();
                     throw e;
@@ -101,8 +103,12 @@ async function handle(msg: ModelMessage): Promise<void> {
                 result = {type: "train", rid, done: true};
                 break;
             }
+            case "configure":
+                getRegistry(msg.model).configure(msg.profile, msg.config);
+                result = {type: "configure", rid, done: true};
+                break;
             case "subscribe": {
-                const port = getRegistry(msg.model).subscribe();
+                const port = getRegistry(msg.model).subscribe(msg.profile);
                 result = {type: "subscribe", rid, done: true, port};
                 transferList.push(port);
                 break;
@@ -122,14 +128,13 @@ async function handle(msg: ModelMessage): Promise<void> {
             }
         }
     } catch (err) {
-        const errBuf = serialize(err);
         result = {
             type: "error",
             rid,
             done: true,
-            err: errBuf,
+            err: serialize(err),
         };
-        transferList.push(errBuf.buffer);
+        transferList.push(result.err.buffer);
     }
     parentPort!.postMessage(result, transferList);
 }

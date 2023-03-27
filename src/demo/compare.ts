@@ -20,9 +20,7 @@ import {ensureDir} from "../util/paths/ensureDir";
 import {pathToFileUrl} from "../util/paths/pathToFileUrl";
 import {seeder} from "../util/random";
 
-const specialModels: {
-    readonly [m: string]: AgentExploitConfig<false /*TWithModelPort*/>;
-} = {
+const specialModels: {readonly [m: string]: AgentExploitConfig} = {
     random: {type: "random"},
     randmove: {type: "random", moveOnly: true},
     damage: {type: "random", moveOnly: "damage"},
@@ -48,7 +46,9 @@ void (async function () {
         join(config.paths.logs, "compare", config.compare.name),
     );
 
-    const models = new ModelWorker("compare", config.tf.gpu);
+    const models = new ModelWorker("compare", config.compare.tf);
+    const games = new GamePipeline("compare", config.compare.pool);
+
     try {
         for (const model of compareModels) {
             if (Object.prototype.hasOwnProperty.call(specialModels, model)) {
@@ -59,10 +59,18 @@ void (async function () {
             try {
                 await models.load(
                     model,
-                    config.compare.batchPredict,
                     pathToFileUrl(
                         join(config.paths.models, model, "model.json"),
                     ),
+                );
+                await models.configure(
+                    model,
+                    "compare",
+                    config.compare.batchPredict,
+                );
+                await games.registerModelPort(
+                    model,
+                    async () => await models.subscribe(model, "compare"),
                 );
             } catch (e) {
                 logger.error(`Error loading model: ${e}`);
@@ -136,8 +144,6 @@ void (async function () {
                         // Note: Random seeds filled in by playGames().
                         exploit: specialModels[model] ?? {type: "model", model},
                     },
-                    requestModelPort: async modelName =>
-                        await models.subscribe(modelName),
                     numGames: config.compare.numGames,
                     logPath: join(logPath, model),
                     ...(config.compare.pool.reduceLogs && {reduceLogs: true}),
@@ -160,7 +166,6 @@ void (async function () {
             }
         };
 
-        const games = new GamePipeline("compare", config.compare.pool);
         try {
             const startTime = process.uptime();
             await games.run(genArgs(), result => {
@@ -228,6 +233,7 @@ void (async function () {
     } catch (e) {
         logger.error((e as Error).stack ?? (e as Error).toString());
     } finally {
+        await Promise.all(compareModels.map(async m => await models.unload(m)));
         await models.close();
         logger.info("Uptime: " + formatUptime(process.uptime()));
         logger.info("Done");

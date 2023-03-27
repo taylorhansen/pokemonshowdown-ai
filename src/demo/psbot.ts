@@ -35,20 +35,24 @@ void (async function () {
         bot.setAvatar(config.psbot.avatar);
     }
 
-    const models = new ModelWorker("psbot", config.tf.gpu);
+    const models = new ModelWorker("psbot", config.psbot.tf);
     const model = await models.load(
         "model",
-        config.psbot.batchPredict,
         pathToFileUrl(
             join(config.paths.models, config.psbot.model, "model.json"),
         ),
     );
+    await models.configure(model, "psbot", config.psbot.batchPredict);
 
     bot.acceptChallenges("gen4randombattle", async (room, user, sender) => {
-        const port = new ModelPort(await models.subscribe(model));
+        const port = new ModelPort(await models.subscribe(model, "psbot"));
         const handler = new handlers.battle.BattleHandler({
             username: user,
-            agent: port.getAgent(undefined /*explore*/, true /*debugRankings*/),
+            agent: port.getAgent(
+                undefined /*explore*/,
+                undefined /*expCallback*/,
+                true /*debugRankings*/,
+            ),
             sender,
             logger: logger.addPrefix(`BattleHandler(${room}): `),
         });

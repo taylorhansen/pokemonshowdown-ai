@@ -56,12 +56,12 @@ export interface SimResult {
  * Plays a single game and processes the results.
  *
  * @param args Arguments for the simulator.
- * @param experienceCallback Callback for processing the final state transition
+ * @param finalExpCallback Callback for processing the final state transition
  * for experience generation. Includes agent name as an identifier.
  */
 export async function playGame(
     args: SimArgs,
-    experienceCallback?: (
+    finalExpCallback?: (
         name: string,
         state?: Float32Array[],
         action?: number,
@@ -70,7 +70,7 @@ export async function playGame(
 ): Promise<SimResult> {
     // Detect battle agents that want to generate Experience objects.
     const [p1, p2] = args.agents.map<PlayerOptions>(function (agentArgs) {
-        if (!experienceCallback || !agentArgs.emitExperience) {
+        if (!finalExpCallback || !agentArgs.emitExperience) {
             return {
                 name: agentArgs.name,
                 agent: agentArgs.agent,
@@ -78,15 +78,17 @@ export async function playGame(
             };
         }
 
-        // Agent is configured to emit partial Experience data, so override the
-        // BattleParser to process them into full Experience objects.
+        // Agent is configured to process and pass partial Experience data up to
+        // the training thread, so override the BattleParser to give it the
+        // initial experience data to process by extracting rewards/choices/etc
+        // from game events.
         return {
             name: agentArgs.name,
             agent: agentArgs.agent,
             parser: experienceBattleParser(
                 main,
                 async (state, action, reward) =>
-                    await experienceCallback(
+                    await finalExpCallback(
                         agentArgs.name,
                         state,
                         action,
