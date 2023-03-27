@@ -83,6 +83,7 @@ export class GamePool {
     public constructor(name: string, config: GamePoolConfig) {
         this.pool = new ThreadPool(
             config.numThreads,
+            config.gamesPerThread,
             workerScriptPath,
             GameWorker,
             i => ({

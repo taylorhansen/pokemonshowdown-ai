@@ -179,8 +179,10 @@ export type ModelServeConfig =
 
 /** Configuration for the thread pool for playing games. */
 export interface GamePoolConfig {
-    /** Number of games to play in parallel. */
+    /** Number of threads to use for parallel games. */
     readonly numThreads: number;
+    /** Number of games to simulate per thread. Used in async batch ops. */
+    readonly gamesPerThread: number;
     /**
      * Maximum amount of turns until the game is considered a tie. Games can go
      * on forever if this is not set and both players only decide to switch.

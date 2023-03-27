@@ -8,6 +8,7 @@ import {Config} from "./types";
 // the training script should make the whole process fully deterministic.
 const numThreads = os.cpus().length;
 const evalThreads = Math.ceil(numThreads / 4);
+const gamesPerThread = 4;
 
 const maxTurns = 100;
 
@@ -48,6 +49,7 @@ export const config: Config = {
         rollout: {
             pool: {
                 numThreads,
+                gamesPerThread,
                 maxTurns,
                 reduceLogs: true,
                 resourceLimits: {maxOldGenerationSizeMb: 512},
@@ -59,12 +61,12 @@ export const config: Config = {
             },
             serve: {
                 type: "batched",
-                maxSize: numThreads,
+                maxSize: numThreads * gamesPerThread,
                 timeoutNs: 5_000_000n /*5ms*/,
             },
             servePrev: {
                 type: "batched",
-                maxSize: Math.ceil(numThreads * 0.2),
+                maxSize: Math.ceil(numThreads * gamesPerThread * 0.2),
                 timeoutNs: 5_000_000n /*5ms*/,
             },
             prevRatio: 0.2,
@@ -94,6 +96,7 @@ export const config: Config = {
             numGames: 100,
             pool: {
                 numThreads: evalThreads,
+                gamesPerThread,
                 maxTurns,
                 reduceLogs: true,
                 resourceLimits: {maxOldGenerationSizeMb: 256},
@@ -101,8 +104,16 @@ export const config: Config = {
             },
             // Use a separate TensorFlow instance on each thread to run
             // inferences so that they don't block the main learner thread.
-            serve: {type: "distributed", maxSize: 1, timeoutNs: 0n},
-            servePrev: {type: "distributed", maxSize: 1, timeoutNs: 0n},
+            serve: {
+                type: "distributed",
+                maxSize: gamesPerThread,
+                timeoutNs: 5_000_000n /*5ms*/,
+            },
+            servePrev: {
+                type: "distributed",
+                maxSize: gamesPerThread,
+                timeoutNs: 5_000_000n /*5ms*/,
+            },
             interval: 5_000,
             predictMetricsInterval: 10_000,
             report: true,
@@ -137,11 +148,12 @@ export const config: Config = {
         numGames: 1000,
         threshold: 0.55,
         batchPredict: {
-            maxSize: numThreads,
+            maxSize: numThreads * gamesPerThread,
             timeoutNs: 5_000_000n /*5ms*/,
         },
         pool: {
             numThreads,
+            gamesPerThread,
             maxTurns: 100,
             reduceLogs: true,
             resourceLimits: {maxOldGenerationSizeMb: 256},

@@ -20,16 +20,11 @@ export type WorkerPortLike<
 
 /** Event for when a WorkerPort is free. */
 const workerFree = Symbol("workerFree");
-/** Event for when a WorkerPort has encountered an uncaught exception. */
-const workerError = Symbol("workerError");
 
 /** Defines events that the ThreadPool implements. */
-interface WorkerEvents
-    extends ListenerSignature<{[workerFree]: true; [workerError]: true}> {
+interface WorkerEvents extends ListenerSignature<{[workerFree]: true}> {
     /** When a worker is free. */
     readonly [workerFree]: () => void;
-    /** When a worker encounters an uncaught exception. */
-    readonly [workerError]: (err: Error) => void;
 }
 
 /**
@@ -66,7 +61,8 @@ export class ThreadPool<
     /**
      * Creates a ThreadPool.
      *
-     * @param numThreads Number of workers to create.
+     * @param numThreads Number of worker threads to create.
+     * @param threadParallel Number of concurrent requests per worker thread.
      * @param scriptPath Path to the worker script. The worker script must
      * support the message protocol defined by the provided `TProtocol` generic
      * type using its parent port.
@@ -78,6 +74,7 @@ export class ThreadPool<
      */
     public constructor(
         public readonly numThreads: number,
+        public readonly threadParallel: number,
         private readonly scriptPath: string,
         private readonly workerPortCtor: new (worker: Worker) => TWorker,
         workerData: (i: number) => TWorkerData,
@@ -88,9 +85,9 @@ export class ThreadPool<
                 `Expected positive numThreads but got ${numThreads}`,
             );
         }
-        this.workerEvents.setMaxListeners(this.numThreads);
+        this.workerEvents.setMaxListeners(numThreads * threadParallel);
 
-        for (let i = 0; i < this.numThreads; ++i) {
+        for (let i = 0; i < numThreads; ++i) {
             this.addWorker(workerData?.(i), resourceLimits);
         }
     }
@@ -103,6 +100,9 @@ export class ThreadPool<
      *
      * Heavy usage can cause listeners to build up, so try to limit the number
      * of outstanding calls to this method by the {@link numThreads}.
+     *
+     * Also, having a {@link threadParallel} > 1 will allow for the same port to
+     * be reserved multiple times.
      */
     public async takePort(): Promise<TWorker> {
         if (this.isClosed) {
@@ -133,7 +133,6 @@ export class ThreadPool<
         if (!this.ports.has(port)) {
             // Errored port has been returned.
             if (this.erroredPorts.has(port)) {
-                this.erroredPorts.delete(port);
                 return;
             }
             throw new Error("WorkerPort doesn't belong to this ThreadPool");
@@ -215,23 +214,34 @@ export class ThreadPool<
             ...(resourceLimits && {resourceLimits}),
         });
         const port = new this.workerPortCtor(worker);
-        worker.on("error", err => {
-            // Broadcast error for logging if possible.
-            this.workerEvents.emit(workerError, err);
+        worker.on("error", () => {
+            // Note: The constructor-provided WorkerPort class should be able to
+            // handle any dangling requests as a result of the error.
 
-            // Remove the errored worker and create a new one to replace it.
-            if (!this.freePorts.includes(port)) {
-                // Port hasn't been given back to us yet.
-                // Cache it in a special place so that #givePort() doesn't throw
-                // later if the original caller decides to give it back.
-                this.ports.delete(port);
-                this.erroredPorts.add(port);
-            }
+            // Store port in a special place so that givePort() doesn't throw.
+            this.erroredPorts.add(port);
+
+            // Replace crashed worker with a new one.
+            this.removeWorker(port);
             this.addWorker(workerData);
         });
+        worker.on("exit", () => this.removeWorker(port));
 
         this.ports.add(port);
-        this.freePorts.push(port);
-        this.workerEvents.emit(workerFree);
+        for (let i = 0; i < this.threadParallel; ++i) {
+            this.givePort(port);
+        }
+    }
+
+    /** Removes worker from the pool. */
+    private removeWorker(port: TWorker): void {
+        if (!this.ports.delete(port)) {
+            return;
+        }
+        for (let i = 0; i < this.freePorts.length; ++i) {
+            if (port === this.freePorts[i]) {
+                this.freePorts.splice(i--, 1);
+            }
+        }
     }
 }
