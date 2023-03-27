@@ -17,7 +17,7 @@ export const test = () =>
 
         const exps: Experience[] = [];
         // eslint-disable-next-line @typescript-eslint/require-await
-        const expCallback = async (exp: Experience) => void exps.push(exp);
+        const expCallback = async (exp: Experience[]) => void exps.push(...exp);
         beforeEach("Clear experience buffer", function () {
             exps.length = 0;
         });
