@@ -2,6 +2,7 @@ import * as tf from "@tensorflow/tfjs";
 import {BatchTensorExperience} from "../../src/game/experience/tensor";
 import {modelInputShapes} from "../../src/model/shapes";
 import {intToChoice} from "../../src/psbot/handlers/battle/agent";
+import {formatUptime} from "../../src/util/format";
 
 export function makeBatch(batchSize: number): BatchTensorExperience {
     return tf.tidy(() => ({
@@ -20,44 +21,33 @@ export function makeState(batchSize: number): tf.Tensor[] {
     );
 }
 
-export function logMemoryStats() {
-    global.gc?.();
-    const nodeMem = process.memoryUsage();
-    console.log(
-        "process: " +
-            `rss=${humanBytes(nodeMem.rss)}, ` +
-            `heap=${humanBytes(nodeMem.heapUsed)}/${humanBytes(
-                nodeMem.heapTotal,
-            )}, ` +
-            `ext=${humanBytes(nodeMem.external)}, ` +
-            `arr=${humanBytes(nodeMem.arrayBuffers)}`,
-    );
-    const tfMem = tf.memory();
-    console.log(
-        "tensorflow: " +
-            `bytes=${humanBytes(tfMem.numBytes)}, ` +
-            `tensors=${humanNumber(tfMem.numTensors)}, ` +
-            `buffers=${humanNumber(tfMem.numDataBuffers)}`,
-    );
+export function log(step: number, type: string, value: number | string) {
+    console.log(`${step},${formatUptime(process.uptime())},${type},${value}`);
 }
 
-export async function profile(name: string, size: number, f: () => void) {
-    let runtime: number;
-    const info = await tf.profile(() => {
-        const start = process.hrtime.bigint();
-        tf.tidy(f);
-        const end = process.hrtime.bigint();
-        runtime = Number(end - start);
-    });
-    console.log(
-        `${name}(${size}): ` +
-            `new tensors ${humanNumber(info.newTensors)} ` +
-            `(${humanBytes(info.newBytes)}), ` +
-            `peak ${humanBytes(info.peakBytes)}, ` +
-            `time ${humanTime(runtime!)}, ` +
-            `through ${humanNumber(size / (runtime! / 1e9))}/s`,
-    );
-    return info;
+export function logMemoryStats(step: number) {
+    global.gc?.();
+
+    const nodeMem = process.memoryUsage();
+    log(step, "rss", nodeMem.rss);
+    log(step, "heap_used", nodeMem.heapUsed);
+    log(step, "heap_total", nodeMem.heapTotal);
+    log(step, "ext", nodeMem.external);
+    log(step, "array_buffers", nodeMem.arrayBuffers);
+
+    const tfMem = tf.memory();
+    log(step, "tf_bytes", tfMem.numBytes);
+    log(step, "tf_tensors", tfMem.numTensors);
+    log(step, "tf_buffers", tfMem.numDataBuffers);
+}
+
+export function median(arr: number[]): number {
+    arr.sort((a, b) => a - b);
+    const mid = Math.floor(arr.length / 2);
+    if (arr.length % 2 === 0) {
+        return (arr[mid] + arr[mid + 1]) / 2;
+    }
+    return arr[mid];
 }
 
 /** Converts to given SI units given a list of unit denominations. */
@@ -92,4 +82,42 @@ const timeUnits = ["ns", "us", "ms", "s"];
 /** Stringifies number of nanoseconds with unit denominations up to seconds. */
 export function humanTime(ns: number, decimals = 1): string {
     return toSiUnits(ns, timeUnits, decimals);
+}
+
+export async function runProfile(
+    steps: number,
+    invasiveInterval: number,
+    size: number,
+    f: (step: number) => void,
+) {
+    const times: number[] = [];
+    const throughputsS: number[] = [];
+
+    console.error(
+        `Config: steps=${steps}, invasive=${invasiveInterval}, size=${size}`,
+    );
+
+    console.log("step,time,type,value");
+    for (let i = 0; i <= steps; ++i) {
+        if (i % invasiveInterval === 0) {
+            const profileInfo = await tf.profile(() => f(i));
+            log(i, "peak_bytes", profileInfo.peakBytes);
+            log(i, "new_bytes", profileInfo.newBytes);
+            log(i, "new_tensors", profileInfo.newTensors);
+            logMemoryStats(i);
+        } else {
+            const startTime = process.hrtime.bigint();
+            f(i);
+            const endTime = process.hrtime.bigint();
+            const time = Number(endTime - startTime);
+            const thruS = size / (time / 1e9);
+            log(i, "time_ms", (time / 1e6).toFixed(1));
+            log(i, "through_s", thruS.toFixed(1));
+            times.push(time);
+            throughputsS.push(thruS);
+        }
+    }
+    console.error(`Median step time: ${humanTime(median(times))}ms`);
+    console.error(`Median throughput: ${humanNumber(median(throughputsS))}/s`);
+    console.error("Runtime: " + formatUptime(process.uptime()));
 }
