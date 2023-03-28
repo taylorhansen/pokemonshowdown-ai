@@ -27,8 +27,9 @@ export interface GameWorkerData {
 
 /** GameWorker request protocol typings. */
 export interface GameProtocol
-    extends WorkerProtocol<"load" | "play" | "collect"> {
+    extends WorkerProtocol<"load" | "reload" | "play" | "collect"> {
     load: {message: GameLoadMessage; result: GameLoadResult};
+    reload: {message: GameReloadMessage; result: GameReloadResult};
     play: {message: GamePlayMessage; result: GamePlayResult};
     collect: {message: GameCollectMessage; result: GameCollectResult};
 }
@@ -76,6 +77,14 @@ export interface GameLoadModelPort extends GameLoadModelBase<"port"> {
 
 /** Config for loading and registering models for a game worker. */
 export type GameLoadModel = GameLoadModelArtifact | GameLoadModelPort;
+
+/** Replaces a local model copy. */
+export interface GameReloadMessage extends GameMessageBase<"reload"> {
+    /** Name of model. */
+    readonly name: string;
+    /** Serialized model to use as replacement. */
+    readonly artifact: tf.io.ModelArtifacts;
+}
 
 /** Game request message format. */
 export interface GamePlayMessage extends GameMessageBase<"play"> {
@@ -149,6 +158,12 @@ type GameResultBase<T extends GameRequestType> = PortResultBase<T>;
 
 /** Result of loading model. */
 export interface GameLoadResult extends GameResultBase<"load"> {
+    /** @override */
+    readonly done: true;
+}
+
+/** Result of reloading model. */
+export interface GameReloadResult extends GameResultBase<"reload"> {
     /** @override */
     readonly done: true;
 }

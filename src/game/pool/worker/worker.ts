@@ -21,6 +21,8 @@ import {
     GameMessage,
     GamePlayMessage,
     GamePlayResult,
+    GameReloadMessage,
+    GameReloadResult,
     GameResult,
     GameWorkerData,
 } from "./GameProtocol";
@@ -53,46 +55,49 @@ const models = new Map<string, GameModel>();
 
 async function load(msg: GameLoadMessage): Promise<GameLoadResult> {
     let model = models.get(msg.name);
-    if (!model) {
-        switch (msg.model.type) {
-            case "artifact":
-                await tfPromise;
-                if (!gameModelArtifactCtor) {
-                    throw new Error(
-                        "Tensorflow not configured for game worker " +
-                            `'${gameWorkerData.name}'`,
-                    );
-                }
-                model = new gameModelArtifactCtor(msg.name);
-                await (model as GameModelArtifact).load(
-                    msg.model.artifact,
-                    msg.model.config,
-                );
-                break;
-            case "port":
-                model = new GameModelPort(msg.model.port);
-                break;
-            default: {
-                const unsupportedModel: never = msg.model;
-                throw new Error(
-                    "Unsupported model type " +
-                        `'${(unsupportedModel as {type: string}).type}'`,
-                );
-            }
-        }
-        models.set(msg.name, model);
-    } else if (model.type === "artifact" && msg.model.type === "artifact") {
-        // Reload model.
-        await (model as GameModelArtifact).load(
-            msg.model.artifact,
-            msg.model.config,
-        );
-    } else {
+    if (model) {
         throw new Error(
-            `Can't replace ${model.type} model with ${msg.model.type}`,
+            `Model '${msg.name}' already exists` +
+                (model.type === "artifact" ? ". Use type=reload instead." : ""),
         );
     }
+    switch (msg.model.type) {
+        case "artifact":
+            await tfPromise;
+            if (!gameModelArtifactCtor) {
+                throw new Error(
+                    "Tensorflow not configured for game worker " +
+                        `'${gameWorkerData.name}'`,
+                );
+            }
+            model = new gameModelArtifactCtor(msg.name, msg.model.config);
+            await (model as GameModelArtifact).load(msg.model.artifact);
+            break;
+        case "port":
+            model = new GameModelPort(msg.model.port);
+            break;
+        default: {
+            const unsupportedModel: never = msg.model;
+            throw new Error(
+                "Unsupported model type " +
+                    `'${(unsupportedModel as {type: string}).type}'`,
+            );
+        }
+    }
+    models.set(msg.name, model);
     return {type: "load", rid: msg.rid, done: true};
+}
+
+async function reload(msg: GameReloadMessage): Promise<GameReloadResult> {
+    const model = models.get(msg.name);
+    if (!model) {
+        throw new Error(`Unknown model '${msg.name}'`);
+    }
+    if (model.type !== "artifact") {
+        throw new Error(`Cannot reload ${model.type} model`);
+    }
+    await (model as GameModelArtifact).load(msg.artifact);
+    return {type: "reload", rid: msg.rid, done: true};
 }
 
 async function play(msg: GamePlayMessage): Promise<GamePlayResult> {
@@ -217,6 +222,9 @@ async function handle(msg: GameMessage) {
             case "load":
                 result = await load(msg);
                 break;
+            case "reload":
+                result = await reload(msg);
+                break;
             case "play": {
                 const gamePromise = play(msg);
                 gamePromises.add(gamePromise);
@@ -239,13 +247,17 @@ async function handle(msg: GameMessage) {
                     ),
                 );
                 break;
-            case "close":
+            case "close": {
                 await Promise.allSettled(gamePromises);
+                const closePromises: Promise<void>[] = [];
                 for (const [, model] of models) {
-                    model.destroy();
+                    closePromises.push(model.destroy());
                 }
+                models.clear();
+                await Promise.all(closePromises);
                 result = {type: "close", rid: msg.rid, done: true};
                 break;
+            }
             default: {
                 const unsupported: never = msg;
                 throw new Error(

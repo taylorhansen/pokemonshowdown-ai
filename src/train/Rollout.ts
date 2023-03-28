@@ -106,10 +106,9 @@ export class Rollout {
                 if (which && model.name !== which) {
                     return;
                 }
-                await this.games.loadModel(
+                await this.games.reloadModel(
                     model.name,
                     await serializeModel(model.model),
-                    serve,
                 );
             }),
         );
@@ -118,11 +117,12 @@ export class Rollout {
     /** Force-closes game threads. */
     public async terminate(): Promise<void> {
         if (this.profile) {
-            this.model.deconfigure("rollout");
+            // TODO: Force cancel predict requests instead of awaiting them.
+            await this.model.deconfigure("rollout");
             this.profile = undefined;
         }
         if (this.prevProfile) {
-            this.prevModel.deconfigure("rollout");
+            await this.prevModel.deconfigure("rollout");
             this.prevProfile = undefined;
         }
         return await this.games.terminate();

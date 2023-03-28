@@ -1,6 +1,7 @@
 import {isArrayBuffer} from "util/types";
 import {deserialize} from "v8";
 import {Worker} from "worker_threads";
+import type * as tf from "@tensorflow/tfjs";
 import {WorkerPort} from "../../../util/worker/WorkerPort";
 import {Experience} from "../../experience";
 import {GamePoolArgs, GamePoolResult} from "../GamePool";
@@ -31,10 +32,7 @@ export class GameWorker {
     }
 
     /**
-     * Loads and registers a model for inference during games. If loaded in
-     * `artifact` mode, this method can be called multiple times to update the
-     * version of the model stored on each thread, otherwise in `port` mode, any
-     * changes to the model are already reflected through the port.
+     * Loads and registers a model for inference during games.
      *
      * @param name Name under which to refer to the model during calls to
      * {@link play}.
@@ -50,8 +48,34 @@ export class GameWorker {
                     ? [
                           model.artifact.modelTopology,
                           model.artifact.weightData,
-                      ].flatMap(ab => (isArrayBuffer(ab) ? [ab] : []))
+                      ].filter(isArrayBuffer)
                     : [],
+                result => (result.type === "error" ? rej(result.err) : res()),
+            ),
+        );
+    }
+
+    /**
+     * Reloads a model that was loaded in `artifact` mode.
+     *
+     * @param name Name of model.
+     * @param artifact Serialized model artifacts.
+     */
+    public async reload(
+        name: string,
+        artifact: tf.io.ModelArtifacts,
+    ): Promise<void> {
+        return await new Promise((res, rej) =>
+            this.workerPort.postMessage<"reload">(
+                {
+                    type: "reload",
+                    rid: this.workerPort.nextRid(),
+                    name,
+                    artifact,
+                },
+                [artifact.modelTopology, artifact.weightData].filter(
+                    isArrayBuffer,
+                ),
                 result => (result.type === "error" ? rej(result.err) : res()),
             ),
         );

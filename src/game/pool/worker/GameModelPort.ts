@@ -31,7 +31,8 @@ export class GameModelPort implements GameModel<"port"> {
     }
 
     /** @override */
-    public destroy(): void {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    public async destroy(): Promise<void> {
         this.port.close();
     }
 }

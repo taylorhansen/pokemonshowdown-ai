@@ -131,6 +131,22 @@ export class GamePool {
         artifact: tf.io.ModelArtifacts,
         config: BatchPredictConfig,
     ): Promise<void> {
+        return await this.loadModelImpl(name, artifact, config);
+    }
+
+    /** Reloads a model from {@link loadModel}. */
+    public async reloadModel(
+        name: string,
+        artifact: tf.io.ModelArtifacts,
+    ): Promise<void> {
+        return await this.loadModelImpl(name, artifact);
+    }
+
+    private async loadModelImpl(
+        name: string,
+        artifact: tf.io.ModelArtifacts,
+        config?: BatchPredictConfig,
+    ): Promise<void> {
         // Convert to shared buffers for broadcasting to multiple workers
         // without excessive copying.
         for (const key of [
@@ -146,8 +162,14 @@ export class GamePool {
         }
 
         await this.pool.map(
-            async port =>
-                await port.load(name, {type: "artifact", artifact, config}),
+            config
+                ? async port =>
+                      await port.load(name, {
+                          type: "artifact",
+                          artifact,
+                          config,
+                      })
+                : async port => await port.reload(name, artifact),
         );
     }
 

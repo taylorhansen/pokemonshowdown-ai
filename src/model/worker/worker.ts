@@ -64,7 +64,9 @@ async function handle(msg: ModelMessage): Promise<void> {
                     ? await tf.loadLayersModel(msg.url)
                     : createModel(msg.name, msg.config, msg.seed);
                 try {
-                    models.set(msg.name, new ModelRegistry(msg.name, model));
+                    const reg = new ModelRegistry(msg.name);
+                    await reg.load(model);
+                    models.set(msg.name, reg);
                 } catch (e) {
                     model.dispose();
                     throw e;
@@ -73,7 +75,7 @@ async function handle(msg: ModelMessage): Promise<void> {
                 break;
             }
             case "unload": {
-                getRegistry(msg.model).unload();
+                await getRegistry(msg.model).unload();
                 models.delete(msg.model);
                 result = {type: "unload", rid, done: true};
                 break;
@@ -114,8 +116,10 @@ async function handle(msg: ModelMessage): Promise<void> {
                 break;
             }
             case "close": {
-                models.forEach(reg => reg.unload());
+                const closePromises: Promise<void>[] = [];
+                models.forEach(reg => closePromises.push(reg.unload()));
                 models.clear();
+                await Promise.all(closePromises);
                 result = {type: "close", rid, done: true};
                 break;
             }

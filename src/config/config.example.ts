@@ -3,12 +3,14 @@ import * as path from "path";
 import {Verbose} from "../util/logging/Verbose";
 import {Config} from "./types";
 
-// Note: Multithreaded training can introduce nondeterminism that can't be
-// easily reproduced. Setting numThreads to 1 and specifying the random seeds in
-// the training script should make the whole process fully deterministic.
+// Note: Use the profiling scripts and monitor CPU usage to help inform these
+// values.
 const numThreads = os.cpus().length;
+const rolloutThreads = Math.ceil(numThreads / 2);
 const evalThreads = Math.ceil(numThreads / 4);
-const gamesPerThread = 4;
+const rolloutPerThread = 32;
+const evalPerThread = 32;
+const comparePerThread = 32;
 
 const maxTurns = 100;
 
@@ -40,34 +42,41 @@ export const config: Config = {
     },
     train: {
         name: "train",
+        // Note: Change gpu=true if you have a CUDA-enabled GPU.
         tf: {backend: "tensorflow", gpu: false},
-        steps: maxTurns * 2 * 500 /*enough for at least 500 games*/,
+        // 1M steps will process at least 5000 rollout games.
+        steps: maxTurns * 2 * 5000,
         model: {
+            // Dueling deep Q network.
             dueling: true,
+            // Distributional RL.
             dist: 51,
         },
         rollout: {
             pool: {
-                numThreads,
-                gamesPerThread,
+                numThreads: rolloutThreads,
+                gamesPerThread: rolloutPerThread,
                 maxTurns,
                 reduceLogs: true,
                 resourceLimits: {maxOldGenerationSizeMb: 512},
+                tf: {backend: "tensorflow", gpu: false},
             },
             policy: {
                 exploration: 1.0,
                 minExploration: 0.01,
-                interpolate: maxTurns * 2 * 250,
+                // Reach minimum exploration by the middle of training.
+                interpolate: maxTurns * 2 * 2500,
             },
             serve: {
-                type: "batched",
-                maxSize: numThreads * gamesPerThread,
-                timeoutNs: 5_000_000n /*5ms*/,
+                type: "distributed",
+                maxSize: rolloutPerThread,
+                // Note: Should tune these based on performance profiling.
+                timeoutNs: 1_000_000n /*1ms*/,
             },
             servePrev: {
-                type: "batched",
-                maxSize: Math.ceil(numThreads * gamesPerThread * 0.2),
-                timeoutNs: 5_000_000n /*5ms*/,
+                type: "distributed",
+                maxSize: Math.ceil(rolloutPerThread * 0.2),
+                timeoutNs: 1_000_000n /*1ms*/,
             },
             prevRatio: 0.2,
             metricsInterval: 1000,
@@ -75,8 +84,10 @@ export const config: Config = {
         experience: {
             rewardDecay: 0.99,
             steps: 1,
-            bufferSize: maxTurns * 2 * 250 /*enough for at least 250 games*/,
-            prefill: maxTurns * 2 * numThreads /*at least one complete game*/,
+            // Store at least 250 games' worth of experience in the buffer.
+            bufferSize: maxTurns * 2 * 250,
+            // Ensure at least one complete game.
+            prefill: maxTurns * 2 * rolloutThreads * rolloutPerThread,
             metricsInterval: 1000,
         },
         learn: {
@@ -87,35 +98,34 @@ export const config: Config = {
             batchSize: 32,
             target: "double",
             interval: 2,
-            targetInterval: 5000,
-            metricsInterval: 100,
-            histogramInterval: 10_000,
+            targetInterval: 10_000,
+            metricsInterval: 1000,
+            histogramInterval: 100_000,
             reportInterval: 100,
         },
         eval: {
             numGames: 100,
             pool: {
                 numThreads: evalThreads,
-                gamesPerThread,
+                gamesPerThread: evalPerThread,
                 maxTurns,
                 reduceLogs: true,
                 resourceLimits: {maxOldGenerationSizeMb: 256},
-                tf: {backend: "wasm", numThreads: 2},
+                tf: {backend: "tensorflow", gpu: false},
             },
-            // Use a separate TensorFlow instance on each thread to run
-            // inferences so that they don't block the main learner thread.
             serve: {
                 type: "distributed",
-                maxSize: gamesPerThread,
-                timeoutNs: 5_000_000n /*5ms*/,
+                maxSize: evalPerThread,
+                timeoutNs: 1_000_000n /*1ms*/,
             },
             servePrev: {
                 type: "distributed",
-                maxSize: gamesPerThread,
-                timeoutNs: 5_000_000n /*5ms*/,
+                maxSize: evalPerThread,
+                timeoutNs: 1_000_000n /*1ms*/,
             },
-            interval: 5_000,
-            predictMetricsInterval: 10_000,
+            interval: 100_000,
+            // Note: Currently only applicable if serve.type=batched
+            predictMetricsInterval: 0,
             report: true,
         },
         seeds: {
@@ -148,12 +158,12 @@ export const config: Config = {
         numGames: 1000,
         threshold: 0.55,
         batchPredict: {
-            maxSize: numThreads * gamesPerThread,
-            timeoutNs: 5_000_000n /*5ms*/,
+            maxSize: numThreads * comparePerThread,
+            timeoutNs: 1_000_000n /*1ms*/,
         },
         pool: {
             numThreads,
-            gamesPerThread,
+            gamesPerThread: comparePerThread,
             maxTurns: 100,
             reduceLogs: true,
             resourceLimits: {maxOldGenerationSizeMb: 256},

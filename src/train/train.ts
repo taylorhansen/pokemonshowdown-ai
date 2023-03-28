@@ -50,11 +50,14 @@ export async function train(
             ));
     }
 
-    const rolloutModel = new ModelRegistry("rollout", model);
+    const rolloutModel = new ModelRegistry("rollout");
+    await rolloutModel.load(model);
     const [evalModel, prevModel] = await Promise.all(
-        ["eval", "prev"].map(
-            async name => new ModelRegistry(name, await cloneModel(model)),
-        ),
+        ["eval", "prev"].map(async name => {
+            const reg = new ModelRegistry(name);
+            await reg.load(await cloneModel(model));
+            return reg;
+        }),
     );
     const targetModel = await cloneModel(model);
 
@@ -282,10 +285,11 @@ export async function train(
     } finally {
         await Promise.all([rollout.terminate(), evaluate.terminate()]);
         learn.cleanup();
-        rolloutModel.unload(false /*disposeModel*/);
-        for (const m of [evalModel, prevModel]) {
-            m.unload();
-        }
+        await Promise.all([
+            rolloutModel.unload(false /*disposeModel*/),
+            evalModel.unload(),
+            prevModel.unload(),
+        ]);
         targetModel.dispose();
         Metrics.flush();
     }

@@ -97,8 +97,7 @@ export class GamePipeline {
 
     /**
      * Makes each game thread load a serialized TensorFlow model for making
-     * inferences during games. Can be called multiple times to reload the
-     * model with new weights.
+     * inferences during games.
      *
      * @param name Name under which to refer to the model during games.
      * @param artifact Serialized TensorFlow model artifacts.
@@ -110,6 +109,14 @@ export class GamePipeline {
         config: BatchPredictConfig,
     ): Promise<void> {
         return await this.pool.loadModel(name, artifact, config);
+    }
+
+    /** Reloads a model from {@link loadModel}. */
+    public async reloadModel(
+        name: string,
+        artifact: tf.io.ModelArtifacts,
+    ): Promise<void> {
+        return await this.pool.reloadModel(name, artifact);
     }
 
     /**

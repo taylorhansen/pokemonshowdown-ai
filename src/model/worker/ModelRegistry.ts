@@ -8,6 +8,19 @@ import {BatchPredict} from "./BatchPredict";
 
 /** Manages a neural network registry. */
 export class ModelRegistry {
+    /** Neural network object. */
+    public get model(): tf.LayersModel {
+        if (!this._model) {
+            throw new Error(`Model '${this.name}' not loaded`);
+        }
+        return this._model;
+    }
+    /** Whether the model has been loaded. */
+    public get isLoaded(): boolean {
+        return !!this._model;
+    }
+    private _model?: tf.LayersModel;
+
     /** Batch predict profiles attached to this model. */
     private readonly profiles = new Map<string, BatchPredict>();
 
@@ -15,20 +28,29 @@ export class ModelRegistry {
      * Support of the Q value distribution. Used for distributional RL if
      * configured.
      */
-    private readonly support?: tf.Tensor;
+    private support?: tf.Tensor;
+
+    /** Resolves when not spending time in {@link predictOnBatch}. */
+    private busy: Promise<void> | null = null;
 
     /**
      * Creates a ModelRegistry.
      *
      * @param name Name of the model.
-     * @param model Neural network object.
      */
-    public constructor(
-        public readonly name: string,
-        public readonly model: tf.LayersModel,
-    ) {
+    public constructor(public readonly name: string) {}
+
+    /** Sets or replaces the model. */
+    public async load(model: tf.LayersModel): Promise<void> {
         verifyModel(model);
 
+        while (this.busy) {
+            await this.busy;
+        }
+        this._model?.dispose();
+        this._model = model;
+
+        this.support?.dispose();
         const metadata = model.getUserDefinedMetadata() as
             | ModelMetadata
             | undefined;
@@ -40,13 +62,25 @@ export class ModelRegistry {
                     metadata.config!.dist!,
                 ]),
             );
+        } else {
+            this.support = undefined;
         }
     }
 
-    /** Safely closes ports and disposes the model. */
-    public unload(disposeModel = true): void {
+    /**
+     * Safely closes ports and disposes the model once all pending predict
+     * requests have resolved.
+     */
+    public async unload(disposeModel = true): Promise<void> {
+        const closePromises: Promise<void>[] = [];
         for (const [, profile] of this.profiles) {
-            profile.destroy();
+            closePromises.push(profile.destroy());
+        }
+        this.profiles.clear();
+        await Promise.all(closePromises);
+
+        while (this.busy) {
+            await this.busy;
         }
         this.support?.dispose();
         if (disposeModel) {
@@ -72,8 +106,11 @@ export class ModelRegistry {
         return profile;
     }
 
-    /** Removes an attached batch predict profile. */
-    public deconfigure(name: string): void {
+    /**
+     * Removes an attached batch predict profile. Returned promise also awaits
+     * any pending predict requests for the removed profile.
+     */
+    public async deconfigure(name: string): Promise<void> {
         const profile = this.profiles.get(name);
         if (!profile) {
             throw new Error(
@@ -81,8 +118,8 @@ export class ModelRegistry {
                     "doesn't exist",
             );
         }
-        profile.destroy();
         this.profiles.delete(name);
+        await profile.destroy();
     }
 
     /**
@@ -102,48 +139,64 @@ export class ModelRegistry {
                     `${inputs.length}`,
             );
         }
-        const results = tf.tidy(() => {
-            const stateTensors = inputs.map((input, i) => {
-                const size = flattenedInputShapes[i];
-                const values = new Float32Array(input.length * size);
-                for (let j = 0; j < input.length; ++j) {
-                    values.set(input[j], j * size);
+
+        await this.busy;
+        let done!: () => void;
+        this.busy = new Promise<void>(res => (done = res)).finally(
+            () => (this.busy = null),
+        );
+        try {
+            const results = tf.tidy(() => {
+                const stateTensors = inputs.map((input, i) => {
+                    const size = flattenedInputShapes[i];
+                    const values = new Float32Array(input.length * size);
+                    for (let j = 0; j < input.length; ++j) {
+                        values.set(input[j], j * size);
+                    }
+                    return tf.tensor(
+                        values,
+                        [input.length, ...modelInputShapes[i]],
+                        "float32",
+                    );
+                });
+
+                const output = this.model.predictOnBatch(
+                    stateTensors,
+                ) as tf.Tensor;
+                tf.dispose(stateTensors);
+
+                if (this.support) {
+                    // Distributional RL: Take the expectation (mean) of the
+                    // Q-value probability distribution.
+                    tf.util.assertShapesMatch(
+                        [
+                            inputs[0].length,
+                            intToChoice.length,
+                            this.support.size,
+                        ],
+                        output.shape,
+                        "Misshaped predict results:",
+                    );
+                    return tf.sum(tf.mul(output, this.support), -1);
                 }
-                return tf.tensor(
-                    values,
-                    [input.length, ...modelInputShapes[i]],
-                    "float32",
-                );
-            });
-
-            const output = this.model.predictOnBatch(stateTensors) as tf.Tensor;
-            tf.dispose(stateTensors);
-
-            if (this.support) {
-                // Distributional RL: Take the expectation (mean) of the Q-value
-                // probability distribution.
                 tf.util.assertShapesMatch(
-                    [inputs[0].length, intToChoice.length, this.support.size],
+                    [inputs[0].length, intToChoice.length],
                     output.shape,
                     "Misshaped predict results:",
                 );
-                return tf.sum(tf.mul(output, this.support), -1);
-            }
-            tf.util.assertShapesMatch(
-                [inputs[0].length, intToChoice.length],
-                output.shape,
-                "Misshaped predict results:",
+                return output;
+            });
+            const resultData = await results.data<"float32">();
+            results.dispose();
+            return Array.from({length: inputs[0].length}, (_, i) =>
+                resultData.subarray(
+                    i * intToChoice.length,
+                    (i + 1) * intToChoice.length,
+                ),
             );
-            return output;
-        });
-        const resultData = await results.data<"float32">();
-        results.dispose();
-        return Array.from({length: inputs[0].length}, (_, i) =>
-            resultData.subarray(
-                i * intToChoice.length,
-                (i + 1) * intToChoice.length,
-            ),
-        );
+        } finally {
+            done();
+        }
     }
 
     /**

@@ -100,10 +100,9 @@ export class Evaluate {
                 if (serve.type !== "distributed") {
                     return;
                 }
-                await this.games.loadModel(
+                await this.games.reloadModel(
                     model.name,
                     await serializeModel(model.model),
-                    serve,
                 );
             }),
         );
@@ -111,24 +110,24 @@ export class Evaluate {
 
     /** Closes game threads. */
     public async close(): Promise<void> {
-        this.closeProfiles();
+        await this.closeProfiles();
         return await this.games.close();
     }
 
     /** Force-closes game threads. */
     public async terminate(): Promise<void> {
-        this.closeProfiles();
+        await this.closeProfiles();
         return await this.games.terminate();
     }
 
     /** Closes batch predict profiles. */
-    private closeProfiles(): void {
+    private async closeProfiles(): Promise<void> {
         if (this.profile) {
-            this.model.deconfigure("eval");
+            await this.model.deconfigure("eval");
             this.profile = undefined;
         }
         if (this.prevProfile) {
-            this.prevModel.deconfigure("eval");
+            await this.prevModel.deconfigure("eval");
             this.prevProfile = undefined;
         }
     }

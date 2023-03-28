@@ -159,23 +159,20 @@ export interface RolloutConfig {
     readonly metricsInterval: number;
 }
 
-/** Config for batching several predict requests on one thread. */
-export interface ModelServeConfigBatched extends BatchPredictConfig {
-    readonly type: "batched";
+/** Configuration for serving a model in game workers. */
+export interface ModelServeConfig extends BatchPredictConfig {
+    /**
+     * Type of predict scheme to use.
+     * - `"batched"`: Game threads are given a message port into the model
+     *   hosted on the main learner thread, and requests are batched and
+     *   executed all at once. This can block the main learner thread while the
+     *   game threads spend most of their time idle.
+     * - `"distributed"`: Game threads keep a separate copy of the model which
+     *   the main learner thread will periodically send updates to. This is
+     *   likely to be non-blocking and increase utilization of all threads.
+     */
+    readonly type: "batched" | "distributed";
 }
-
-/**
- * Config for running inferences on each thread that uses the model
- * independently.
- */
-export interface ModelServeConfigDistributed extends BatchPredictConfig {
-    readonly type: "distributed";
-}
-
-/** Configuration for serving a model. */
-export type ModelServeConfig =
-    | ModelServeConfigBatched
-    | ModelServeConfigDistributed;
 
 /** Configuration for the thread pool for playing games. */
 export interface GamePoolConfig {

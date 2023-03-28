@@ -88,12 +88,26 @@ export class BatchPredict {
         this.events.setMaxListeners(config.maxSize);
     }
 
-    /** Safely closes ports and destroys this profile. */
-    public destroy(): void {
-        this.endMetrics(false /*storeMetrics*/);
+    /**
+     * Safely closes ports and destroys this profile.
+     *
+     * After calling (*not* after resolving), {@link predict} should not be
+     * called.
+     */
+    public async destroy(): Promise<void> {
         for (const port of this.ports) {
             port.close();
         }
+
+        while (this.callbacks.length > 0) {
+            await new Promise<void>(res => this.events.once(predictReady, res));
+            // Hope that pending predict() calls will queue up before we fully
+            // close the profile.
+            await tf.nextFrame();
+        }
+        await this.predictPromise;
+
+        this.endMetrics(false /*storeMetrics*/);
     }
 
     /** Starts a metrics profile under the given name and step number. */
@@ -280,11 +294,11 @@ export class BatchPredict {
             await this.executeBatch();
             return;
         }
+
+        // Setup batch timer.
         if (this.timeoutPromise) {
             return;
         }
-
-        // Setup batch timer.
         this.timeoutPromise = new Promise<boolean>(
             res =>
                 (this.cancelTimer = setTimeoutNs(res, this.config.timeoutNs)),

@@ -41,5 +41,5 @@ export interface GameModel<T extends GameModelType = GameModelType> {
     ) => ExperienceBattleAgent;
 
     /** Destroys this model. */
-    destroy: () => void;
+    destroy: () => Promise<void>;
 }

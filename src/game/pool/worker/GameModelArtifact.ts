@@ -21,32 +21,28 @@ export class GameModelArtifact implements GameModel<"artifact"> {
     public readonly type = "artifact";
 
     /** Wrapped model. */
-    private model?: ModelRegistry;
+    private readonly model = new ModelRegistry(this.name);
     /** Batch predict profile. */
-    private profile?: BatchPredict;
+    private readonly profile = this.model.configure("agent", this.config);
 
     /**
      * Creates a GameModelArtifact.
      *
      * @param name Name of model.
+     * @param config Batch predict config.
      */
-    public constructor(private readonly name: string) {}
+    public constructor(
+        public readonly name: string,
+        public readonly config: BatchPredictConfig,
+    ) {}
 
     /**
-     * Loads the model or replaces it. Can be called while games are still in
-     * progress.
-     *
-     * @param artifact Serialized model.
-     * @param config Config for batching predictions on this thread.
+     * Loads the model or replaces it, such that any future and
+     * currently-pending predict requests will use the new model.
      */
-    public async load(
-        artifact: tf.io.ModelArtifacts,
-        config: BatchPredictConfig,
-    ): Promise<void> {
+    public async load(artifact: tf.io.ModelArtifacts): Promise<void> {
         const model = await deserializeModel(artifact);
-        this.destroy();
-        this.model = new ModelRegistry(this.name, model);
-        this.profile = this.model.configure("agent", config);
+        await this.model.load(model);
     }
 
     /** @override */
@@ -75,16 +71,9 @@ export class GameModelArtifact implements GameModel<"artifact"> {
     }
 
     /** @override */
-    public destroy(): void {
-        if (!this.model) {
-            return;
-        }
-        if (this.profile) {
-            this.model.deconfigure(this.profile.name);
-            this.profile = undefined;
-        }
-        this.model.unload();
-        this.model = undefined;
+    public async destroy(): Promise<void> {
+        await this.model.deconfigure(this.profile.name);
+        await this.model.unload();
     }
 
     private ensureProfile(): BatchPredict {
