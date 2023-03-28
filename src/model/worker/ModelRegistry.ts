@@ -67,6 +67,19 @@ export class ModelRegistry {
         }
     }
 
+    /** Replaces model weights from serialized data. */
+    public async reload(
+        data: ArrayBufferLike,
+        specs: tf.io.WeightsManifestEntry[],
+    ): Promise<void> {
+        while (this.busy) {
+            await this.busy;
+        }
+        const weights = tf.io.decodeWeights(data, specs);
+        this.model.setWeights(specs.map(spec => weights[spec.name]));
+        tf.dispose(weights);
+    }
+
     /**
      * Safely closes ports and disposes the model once all pending predict
      * requests have resolved.

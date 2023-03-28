@@ -45,6 +45,14 @@ export class GameModelArtifact implements GameModel<"artifact"> {
         await this.model.load(model);
     }
 
+    /** Replaces the model's weights. */
+    public async reload(
+        data: ArrayBufferLike,
+        specs: tf.io.WeightsManifestEntry[],
+    ): Promise<void> {
+        await this.model.reload(data, specs);
+    }
+
     /** @override */
     public getAgent(
         explore?: AgentExploreConfig,

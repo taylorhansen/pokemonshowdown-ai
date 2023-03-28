@@ -96,7 +96,7 @@ async function reload(msg: GameReloadMessage): Promise<GameReloadResult> {
     if (model.type !== "artifact") {
         throw new Error(`Cannot reload ${model.type} model`);
     }
-    await (model as GameModelArtifact).load(msg.artifact);
+    await (model as GameModelArtifact).reload(msg.data, msg.specs);
     return {type: "reload", rid: msg.rid, done: true};
 }
 

@@ -1,4 +1,5 @@
 import {join} from "path";
+import * as tf from "@tensorflow/tfjs";
 import {EvalConfig} from "../config/types";
 import {
     GameArgsGenOptions,
@@ -100,10 +101,13 @@ export class Evaluate {
                 if (serve.type !== "distributed") {
                     return;
                 }
-                await this.games.reloadModel(
-                    model.name,
-                    await serializeModel(model.model),
+                const {data, specs} = await tf.io.encodeWeights(
+                    model.model.weights.map(w => ({
+                        name: w.name,
+                        tensor: w.read(),
+                    })),
                 );
+                await this.games.reloadModel(model.name, data, specs);
             }),
         );
     }

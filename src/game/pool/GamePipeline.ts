@@ -111,12 +111,13 @@ export class GamePipeline {
         return await this.pool.loadModel(name, artifact, config);
     }
 
-    /** Reloads a model from {@link loadModel}. */
+    /** Reloads a model from {@link loadModel} using only encoded weights. */
     public async reloadModel(
         name: string,
-        artifact: tf.io.ModelArtifacts,
+        data: ArrayBufferLike,
+        specs: tf.io.WeightsManifestEntry[],
     ): Promise<void> {
-        return await this.pool.reloadModel(name, artifact);
+        return await this.pool.reloadModel(name, data, specs);
     }
 
     /**

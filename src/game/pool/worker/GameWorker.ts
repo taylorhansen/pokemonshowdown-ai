@@ -59,11 +59,13 @@ export class GameWorker {
      * Reloads a model that was loaded in `artifact` mode.
      *
      * @param name Name of model.
-     * @param artifact Serialized model artifacts.
+     * @param data Serialized model weights.
+     * @param specs Model weight specifications for deserialization.
      */
     public async reload(
         name: string,
-        artifact: tf.io.ModelArtifacts,
+        data: ArrayBufferLike,
+        specs: tf.io.WeightsManifestEntry[],
     ): Promise<void> {
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"reload">(
@@ -71,11 +73,10 @@ export class GameWorker {
                     type: "reload",
                     rid: this.workerPort.nextRid(),
                     name,
-                    artifact,
+                    data,
+                    specs,
                 },
-                [artifact.modelTopology, artifact.weightData].filter(
-                    isArrayBuffer,
-                ),
+                isArrayBuffer(data) ? [data] : [],
                 result => (result.type === "error" ? rej(result.err) : res()),
             ),
         );

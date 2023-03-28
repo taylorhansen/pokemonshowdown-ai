@@ -1,3 +1,4 @@
+import * as tf from "@tensorflow/tfjs";
 import {ExperienceConfig, RolloutConfig} from "../config/types";
 import {Experience} from "../game/experience";
 import {
@@ -106,10 +107,13 @@ export class Rollout {
                 if (which && model.name !== which) {
                     return;
                 }
-                await this.games.reloadModel(
-                    model.name,
-                    await serializeModel(model.model),
+                const {data, specs} = await tf.io.encodeWeights(
+                    model.model.weights.map(w => ({
+                        name: w.name,
+                        tensor: w.read(),
+                    })),
                 );
+                await this.games.reloadModel(model.name, data, specs);
             }),
         );
     }

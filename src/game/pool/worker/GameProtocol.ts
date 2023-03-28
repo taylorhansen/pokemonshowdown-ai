@@ -82,8 +82,10 @@ export type GameLoadModel = GameLoadModelArtifact | GameLoadModelPort;
 export interface GameReloadMessage extends GameMessageBase<"reload"> {
     /** Name of model. */
     readonly name: string;
-    /** Serialized model to use as replacement. */
-    readonly artifact: tf.io.ModelArtifacts;
+    /** Serialized model weights. */
+    readonly data: ArrayBufferLike;
+    /** Specifications for deserializing model weights. */
+    readonly specs: tf.io.WeightsManifestEntry[];
 }
 
 /** Game request message format. */
