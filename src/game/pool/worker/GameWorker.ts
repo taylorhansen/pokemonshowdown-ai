@@ -61,10 +61,7 @@ export class GameWorker {
      * @param data Serialized model weights. Data layout must match the original
      * model.
      */
-    public async reload(
-        name: string,
-        data: ArrayBufferLike,
-    ): Promise<void> {
+    public async reload(name: string, data: ArrayBufferLike): Promise<void> {
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"reload">(
                 {
