@@ -146,7 +146,7 @@ export class Learn {
 
             if (storeMetrics) {
                 const postStep = process.hrtime.bigint();
-                const updateMs = Number((postStep - preStep!) / 1_000_000n);
+                const updateMs = Number(postStep - preStep!) / 1e6;
                 this.metrics!.scalar("update_ms", updateMs, step);
                 this.metrics!.scalar(
                     "update_throughput_s",

@@ -256,7 +256,7 @@ export interface LearnConfig {
     /**
      * Step interval for updating the target network. Should be much larger than
      * {@link interval}, and also preferably divisible by it to ensure an equal
-     * number of gradient updates before each target network update.
+     * number of gradient updates between target network updates.
      */
     readonly targetInterval: number;
     /**
