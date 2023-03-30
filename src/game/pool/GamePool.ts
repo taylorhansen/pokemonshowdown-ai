@@ -1,5 +1,5 @@
 import {resolve} from "path";
-import {isArrayBuffer} from "util/types";
+import {isArrayBuffer, isSharedArrayBuffer} from "util/types";
 import {MessagePort} from "worker_threads";
 import {PRNGSeed} from "@pkmn/sim";
 import type * as tf from "@tensorflow/tfjs";
@@ -74,13 +74,19 @@ export class GamePool {
         GameWorkerData
     >;
 
+    /** Buffer pool for transfering serialized model weights. */
+    private readonly poolWeights = new Map<string, SharedArrayBuffer>();
+
     /**
      * Creates a GamePool.
      *
      * @param name Name prefix for threads.
      * @param config Config for creating the thread pool.
      */
-    public constructor(name: string, config: GamePoolConfig) {
+    public constructor(
+        public readonly name: string,
+        public readonly config: GamePoolConfig,
+    ) {
         this.pool = new ThreadPool(
             config.numThreads,
             config.gamesPerThread,
@@ -133,10 +139,7 @@ export class GamePool {
     ): Promise<void> {
         // Convert to shared buffers for broadcasting to multiple workers
         // without excessive copying.
-        for (const key of [
-            "modelTopology",
-            "weightData",
-        ] as (keyof tf.io.ModelArtifacts)[]) {
+        for (const key of ["modelTopology", "weightData"] as const) {
             const buf = artifact[key];
             if (isArrayBuffer(buf)) {
                 const sharedBuf = new SharedArrayBuffer(buf.byteLength);
@@ -153,6 +156,9 @@ export class GamePool {
                     config,
                 }),
         );
+        if (isSharedArrayBuffer(artifact.weightData)) {
+            this.poolWeights.set(name, artifact.weightData);
+        }
     }
 
     /** Reloads a model from {@link loadModel} using only encoded weights. */
@@ -161,10 +167,23 @@ export class GamePool {
         data: ArrayBufferLike,
         specs: tf.io.WeightsManifestEntry[],
     ): Promise<void> {
-        // Convert to shared buffers for broadcasting to multiple workers
-        // without excessive copying.
+        // Use same SAB from original weight transfer to prevent excessive
+        // memory usage.
+        // This is mostly safe since the deserializing process makes separate
+        // copies from the buffer to construct the weight tensors anyway.
+        // TODO: If ^ changes, then the workers themselves should make their own
+        // copies explicitly, since otherwise transfering around so many SABs
+        // across thread boundaries can burden the GC.
         if (isArrayBuffer(data)) {
-            const shared = new SharedArrayBuffer(data.byteLength);
+            const shared =
+                this.poolWeights.get(name) ??
+                new SharedArrayBuffer(data.byteLength);
+            if (data.byteLength !== shared.byteLength) {
+                throw new Error(
+                    `Wrong size weights data: expected ${data.byteLength} ` +
+                        `but got ${shared.byteLength}}`,
+                );
+            }
             new Float32Array(shared).set(new Float32Array(data));
             data = shared;
         }
@@ -238,11 +257,13 @@ export class GamePool {
 
     /** Waits for in-progress games to complete then closes the thread pool. */
     public async close(): Promise<void> {
-        return await this.pool.close();
+        await this.pool.close();
+        this.poolWeights.clear();
     }
 
     /** Terminates in-progress games and closes the thread pool. */
     public async terminate(): Promise<void> {
-        return await this.pool.terminate();
+        await this.pool.terminate();
+        this.poolWeights.clear();
     }
 }
