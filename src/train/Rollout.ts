@@ -155,7 +155,7 @@ export class Rollout {
      * Updates the exploration rate for future games and logs metrics to prepare
      * for the next learning step.
      */
-    public step(step: number): void {
+    public async step(step: number): Promise<void> {
         if (this.metrics && step % this.config.metricsInterval === 0) {
             this.metrics.scalar("exploration", this.exploration.factor, step);
             if (this.numGames > 0) {
@@ -176,6 +176,10 @@ export class Rollout {
                 this.config.policy.interpolate;
         if (this.exploration.factor < this.config.policy.minExploration) {
             this.exploration.factor = this.config.policy.minExploration;
+        }
+
+        if (step % this.config.updateInterval === 0) {
+            await this.reload("rollout");
         }
     }
 

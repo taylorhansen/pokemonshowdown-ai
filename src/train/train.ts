@@ -220,8 +220,6 @@ export async function train(
                 replayBuffer.logMetrics(step);
             }
 
-            rollout.step(step);
-
             let loss: number | undefined;
             if (step % config.learn.interval === 0) {
                 const batch = replayBuffer.sample(
@@ -236,16 +234,7 @@ export async function train(
                 }
 
                 lossTensor.dispose();
-
-                // TODO: Add a separate interval config for this.
-                await rollout.reload("rollout");
             }
-
-            callback?.({
-                type: "step",
-                step,
-                ...(loss !== undefined && {loss}),
-            });
 
             if (step % config.learn.histogramInterval === 0) {
                 learn.logWeights(step);
@@ -254,6 +243,8 @@ export async function train(
             if (step % config.learn.targetInterval === 0) {
                 targetModel.setWeights(model.getWeights());
             }
+
+            await rollout.step(step);
 
             if (step % config.eval.interval === 0) {
                 await lastEval;
@@ -277,6 +268,12 @@ export async function train(
             if (step % config.metricsInterval === 0) {
                 logMemoryMetrics?.(step);
             }
+
+            callback?.({
+                type: "step",
+                step,
+                ...(loss !== undefined && {loss}),
+            });
 
             ++step;
         }

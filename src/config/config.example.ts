@@ -79,6 +79,7 @@ export const config: Config = {
                 timeoutNs: 1_000_000n /*1ms*/,
             },
             prevRatio: 0.2,
+            updateInterval: 100,
             metricsInterval: 1000,
         },
         experience: {

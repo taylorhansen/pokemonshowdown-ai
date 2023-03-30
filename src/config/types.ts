@@ -153,6 +153,13 @@ export interface RolloutConfig {
      */
     readonly prevRatio: number;
     /**
+     * Step interval for reloading the main model stored on each of the game
+     * threads after a number of gradient updates. Should be divisible by
+     * {@link LearnConfig.interval}. Required if {@link serve} has
+     * `type="distributed"`. Set to zero to disable.
+     */
+    readonly updateInterval: number;
+    /**
      * Step interval for tracking metrics such as exploration rate and game
      * stats. Set to zero to disable.
      */
