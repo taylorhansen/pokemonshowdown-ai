@@ -107,13 +107,13 @@ export class Rollout {
                 if (which && model.name !== which) {
                     return;
                 }
-                const {data, specs} = await tf.io.encodeWeights(
+                const {data} = await tf.io.encodeWeights(
                     model.model.weights.map(w => ({
                         name: w.name,
                         tensor: w.read(),
                     })),
                 );
-                await this.games.reloadModel(model.name, data, specs);
+                await this.games.reloadModel(model.name, data);
             }),
         );
     }

@@ -1,7 +1,6 @@
 import {isArrayBuffer} from "util/types";
 import {deserialize} from "v8";
 import {Worker} from "worker_threads";
-import type * as tf from "@tensorflow/tfjs";
 import {WorkerPort} from "../../../util/worker/WorkerPort";
 import {Experience} from "../../experience";
 import {GamePoolArgs, GamePoolResult} from "../GamePool";
@@ -59,13 +58,12 @@ export class GameWorker {
      * Reloads a model that was loaded in `artifact` mode.
      *
      * @param name Name of model.
-     * @param data Serialized model weights.
-     * @param specs Model weight specifications for deserialization.
+     * @param data Serialized model weights. Data layout must match the original
+     * model.
      */
     public async reload(
         name: string,
         data: ArrayBufferLike,
-        specs: tf.io.WeightsManifestEntry[],
     ): Promise<void> {
         return await new Promise((res, rej) =>
             this.workerPort.postMessage<"reload">(
@@ -74,7 +72,6 @@ export class GameWorker {
                     rid: this.workerPort.nextRid(),
                     name,
                     data,
-                    specs,
                 },
                 isArrayBuffer(data) ? [data] : [],
                 result => (result.type === "error" ? rej(result.err) : res()),

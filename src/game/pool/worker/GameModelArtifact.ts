@@ -25,6 +25,8 @@ export class GameModelArtifact implements GameModel<"artifact"> {
     /** Batch predict profile. */
     private readonly profile = this.model.configure("agent", this.config);
 
+    private weightSpecs?: tf.io.WeightsManifestEntry[];
+
     /**
      * Creates a GameModelArtifact.
      *
@@ -43,14 +45,18 @@ export class GameModelArtifact implements GameModel<"artifact"> {
     public async load(artifact: tf.io.ModelArtifacts): Promise<void> {
         const model = await deserializeModel(artifact);
         await this.model.load(model);
+        this.weightSpecs = artifact.weightSpecs;
     }
 
     /** Replaces the model's weights. */
-    public async reload(
-        data: ArrayBufferLike,
-        specs: tf.io.WeightsManifestEntry[],
-    ): Promise<void> {
-        await this.model.reload(data, specs);
+    public async reload(data: ArrayBufferLike): Promise<void> {
+        if (!this.weightSpecs) {
+            throw new Error(
+                `Model '${this.name}' can't be reloaded because it was not ` +
+                    `loaded in the first place`,
+            );
+        }
+        await this.model.reload(data, this.weightSpecs);
     }
 
     /** @override */

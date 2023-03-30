@@ -165,7 +165,6 @@ export class GamePool {
     public async reloadModel(
         name: string,
         data: ArrayBufferLike,
-        specs: tf.io.WeightsManifestEntry[],
     ): Promise<void> {
         // Use same SAB from original weight transfer to prevent excessive
         // memory usage.
@@ -187,7 +186,7 @@ export class GamePool {
             new Float32Array(shared).set(new Float32Array(data));
             data = shared;
         }
-        await this.pool.map(async port => await port.reload(name, data, specs));
+        await this.pool.map(async port => await port.reload(name, data));
     }
 
     /**

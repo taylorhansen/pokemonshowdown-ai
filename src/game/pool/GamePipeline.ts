@@ -115,9 +115,8 @@ export class GamePipeline {
     public async reloadModel(
         name: string,
         data: ArrayBufferLike,
-        specs: tf.io.WeightsManifestEntry[],
     ): Promise<void> {
-        return await this.pool.reloadModel(name, data, specs);
+        return await this.pool.reloadModel(name, data);
     }
 
     /**
