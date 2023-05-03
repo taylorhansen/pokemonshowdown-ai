@@ -1203,19 +1203,23 @@ function calcDamge(
 
         let {multihit, multiaccuracy} = psMove;
         if (multihit) {
-            if (Array.isArray(multihit) && multihit.length > 1) {
-                if (ourActive.ability === "skilllink") {
-                    [, multihit] = multihit;
-                    multiaccuracy = false;
-                } else if (!multiaccuracy) {
-                    // Only 2-5 hit moves (which hit 3.0 times on average) fit
-                    // this condition currently.
-                    multihit = 3;
+            if (Array.isArray(multihit)) {
+                if (multihit.length > 1) {
+                    if (ourActive.ability === "skilllink") {
+                        [, multihit] = multihit;
+                        multiaccuracy = false;
+                    } else if (!multiaccuracy) {
+                        // Currently only refers to 2-5 hit moves, which hit 3.0
+                        // times on average.
+                        multihit = 3;
+                    }
+                } else {
+                    [multihit] = multihit;
                 }
             }
 
             let multiDmg = damageAvg;
-            for (let j = 1; j < multihit; ++j) {
+            for (let j = 1; j < (multihit as number); ++j) {
                 // TODO: Move triplekick has variable base power for each hit.
                 multiDmg +=
                     damageAvg * (multiaccuracy ? accuracy ** (i + 1) : 1);
