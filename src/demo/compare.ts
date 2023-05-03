@@ -26,14 +26,15 @@ const specialModels: {readonly [m: string]: AgentExploitConfig} = {
     damage: {type: "random", moveOnly: "damage"},
 };
 
+const logger = new Logger(
+    Logger.stderr,
+    config.train.verbose ?? Verbose.Debug,
+    "Compare: ",
+);
+
 void (async function () {
     const compareModels = [...new Set(config.compare.models)];
 
-    const logger = new Logger(
-        Logger.stderr,
-        config.train.verbose ?? Verbose.Debug,
-        `Compare: `,
-    );
     logger.info(`Comparing models: ${compareModels.join(", ")}`);
     if (compareModels.length < 2) {
         logger.error(
@@ -233,9 +234,16 @@ void (async function () {
     } catch (e) {
         logger.error((e as Error).stack ?? (e as Error).toString());
     } finally {
-        await Promise.all(compareModels.map(async m => await models.unload(m)));
+        await Promise.all(
+            compareModels.map(
+                async m =>
+                    !Object.prototype.hasOwnProperty.call(specialModels, m) &&
+                    (await models.unload(m)),
+            ),
+        );
         await models.close();
-        logger.info("Uptime: " + formatUptime(process.uptime()));
-        logger.info("Done");
     }
-})();
+})().finally(() => {
+    logger.info("Uptime: " + formatUptime(process.uptime()));
+    logger.info("Done");
+});
