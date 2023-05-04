@@ -1,6 +1,7 @@
 import {join} from "path";
 import {serialize} from "v8";
 import * as tf from "@tensorflow/tfjs";
+import type {NodeJSKernelBackend} from "@tensorflow/tfjs-node/dist/nodejs_kernel_backend";
 import {PathsConfig, TrainConfig} from "../config/types";
 import {GameArgsGenSeeders} from "../game/pool";
 import {ModelTrainData} from "../model/worker";
@@ -151,6 +152,15 @@ export async function train(
             const tfMem = tf.memory();
             metrics.scalar("memory/tf_num_bytes", tfMem.numBytes, step);
             metrics.scalar("memory/tf_num_tensors", tfMem.numTensors, step);
+            if (config.tf.backend === "tensorflow") {
+                // Node backend tensor count seems to behave differently, might
+                // be useful to track.
+                metrics.scalar(
+                    "memory/tf_num_node_tensors",
+                    (tf.backend() as NodeJSKernelBackend).getNumOfTFTensors(),
+                    step,
+                );
+            }
         });
 
     const replayBuffer = new ReplayBuffer(
