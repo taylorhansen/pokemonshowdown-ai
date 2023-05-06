@@ -13,9 +13,8 @@ import {map} from "./Encoder";
 import {
     abilityEncoder,
     aliveEncoder,
+    allItemEncoder,
     basicEncoder,
-    itemEncoder,
-    lastItemEncoder,
     movesetEncoder,
     PokemonArgs,
     roomStatusEncoder,
@@ -71,8 +70,7 @@ const pokemonAbilityEncoders = map(
     numTeams,
     map(teamSize + numActive, abilityEncoder),
 );
-const pokemonItemEncoders = map(numTeams, map(teamSize, itemEncoder));
-const pokemonLastItemEncoders = map(numTeams, map(teamSize, lastItemEncoder));
+const pokemonItemEncoders = map(numTeams, map(teamSize, allItemEncoder));
 const pokemonMovesetEncoders = map(
     numTeams,
     map(teamSize + numActive, movesetEncoder),
@@ -207,15 +205,10 @@ export function encodeState(
             case "pokemon/item":
                 pokemonItemEncoders.encode(
                     arr,
-                    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-                    pokemon.map(a => a.map(p => p && p.item)),
-                );
-                break;
-            case "pokemon/last_item":
-                pokemonLastItemEncoders.encode(
-                    arr,
-                    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-                    pokemon.map(a => a.map(p => p && p.lastItem)),
+                    pokemon.map(a =>
+                        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+                        a.map(p => [p && p.item, p && p.lastItem]),
+                    ),
                 );
                 break;
             case "pokemon/moves":

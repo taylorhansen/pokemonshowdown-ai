@@ -504,7 +504,7 @@ export const emptyItemEncoder: Encoder<undefined> = zeroEncoder(
     dex.itemKeys.length,
 );
 
-/** Encoder for a Pokemon's item. */
+/** Encoder for a Pokemon's current held item. */
 export const itemEncoder: Encoder<string | null | undefined> = optional(
     definedItemEncoder,
     unknownItemEncoder,
@@ -522,6 +522,14 @@ export const lastItemEncoder: Encoder<string | null | undefined> = optional(
     definedItemEncoder,
     unknownLastItemEncoder,
     emptyItemEncoder,
+);
+
+/** Encoder for both the current and last held item of a Pokemon. */
+export const allItemEncoder: Encoder<
+    [string | null | undefined, string | null | undefined]
+> = concat(
+    augment(([item]) => item, itemEncoder),
+    augment(([, lastItem]) => lastItem, lastItemEncoder),
 );
 
 //#endregion

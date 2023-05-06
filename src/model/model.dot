@@ -61,8 +61,7 @@ digraph model {
         pokemon_types [label="Pokemon Types\n(2x7x17)"]
         pokemon_stats [label="Pokemon Stats\n(2x7x35)"]
         pokemon_ability [label="Pokemon Ability\n(2x7x123)"]
-        pokemon_item [label="Pokemon Item\n(2x6x209)"]
-        pokemon_last_item [label="Pokemon Last Item\n(2x6x209)"]
+        pokemon_item [label="Pokemon Item\n(2x6x2x209)"]
         pokemon_moves [label="Pokemon Moves\n(2x7x4x472)"]
     }
 
@@ -77,8 +76,7 @@ digraph model {
         pokemon_types_dense [label="Dense(128) + Leaky ReLU\n(2x7x128)"]
         pokemon_stats_dense [label="Dense(128) + Leaky ReLU\n(2x7x128)"]
         pokemon_ability_dense [label="Dense(128) + Leaky ReLU\n(2x7x128)"]
-        pokemon_item_dense [label="Dense(128) + Leaky ReLU\n(2x6x128)"]
-        pokemon_last_item_dense [label="Dense(128) + Leaky ReLU\n(2x6x128)"]
+        pokemon_item_dense [label="Dense(128) + Leaky ReLU\n(2x6x2x128)"]
         pokemon_moves_dense [label="Dense(128) + Leaky ReLU\n(2x7x4x128)"]
 
         room_status:e -> room_status_dense:w
@@ -90,11 +88,7 @@ digraph model {
         pokemon_stats:e -> pokemon_stats_dense:w
         pokemon_ability:e -> pokemon_ability_dense:w
         pokemon_item:e -> pokemon_item_dense:w
-        pokemon_last_item:e -> pokemon_last_item_dense:w
         pokemon_moves:e -> pokemon_moves_dense:w
-
-        edge [dir=none constraint=false style=dotted label="(shared)"]
-        pokemon_item_dense -> pokemon_last_item_dense
     }
 
     subgraph cluster_move {
@@ -103,7 +97,7 @@ digraph model {
         pokemon_moves_attention [label="SAB(4,32,128)\n(2x7x4x128)"]
         pokemon_moves_aggregate [label="PMA(4,32,128)\n(2x7x128)"]
 
-        pokemon_moves_dense:s -> pokemon_moves_attention:n
+        pokemon_moves_dense:n -> pokemon_moves_attention:s
         pokemon_moves_attention:e -> pokemon_moves_aggregate:w
 
         pokemon_moves -> pokemon_moves_attention [style=invis]
@@ -114,7 +108,7 @@ digraph model {
 
         active_and_pokemon_concat [label="Concat\n(2x7x640)"]
         active_and_pokemon_split [label="Split + Reshape\n(2x1x1280), (2x5x640)"]
-        pokemon_concat [label="Concat\n(2x6x384)"]
+        pokemon_concat [label="Reshape + Concat\n(2x6x384)"]
         pokemon_split [label="Split\n(2x1x384), (2x5x384)"]
         alive_split [label="Split\n(2x1), (2x5)"]
 
@@ -122,11 +116,10 @@ digraph model {
         pokemon_types_dense:e -> active_and_pokemon_concat:w
         pokemon_stats_dense:e -> active_and_pokemon_concat:w
         pokemon_ability_dense:e -> active_and_pokemon_concat:w
-        pokemon_moves_aggregate:e -> active_and_pokemon_concat:w
+        pokemon_moves_aggregate:se -> active_and_pokemon_concat:w
         active_and_pokemon_concat:e -> active_and_pokemon_split:w
         pokemon_basic_dense:e -> pokemon_concat:w
         pokemon_item_dense:e -> pokemon_concat:w
-        pokemon_last_item_dense:e -> pokemon_concat:w
         pokemon_concat:e -> pokemon_split:w
         pokemon_alive:e -> alive_split:w
     }
@@ -202,7 +195,7 @@ digraph model {
 
             pokemon_moves_attention:e -> action_move_slice:w
             action_move_slice:e -> action_move_concat:w
-            active_global_concat:e -> action_move_concat:nw [label="(tiled x4)"]
+            active_global_concat:e -> action_move_concat:sw [label="(tiled x4)"]
             action_move_concat:e -> action_move_dense:w
 
             global_concat -> action_move_slice [style=invis]
@@ -217,7 +210,7 @@ digraph model {
 
             bench_attention:e -> action_switch_slice:w
             action_switch_slice:e -> action_switch_concat:w
-            active_global_concat:e -> action_switch_concat:nw [label="(tiled x5)"]
+            active_global_concat:e -> action_switch_concat:sw [label="(tiled x5)"]
             action_switch_concat:e -> action_switch_dense:w
 
             active_global_concat -> action_switch_slice [style=invis]

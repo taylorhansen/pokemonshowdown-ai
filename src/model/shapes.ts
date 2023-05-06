@@ -29,8 +29,7 @@ export const modelInputShapes: readonly (readonly number[])[] = [
     [numTeams, teamSize + numActive, encoders.typesEncoder.size],
     [numTeams, teamSize + numActive, encoders.statTableEncoder.size],
     [numTeams, teamSize + numActive, encoders.abilityEncoder.size],
-    [numTeams, teamSize, encoders.itemEncoder.size],
-    [numTeams, teamSize, encoders.lastItemEncoder.size],
+    [numTeams, teamSize, 2 /*current + last item*/, encoders.itemEncoder.size],
     [numTeams, teamSize + numActive, numMoves, encoders.moveSlotEncoder.size],
 ];
 
@@ -58,7 +57,6 @@ export const modelInputNames: readonly string[] = [
     "pokemon/stats",
     "pokemon/ability",
     "pokemon/item",
-    "pokemon/last_item",
     "pokemon/moves",
 ];
 

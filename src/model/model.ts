@@ -107,10 +107,17 @@ export function createModel(
     inputs.push(ability.input);
     activeAndPokemonFeatures.push(ability.features);
 
-    const itemLabels = ["pokemon/item", "pokemon/last_item"];
-    const item = inputFeaturesList(name, itemLabels, 128, random);
-    inputs.push(...item.inputs);
-    pokemonFeatures.push(...item.features);
+    const itemUnits = 128;
+    const item = inputFeatures(name, "pokemon/item", itemUnits, random);
+    inputs.push(item.input);
+    // Combine current + last item features.
+    const flatItem = tf.layers
+        .reshape({
+            name: "pokemon/item/reshape",
+            targetShape: [numTeams, teamSize, 2 * itemUnits],
+        })
+        .apply(item.features) as tf.SymbolicTensor;
+    pokemonFeatures.push(flatItem);
 
     const moveUnits = 128;
     const moves = inputFeatures(name, "pokemon/moves", moveUnits, random);
@@ -313,50 +320,19 @@ function inputFeatures(
     units: number,
     random?: Rng,
 ): InputFeatures {
-    const {
-        inputs: [input],
-        features: [features],
-    } = inputFeaturesList(name, [label], units, random);
-    return {input, features};
-}
-
-/** Input features with multiple inputs/outputs. */
-interface InputFeaturesList {
-    inputs: tf.SymbolicTensor[];
-    features: tf.SymbolicTensor[];
-}
-
-/**
- * Creates basic input features with a shared dense layer for each input.
- *
- * @param name Name of model.
- * @param labels Names of inputs for shape lookup.
- * @param units Hidden layer size.
- * @param random Optional seeder for weight init.
- * @returns Both the input and output features.
- */
-function inputFeaturesList(
-    name: string,
-    labels: string[],
-    units: number,
-    random?: Rng,
-): InputFeaturesList {
-    const inputs = labels.map(label => inputLayer(name, label));
+    const input = inputLayer(name, label);
     const denseLayer = tf.layers.dense({
-        name: `${name}/${labels[0]}/dense`,
+        name: `${name}/${label}/dense`,
         units,
         kernelInitializer: tf.initializers.heNormal({seed: random?.()}),
         biasInitializer: "zeros",
     });
     const activationLayer = tf.layers.leakyReLU({
-        name: `${name}/${labels[0]}/leaky_relu`,
+        name: `${name}/${label}/leaky_relu`,
     });
-    const features = inputs.map(input => {
-        input = denseLayer.apply(input) as tf.SymbolicTensor;
-        input = activationLayer.apply(input) as tf.SymbolicTensor;
-        return input;
-    });
-    return {inputs, features};
+    let features = denseLayer.apply(input) as tf.SymbolicTensor;
+    features = activationLayer.apply(features) as tf.SymbolicTensor;
+    return {input, features};
 }
 
 /**
