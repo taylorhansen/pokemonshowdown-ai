@@ -98,43 +98,50 @@ export async function train(
         learn.logWeights(0 /*step*/);
     }
 
-    const evaluate = new Evaluate(
-        "train",
-        evalModel,
-        prevModel,
-        config.eval,
-        paths?.logs ? join(paths.logs, "eval") : undefined,
-        seeders && {
-            ...(seeders.battle && {battle: seeder(seeders.battle())}),
-            ...(seeders.team && {team: seeder(seeders.team())}),
-            ...(seeders.explore && {explore: seeder(seeders.explore())}),
-        },
-    );
-    const runEval = async (step: number) =>
-        await evaluate.run(
-            step,
-            callback &&
-                (gameResult => {
-                    if (!config.eval.report && !gameResult.err) {
-                        return;
-                    }
-                    callback({
-                        type: "eval",
-                        step,
-                        id: gameResult.id,
-                        agents: gameResult.agents,
-                        ...(gameResult.winner !== undefined && {
-                            winner: gameResult.winner,
-                        }),
-                        ...(gameResult.err && {
-                            err: serialize(gameResult.err),
-                        }),
-                    });
-                }),
-            callback && config.eval.report
-                ? result => callback({type: "evalDone", step, ...result})
-                : undefined,
-        );
+    const evaluate =
+        config.eval.interval > 0
+            ? new Evaluate(
+                  "train",
+                  evalModel,
+                  prevModel,
+                  config.eval,
+                  paths?.logs ? join(paths.logs, "eval") : undefined,
+                  seeders && {
+                      ...(seeders.battle && {battle: seeder(seeders.battle())}),
+                      ...(seeders.team && {team: seeder(seeders.team())}),
+                      ...(seeders.explore && {
+                          explore: seeder(seeders.explore()),
+                      }),
+                  },
+              )
+            : null;
+    const runEval =
+        evaluate &&
+        (async (step: number) =>
+            await evaluate.run(
+                step,
+                callback &&
+                    (gameResult => {
+                        if (!config.eval.report && !gameResult.err) {
+                            return;
+                        }
+                        callback({
+                            type: "eval",
+                            step,
+                            id: gameResult.id,
+                            agents: gameResult.agents,
+                            ...(gameResult.winner !== undefined && {
+                                winner: gameResult.winner,
+                            }),
+                            ...(gameResult.err && {
+                                err: serialize(gameResult.err),
+                            }),
+                        });
+                    }),
+                callback && config.eval.report
+                    ? result => callback({type: "evalDone", step, ...result})
+                    : undefined,
+            ));
 
     const logMemoryMetrics =
         metrics &&
@@ -171,7 +178,7 @@ export async function train(
         ? rng(config.seeds.learn)
         : undefined;
 
-    await Promise.all([rollout.ready(), evaluate.ready()]);
+    await Promise.all([rollout.ready(), evaluate?.ready()]);
 
     const expGen = rollout.run(
         callback &&
@@ -187,13 +194,13 @@ export async function train(
     try {
         let step = 0;
         if (config.eval.interval) {
-            lastEval = runEval(step);
+            lastEval = runEval?.(step);
             if (config.eval.sync) {
                 await lastEval;
             } else {
                 // Suppress unhandled exception warnings since we'll be awaiting
                 // this promise later.
-                lastEval.catch(() => {});
+                lastEval?.catch(() => {});
             }
         }
 
@@ -219,7 +226,7 @@ export async function train(
         }
 
         ++step;
-        while (!config.steps || step < config.steps) {
+        while (!config.steps || step <= config.steps) {
             const r = await expGen.next();
             if (r.done) {
                 throw new Error("Experience stream ended");
@@ -261,14 +268,14 @@ export async function train(
 
                 prevModel.model.setWeights(evalModel.model.getWeights());
                 evalModel.model.setWeights(model.getWeights());
-                await Promise.all([rollout.reload("prev"), evaluate.reload()]);
+                await Promise.all([rollout.reload("prev"), evaluate?.reload()]);
 
-                lastEval = runEval(step);
+                lastEval = runEval?.(step);
 
                 if (config.eval.sync) {
                     await lastEval;
                 } else {
-                    lastEval.catch(() => {});
+                    lastEval?.catch(() => {});
                 }
             }
             if (step % config.checkpointInterval === 0) {
@@ -288,9 +295,9 @@ export async function train(
             ++step;
         }
         await Promise.all([rollout.terminate(), lastEval]);
-        await evaluate.close();
+        await evaluate?.close();
     } finally {
-        await Promise.all([rollout.terminate(), evaluate.terminate()]);
+        await Promise.all([rollout.terminate(), evaluate?.terminate()]);
         learn.cleanup();
         await Promise.all([
             rolloutModel.unload(false /*disposeModel*/),

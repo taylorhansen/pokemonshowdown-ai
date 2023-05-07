@@ -85,7 +85,7 @@ export class BatchPredict {
         public readonly model: ModelRegistry,
         private readonly config: BatchPredictConfig,
     ) {
-        this.events.setMaxListeners(config.maxSize);
+        this.events.setMaxListeners(config.maxSize * 2);
     }
 
     /**

@@ -119,7 +119,7 @@ export class TrainingProgress {
                     ),
                 );
             }
-            if (data.loss !== undefined) {
+            if (this.config.learn.reportInterval && data.loss !== undefined) {
                 this.lastLoss = data.loss.toFixed(TrainingProgress.lossDigits);
             }
             this.progress.tick({

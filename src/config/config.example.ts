@@ -59,7 +59,6 @@ export const config: Config = {
                 maxTurns,
                 reduceLogs: true,
                 resourceLimits: {maxOldGenerationSizeMb: 512},
-                tf: {backend: "tensorflow", gpu: false},
             },
             policy: {
                 exploration: 1.0,
@@ -67,15 +66,15 @@ export const config: Config = {
                 // Reach minimum exploration by the middle of training.
                 interpolate: maxTurns * 2 * 2500,
             },
+            // Should tune these based on performance profiling.
             serve: {
-                type: "distributed",
-                maxSize: rolloutPerThread,
-                // Note: Should tune these based on performance profiling.
+                type: "batched",
+                maxSize: rolloutPerThread * rolloutThreads,
                 timeoutNs: 1_000_000n /*1ms*/,
             },
             servePrev: {
-                type: "distributed",
-                maxSize: Math.ceil(rolloutPerThread * 0.2),
+                type: "batched",
+                maxSize: Math.ceil(rolloutPerThread * rolloutThreads * 0.2),
                 timeoutNs: 1_000_000n /*1ms*/,
             },
             prevRatio: 0.2,
@@ -112,7 +111,8 @@ export const config: Config = {
                 maxTurns,
                 reduceLogs: true,
                 resourceLimits: {maxOldGenerationSizeMb: 256},
-                tf: {backend: "tensorflow", gpu: false},
+                // Use CPU inference to minimize interference with main loop.
+                tf: {backend: "wasm", numThreads: 4},
             },
             serve: {
                 type: "distributed",
@@ -143,6 +143,37 @@ export const config: Config = {
         progress: true,
         verbose: Verbose.Info,
         resourceLimits: {maxOldGenerationSizeMb: 1024},
+    },
+    tune: {
+        override: {
+            name: "tune",
+            steps: 100_000,
+            rollout: {policy: {interpolate: 50_000}, metricsInterval: 0},
+            experience: {metricsInterval: 0},
+            learn: {
+                metricsInterval: 0,
+                histogramInterval: 0,
+                reportInterval: 100_000,
+            },
+            eval: {interval: 0},
+            savePreviousVersions: false,
+            checkpointInterval: 0,
+            metricsInterval: 0,
+        },
+        searchSpace: [
+            [1e-4, 1e-5, 1e-6].map(learningRate => ({
+                name: `lr=${learningRate}`,
+                learn: {optimizer: {learningRate}},
+            })),
+            [
+                [32, 2],
+                [64, 4],
+            ].map(([batchSize, interval]) => ({
+                name: `batch=${batchSize}/${interval}`,
+                learn: {batchSize, interval},
+            })),
+        ],
+        target: "loss",
     },
     compare: {
         name: "latest-original",

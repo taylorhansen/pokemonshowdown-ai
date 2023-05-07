@@ -1,5 +1,6 @@
 import {ResourceLimits} from "worker_threads";
 import {Verbose} from "../util/logging/Verbose";
+import {DeepReadonlyPartial} from "../util/types";
 
 /** Config typings. */
 export interface Config {
@@ -9,6 +10,8 @@ export interface Config {
     readonly paths: PathsConfig;
     /** Training config. */
     readonly train: TrainConfig;
+    /** Tuning config. */
+    readonly tune: TuneConfig;
     /** Model comparison script config. */
     readonly compare: CompareConfig;
 }
@@ -366,6 +369,19 @@ export interface TrainSeedConfig {
     readonly explore?: string;
     /** Seed for shuffling training examples during the learning step. */
     readonly learn?: string;
+}
+
+/** Configuration for the tuning script. */
+export interface TuneConfig {
+    /** Override base train config. */
+    readonly override: DeepReadonlyPartial<TrainConfig>;
+    /** Grid search axes. */
+    readonly searchSpace: DeepReadonlyPartial<TrainConfig>[][];
+    /**
+     * Optimization target for tuning, or the name of an evaluation opponent to
+     * use as a baseline.
+     */
+    readonly target: "loss" | "runtime" | "random" | "randmove" | "damage";
 }
 
 /** Configuration for the model comparison script. */

@@ -1,10 +1,6 @@
-import {workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {TensorflowConfig} from "../../config/types";
 import {importTfn, Tfn} from "../../util/importTf";
-import {ModelWorkerData} from "./ModelProtocol";
-
-const modelWorkerData = workerData as ModelWorkerData;
 
 type Writer = ReturnType<Tfn["node"]["summaryFileWriter"]>;
 
@@ -29,14 +25,15 @@ export class Metrics {
                     "backend",
             );
         }
-        Metrics.writer = importTfn(
-            modelWorkerData.tf.gpu,
-        ).node.summaryFileWriter(path, 100 /*maxQueue*/);
+        Metrics.writer = importTfn(config.gpu).node.summaryFileWriter(
+            path,
+            100 /*maxQueue*/,
+        );
     }
 
     /**
      * Gets a Metrics object for the given name. Returns null if
-     * {@link ModelWorkerData.metricsPath} is not set.
+     * {@link configure} hasn't been called yet.
      */
     public static get(name: string): Metrics | null {
         if (!Metrics.writer) {
