@@ -113,7 +113,6 @@ handlersImpl["|request|"] = async function (ctx) {
     ctx.logger.debug(
         `Request ${req.requestType}${ctx.state.started ? "" : " (init)"}`,
     );
-    ctx.logger.debug(JSON.stringify(req));
 
     switch (req.requestType) {
         case "team":
