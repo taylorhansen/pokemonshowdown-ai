@@ -223,15 +223,22 @@ export class BattleHandler<TAgent extends BattleAgent = BattleAgent>
 
     private handleRequest(event: Event<"|request|">): void {
         if (this.pendingRequest) {
-            // Two |request| events in a row without an |error| event in between
-            // to indicate a choice-retrying scenario.
-            throw new Error(
-                `Unhandled |request| event:\npending: ${JSON.stringify(
-                    Protocol.parseRequest(this.pendingRequest.args[1]),
-                )}\nnew: ${JSON.stringify(
-                    Protocol.parseRequest(event.args[1]),
-                )}`,
-            );
+            const [, oldReq] = this.pendingRequest.args;
+            const [, newReq] = event.args;
+            if (newReq !== oldReq) {
+                // Usually we'd expect an |error| event between two consecutive
+                // |request| events to indicate a retry, but in some rare cases
+                // we might receive a duplicate.
+                throw new Error(
+                    "Unhandled |request| event:\n" +
+                        `pending: ${JSON.stringify(
+                            Protocol.parseRequest(oldReq),
+                        )}\n` +
+                        `new: ${JSON.stringify(Protocol.parseRequest(newReq))}`,
+                );
+            }
+            this.logger.info("Ignoring duplicate |request| event");
+            return;
         }
 
         if (!this.unavailableChoice) {
