@@ -813,6 +813,12 @@ function calcDamge(
                     ({basePower} = ourItem.naturalGift);
                 }
                 break;
+            case "payback":
+                // Assume opponent is using a move of the same priority.
+                if (ourSpe < theirSpe) {
+                    basePower *= 2;
+                }
+                break;
             case "present":
                 // Average power.
                 basePower = 52;
