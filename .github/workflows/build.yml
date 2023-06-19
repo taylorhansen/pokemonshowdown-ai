@@ -40,12 +40,12 @@ jobs:
           environment-file: environment.yml
           auto-activate-base: false
       - name: Check imports
-        run: conda run --no-capture-output isort --check src test
+        run: conda run -n psai --no-capture-output isort --check src test
       - name: Check formatting
-        run: conda run --no-capture-output black --check src test
+        run: conda run -n psai --no-capture-output black --check src test
       - name: Run linter
-        run: conda run --no-capture-output pylint src test
+        run: conda run -n psai --no-capture-output pylint src test
       - name: Run type checker
-        run: conda run --no-capture-output mypy src test
+        run: conda run -n psai --no-capture-output mypy src test
       - name: Run tests
-        run: conda run --no-capture-output python -m test.unit
+        run: conda run -n psai --no-capture-output python -m test.unit
