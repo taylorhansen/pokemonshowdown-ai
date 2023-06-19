@@ -32,9 +32,6 @@ conda env create --name psai --file environment.yml
 conda activate psai
 npm install
 
-# Setup config, edit as desired.
-cp src/config/config.example.ts src/config/config.ts
-
 # Compile TS.
 npm run build
 ```
@@ -83,7 +80,9 @@ tensorboard --logdir experiments
 ## Running
 
 ```sh
+# Edit config as needed.
 cp config/psbot_example.yml config/psbot.yml
+
 npm run psbot
 ```
 
