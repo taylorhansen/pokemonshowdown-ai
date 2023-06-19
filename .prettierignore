@@ -1,8 +1,8 @@
 /.husky/
+/.mypy_cache/
 /.nyc_output/
 /.vscode/
 /coverage/
 /dist/
-/logs/
-/models/
+/experiments/
 package*.json

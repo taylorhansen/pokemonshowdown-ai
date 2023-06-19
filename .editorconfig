@@ -8,6 +8,6 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[{.eslintrc,.prettierrc,*.json,*.yml}]
+[{.eslintrc,.prettierrc,*.json,*.yml,*.toml}]
 indent_style = space
 indent_size = 2

@@ -1,5 +1,4 @@
 /coverage/
 /dist/
-/logs/
-/models/
+/experiments/
 **/*.js

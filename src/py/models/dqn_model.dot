@@ -1,0 +1,323 @@
+digraph model {
+    label = "DQN Model\nExample with Dueling + Distributional (atoms = 51), Layer Normalization, and ReLU activation\nTotal parameters = 2,442,009"
+    node [shape=rect]
+    rankdir = LR
+    splines = polyline
+    ranksep = .1
+    nodesep = .1
+    ratio = .4
+
+    subgraph cluster_mab {
+        label = "Multi-head Attention Block (permutation equivariant)\nMAB(h,d)"
+
+        mab_query [style=filled label="Query\n(TxU)"]
+        mab_key [style=filled label="Key\n(SxU)"]
+        mab_query_mask [style=filled label="Query Mask (optional)\n(T)"]
+        mab_value_mask [style=filled label="Value Mask (optional)\n(S)"]
+        mab_mha [label="Multi-Head Attention\nMHA(h,d)\n(TxU)"]
+        mab_add_att [label="Add\n(TxU)"]
+        mab_ln_att [label="Layer Norm\n(TxU)"]
+        mab_rff [label="Dense(K) + ReLU\n(TxU)"]
+        mab_add_rff [label="Add\n(TxU)"]
+        mab_ln_rff [label="Layer Norm\n(TxU)"]
+        mab_out [style=filled label="Output\n(TxU)"]
+
+        mab_query:e -> mab_mha:w [label="Q"]
+        mab_key:e -> mab_mha:w [label="K/V"]
+        mab_query_mask:e -> mab_mha:w [label="(Q mask)"]
+        mab_value_mask:e -> mab_mha:w [label="\n(K/V mask)"]
+        mab_query:e -> mab_add_att:w
+        mab_mha:e -> mab_add_att:w
+        mab_add_att:e -> mab_ln_att:w
+        mab_ln_att:e -> mab_rff:w
+        mab_ln_att:e -> mab_add_rff:w
+        mab_rff:e -> mab_add_rff:w
+        mab_add_rff:e -> mab_ln_rff:w
+        mab_ln_rff:e -> mab_out:w
+    }
+
+
+    subgraph cluster_pma {
+        label = "Pooling via Multi-head Attention (permutation invariant)\nPMA(s,h,d)"
+
+        pma_seed [label="Seed\n(SxU)"]
+        pma_features [style=filled label="Features\n(NxU)"]
+        pma_mask [style=filled label="Mask (optional)\n(N)"]
+        pma_rff_s [label="Dense(U) + ReLU\n(NxU)"]
+        pma_mab [label="MAB(h,d)\n(SxU)"]
+        pma_out [style=filled label="Output\n(SxU)"]
+
+        pma_seed:e -> pma_mab:w [label="Q"]
+        pma_features:e -> pma_rff_s:w
+        pma_rff_s:e -> pma_mab:w [label="K/V"]
+        pma_mask:e -> pma_mab:w [label="\n(K/V mask)"]
+        pma_mab:e -> pma_out:w
+    }
+
+    subgraph cluster_sab {
+        label = "Self Attention Block for set input (permutation equivariant)\nSAB(h,d)"
+
+        sab_features [style=filled label="Features\n(NxU)"]
+        sab_mask [style=filled label="Mask (optional)\n(N)"]
+        sab_mab [label="MAB(h,d)\n(NxU)"]
+        sab_out [style=filled label="Output\n(NxU)"]
+
+        sab_features:e -> sab_mab:w [label="Q/K/V"]
+        sab_mask -> sab_mab:w [label="(Q/K/V mask)"]
+        sab_mab:e -> sab_out:w
+    }
+
+    subgraph cluster_input {
+        label = "Input"
+
+        node [style=filled]
+        room_status [label="Room Status\n(6)"]
+        team_status [label="Team Status\n(2x16)"]
+        volatile [label="Active Volatile\n(2x1x68)"]
+        alive [label="Pokemon Alive\n(2x6)"]
+        basic [label="Pokemon Basic\n(2x6x11)"]
+        species [label="Pokemon Species\n(2x7x557)"]
+        types [label="Pokemon Types\n(2x7x17)"]
+        stats [label="Pokemon Stats\n(2x7x35)"]
+        ability [label="Pokemon Ability\n(2x7x123)"]
+        item [label="Pokemon Item\n(2x6x2x209)"]
+        moves [label="Pokemon Moves\n(2x7x4x472)"]
+    }
+
+    subgraph cluster_encoder {
+        label = "Individual Encoders"
+
+        room_status_dense [label = "Dense(64) + ReLU\n(64)"]
+        team_status_dense [label = "Dense(64) + ReLU)\n(2x64)"]
+        volatile_dense [label = "Dense(128) + ReLU\n(2x1x128)"]
+        basic_dense [label="Dense(64) + ReLU\n(2x6x64)"]
+        species_dense [label="Dense(128) + ReLU\n(2x7x128)"]
+        types_dense [label="Dense(128) + ReLU\n(2x7x128)"]
+        stats_dense [label="Dense(128) + ReLU\n(2x7x128)"]
+        ability_dense [label="Dense(128) + ReLU\n(2x7x128)"]
+        item_dense [label="Dense(128) + ReLU\n(2x6x2x128)"]
+        moves_dense [label="Dense(128) + ReLU\n(2x7x4x128)"]
+
+        room_status:e -> room_status_dense:w
+        team_status:e -> team_status_dense:w
+        volatile:e -> volatile_dense:w
+        basic:e -> basic_dense:w
+        species:e -> species_dense:w
+        types:e -> types_dense:w
+        stats:e -> stats_dense:w
+        ability:e -> ability_dense:w
+        item:e -> item_dense:w
+        moves:e -> moves_dense:w
+
+        room_status_ln [label = "Layer Norm\n(64)"]
+        team_status_ln [label = "Layer Norm)\n(2x64)"]
+        volatile_ln [label = "Layer Norm\n(2x1x128)"]
+        basic_ln [label="Layer Norm\n(2x6x64)"]
+        species_ln [label="Layer Norm\n(2x7x128)"]
+        types_ln [label="Layer Norm\n(2x7x128)"]
+        stats_ln [label="Layer Norm\n(2x7x128)"]
+        ability_ln [label="Layer Norm\n(2x7x128)"]
+        item_ln [label="Layer Norm\n(2x6x2x128)"]
+        moves_ln [label="Layer Norm\n(2x7x4x128)"]
+
+        room_status_dense:e -> room_status_ln:w
+        team_status_dense:e -> team_status_ln:w
+        volatile_dense:e -> volatile_ln:w
+        basic_dense:e -> basic_ln:w
+        species_dense:e -> species_ln:w
+        types_dense:e -> types_ln:w
+        stats_dense:e -> stats_ln:w
+        ability_dense:e -> ability_ln:w
+        item_dense:e -> item_ln:w
+        moves_dense:e -> moves_ln:w
+
+        species_dense -> moves_ln [style=invis]
+    }
+
+    subgraph cluster_move {
+        label = "Moveset Encoder"
+
+        moves_enc [label="SAB(4,32)\n(2x7x4x128)"]
+        moves_agg [label="PMA(1,4,32) + Reshape\n(2x7x128)"]
+
+        moves_ln:e -> moves_enc:w
+        moves_enc:e -> moves_agg:w
+    }
+
+    subgraph cluster_split {
+        label = "Active/Bench Split"
+
+        pokemon_with_override_concat [label="Concat\n(2x7x640)"]
+        pokemon_with_override_split [label="Split + Reshape\n(2x1x1280), (2x5x640)"]
+        pokemon_concat [label="Reshape + Concat\n(2x6x320)"]
+        pokemon_split [label="Split\n(2x1x320), (2x5x320)"]
+        alive_split [label="Split\n(2x1), (2x5)"]
+
+        species_ln:e -> pokemon_with_override_concat:w
+        types_ln:e -> pokemon_with_override_concat:w
+        stats_ln:e -> pokemon_with_override_concat:w
+        ability_ln:e -> pokemon_with_override_concat:w
+        moves_agg:e -> pokemon_with_override_concat:w
+        pokemon_with_override_concat:e -> pokemon_with_override_split:w
+        basic_ln:e -> pokemon_concat:w
+        item_ln:e -> pokemon_concat:w
+        pokemon_concat:e -> pokemon_split:w
+        alive:e -> alive_split:w
+
+        moves_agg -> pokemon_concat [style=invis]
+    }
+
+    subgraph cluster_active {
+        label = "Active Features"
+
+        active_concat [label="Concat\n(2x1x1728)"]
+        active_mask [label="Mask\n(2x1x1728)"]
+        active_dense [label="Dense(256) + ReLU\n(2x1x256)"]
+        active_ln [label="Layer Norm\n(2x1x256)"]
+
+        volatile_ln:e -> active_concat:w
+        pokemon_with_override_split:se -> active_concat:w
+        pokemon_split:se -> active_concat:w
+        active_concat:e -> active_mask:w
+        alive_split:e -> active_mask:w [label="(mask)  "]
+        active_mask:e -> active_dense:w
+        active_dense:e -> active_ln:w
+    }
+
+    subgraph cluster_bench {
+        label = "Bench Features"
+
+        bench_concat [label="Concat\n(2x5x960)"]
+        bench_mask [label="Mask\n(2x5x960)"]
+        bench_dense [label="Dense(256) + ReLU\n(2x5x256)"]
+        bench_ln [label="Layer Norm\n(2x5x256)"]
+
+        pokemon_with_override_split:e -> bench_concat:w
+        pokemon_split:e ->  bench_concat:w
+        bench_concat:e -> bench_mask:w
+        alive_split:e -> bench_mask:w [label="\n(mask)"]
+        bench_mask:e -> bench_dense:w
+        bench_dense:e -> bench_ln:w
+
+        active_concat -> bench_concat [style=invis]
+    }
+
+    subgraph cluster_bench_aggregate {
+        label = "Bench Aggregate"
+
+        bench_enc [label="SAB(8,32)\n(2x5x256)"]
+        bench_agg [label="PMA(8,32)\n(2x256)"]
+
+        bench_ln:e -> bench_enc:w
+        alive_split:e -> bench_enc:w [label="(mask)"]
+        bench_enc:e -> bench_agg:w
+        alive_split:e -> bench_agg:w [label="(mask)"]
+    }
+
+    subgraph cluster_global {
+        label = "Global"
+
+        global_concat [label="Flatten + Concat\n(1216)"]
+        global_dense [label="Dense(256) + RelU\n(256)"]
+        global_ln [label="Layer Norm\n(256)"]
+        global_reshape [label="Reshape\n(1x256)"]
+
+        room_status_ln:e ->  global_concat:w
+        team_status_ln:e -> global_concat:w
+        active_ln:e -> global_concat:w
+        bench_agg:e -> global_concat:w
+        global_concat:e -> global_dense:w
+        global_dense:e -> global_ln:w
+        global_ln:e -> global_reshape:w
+    }
+
+    subgraph cluster_action {
+        label = "Action"
+
+        subgraph cluster_action_move {
+            label = "Move"
+
+            action_move_slice [label="Slice + Reshape\n(4x128)"]
+            action_move_concat [label="Concat\n(4x384)"]
+            action_move_dense [label="Dense(256) + ReLU\n(4x256)"]
+            action_move_ln [label="Layer Norm\n(4x256)"]
+
+            moves_enc:e -> action_move_slice:w
+            action_move_slice:e -> action_move_concat:w
+            global_reshape:e -> action_move_concat:w [label="(tiled x4)"]
+            action_move_concat:e -> action_move_dense:w
+            action_move_dense:e -> action_move_ln:w
+
+            global_concat -> action_move_slice [style=invis]
+        }
+
+        subgraph cluster_action_switch {
+            label = "Switch"
+
+            action_switch_slice [label="Slice + Reshape\n(5x256)"]
+            action_switch_concat [label="Concat\n(5x512)"]
+            action_switch_dense [label="Dense(256) + ReLU\n(5x256)"]
+            action_switch_ln [label="Layer Norm\n(5x256)"]
+
+            bench_enc:e -> action_switch_slice:w
+            action_switch_slice:e -> action_switch_concat:w
+            global_reshape:e -> action_switch_concat:w [label="\n\n(tiled x5)"]
+            action_switch_concat:e -> action_switch_dense:w
+            action_switch_dense:e -> action_switch_ln:w
+
+            global_reshape -> action_switch_slice [style=invis]
+        }
+    }
+
+    subgraph cluster_value {
+        label = "State (Dueling)"
+
+        value_dense [label="Dense(256) + ReLU\n(1x256)"]
+        value_ln [label="Layer Norm\n(1x256)"]
+
+        global_reshape:e -> value_dense:w
+        value_dense:e -> value_ln:w
+    }
+
+    subgraph cluster_dist {
+        label = "Distributional (atoms = 51)"
+
+        subgraph cluster_dist_action {
+            label = "Action Advantage Dist"
+
+            action_move_adv_logits [label="Dense(51)\n(4x51)"]
+            action_switch_adv_logits [label="Dense(51)\n(5x51)"]
+            adv_logits [label="Concat\n(9x51)"]
+
+            action_move_ln:e -> action_move_adv_logits:w
+            action_switch_ln:e -> action_switch_adv_logits:w
+            action_move_adv_logits:e -> adv_logits:w
+            action_switch_adv_logits:e -> adv_logits:w
+        }
+
+        subgraph cluster_dist_dueling {
+            label = "Dueling"
+
+            subgraph cluster_dist_value {
+                label = "State Value Dist"
+
+                v_logits [label="Dense(51)\n(1x51)"]
+
+                value_ln:e -> v_logits:w
+
+                adv_logits -> v_logits [style=invis]
+            }
+
+            adv_centered_logits [label="Sub Mean\nOver Action Dim\n(9x51)"]
+            q_logits [label="Add\n(9x51)"]
+            q_dist_dueling [label="Softmax\n(9x51)"]
+            dist_dueling_output [style=filled label="Action Dist\n(9x51)"]
+
+            adv_logits:e -> adv_centered_logits:w
+            adv_centered_logits:e -> q_logits:w
+            v_logits:e -> q_logits:w
+            q_logits:e -> q_dist_dueling:w
+            q_dist_dueling:e -> dist_dueling_output:w
+        }
+    }
+}

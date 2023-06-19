@@ -1,0 +1,21 @@
+[project]
+requires-python = ">=3.9"
+
+[tool.black]
+target-version = ["py39"]
+line-length = 80
+extend-exclude = '''
+(
+  \.toml
+  |\.sh
+  |\.yml
+  |\.js
+  |\.ts
+  |\.json
+)
+'''
+
+[tool.isort]
+py_version = 39
+profile = "black"
+line_length = 80

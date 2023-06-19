@@ -2,7 +2,18 @@
 . "$(dirname "$0")/_/husky.sh"
 
 echo "Formatting..."
+
 npx git-format-staged -f 'prettier --ignore-unknown --stdin-filepath "{}"' "*"
+
+npx git-format-staged -f 'isort - ' "*.py"
+npx git-format-staged -f 'black - --stdin-filename "{}" --quiet' "*.py"
+
 echo "Linting..."
+
 npx git-format-staged --no-write -f 'eslint --stdin --stdin-filename "{}" >&2' "*.js" "*.ts"
+
+npx git-format-staged --no-write -f 'pylint --score n --from-stdin "{}" >&2' "*.py"
+trap 'test -f mypy_tmp && rm mypy_tmp' EXIT
+npx git-format-staged --no-write -f 'cat > mypy_tmp && mypy --no-error-summary --shadow-file "{}" mypy_tmp "{}" >&2' "*.py"
+
 echo "Done verifying"

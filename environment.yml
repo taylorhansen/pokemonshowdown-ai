@@ -1,0 +1,10 @@
+name: psai
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip>=23.0
+  - cudatoolkit=11.8.0
+  - pip:
+      - -r file:requirements.txt

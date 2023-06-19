@@ -5,21 +5,17 @@ on:
   pull_request:
     branches: [main]
 jobs:
-  build:
+  node:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.x, 17.x, 18.x]
     steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 16.x
       - name: Install dependencies
         run: npm ci
-      - name: Configure config
-        run: cp src/config/config.example.ts src/config/config.ts
       - name: Check formatting
         run: npm run format:check
       - name: Run linter
@@ -32,3 +28,23 @@ jobs:
         run: npm install -g codecov
       - name: Upload coverage
         run: codecov
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: environment.yml
+          activate-environment: psai
+      - name: Check imports
+        run: conda run --no-capture-output isort --check src test
+      - name: Check formatting
+        run: conda run --no-capture-output black --check src test
+      - name: Run linter
+        run: conda run --no-capture-output pylint src test
+      - name: Run type checker
+        run: conda run --no-capture-output mypy src test
+      - name: Run tests
+        run: conda run --no-capture-output python -m test.unit

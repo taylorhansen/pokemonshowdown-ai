@@ -7,14 +7,8 @@
 # TS -> JS build files.
 /dist/
 
-# Training logs.
-/logs/
-
-# Trained models.
-/models/
-
-# Training metrics.
-/metrics/
+# Files generated from training script.
+/experiments/
 
 # NPM packages.
 /node_modules/
@@ -23,7 +17,17 @@
 /npm-debug.log
 
 # Private config.
-/src/config/config.ts
+/config/*
+!/config/psbot_example.yml
+!/config/train_example.yml
 
 # TS build file.
 /*.tsbuildinfo
+
+# Python build/lint caches.
+/.mypy_cache/
+__pycache__/
+
+# Environments.
+/env/
+/venv/

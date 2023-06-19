@@ -1,4 +1,4 @@
-/** @file Main unit test runner. */
-import {test as run} from "../src/index.test";
+/** @file TypeScript unit test runner. */
+import {test as run} from "../src/ts/index.test";
 
 run();

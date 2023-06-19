@@ -3,16 +3,16 @@
 [![Build](https://github.com/taylorhansen/pokemonshowdown-ai/actions/workflows/build.yml/badge.svg)](https://github.com/taylorhansen/pokemonshowdown-ai/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai/branch/main/graph/badge.svg?token=qRdGD5oRzd)](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai)
 
-For this project I plan on making and training a neural network to play in a
-Pokemon gen-4 random battle. The code is pretty unstable right now so I wouldn't
+Reinforcement learning project for Pokemon Showdown. Currently only supports the
+Gen-4 random battle format. The code is pretty unstable right now so I wouldn't
 recommend trying to use it out of the box.
 
 This project has three parts:
 
--   [PsBot](/src/psbot) framework for creating a general Pokemon Showdown bot
+-   [PsBot](/src/ts/psbot) framework for creating a general Pokemon Showdown bot
     and setting up the battle interface.
--   [Battle](/src/psbot/handlers/battle) state tracker and PS protocol parser.
--   Neural network [management](/src/model) and [training](/src/train) scripts.
+-   [Battle](/src/ts/battle) state tracker and PS protocol parser.
+-   Neural network [training](/src/py/train.py) script.
 
 https://user-images.githubusercontent.com/13547043/184581452-31b33c7e-87d5-4a26-8772-a7c365704109.mp4
 
@@ -20,18 +20,22 @@ _Me (left) vs a model (right) that was trained over ~16k games against itself_
 
 ## Build Instructions
 
-Make sure you have at least Node 16 (LTS) installed.
+Make sure you have at least Node v16 (LTS) and Miniconda 3 installed.
 
 ```sh
 # Download the repository.
 git clone https://github.com/taylorhansen/pokemonshowdown-ai
 cd pokemonshowdown-ai
+
+# Setup environment.
+conda env create --name psai --file environment.yml
+conda activate psai
 npm install
 
 # Setup config, edit as desired.
 cp src/config/config.example.ts src/config/config.ts
 
-# Compile the project.
+# Compile TS.
 npm run build
 ```
 
@@ -40,59 +44,57 @@ npm run build
 ```sh
 # Run formatter.
 npm run format
+isort src test
+black src test
 
 # Run linter.
 npm run lint
+pylint src test
+mypy src test
 
-# Run tests with coverage.
+# Run tests.
 npm test
+python -m test.unit
 ```
 
 ## Training
 
 ```sh
-npm run train
+# Edit hyperparmeters as needed.
+cp config/train_example.yml config/train.yml
+
+python -m src.py.train
 ```
 
 Trains the neural network through self-play. This requires a powerful computer,
 and may take several hours depending on how it's
-[configured](/src/config/config.example.ts).
+[configured](/config/train_example.yml).
 
-The training script saves logs to `./logs/` and checkpoints to `./models/` (can
-be changed by config).
+Training logs are saved to `./experiments/`.
 
-Some metrics such as loss, gradients, evaluation scores, etc. can be viewed
+Metrics such as loss, weights, gradients, evaluation scores, etc. can be viewed
 using TensorBoard.
 
 ```sh
 pip install tensorboard
-tensorboard --logdir metrics
+tensorboard --logdir experiments
 ```
-
-## Comparing trained models
-
-```sh
-npm run compare
-```
-
-Based on the [config](/src/config/config.example.ts), runs several games between
-each of the models that were created by differently-configured training runs
-(via `npm run train`), round-robin style, in order to determine which model
-performs the best against the others. Includes support for a baseline
-randomly-acting model and fixed random seeds.
 
 ## Running
 
 ```sh
+cp config/psbot_example.yml config/psbot.yml
 npm run psbot
 ```
 
-Connects to the PS server specified in the
-[config](/src/config/config.example.ts) and starts accepting battle challenges
-in the `gen4randombattle` format, which is the format that this project is using
-for now. By default it loads the model from the last completed training run in
-`./models/train`. This allows the model to take on human challengers or any
-other outside bots.
+Connects to the PS server specified in the [config](/config/psbot_example.yml)
+and starts accepting battle challenges in the `gen4randombattle` format, which
+is the only format that this project supports for now. By default it loads the
+model from `./experiments/train/model` (assuming a training run was completed)
+and connects to a locally-hosted PS instance (see
+[guide](https://github.com/smogon/pokemon-showdown/blob/master/server/README.md)).
+This allows the trained model to take on human challengers or any other outside
+bots.
 
 ## License
 

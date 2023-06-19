@@ -1,0 +1,4 @@
+# Note: See src/ts/psbot/config.ts for docs.
+websocketRoute: ws://localhost:8000/
+modelPath: ../experiments/train/model
+maxBatch: 32

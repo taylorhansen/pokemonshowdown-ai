@@ -1,0 +1,66 @@
+# Note: See src/py/config.py for docs.
+name: train
+seed: null
+save_path: experiments/
+dqn:
+  model:
+    dueling: true
+    dist: 51
+    use_layer_norm: true
+    attention: true
+    pooling: attention
+  exploration:
+    decay_type: linear
+    start: 1.0
+    end: 0.1
+    episodes: 5_000
+  experience:
+    n_steps: 2
+    discount_factor: 0.99
+    buffer_size: 5000
+  learn:
+    buffer_prefill: 500
+    learning_rate: 1.e-4
+    batch_size: 64
+    steps_per_update: 2
+    steps_per_target_update: 5000
+    steps_per_histogram: 5000
+rollout:
+  num_episodes: 10_000
+  eps_per_eval: 1000
+  eps_per_ckpt: 1000
+  eps_per_prev_update: 1000
+  env:
+    max_turns: 100
+    batch_limit: 1
+    pool:
+      workers: 1
+      per_worker: 1
+      battles_per_log: 1000
+  opponents:
+    - name: previous
+      prob: 0.3
+      type: model
+      model: previous
+eval:
+  env:
+    max_turns: 100
+    batch_limit: 4
+    pool:
+      workers: 4
+      per_worker: 2
+      battles_per_log: 100
+  opponents:
+    - name: previous
+      battles: 100
+      type: model
+      model: previous
+    - name: random
+      battles: 100
+      type: random
+    - name: random_move
+      battles: 100
+      type: random_move
+    - name: max_damage
+      battles: 100
+      type: max_damage

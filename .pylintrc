@@ -1,0 +1,16 @@
+[DESIGN]
+max-args=20
+max-attributes=20
+max-branches=20
+max-locals=50
+max-statements=100
+min-public-methods=1
+
+[FORMAT]
+max-line-length=80
+
+[MESSAGES CONTROL]
+disable=duplicate-code
+
+[MISCELLANEOUS]
+notes=

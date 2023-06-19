@@ -6,15 +6,12 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "main": "dist/psbot/index.js",
+  "main": "dist/ts/psbot/runner.js",
   "scripts": {
     "prepare": "husky install",
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "tune": "node -r source-map-support/register dist/demo/tune.js",
-    "train": "node -r source-map-support/register dist/demo/train.js",
-    "psbot": "node -r source-map-support/register dist/demo/psbot.js",
-    "compare": "node -r source-map-support/register dist/demo/compare.js",
+    "psbot": "node -r source-map-support/register dist/ts/psbot/runner.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
@@ -33,7 +30,7 @@
     ],
     "trace-warnings": true,
     "watch-files": [
-      "src/**/*.test.ts"
+      "src/ts/**/*.test.ts"
     ]
   },
   "nyc": {
@@ -42,10 +39,9 @@
       "coverage/",
       "dist/",
       "scripts/",
-      "src/config/",
-      "src/demo/",
-      "src/**/*.test.ts",
-      "src/**/*.js",
+      "src/ts/config/",
+      "src/ts/**/*.test.ts",
+      "src/ts/**/*.js",
       "test/"
     ],
     "reporter": [
@@ -69,29 +65,24 @@
     "@pkmn/protocol": "^0.6.11",
     "@pkmn/randoms": "^0.7.39",
     "@pkmn/sim": "^0.7.39",
-    "@tensorflow/tfjs": "^4.4.0",
-    "@tensorflow/tfjs-backend-wasm": "^4.4.0",
-    "@tensorflow/tfjs-node": "^4.4.0",
-    "@tensorflow/tfjs-node-gpu": "^4.4.0",
-    "long": "^5.2.3",
     "node-fetch": "^2.6.9",
-    "progress": "^2.0.3",
     "seedrandom": "^3.0.5",
-    "tfrecord": "^0.2.0",
-    "tiny-typed-emitter": "^2.1.0",
     "tmp-promise": "^3.0.3",
-    "websocket": "^1.0.34"
+    "websocket": "^1.0.34",
+    "yaml": "^2.3.1",
+    "zeromq": "^6.0.0-beta.16"
   },
   "devDependencies": {
     "@pkmn/dex-types": "^0.7.39",
     "@pkmn/types": "^3.0.0",
     "@types/chai": "^4.3.5",
     "@types/chai-as-promised": "^7.1.5",
-    "@types/long": "^5.0.0",
+    "@types/eslint": "^8.40.1",
     "@types/mocha": "^10.0.1",
     "@types/node": "^16.18.25",
     "@types/node-fetch": "^2.6.3",
-    "@types/progress": "^2.0.5",
+    "@types/prettier": "^2.7.3",
+    "@types/seedrandom": "^3.0.5",
     "@types/websocket": "^1.0.5",
     "@typescript-eslint/eslint-plugin": "^5.59.2",
     "@typescript-eslint/parser": "^5.59.2",

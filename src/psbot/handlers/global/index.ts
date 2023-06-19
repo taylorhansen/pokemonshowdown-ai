@@ -1,1 +1,0 @@
-export {GlobalHandler} from "./GlobalHandler";

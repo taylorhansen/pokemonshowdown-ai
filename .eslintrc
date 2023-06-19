@@ -241,7 +241,7 @@
     {
       // Allow dev dependencies in helper scripts/test files that don't go into
       // production.
-      "files": ["scripts/**/*", "src/**/*.test.ts", "test/**/*"],
+      "files": ["scripts/**/*.ts", "src/ts/**/*.test.ts", "test/**/*.ts"],
       "settings": {
         "node": {
           "allowModules": ["@pkmn/types", "chai", "mocha", "websocket"]
