@@ -4,8 +4,7 @@
 [![codecov](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai/branch/main/graph/badge.svg?token=qRdGD5oRzd)](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai)
 
 Reinforcement learning project for Pokemon Showdown. Currently only supports the
-Gen-4 random battle format. The code is pretty unstable right now so I wouldn't
-recommend trying to use it out of the box.
+Gen-4 random battle format.
 
 This project has three parts:
 
@@ -20,19 +19,26 @@ _Me (left) vs a model (right) that was trained over ~16k games against itself_
 
 ## Build Instructions
 
-Make sure you have at least Node v16 (LTS) and Miniconda 3 installed.
+Make sure you have at least Node v16 (LTS) and Miniconda 3 installed. Should
+work on Linux and likely also Windows WSL2.
 
 ```sh
 # Download the repository.
 git clone https://github.com/taylorhansen/pokemonshowdown-ai
 cd pokemonshowdown-ai
 
-# Setup environment.
+# Setup Python/TensorFlow.
 conda env create --name psai --file environment.yml
 conda activate psai
-npm install
 
-# Compile TS.
+# If using GPU, ensure cuDNN gets loaded correctly.
+# Copied from https://www.tensorflow.org/install/pip.
+mkdir -p $CONDA_PREFIX/etc/conda/activate.d
+echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+
+# Setup TS.
+npm install
 npm run build
 ```
 
@@ -63,14 +69,13 @@ cp config/train_example.yml config/train.yml
 python -m src.py.train
 ```
 
-Trains the neural network through self-play. This requires a powerful computer,
-and may take several hours depending on how it's
+Trains the neural network through self-play. This requires a powerful computer
+and/or GPU, and may take several hours depending on how it's
 [configured](/config/train_example.yml).
 
-Training logs are saved to `./experiments/`.
+Training logs are saved to `./experiments/` by default.
 
-Metrics such as loss, weights, gradients, evaluation scores, etc. can be viewed
-using TensorBoard.
+Metrics such as loss and evaluation scores can be viewed using TensorBoard.
 
 ```sh
 pip install tensorboard
@@ -91,9 +96,9 @@ and starts accepting battle challenges in the `gen4randombattle` format, which
 is the only format that this project supports for now. By default it loads the
 model from `./experiments/train/model` (assuming a training run was completed)
 and connects to a locally-hosted PS instance (see
-[guide](https://github.com/smogon/pokemon-showdown/blob/master/server/README.md)).
-This allows the trained model to take on human challengers or any other outside
-bots.
+[guide](https://github.com/smogon/pokemon-showdown/blob/master/server/README.md)
+on how to set one up). This allows the trained model to take on human
+challengers or any other outside bots.
 
 ## License
 
