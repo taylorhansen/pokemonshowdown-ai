@@ -3340,7 +3340,10 @@ export const test = () =>
 
         describe("|-primal|", function () {
             it("Should do nothing since unsupported", async function () {
-                await ph.handle({args: ["-primal", toIdent("p1")], kwArgs: {}});
+                await ph.handle({
+                    args: ["-primal", toIdent("p1"), toItemName("redorb")],
+                    kwArgs: {},
+                });
                 await ph.return();
             });
         });
