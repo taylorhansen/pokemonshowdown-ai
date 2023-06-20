@@ -44,7 +44,7 @@
     "node": {
       "allowModules": [
         "@pkmn/types", // Type-only package.
-        "websocket" // For some reason the node plugin can't find this pkg.
+        "zeromq" // Installed separately.
       ],
       "tryExtensions": [".ts", ".d.ts"]
     }

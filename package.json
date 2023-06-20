@@ -8,6 +8,7 @@
   },
   "main": "dist/ts/psbot/runner.js",
   "scripts": {
+    "postinstall": "npm install --no-save zeromq@6.0.0-beta.17",
     "prepare": "husky install",
     "build": "tsc",
     "build:watch": "tsc --watch",
@@ -69,8 +70,7 @@
     "seedrandom": "^3.0.5",
     "tmp-promise": "^3.0.3",
     "websocket": "^1.0.34",
-    "yaml": "^2.3.1",
-    "zeromq": "^6.0.0-beta.17"
+    "yaml": "^2.3.1"
   },
   "devDependencies": {
     "@pkmn/dex-types": "^0.7.43",
