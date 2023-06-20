@@ -34,7 +34,9 @@ def decode_state(buffer: Any) -> State:
 
 def decode_tensor_state(buffer: Any) -> TensorState:
     """Decodes a buffer into an encoded state tensor dict."""
-    state_flat = tf.constant(_decode_state_flat(buffer), dtype=tf.float32)
+    state_flat = tf.convert_to_tensor(
+        _decode_state_flat(buffer), dtype=tf.float32
+    )
     state_flat_split = tf.split(
         state_flat,
         [STATE_SHAPES_FLAT[name] for name in STATE_NAMES],

@@ -118,7 +118,7 @@ class DQNAgent(Agent):
                 continue
             # Exploitation.
             batch_states = {
-                name: tf.constant(
+                name: tf.convert_to_tensor(
                     np.stack([state[key][name] for key in keys]),
                     name=f"state/{name}",
                 )

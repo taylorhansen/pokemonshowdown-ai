@@ -70,25 +70,31 @@ class ReplayBuffer:
         dones = self.dones[indices]
 
         batch_states = {
-            name: tf.constant(
+            name: tf.convert_to_tensor(
                 np.stack([state[name] for state in states]),
                 dtype=tf.float32,
                 name=f"state/{name}",
             )
             for name in STATE_NAMES
         }
-        batch_actions = tf.constant(actions, dtype=tf.int32, name="action")
-        batch_rewards = tf.constant(rewards, dtype=tf.float32, name="reward")
+        batch_actions = tf.convert_to_tensor(
+            actions, dtype=tf.int32, name="action"
+        )
+        batch_rewards = tf.convert_to_tensor(
+            rewards, dtype=tf.float32, name="reward"
+        )
         batch_next_states = {
-            name: tf.constant(
+            name: tf.convert_to_tensor(
                 np.stack([next_state[name] for next_state in next_states]),
                 dtype=tf.float32,
                 name=f"next_state/{name}",
             )
             for name in STATE_NAMES
         }
-        batch_choices = tf.constant(choices, dtype=tf.float32, name="choices")
-        batch_dones = tf.constant(dones, dtype=tf.bool, name="done")
+        batch_choices = tf.convert_to_tensor(
+            choices, dtype=tf.float32, name="choices"
+        )
+        batch_dones = tf.convert_to_tensor(dones, dtype=tf.bool, name="done")
         return TensorExperience(
             state=batch_states,
             action=batch_actions,
