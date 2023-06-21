@@ -342,7 +342,7 @@ class DQNAgent(Agent):
         action_mask = tf.one_hot(action, len(ACTION_NAMES))  # (B, A)
         if self.config.model.dist is not None:
             # Broadcast over selected action's Q distribution.
-            action_mask = tf.expand_dims(action_mask, axis=-1)  # (B, A, 1)
+            action_mask = action_mask[..., tf.newaxis]  # (B, A, 1)
         action_mask = tf.stop_gradient(action_mask)
 
         with tf.GradientTape(watch_accessed_variables=False) as tape:
@@ -369,14 +369,10 @@ class DQNAgent(Agent):
         # Return data for metrics logging.
         if self.config.model.dist is not None:
             # Record mean of Q/tgt distributions for each sample in the batch.
-            support = tf.expand_dims(
-                tf.linspace(
-                    float(MIN_REWARD),
-                    float(MAX_REWARD),
-                    self.config.model.dist,
-                ),
-                axis=0,
+            support = tf.linspace(
+                float(MIN_REWARD), float(MAX_REWARD), self.config.model.dist
             )
+            support = support[tf.newaxis, ...]  # Broadcast: (1, D)
             q_pred = tf.reduce_sum(q_pred * support, axis=-1)
             td_target = tf.reduce_sum(td_target * support, axis=-1)
         return loss, activations, gradients, q_pred, td_target
@@ -403,34 +399,41 @@ class DQNAgent(Agent):
             # Infinite n-step reduces to episodic Monte Carlo returns.
             return reward
 
-        if self.config.model.dist is not None:
-            support = tf.expand_dims(
-                tf.linspace(
-                    float(MIN_REWARD), float(MAX_REWARD), self.config.model.dist
-                ),
-                axis=0,
-            )
-
         # Double DQN target: r + gamma^n * Qt(s', argmax_a(Q(s', a))).
-        tgt_next_q = self.target(next_state)
+
+        tgt_next_q = self.target(next_state)  # (B, A) or (B, A, D)
         next_q = self.model(next_state)  # (B, A) or (B, A, D)
+        tf.debugging.assert_same_float_dtype([tgt_next_q, next_q])
+
+        if self.config.model.dist is not None:
+            support = tf.linspace(
+                tf.constant(MIN_REWARD, dtype=next_q.dtype),
+                tf.constant(MAX_REWARD, dtype=next_q.dtype),
+                self.config.model.dist,
+            )
+            support = support[tf.newaxis, ...]  # Broadcast: (1, D)
 
         if self.config.model.dist is not None:
             # Distributional RL: Take expectation (mean) of the Q distribution.
             # (B, A, D) -> (B, A)
             next_q = tf.reduce_sum(next_q * support, axis=-1)
 
-        # Mask out illegal actions from argmax.
-        next_q += (1 - choices) * -1e9
-        # Get best action for next state: argmax_a(Q(s', a))
+        # Get best action for next state: argmax_{legal(a)}(Q(s', a))
+        next_q += (1 - choices) * (
+            -1e9 if next_q.dtype != tf.float16 else tf.float16.min
+        )
         next_action = tf.argmax(next_q, axis=-1, output_type=tf.int32)
+
         # Get target Q value of best action: Qt(s', argmax_a(...))
-        next_action_mask = tf.one_hot(next_action, depth=len(ACTION_NAMES))
+        next_action_mask = tf.one_hot(
+            next_action, depth=len(ACTION_NAMES), dtype=tgt_next_q.dtype
+        )
         if self.config.model.dist is not None:
             # Broadcast along distribution dimension.
-            next_action_mask = tf.expand_dims(next_action_mask, axis=-1)
+            next_action_mask = next_action_mask[..., tf.newaxis]  # (B, A, 1)
         tgt_next_q = tf.reduce_sum(
-            tgt_next_q * next_action_mask, axis=1
+            tgt_next_q * next_action_mask,
+            axis=-1 if self.config.model.dist is None else -2,  # Dim A.
         )  # (B,) or (B, D)
 
         # Apply reward and discount factor: r + gamma^n * Qt(...)

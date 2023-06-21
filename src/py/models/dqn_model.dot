@@ -84,6 +84,41 @@ digraph model {
         moves [label="Pokemon Moves\n(2x7x4x472)"]
     }
 
+    subgraph cluster_alive {
+        label = "Alive Masking"
+
+        alive_split [label="Split\n(2x1), (2x5)"]
+        alive_concat [label="Concat Active w/\nOverride\n(2x7)"]
+        volatile_mask [label="Mask\n(2x1x68)"]
+        basic_mask [label="Mask\n(2x6x11)"]
+        species_mask [label="Mask\n(2x7x557)"]
+        types_mask [label="Mask\n(2x7x17)"]
+        stats_mask [label="Mask\n(2x7x35)"]
+        ability_mask [label="Mask\n(2x7x123)"]
+        item_mask [label="Mask\n(2x6x2x209)"]
+        moves_mask [label="Mask\n(2x7x4x472)"]
+
+        alive:e -> alive_split:w
+        alive:e -> alive_concat:w
+        alive_split:e -> alive_concat:w [label="(2x1)"]
+        volatile:e -> volatile_mask:w
+        alive_split:e -> volatile_mask:w [label="(2x1)"]
+        basic:e -> basic_mask:w
+        alive:e -> basic_mask:w
+        species:e -> species_mask:w
+        alive_concat:e -> species_mask:w
+        types:e -> types_mask:w
+        alive_concat:e -> types_mask:w
+        stats:e -> stats_mask:w
+        alive_concat:e -> stats_mask:w
+        ability:e -> ability_mask:w
+        alive_concat:e -> ability_mask:w
+        item:e -> item_mask:w
+        alive_concat:e -> item_mask:w
+        moves:e -> moves_mask:w
+        alive_concat:e -> moves_mask:w
+    }
+
     subgraph cluster_encoder {
         label = "Individual Encoders"
 
@@ -100,17 +135,17 @@ digraph model {
 
         room_status:e -> room_status_dense:w
         team_status:e -> team_status_dense:w
-        volatile:e -> volatile_dense:w
-        basic:e -> basic_dense:w
-        species:e -> species_dense:w
-        types:e -> types_dense:w
-        stats:e -> stats_dense:w
-        ability:e -> ability_dense:w
-        item:e -> item_dense:w
-        moves:e -> moves_dense:w
+        volatile_mask:e -> volatile_dense:w
+        basic_mask:e -> basic_dense:w
+        species_mask:e -> species_dense:w
+        types_mask:e -> types_dense:w
+        stats_mask:e -> stats_dense:w
+        ability_mask:e -> ability_dense:w
+        item_mask:e -> item_dense:w
+        moves_mask:e -> moves_dense:w
 
         room_status_ln [label = "Layer Norm\n(64)"]
-        team_status_ln [label = "Layer Norm)\n(2x64)"]
+        team_status_ln [label = "Layer Norm\n(2x64)"]
         volatile_ln [label = "Layer Norm\n(2x1x128)"]
         basic_ln [label="Layer Norm\n(2x6x64)"]
         species_ln [label="Layer Norm\n(2x7x128)"]
@@ -151,7 +186,6 @@ digraph model {
         pokemon_with_override_split [label="Split + Reshape\n(2x1x1280), (2x5x640)"]
         pokemon_concat [label="Reshape + Concat\n(2x6x320)"]
         pokemon_split [label="Split\n(2x1x320), (2x5x320)"]
-        alive_split [label="Split\n(2x1), (2x5)"]
 
         species_ln:e -> pokemon_with_override_concat:w
         types_ln:e -> pokemon_with_override_concat:w
@@ -162,7 +196,6 @@ digraph model {
         basic_ln:e -> pokemon_concat:w
         item_ln:e -> pokemon_concat:w
         pokemon_concat:e -> pokemon_split:w
-        alive:e -> alive_split:w
 
         moves_agg -> pokemon_concat [style=invis]
     }
@@ -171,16 +204,13 @@ digraph model {
         label = "Active Features"
 
         active_concat [label="Concat\n(2x1x1728)"]
-        active_mask [label="Mask\n(2x1x1728)"]
         active_dense [label="Dense(256) + ReLU\n(2x1x256)"]
         active_ln [label="Layer Norm\n(2x1x256)"]
 
         volatile_ln:e -> active_concat:w
         pokemon_with_override_split:se -> active_concat:w
         pokemon_split:se -> active_concat:w
-        active_concat:e -> active_mask:w
-        alive_split:e -> active_mask:w [label="(mask)  "]
-        active_mask:e -> active_dense:w
+        active_concat:e -> active_dense:w
         active_dense:e -> active_ln:w
     }
 
@@ -188,15 +218,12 @@ digraph model {
         label = "Bench Features"
 
         bench_concat [label="Concat\n(2x5x960)"]
-        bench_mask [label="Mask\n(2x5x960)"]
         bench_dense [label="Dense(256) + ReLU\n(2x5x256)"]
         bench_ln [label="Layer Norm\n(2x5x256)"]
 
         pokemon_with_override_split:e -> bench_concat:w
         pokemon_split:e ->  bench_concat:w
-        bench_concat:e -> bench_mask:w
-        alive_split:e -> bench_mask:w [label="\n(mask)"]
-        bench_mask:e -> bench_dense:w
+        bench_concat:e -> bench_dense:w
         bench_dense:e -> bench_ln:w
 
         active_concat -> bench_concat [style=invis]
@@ -209,16 +236,16 @@ digraph model {
         bench_agg [label="PMA(8,32)\n(2x256)"]
 
         bench_ln:e -> bench_enc:w
-        alive_split:e -> bench_enc:w [label="(mask)"]
+        alive_split:e -> bench_enc:w [label="(2x5)"]
         bench_enc:e -> bench_agg:w
-        alive_split:e -> bench_agg:w [label="(mask)"]
+        alive_split:e -> bench_agg:w [label="(2x5)"]
     }
 
     subgraph cluster_global {
         label = "Global"
 
         global_concat [label="Flatten + Concat\n(1216)"]
-        global_dense [label="Dense(256) + RelU\n(256)"]
+        global_dense [label="Dense(256) + ReLU\n(256)"]
         global_ln [label="Layer Norm\n(256)"]
         global_reshape [label="Reshape\n(1x256)"]
 
