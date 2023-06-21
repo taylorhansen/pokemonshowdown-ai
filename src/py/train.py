@@ -251,7 +251,9 @@ async def train(config: TrainConfig):
             pbar.update()
 
         state, info = env.reset(
-            rollout_battles=config.rollout.num_episodes,
+            rollout_battles=max(
+                0, config.rollout.num_episodes - (int(episode) - 1)
+            ),
             rollout_opponents=config.rollout.opponents,
         )
         done = False
