@@ -9,9 +9,8 @@ import tensorflow as tf
 import zmq
 import zmq.asyncio
 
-from .gen.shapes import STATE_NAMES
 from .models.dqn_model import DQNModel
-from .utils.state import TensorState, decode_tensor_state
+from .utils.state import decode_tensor_state
 
 
 class Ready(TypedDict):
@@ -66,8 +65,8 @@ class Pending(NamedTuple):
     req: ModelRequest
     """Request json."""
 
-    state: TensorState
-    """Encoded tensor state input dict."""
+    state: tf.Tensor
+    """Encoded tensor state input."""
 
 
 async def server(
@@ -117,12 +116,9 @@ async def server(
             pending.append(Pending(routing_id=routing_id, req=req, state=state))
 
         # Execute batch.
-        batch_state = {
-            label: tf.stack([p.state[label] for p in pending])
-            for label in STATE_NAMES
-        }
+        batch_state = tf.stack([p.state for p in pending])
         if debug_outputs:
-            ranked_actions, q_values = model.greedy_debug(batch_state)
+            ranked_actions, q_values = model.greedy_with_q(batch_state)
             q_values = DQNModel.decode_q_values(q_values)
         else:
             ranked_actions = model.greedy(batch_state)

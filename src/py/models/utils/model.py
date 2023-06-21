@@ -1,36 +1,26 @@
 """Model building utilities."""
-from types import MappingProxyType
-from typing import Final, Optional
+from typing import Optional
 
 import tensorflow as tf
 
-from ...gen.shapes import STATE_SHAPES
+from ...gen.shapes import STATE_SIZE
 from .attention import PMA, SAB
 
-STATE_SHAPES_WITH_BATCH: Final = MappingProxyType(
-    {label: (None, *shape) for label, shape in STATE_SHAPES.items()}
-)
-"""State input shapes with placeholder batch dimension."""
+
+def state_input_spec() -> tf.keras.layers.InputSpec:
+    """Creates an input spec for the battle state."""
+    return tf.keras.layers.InputSpec(
+        dtype=tf.float32,
+        shape=(
+            None,
+            STATE_SIZE,
+        ),
+    )
 
 
-def state_input_spec() -> dict[str, tf.keras.layers.InputSpec]:
-    """Creates an input spec dict for the battle state."""
-    return {
-        label: tf.keras.layers.InputSpec(
-            dtype=tf.float32, shape=shape, name=label
-        )
-        for label, shape in STATE_SHAPES_WITH_BATCH.items()
-    }
-
-
-def state_tensor_spec(prefix="state") -> dict[str, tf.keras.layers.InputSpec]:
-    """Creates a tensor spec dict for the battle state."""
-    return {
-        label: tf.TensorSpec(
-            shape=shape, dtype=tf.float32, name=f"{prefix}_{label}"
-        )
-        for label, shape in STATE_SHAPES_WITH_BATCH.items()
-    }
+def state_tensor_spec(name="state") -> tf.TensorSpec:
+    """Creates a tensor spec for the battle state with batch dimension."""
+    return tf.TensorSpec(shape=(None, STATE_SIZE), dtype=tf.float32, name=name)
 
 
 def value_function(

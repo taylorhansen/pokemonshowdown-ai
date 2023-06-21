@@ -8,6 +8,7 @@ from collections import deque
 from pathlib import Path
 from typing import Final, NamedTuple, Optional, Union
 
+import numpy as np
 import tensorflow as tf
 import zmq
 import zmq.asyncio
@@ -15,7 +16,7 @@ import zmq.asyncio
 from ...config import BattlePoolConfig
 from ...utils.paths import PROJECT_DIR
 from ...utils.random import make_prng_seeds, randstr
-from ...utils.state import State, decode_state
+from ...utils.state import decode_state
 from .protocol import (
     AgentFinalRequest,
     AgentReply,
@@ -281,7 +282,7 @@ class BattlePool:
     async def agent_recv(
         self, flags=0
     ) -> tuple[
-        AgentKey, Union[AgentRequest, AgentFinalRequest], Optional[State]
+        AgentKey, Union[AgentRequest, AgentFinalRequest], Optional[np.ndarray]
     ]:
         """
         Receives an agent predict request from one of the active battles.
@@ -290,9 +291,8 @@ class BattlePool:
         :returns: A tuple containing:
         1. Id of the request socket. Used for sending the response back via
         `agent_send()`.
-        3. Parsed JSON protocol request.
-        4. Encoded battle state input data as a dictionary of tensors, if it was
-        transmitted.
+        2. Parsed JSON protocol request.
+        3. Encoded battle state input data, if it was transmitted.
         """
         msg = await self.agent_sock.recv_multipart(flags=flags, copy=False)
         worker_id_frame, req_frame = msg[:2]

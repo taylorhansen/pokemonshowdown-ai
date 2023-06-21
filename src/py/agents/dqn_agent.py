@@ -1,5 +1,6 @@
 """DQN agent."""
 import math
+from contextlib import nullcontext
 from typing import Optional
 
 import numpy as np
@@ -7,10 +8,9 @@ import tensorflow as tf
 
 from ..config import DQNConfig
 from ..environments.battle_env import AgentDict, InfoDict
-from ..gen.shapes import ACTION_NAMES, MAX_REWARD, MIN_REWARD, STATE_NAMES
+from ..gen.shapes import ACTION_NAMES, MAX_REWARD, MIN_REWARD
 from ..models.dqn_model import DQNModel
 from ..models.utils.model import state_tensor_spec
-from ..utils.state import State, TensorState
 from ..utils.typing import Experience
 from .agent import Agent
 from .utils.n_step_returns import NStepReturns
@@ -58,7 +58,7 @@ class DQNAgent(Agent):
             max_size=config.experience.buffer_size
         )
         self.n_step: AgentDict[NStepReturns] = {}
-        self.last_state: AgentDict[State] = {}
+        self.last_state: AgentDict[np.ndarray] = {}
 
         self.step = tf.Variable(0, name="step", dtype=tf.int64)
         # Ensure optimizer state is loaded from checkpoint.
@@ -76,7 +76,7 @@ class DQNAgent(Agent):
 
     def select_action(
         self,
-        state: AgentDict[State],
+        state: AgentDict[tf.Tensor],
         info: AgentDict[InfoDict],
         episode: Optional[tf.Variable] = None,
         training=False,
@@ -84,8 +84,7 @@ class DQNAgent(Agent):
         """
         Selects action for each agent.
 
-        :param state: Encoded state input tensors for each battle's ready
-        players.
+        :param state: Encoded state inputs for each battle's ready players.
         :param info: Dictionaries that include additional info for each
         battle's ready players.
         :param episode: Variable indicating the current episode.
@@ -113,22 +112,22 @@ class DQNAgent(Agent):
                 explore_keys, DQNModel.decode_ranked_actions(random_actions)
             )
 
-        for keys, use_prev in [(model_keys, False), (prev_keys, True)]:
+        for keys, model in [
+            (model_keys, self.model),
+            (prev_keys, self.previous),
+        ]:
             if len(keys) <= 0:
                 continue
             # Exploitation.
-            batch_states = {
-                name: tf.convert_to_tensor(
-                    np.stack([state[key][name] for key in keys]),
-                    name=f"state/{name}",
+            with (
+                tf.device(self.config.inference_device)
+                if self.config.inference_device is not None
+                else nullcontext()
+            ):
+                batch_states = tf.stack(
+                    [state[key] for key in keys], name="state"
                 )
-                for name in STATE_NAMES
-            }
-            greedy_actions = (
-                self.previous.greedy(batch_states)
-                if use_prev
-                else self.model.greedy(batch_states)
-            )
+            greedy_actions = model.greedy(batch_states)
             result |= zip(keys, DQNModel.decode_ranked_actions(greedy_actions))
 
         return result
@@ -199,9 +198,9 @@ class DQNAgent(Agent):
 
     def update_model(
         self,
-        state: AgentDict[State],
+        state: AgentDict[np.ndarray],
         reward: AgentDict[float],
-        next_state: AgentDict[State],
+        next_state: AgentDict[np.ndarray],
         terminated: AgentDict[bool],
         truncated: AgentDict[bool],
         info: AgentDict[InfoDict],
@@ -272,9 +271,14 @@ class DQNAgent(Agent):
                     batch_size=self.config.learn.batch_size,
                     _r=1,
                 ):
-                    batch = self.replay_buffer.sample(
-                        self.config.learn.batch_size
-                    )
+                    with (
+                        tf.device(self.config.learn.batch_device)
+                        if self.config.learn.batch_device is not None
+                        else nullcontext()
+                    ):
+                        batch = self.replay_buffer.sample(
+                            self.config.learn.batch_size
+                        )
                     self._learn_step(*batch)
 
     @tf.function(
@@ -293,10 +297,10 @@ class DQNAgent(Agent):
     )
     def _learn_step(
         self,
-        state: TensorState,
+        state: tf.Tensor,
         action: tf.Tensor,
         reward: tf.Tensor,
-        next_state: TensorState,
+        next_state: tf.Tensor,
         choices: tf.Tensor,
         done: tf.Tensor,
     ):
@@ -325,10 +329,10 @@ class DQNAgent(Agent):
     )
     def _learn_step_impl(
         self,
-        state: TensorState,
+        state: tf.Tensor,
         action: tf.Tensor,
         reward: tf.Tensor,
-        next_state: TensorState,
+        next_state: tf.Tensor,
         choices: tf.Tensor,
         done: tf.Tensor,
     ):
@@ -380,7 +384,7 @@ class DQNAgent(Agent):
     def _calculate_target(
         self,
         reward: tf.Tensor,
-        next_state: TensorState,
+        next_state: tf.Tensor,
         choices: tf.Tensor,
         done: tf.Tensor,
     ) -> tf.Tensor:

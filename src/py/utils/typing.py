@@ -4,13 +4,11 @@ from typing import NamedTuple
 import numpy as np
 import tensorflow as tf
 
-from .state import State, TensorState
-
 
 class Experience(NamedTuple):
     """Stores information about a state transition for use in learning."""
 
-    state: State
+    state: tf.Tensor
     """State at beginning of transition."""
 
     action: int
@@ -19,7 +17,7 @@ class Experience(NamedTuple):
     reward: float
     """Reward from state transition."""
 
-    next_state: State
+    next_state: tf.Tensor
     """State at end of transition."""
 
     choices: np.ndarray
@@ -32,9 +30,9 @@ class Experience(NamedTuple):
 class TensorExperience(NamedTuple):
     """Experience where fields are replaced with tensors. Can be batched."""
 
-    state: TensorState
+    state: tf.Tensor
     action: tf.Tensor
     reward: tf.Tensor
-    next_state: TensorState
+    next_state: tf.Tensor
     choices: tf.Tensor
     done: tf.Tensor

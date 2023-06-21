@@ -1,5 +1,6 @@
 """Main RL environment for training script."""
 import asyncio
+from contextlib import nullcontext
 from pathlib import Path
 from typing import NamedTuple, Optional, TypedDict, TypeVar, Union, cast
 
@@ -8,8 +9,7 @@ import tensorflow as tf
 import zmq
 
 from ..config import BattleEnvConfig, EvalOpponentConfig, RolloutOpponentConfig
-from ..gen.shapes import ACTION_IDS, ACTION_NAMES
-from ..utils.state import State
+from ..gen.shapes import ACTION_IDS, ACTION_NAMES, STATE_SIZE
 from .environment import Environment
 from .utils.battle_pool import AgentKey, BattleKey, BattlePool
 from .utils.protocol import AgentFinalRequest, AgentRequest, BattleReply
@@ -70,6 +70,13 @@ class BattleEnv(Environment):
         self.queue_task: Optional[asyncio.Task[None]] = None
         self.active_battles: dict[BattleKey, ActiveBattle] = {}
 
+        with (
+            tf.device(config.device)
+            if config.device is not None
+            else nullcontext()
+        ):
+            self._zero_state = tf.zeros(shape=(STATE_SIZE,), dtype=tf.float32)
+
     def __del__(self):
         self.close()
 
@@ -92,7 +99,7 @@ class BattleEnv(Environment):
         rollout_battles=0,
         rollout_opponents: tuple[RolloutOpponentConfig, ...] = (),
         eval_opponents: tuple[EvalOpponentConfig, ...] = (),
-    ) -> tuple[AgentDict[State], AgentDict[InfoDict]]:
+    ) -> tuple[AgentDict[np.ndarray], AgentDict[InfoDict]]:
         """
         Resets the env.
 
@@ -214,7 +221,7 @@ class BattleEnv(Environment):
     async def step(
         self, action: AgentDict[list[str]]
     ) -> tuple[
-        AgentDict[State],
+        AgentDict[tf.Tensor],
         AgentDict[float],
         AgentDict[bool],
         AgentDict[bool],
@@ -231,9 +238,9 @@ class BattleEnv(Environment):
         call. Should be empty on the first call.
         :returns: A tuple containing:
 
-        1. `state`: Dictionary of encoded battle state dicts for each stepped
-        agent. Entry is empty if the agent observes a terminal state or the game
-        is truncated.
+        1. `state`: Dictionary of encoded battle states for each stepped agent.
+        Entry is zeroed if the agent observes a terminal state or the game is
+        truncated.
         2. `reward`: Dictionary of rewards for each stepped agent.
         3. `terminated`: Dictionary of bools for each stepped agent as to
         whether the battle has been completed from the agent's perspective.
@@ -256,7 +263,7 @@ class BattleEnv(Environment):
         for key, ranked_actions in action.items():
             await self.battle_pool.agent_send(key, ranked_actions)
 
-        states: AgentDict[State] = {}
+        states: AgentDict[tf.Tensor] = {}
         rewards: AgentDict[float] = {}
         terminateds: AgentDict[bool] = {}
         truncateds: AgentDict[bool] = {}
@@ -286,7 +293,12 @@ class BattleEnv(Environment):
                     key.player in self.active_battles[key.battle].active_agents
                 )
                 assert state is not None
-                states[key] = state
+                with (
+                    tf.device(self.config.device)
+                    if self.config.device is not None
+                    else nullcontext()
+                ):
+                    states[key] = tf.convert_to_tensor(state, dtype=tf.float32)
                 rewards[key] = (
                     req["reward"]
                     if "reward" in req and req["reward"] is not None
@@ -305,7 +317,7 @@ class BattleEnv(Environment):
                 # Note: Don't count final transitions under the batch_limit.
                 req = cast(AgentFinalRequest, req)
                 assert state is None
-                states[key] = {}
+                states[key] = self._zero_state
                 rewards[key] = (
                     req["reward"]
                     if "reward" in req and req["reward"] is not None

@@ -14,10 +14,11 @@ from ..gen.shapes import (
     NUM_POKEMON,
     NUM_TEAMS,
     STATE_NAMES,
+    STATE_SHAPES,
+    STATE_SHAPES_FLAT,
+    STATE_SIZE,
 )
-from ..utils.state import TensorState
 from .utils.model import (
-    STATE_SHAPES_WITH_BATCH,
     create_dense_stack,
     pooling_attention,
     self_attention_block,
@@ -156,27 +157,37 @@ class DQNModel(tf.keras.Model):
     def init(self):
         """Initializes model weights."""
         self.input_spec = state_input_spec()
-        self.build({**STATE_SHAPES_WITH_BATCH})
+        self.build((None, STATE_SIZE))
 
     # pylint: disable-next=too-many-branches
     def call(
         self,
-        inputs: TensorState,
+        inputs,
         training=False,
         mask=None,
         return_activations=False,
     ):
-        # Note: tf.concat() and other functions seem to be broken for pylint.
-        # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
+        batch_shape = tf.shape(inputs)[:-1]
 
-        assert set(inputs.keys()) == set(STATE_NAMES)
+        features = dict(
+            zip(
+                STATE_NAMES,
+                tf.split(
+                    inputs,
+                    [STATE_SHAPES_FLAT[label] for label in STATE_NAMES],
+                    axis=-1,
+                ),
+            )
+        )
 
         if return_activations:
             activations = {}
 
         # Initial input features.
-        features = inputs.copy()
         for label in STATE_NAMES:
+            features[label] = tf.reshape(
+                features[label], (-1, *STATE_SHAPES[label])
+            )
             for layer in self.input_fcs.get(label, []):
                 features[label] = layer(features[label], training=training)
                 if return_activations:
@@ -205,18 +216,20 @@ class DQNModel(tf.keras.Model):
                 f"Invalid config.pooling type '{self.config.pooling}'"
             )
 
+        # Note: tf.concat() seems to be broken for pylint.
+        # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
+
         # Concat pre-batched item + last_item tensors.
         # (B,2,6,2,X) -> (B,2,6,2*X)
         item = features["item"]
         item_flat = tf.reshape(
             item,
-            shape=tf.stack(
+            shape=tf.concat(
                 [
-                    tf.shape(item)[0],
-                    NUM_TEAMS,
-                    NUM_POKEMON,
-                    2 * item.shape[-1],
-                ]
+                    batch_shape,
+                    [NUM_TEAMS, NUM_POKEMON, 2 * item.shape[-1]],
+                ],
+                axis=-1,
             ),
         )
 
@@ -244,13 +257,9 @@ class DQNModel(tf.keras.Model):
         # (B,2,2,X) -> (B,2,1,2*X)
         active1 = tf.reshape(
             active1,
-            shape=tf.stack(
-                [
-                    tf.shape(active1)[0],
-                    NUM_TEAMS,
-                    NUM_ACTIVE,
-                    2 * active1.shape[-1],
-                ],
+            shape=tf.concat(
+                [batch_shape, [NUM_TEAMS, NUM_ACTIVE, 2 * active1.shape[-1]]],
+                axis=-1,
             ),
         )
 
@@ -313,12 +322,18 @@ class DQNModel(tf.keras.Model):
         # (B,X)
         global_features_list = [features["room_status"]] + [
             tf.reshape(
-                features,
-                shape=tf.stack(
-                    [tf.shape(features)[0], tf.reduce_prod(features.shape[1:])]
+                tensor,
+                shape=tf.concat(
+                    [
+                        batch_shape,
+                        tf.expand_dims(
+                            tf.reduce_prod(tensor.shape[1:]), axis=0
+                        ),
+                    ],
+                    axis=-1,
                 ),
             )
-            for features in [features["team_status"], active, pooled_bench]
+            for tensor in [features["team_status"], active, pooled_bench]
         ]
         global_features = tf.concat(global_features_list, axis=-1)
         for layer in self.global_fcs:
@@ -362,6 +377,8 @@ class DQNModel(tf.keras.Model):
         # (B,9,D) where D=dist or 1
         action_value = tf.concat([action_move, action_switch], axis=-2)
 
+        # pylint: enable=unexpected-keyword-arg, no-value-for-parameter
+
         if self.config.dueling:
             # (B,1,D)
             state_value = global_features
@@ -386,8 +403,6 @@ class DQNModel(tf.keras.Model):
             return output, activations
         return output
 
-        # pylint: enable=unexpected-keyword-arg, no-value-for-parameter
-
     def get_config(self):
         return super().get_config() | {"config": self.config.__dict__}
 
@@ -397,11 +412,11 @@ class DQNModel(tf.keras.Model):
         return cls(**config)
 
     @tf.function(input_signature=[state_tensor_spec()], jit_compile=True)
-    def greedy(self, state: TensorState):
+    def greedy(self, state):
         """
         Creates action id rankings based on predicted Q-values.
 
-        :param state: Encoded battle state input tensors.
+        :param state: Encoded battle state input.
         :returns: A tensor containing all possible action ids sorted by
         predicted Q-value for each sample in the batch of input states. If
         `return_output` is true, then a tuple is returned with the first element
@@ -411,12 +426,12 @@ class DQNModel(tf.keras.Model):
         return self._greedy(state)
 
     @tf.function(input_signature=[state_tensor_spec()], jit_compile=True)
-    def greedy_debug(self, state: TensorState):
+    def greedy_with_q(self, state):
         """
         Creates action id rankings based on predicted Q-values, while also
         providing the Q-values that informed those rankings.
 
-        :param state: Encoded battle state input tensors.
+        :param state: Encoded battle state input.
         :returns: A tuple with the first element being a tensor containing all
         possible action ids sorted by predicted Q-value for each sample in the
         batch of input states, and the second element being the actual list of
@@ -424,7 +439,7 @@ class DQNModel(tf.keras.Model):
         """
         return self._greedy(state, return_output=True)
 
-    def _greedy(self, state: TensorState, return_output=False):
+    def _greedy(self, state: tf.Tensor, return_output=False):
         # Get Q-values for all possible actions.
         q_values = self(state)
         if self.config.dist is not None:
