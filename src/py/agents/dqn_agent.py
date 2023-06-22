@@ -151,8 +151,8 @@ class DQNAgent(Agent):
         """Gets the current exploration rate."""
         explore = self.config.exploration
         if isinstance(explore, float):
-            epsilon = tf.constant(explore, tf.float32)
-        elif explore.decay_type == "linear":
+            return tf.constant(explore, tf.float32)
+        if explore.decay_type == "linear":
             # Linearly interpolate through the points (0, start) and
             # (episodes, end) where x=episode and y=epsilon.
             # Equation: epsilon = start - (decay_rate * episode)
