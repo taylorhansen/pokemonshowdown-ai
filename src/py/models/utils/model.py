@@ -64,22 +64,20 @@ def create_dense_stack(
     return [
         layer
         for i, hidden in enumerate(units)
-        for layer in (
-            [
-                tf.keras.layers.Dense(
-                    units=hidden,
-                    activation="relu",
-                    kernel_initializer="he_normal",
-                    bias_initializer="zeros",
-                    name=f"{name}/dense_{i+1}",
-                )
-            ]
-            + (
+        for layer in [
+            tf.keras.layers.Dense(
+                units=hidden,
+                kernel_initializer="he_normal",
+                bias_initializer="zeros",
+                name=f"{name}/dense_{i+1}",
+            ),
+            *(
                 [tf.keras.layers.LayerNormalization(name=f"{name}/ln_{i+1}")]
                 if use_layer_norm
                 else []
-            )
-        )
+            ),
+            tf.keras.layers.ReLU(name=f"{name}/relu_{i+1}"),
+        ]
     ]
 
 
