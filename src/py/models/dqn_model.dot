@@ -74,7 +74,6 @@ digraph model {
         room_status [label="Room Status\n(6)"]
         team_status [label="Team Status\n(2x16)"]
         volatile [label="Active Volatile\n(2x1x68)"]
-        alive [label="Pokemon Alive\n(2x6)"]
         basic [label="Pokemon Basic\n(2x6x11)"]
         species [label="Pokemon Species\n(2x7x557)"]
         types [label="Pokemon Types\n(2x7x17)"]
@@ -82,41 +81,6 @@ digraph model {
         ability [label="Pokemon Ability\n(2x7x123)"]
         item [label="Pokemon Item\n(2x6x2x209)"]
         moves [label="Pokemon Moves\n(2x7x4x472)"]
-    }
-
-    subgraph cluster_alive {
-        label = "Alive Masking"
-
-        alive_split [label="Split\n(2x1), (2x5)"]
-        alive_concat [label="Concat Active w/\nOverride\n(2x7)"]
-        volatile_mask [label="Mask\n(2x1x68)"]
-        basic_mask [label="Mask\n(2x6x11)"]
-        species_mask [label="Mask\n(2x7x557)"]
-        types_mask [label="Mask\n(2x7x17)"]
-        stats_mask [label="Mask\n(2x7x35)"]
-        ability_mask [label="Mask\n(2x7x123)"]
-        item_mask [label="Mask\n(2x6x2x209)"]
-        moves_mask [label="Mask\n(2x7x4x472)"]
-
-        alive:e -> alive_split:w
-        alive:e -> alive_concat:w
-        alive_split:e -> alive_concat:w [label="(2x1)"]
-        volatile:e -> volatile_mask:w
-        alive_split:e -> volatile_mask:w [label="(2x1)"]
-        basic:e -> basic_mask:w
-        alive:e -> basic_mask:w
-        species:e -> species_mask:w
-        alive_concat:e -> species_mask:w
-        types:e -> types_mask:w
-        alive_concat:e -> types_mask:w
-        stats:e -> stats_mask:w
-        alive_concat:e -> stats_mask:w
-        ability:e -> ability_mask:w
-        alive_concat:e -> ability_mask:w
-        item:e -> item_mask:w
-        alive_concat:e -> item_mask:w
-        moves:e -> moves_mask:w
-        alive_concat:e -> moves_mask:w
     }
 
     subgraph cluster_encoder {
@@ -135,14 +99,14 @@ digraph model {
 
         room_status:e -> room_status_dense:w
         team_status:e -> team_status_dense:w
-        volatile_mask:e -> volatile_dense:w
-        basic_mask:e -> basic_dense:w
-        species_mask:e -> species_dense:w
-        types_mask:e -> types_dense:w
-        stats_mask:e -> stats_dense:w
-        ability_mask:e -> ability_dense:w
-        item_mask:e -> item_dense:w
-        moves_mask:e -> moves_dense:w
+        volatile:e -> volatile_dense:w
+        basic:e -> basic_dense:w
+        species:e -> species_dense:w
+        types:e -> types_dense:w
+        stats:e -> stats_dense:w
+        ability:e -> ability_dense:w
+        item:e -> item_dense:w
+        moves:e -> moves_dense:w
     }
 
     subgraph cluster_move {
@@ -208,9 +172,7 @@ digraph model {
         bench_agg [label="PMA(8,32)\n(2x256)"]
 
         bench_dense:e -> bench_enc:w
-        alive_split:e -> bench_enc:w [label="(2x5)"]
         bench_enc:e -> bench_agg:w
-        alive_split:e -> bench_agg:w [label="(2x5)"]
     }
 
     subgraph cluster_global {
