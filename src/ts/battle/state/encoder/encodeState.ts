@@ -4,7 +4,6 @@ import {ReadonlyBattleState} from "../BattleState";
 import {map} from "./Encoder";
 import {
     abilityEncoder,
-    aliveEncoder,
     allItemEncoder,
     basicEncoder,
     movesetEncoder,
@@ -56,7 +55,6 @@ export function allocEncodedState(mode?: "shared" | "unsafe"): {
 // Factored-out encoders for multiple encodeState() calls.
 const teamStatusEncoders = map(numTeams, teamStatusEncoder);
 const volatileStatusEncoders = map(numTeams, volatileStatusEncoder);
-const pokemonAliveEncoders = map(numTeams, map(numPokemon, aliveEncoder));
 const pokemonBasicEncoders = map(numTeams, map(numPokemon, basicEncoder));
 const pokemonSpeciesEncoders = map(
     numTeams,
@@ -140,9 +138,6 @@ export function encodeState(
                     arr,
                     actives.map(p => p.volatile),
                 );
-                break;
-            case "alive":
-                pokemonAliveEncoders.encode(arr, pokemon);
                 break;
             case "basic":
                 pokemonBasicEncoders.encode(arr, pokemon);

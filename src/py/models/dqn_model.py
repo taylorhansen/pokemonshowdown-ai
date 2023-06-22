@@ -82,7 +82,7 @@ class DQNModel(tf.keras.Model):
                 "moves": (128,),
             }.items()
         }
-        assert set(STATE_NAMES) == (set(self.input_fcs.keys()) | {"alive"})
+        assert set(STATE_NAMES) == set(self.input_fcs.keys())
         if config.attention:
             self.moveset_encoder = self_attention_block(
                 num_heads=4,
@@ -180,51 +180,14 @@ class DQNModel(tf.keras.Model):
             )
         )
 
-        # Note: tf.concat() seems to be broken for pylint.
-        # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
-
-        # (B,2,6)
-        alive_pokemon = tf.reshape(
-            features.pop("alive"), (-1, *STATE_SHAPES["alive"])
-        )
-        # (B,2,6) -> (B,2,1), (B,2,5)
-        alive_active, alive_bench = tf.split(
-            alive_pokemon, [NUM_ACTIVE, NUM_POKEMON - NUM_ACTIVE], axis=-1
-        )
-        # (B,2,7)
-        alive_pokemon_with_override = tf.concat(
-            [alive_active, alive_pokemon], axis=-1
-        )
-
         if return_activations:
             activations = {}
 
         # Initial input features.
         for label in STATE_NAMES:
-            if label == "alive":
-                continue
             features[label] = tf.reshape(
                 features[label], (-1, *STATE_SHAPES[label])
             )
-            # Mask out features of fainted pokemon, forcing them to zero which
-            # is the same encoding used for nonexistent/empty pokemon slots.
-            if label == "volatile":
-                # (B,2,1,X)
-                features[label] *= alive_active[..., tf.newaxis]
-            elif label == "basic":
-                # (B,2,6,X)
-                features[label] *= alive_pokemon[..., tf.newaxis]
-            elif label == "item":
-                # (B,2,6,2,X)
-                features[label] *= alive_pokemon[..., tf.newaxis, tf.newaxis]
-            elif label in {"species", "types", "stats", "ability"}:
-                # (B,2,7,X)
-                features[label] *= alive_pokemon_with_override[..., tf.newaxis]
-            elif label == "moves":
-                # (B,2,7,4,X)
-                features[label] *= alive_pokemon_with_override[
-                    ..., tf.newaxis, tf.newaxis
-                ]
             for layer in self.input_fcs.get(label, []):
                 features[label] = layer(features[label], training=training)
                 if return_activations:
@@ -252,6 +215,9 @@ class DQNModel(tf.keras.Model):
             raise ValueError(
                 f"Invalid config.pooling type '{self.config.pooling}'"
             )
+
+        # Note: tf.concat() seems to be broken for pylint.
+        # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
 
         # Concat pre-batched item + last_item tensors.
         # (B,2,6,2,X) -> (B,2,6,2*X)
@@ -317,19 +283,13 @@ class DQNModel(tf.keras.Model):
                 activations[layer.name] = bench
 
         if self.config.attention:
-            # Note: Masking is required for attention layers to prevent them
-            # from considering fainted pokemon features.
-            bench = self.bench_encoder(
-                bench, training=training, mask=alive_bench
-            )
+            bench = self.bench_encoder(bench, training=training)
             if return_activations:
                 activations[self.bench_encoder.name] = bench
 
         # (B,2,X)
         if self.config.pooling == "attention":
-            pooled_bench = self.bench_pooling(
-                bench, training=training, mask=alive_bench
-            )
+            pooled_bench = self.bench_pooling(bench, training=training)
             # Collapse PMA seed dimension.
             pooled_bench = tf.squeeze(pooled_bench, axis=-2)
             if return_activations:
