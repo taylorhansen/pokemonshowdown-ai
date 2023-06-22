@@ -212,6 +212,8 @@ async def train(config: TrainConfig):
             step=agent.step,
         )
         ckpt_manager = tf.train.CheckpointManager(ckpt, ckpt_dir, max_to_keep=5)
+        print(f"Configured to write checkpoints to {ckpt_dir}")
+
         ckpt_options = tf.train.CheckpointOptions(enable_async=True)
         if (restore_path := ckpt_manager.restore_or_initialize()) is not None:
             print(f"Restored from {restore_path}")
