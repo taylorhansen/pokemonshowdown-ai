@@ -104,12 +104,14 @@ class BattlePool:
 
         self.battle_sock = self.ctx.socket(zmq.ROUTER)
         # Prevent indefinite blocking.
-        self.battle_sock.setsockopt(zmq.SNDTIMEO, 60_000)  # 1min
+        self.battle_sock.setsockopt(zmq.SNDTIMEO, 10_000)  # 10s
+        self.battle_sock.setsockopt(zmq.RCVTIMEO, 10_000)
         self.battle_sock.bind(f"ipc:///tmp/psai-battle-socket-{self.sock_id}")
 
         self.agent_sock = self.ctx.socket(zmq.ROUTER)
         # The JS simulator is very fast compared to the ML code so it shouldn't
-        # take long at all to send predictions/receive requests.
+        # take long at all to send predictions to or receive requests from any
+        # of the connected workers.
         self.agent_sock.setsockopt(zmq.SNDTIMEO, 10_000)  # 10s
         self.agent_sock.setsockopt(zmq.RCVTIMEO, 10_000)
         self.agent_sock.bind(f"ipc:///tmp/psai-agent-socket-{self.sock_id}")
@@ -345,6 +347,8 @@ class BattlePool:
 
     async def _pull_results(self) -> None:
         """Coroutine that pulls battle results from workers."""
+        # Requires a longer wait due to async battle scheduling.
+        self.battle_sock.setsockopt(zmq.RCVTIMEO, -1)
         while True:
             worker_id, msg = await self.battle_sock.recv_multipart()
             self._put_worker(worker_id)
