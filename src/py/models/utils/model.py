@@ -40,7 +40,7 @@ def value_function(
     :param use_layer_norm: Whether to use layer normalization.
     """
     return create_dense_stack(
-        units=units, name=name, use_layer_norm=use_layer_norm
+        units=units, name=name, use_layer_norm=use_layer_norm, omit_last_ln=True
     ) + [
         tf.keras.layers.Dense(
             units=dist or 1,
@@ -52,7 +52,7 @@ def value_function(
 
 
 def create_dense_stack(
-    units: tuple[int, ...], name: str, use_layer_norm=False
+    units: tuple[int, ...], name: str, use_layer_norm=False, omit_last_ln=False
 ) -> list[tf.keras.layers.Layer]:
     """
     Creates a stack of dense layers for an input tensor.
@@ -60,6 +60,8 @@ def create_dense_stack(
     :param units: Size of each hidden layer.
     :param name: Name scope prefix.
     :param use_layer_norm: Whether to use layer normalization.
+    :param omit_last_ln: If true and `use_layer_norm`, disables layer
+    normalization for the final layer.
     """
     return [
         layer
@@ -73,7 +75,7 @@ def create_dense_stack(
             ),
             *(
                 [tf.keras.layers.LayerNormalization(name=f"{name}/ln_{i+1}")]
-                if use_layer_norm
+                if use_layer_norm and (not omit_last_ln or i != len(units) - 1)
                 else []
             ),
             tf.keras.layers.ReLU(name=f"{name}/relu_{i+1}"),
