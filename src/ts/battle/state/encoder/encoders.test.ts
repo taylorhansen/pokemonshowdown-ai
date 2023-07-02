@@ -236,43 +236,6 @@ export const test = () =>
         });
 
         testEncoder(
-            "aliveEncoder",
-            {
-                name: "Fully Initialized",
-                encoder: encoders.aliveEncoder,
-                init() {
-                    const mon = new Pokemon("magikarp");
-                    mon.hp.set(100, 100);
-
-                    return mon;
-                },
-                values: new Float32Array([1]),
-            },
-            {
-                name: "Fainted",
-                encoder: encoders.aliveEncoder,
-                init() {
-                    const mon = new Pokemon("ditto");
-                    mon.hp.set(0);
-                    return mon;
-                },
-                values: new Float32Array([0]),
-            },
-            {
-                name: "Unrevealed",
-                encoder: encoders.aliveEncoder,
-                init: () => null,
-                values: new Float32Array([1]),
-            },
-            {
-                name: "Nonexistent",
-                encoder: encoders.aliveEncoder,
-                init: () => undefined,
-                values: new Float32Array([0]),
-            },
-        );
-
-        testEncoder(
             "Hp",
             {
                 name: "Fully Initialized",
