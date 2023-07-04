@@ -162,10 +162,16 @@ class MHA(tf.keras.layers.Layer):
         D=depth.
         :returns: A tensor of shape `(B..., H, N, D)`.
         """
-        batch_shape = [s if s is not None else -1 for s in qkv.shape[:-2]]
+        batch_shape = tf.shape(qkv)[:-2]
         num_elements = qkv.shape[-2]
         qkv = tf.reshape(
-            qkv, (*batch_shape, num_elements, self.num_heads, self.depth)
+            qkv,
+            # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
+            shape=tf.concat(
+                [batch_shape, (num_elements, self.num_heads, self.depth)],
+                axis=0,
+            ),
+            # pylint: enable=unexpected-keyword-arg, no-value-for-parameter
         )
         perm = [i for i, _ in enumerate(qkv.shape)]
         perm[-3], perm[-2] = perm[-2], perm[-3]  # Swap N and H dims.
@@ -181,13 +187,18 @@ class MHA(tf.keras.layers.Layer):
         elements, and D is the size of each attention head.
         :returns: A tensor of shape `(B..., N, H*D)`.
         """
-        batch_shape = [s if s is not None else -1 for s in heads.shape[:-3]]
+        batch_shape = tf.shape(heads)[:-3]
         num_heads, num_elements, depth = heads.shape[-3:]
         perm = [i for i, _ in enumerate(heads.shape)]
         perm[-3], perm[-2] = perm[-2], perm[-3]  # Swap N and H dims.
         heads = tf.transpose(heads, perm=perm)  # (B..., N, H, D)
         return tf.reshape(
-            heads, (*batch_shape, num_elements, num_heads * depth)
+            heads,
+            # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
+            shape=tf.concat(
+                [batch_shape, (num_elements, num_heads * depth)], axis=0
+            ),
+            # pylint: enable=unexpected-keyword-arg, no-value-for-parameter
         )
 
     def get_initializer_config(self):
@@ -225,10 +236,6 @@ class MHA(tf.keras.layers.Layer):
             | self.get_initializer_config()
             | {"num_heads": self.num_heads, "depth": self.depth}
         )
-
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
 
 
 @tf.keras.saving.register_keras_serializable()
@@ -327,10 +334,6 @@ class MAB(tf.keras.layers.Layer):
             }
         )
 
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
-
 
 @tf.keras.saving.register_keras_serializable()
 class SAB(tf.keras.layers.Layer):
@@ -409,10 +412,6 @@ class SAB(tf.keras.layers.Layer):
             }
         )
 
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
-
 
 @tf.keras.saving.register_keras_serializable()
 class PMA(tf.keras.layers.Layer):
@@ -469,15 +468,6 @@ class PMA(tf.keras.layers.Layer):
         self.rff_s = rff_s
         self.seed_initializer = tf.keras.initializers.get(seed_initializer)
 
-        self.seed = self.add_weight(
-            name="seed"
-            if kwargs.get("name") is None
-            else f"{kwargs['name']}/seed",
-            shape=(num_seeds, num_heads * depth),
-            dtype=self.dtype,
-            initializer=self.seed_initializer,
-            trainable=True,
-        )
         self.mab = MAB(
             num_heads=num_heads,
             depth=depth,
@@ -494,6 +484,16 @@ class PMA(tf.keras.layers.Layer):
             output_bias_initializer=output_bias_initializer,
             name="mab",
             dtype=self.dtype,
+        )
+
+    def build(self, input_shape):
+        # pylint: disable-next=attribute-defined-outside-init
+        self.seed = self.add_weight(
+            name="seed",
+            shape=(self.num_seeds, self.mab.mha.num_heads * self.mab.mha.depth),
+            dtype=self.dtype,
+            initializer=self.seed_initializer,
+            trainable=True,
         )
 
     def call(self, inputs, *args, training=None, mask=None, **kwargs):
@@ -519,7 +519,3 @@ class PMA(tf.keras.layers.Layer):
                 ),
             }
         )
-
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)

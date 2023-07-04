@@ -29,6 +29,23 @@ class DQNModelConfig:
 
 
 @dataclass
+class DRQNModelConfig(DQNModelConfig):
+    """Config for the DRQN model."""
+
+
+@dataclass
+class InferenceConfig:
+    """Config for model inference."""
+
+    batch_device: Optional[str] = None
+    """
+    Device on which to place the initial batch operation used for inference.
+    Usually should be the same as the one containing the tensors being batched,
+    i.e. the ones returned by the environment.
+    """
+
+
+@dataclass
 class ExplorationConfig:
     """Defines schedule for decayed epsilon-greedy."""
 
@@ -53,7 +70,10 @@ class ExperienceConfig:
     """Config for experience collection."""
 
     n_steps: int
-    """Number of lookahead steps for n-step returns."""
+    """
+    Number of lookahead steps for n-step returns, or zero to lookahead to the
+    end of the episode (i.e. Monte Carlo returns).
+    """
 
     discount_factor: float
     """Discount factor for future rewards."""
@@ -69,7 +89,7 @@ class DQNLearnConfig:
     buffer_prefill: int
     """
     Fill replay buffer with some experience before starting training. Must be
-    larget than `batch_size`.
+    larger than `batch_size`.
     """
 
     learning_rate: float
@@ -101,11 +121,19 @@ class DQNLearnConfig:
 
 
 @dataclass
+class DRQNLearnConfig(DQNLearnConfig):
+    """Config for DRQN learning algorithm."""
+
+
+@dataclass
 class DQNConfig:
     """Config for DQN algorithm."""
 
     model: DQNModelConfig
     """Config for the model."""
+
+    inference: InferenceConfig
+    """Config for model inference."""
 
     exploration: Union[float, ExplorationConfig]
     """
@@ -118,13 +146,6 @@ class DQNConfig:
     learn: DQNLearnConfig
     """Config for learning."""
 
-    inference_device: Optional[str] = None
-    """
-    Device on which to place the initial batch operation used for inference.
-    Usually should be the same as the one containing the tensors being batched,
-    i.e. the ones returned by the environment.
-    """
-
     @classmethod
     def from_dict(cls, config: dict):
         """Creates a DQNConfig from a JSON dictionary."""
@@ -133,6 +154,89 @@ class DQNConfig:
             config["exploration"] = ExplorationConfig(**config["exploration"])
         config["experience"] = ExperienceConfig(**config["experience"])
         config["learn"] = DQNLearnConfig(**config["learn"])
+        config["inference"] = InferenceConfig(**config["inference"])
+        return cls(**config)
+
+
+@dataclass
+class DRQNConfig:
+    """
+    Config for DRQN algorithm.
+
+    This is the recurrent version of DQN, where recurrent hidden states are
+    tracked and the replay buffer stores entire episodes from one perspective of
+    the battle. As such, learning steps are not counted by individual
+    environment steps (i.e. experiences or state transitions) but instead by
+    collected trajectories.
+    """
+
+    model: DRQNModelConfig
+    """Config for the model."""
+
+    inference: InferenceConfig
+    """Config for model inference."""
+
+    exploration: Union[float, ExplorationConfig]
+    """
+    Exploration rate for epsilon-greedy. Either a constant or a decay schedule.
+    """
+
+    experience: ExperienceConfig
+    """Config for experience collection."""
+
+    learn: DRQNLearnConfig
+    """Config for learning."""
+
+    unroll_length: int
+    """
+    Number of agent steps to unroll at once when storing trajectories in the
+    replay buffer and later learning from them.
+    """
+
+    burn_in: int = 0
+    """
+    Number of agent steps to include before the main unroll that gets skipped
+    during learning, used only for deriving a useful hidden state before
+    learning on the main `unroll_length`.
+
+    Used in the R2D2 paper to counteract staleness in the hidden states that get
+    stored in the replay buffer.
+    https://openreview.net/pdf?id=r1lyTjAqYX
+    """
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a DRQNConfig from a JSON dictionary."""
+        config["model"] = DRQNModelConfig(**config["model"])
+        if not isinstance(config["exploration"], float):
+            config["exploration"] = ExplorationConfig(**config["exploration"])
+        config["experience"] = ExperienceConfig(**config["experience"])
+        config["learn"] = DRQNLearnConfig(**config["learn"])
+        config["inference"] = InferenceConfig(**config["inference"])
+        return cls(**config)
+
+
+@dataclass
+class AgentConfig:
+    """Config for agent algorithm."""
+
+    type: str
+    """
+    Type of agent algorithm to use. Supported values are `"dqn"` and `"drqn"`.
+    """
+
+    config: Union[DQNConfig, DRQNConfig]
+    """Config for chosen agent algorithim."""
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates an AgentConfig from a JSON dictionary."""
+        if config["type"] == "dqn":
+            config["config"] = DQNConfig.from_dict(config["config"])
+        elif config["type"] == "drqn":
+            config["config"] = DRQNConfig.from_dict(config["config"])
+        else:
+            raise ValueError(f"Unknown agent type '{config['type']}'")
         return cls(**config)
 
 
@@ -295,8 +399,8 @@ class TrainConfig:
     the prefix specified by `name`.
     """
 
-    dqn: DQNConfig
-    """Config for DQN algorithm."""
+    agent: AgentConfig
+    """Config for agent algorithm."""
 
     rollout: RolloutConfig
     """Config for rollout."""
@@ -307,7 +411,7 @@ class TrainConfig:
     @classmethod
     def from_dict(cls, config: dict):
         """Creates a TrainConfig from a JSON dictionary."""
-        config["dqn"] = DQNConfig.from_dict(config["dqn"])
+        config["agent"] = AgentConfig.from_dict(config["agent"])
         config["rollout"] = RolloutConfig.from_dict(config["rollout"])
         config["eval"] = EvalConfig.from_dict(config["eval"])
         return cls(**config)

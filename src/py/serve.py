@@ -3,13 +3,16 @@ import argparse
 import asyncio
 import json
 from pathlib import Path
-from typing import NamedTuple, Optional, TypedDict
+from typing import NamedTuple, Optional, TypedDict, Union, cast
 
 import tensorflow as tf
 import zmq
 import zmq.asyncio
 
 from .models.dqn_model import DQNModel
+from .models.drqn_model import DRQNModel
+from .models.utils.greedy import decode_action_rankings
+from .models.utils.q_value import decode_q_values
 from .utils.state import decode_tensor_state
 
 
@@ -39,6 +42,11 @@ class ModelRequest(TypedDict):
     id: int
     """Differentiates multiple requests from the same client."""
 
+    key: str
+    """
+    Key for looking up hidden states or other context used to continue a battle.
+    """
+
 
 class ModelReply(TypedDict):
     """Model prediction reply protocol."""
@@ -49,11 +57,26 @@ class ModelReply(TypedDict):
     id: int
     """Differentiates multiple requests from the same client."""
 
+    key: str
+    """Same key that was passed from the ModelRequest."""
+
     ranked_actions: list[str]
     """Action names ranked by the model."""
 
     q_values: Optional[dict[str, float]]
     """Maps action names to predicted Q-values. Optional debug info."""
+
+
+class CleanupRequest(TypedDict):
+    """
+    Request protocol for cleaning up stored prediction context from a battle.
+    """
+
+    type: str
+    """Must be `"cleanup"`."""
+
+    key: str
+    """Key identifier for the stored context."""
 
 
 class Pending(NamedTuple):
@@ -74,9 +97,12 @@ async def server(
 ):
     """Serve worker function."""
 
-    model: DQNModel = tf.keras.models.load_model(
-        model_path, custom_objects={"DQNModel": DQNModel}, compile=False
+    model: Union[DQNModel, DRQNModel] = tf.keras.models.load_model(
+        model_path,
+        custom_objects={"DQNModel": DQNModel, "DRQNModel": DRQNModel},
+        compile=False,
     )
+    is_recurrent = model.__class__.__name__ == "DRQNModel"
     print(f"Loaded model from {model_path}")
 
     ctx = zmq.asyncio.Context.instance()
@@ -96,42 +122,75 @@ async def server(
     ack_msg: Ack = {"type": "ack"}
     await sock.send_multipart([routing_id, json.dumps(ack_msg).encode()])
 
+    if is_recurrent:
+        hiddens: dict[str, list[tf.Tensor]] = {}
+
     # Naive serve loop. Only meant for lightweight demos.
     print("Serving model")
     while True:
         # Gather pending model requests.
-        pending: list[Pending] = []
+        pending: dict[str, Pending] = {}
         while (
             max_batch <= 0 or len(pending) < max_batch
         ) and await poller.poll(timeout=0 if len(pending) > 0 else None):
-            (
-                routing_id_frame,
-                req_frame,
-                state_frame,
-            ) = await sock.recv_multipart(flags=zmq.DONTWAIT, copy=False)
-            routing_id = routing_id_frame.bytes
-            req: ModelRequest = json.loads(req_frame.bytes)
+            msg = await sock.recv_multipart(flags=zmq.DONTWAIT, copy=False)
+            routing_id = msg[0].bytes
+            req: Union[ModelRequest, CleanupRequest] = json.loads(msg[1].bytes)
+            key = req["key"]
+            if req["type"] == "cleanup":
+                if is_recurrent:
+                    del hiddens[key]
+                continue
+            req = cast(ModelRequest, req)
             assert req["type"] == "model"
-            state = decode_tensor_state(state_frame.buffer)
-            pending.append(Pending(routing_id=routing_id, req=req, state=state))
+            assert key not in pending
+
+            state = decode_tensor_state(msg[2].buffer)
+            pending[key] = Pending(routing_id=routing_id, req=req, state=state)
+            if is_recurrent and key not in hiddens:
+                hiddens[key] = DRQNModel.new_hidden()
 
         # Execute batch.
-        batch_state = tf.stack([p.state for p in pending])
-        if debug_outputs:
-            ranked_actions, q_values = model.greedy_with_q(batch_state)
-            q_values = DQNModel.decode_q_values(q_values)
+        keys = [*pending.keys()]
+        batch_state = tf.stack([pending[key].state for key in keys])
+        if not is_recurrent:
+            if debug_outputs:
+                ranked_actions, q_values = model.greedy_with_q(batch_state)
+            else:
+                ranked_actions = model.greedy(batch_state)
+                q_values = None
         else:
-            ranked_actions = model.greedy(batch_state)
+            # Need to also handle sequence dim and hidden states.
+            batch_state = tf.expand_dims(batch_state, axis=1)
+            batch_hidden = list(
+                map(tf.stack, zip(*(hiddens[key] for key in keys)))
+            )
+            if debug_outputs:
+                ranked_actions, new_hiddens, q_values = model.greedy_with_q(
+                    batch_state, batch_hidden
+                )
+                q_values = tf.squeeze(q_values, axis=1)
+            else:
+                ranked_actions, new_hiddens = model.greedy(
+                    batch_state, batch_hidden
+                )
+                q_values = None
+            ranked_actions = tf.squeeze(ranked_actions, axis=1)
+            hiddens |= zip(keys, zip(*map(tf.unstack, new_hiddens)))
+
+        ranked_actions = decode_action_rankings(ranked_actions)
+        if q_values is not None:
+            q_values = decode_q_values(q_values)
+        else:
             q_values = [None] * len(pending)
-        ranked_actions = DQNModel.decode_ranked_actions(ranked_actions)
 
         # Send replies.
-        for (routing_id, req, _), action, q_dict in zip(
-            pending, ranked_actions, q_values
-        ):
+        for key, action, q_dict in zip(keys, ranked_actions, q_values):
+            routing_id, req, _ = pending[key]
             rep: ModelReply = {
                 "type": "model",
                 "id": req["id"],
+                "key": key,
                 "ranked_actions": action,
                 "q_values": q_dict,
             }

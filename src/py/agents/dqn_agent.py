@@ -1,19 +1,20 @@
 """DQN agent."""
-import math
+import warnings
 from contextlib import nullcontext
 from typing import Optional
 
-import numpy as np
 import tensorflow as tf
 
 from ..config import DQNConfig
 from ..environments.battle_env import AgentDict, InfoDict
-from ..gen.shapes import ACTION_NAMES, MAX_REWARD, MIN_REWARD
+from ..gen.shapes import ACTION_NAMES, MAX_REWARD, MIN_REWARD, STATE_SIZE
 from ..models.dqn_model import DQNModel
-from ..models.utils.model import state_tensor_spec
+from ..models.utils.greedy import decode_action_rankings
 from ..utils.typing import Experience
 from .agent import Agent
-from .utils.n_step_returns import NStepReturns
+from .utils.dqn_context import DQNContext
+from .utils.epsilon_greedy import EpsilonGreedy
+from .utils.q_dist import project_target_update, zero_q_dist
 from .utils.replay_buffer import ReplayBuffer
 
 
@@ -22,12 +23,12 @@ class DQNAgent(Agent):
 
     def __init__(
         self,
-        config=DQNConfig,
+        config: DQNConfig,
         rng: Optional[tf.random.Generator] = None,
         writer: Optional[tf.summary.SummaryWriter] = None,
     ):
         """
-        Creates a DQNMultiAgent.
+        Creates a DQNAgent.
 
         :param config: Algorithm config.
         :param rng: Random number generator.
@@ -41,6 +42,8 @@ class DQNAgent(Agent):
         self.rng = rng
         self.writer = writer
 
+        self.epsilon_greedy = EpsilonGreedy(config.exploration, rng)
+
         self.model = DQNModel(config=config.model, name="model")
         self.model.init()
 
@@ -49,16 +52,18 @@ class DQNAgent(Agent):
         self.update_prev()
         self.previous.trainable = False
 
-        self.target = DQNModel(config=config.model, name="target")
-        self.target.init()
-        self._update_target()
-        self.target.trainable = False
+        if config.experience.n_steps > 0:
+            # Infinite steps reduces to episodic Monte Carlo returns, which
+            # doesn't require a target network.
+            self.target = DQNModel(config=config.model, name="target")
+            self.target.init()
+            self._update_target()
+            self.target.trainable = False
 
         self.replay_buffer = ReplayBuffer(
             max_size=config.experience.buffer_size
         )
-        self.n_step: AgentDict[NStepReturns] = {}
-        self.last_state: AgentDict[np.ndarray] = {}
+        self.agent_contexts: AgentDict[DQNContext] = {}
 
         self.step = tf.Variable(0, name="step", dtype=tf.int64)
         # Ensure optimizer state is loaded from checkpoint.
@@ -102,15 +107,15 @@ class DQNAgent(Agent):
         if training and len(model_keys) > 0:
             if episode is None:
                 raise ValueError("Missing `episode` argument in training mode")
-            exploring = memoryview(self._explore(len(model_keys), episode))
+            exploring = memoryview(
+                self.epsilon_greedy.explore(len(model_keys), episode)
+            )
             explore_keys = [k for k, e in zip(model_keys, exploring) if e]
             model_keys = [k for k, e in zip(model_keys, exploring) if not e]
 
             # Exploration.
-            random_actions = self._rand_actions(len(explore_keys))
-            result |= zip(
-                explore_keys, DQNModel.decode_ranked_actions(random_actions)
-            )
+            random_actions = self.epsilon_greedy.rand_actions(len(explore_keys))
+            result |= zip(explore_keys, decode_action_rankings(random_actions))
 
         for keys, model in [
             (model_keys, self.model),
@@ -118,89 +123,26 @@ class DQNAgent(Agent):
         ]:
             if len(keys) <= 0:
                 continue
+
             # Exploitation.
             with (
-                tf.device(self.config.inference_device)
-                if self.config.inference_device is not None
+                tf.device(self.config.inference.batch_device)
+                if self.config.inference.batch_device is not None
                 else nullcontext()
             ):
                 batch_states = tf.stack(
                     [state[key] for key in keys], name="state"
                 )
             greedy_actions = model.greedy(batch_states)
-            result |= zip(keys, DQNModel.decode_ranked_actions(greedy_actions))
+            result |= zip(keys, decode_action_rankings(greedy_actions))
 
         return result
 
-    @tf.function(
-        input_signature=[
-            tf.TensorSpec(shape=(), dtype=tf.int32, name="num"),
-            tf.TensorSpec(shape=(), dtype=tf.int64, name="episode"),
-        ]
-    )
-    def _explore(self, num, episode):
-        return self.rng.uniform(shape=(num,)) < self.get_epsilon(episode)
-
-    @tf.function(
-        input_signature=[
-            tf.TensorSpec(shape=(), dtype=tf.int64, name="episode"),
-        ],
-        jit_compile=True,
-    )
-    def get_epsilon(self, episode):
-        """Gets the current exploration rate."""
-        explore = self.config.exploration
-        if isinstance(explore, float):
-            return tf.constant(explore, tf.float32)
-        if explore.decay_type == "linear":
-            # Linearly interpolate through the points (0, start) and
-            # (episodes, end) where x=episode and y=epsilon.
-            # Equation: epsilon = start - (decay_rate * episode)
-            # Solution: decay_rate = (start - end) / episodes
-            epsilon = explore.start - (
-                tf.cast(episode, dtype=tf.float32)
-                * (explore.start - explore.end)
-                / explore.episodes
-            )
-        elif explore.decay_type == "exponential":
-            # Exponentially interpolate through the points (0, start) and
-            # (episodes, end) where x=episode and y=epsilon.
-            # Equation: epsilon = start * (decay_rate**episode)
-            # Solution: decay_rate = (end/start) ** (1/episodes)
-            # Using log transformation on epsilon for numerical stability.
-            epsilon = explore.start * tf.math.exp(
-                tf.cast(episode, tf.float32)
-                / explore.episodes
-                * tf.math.log(explore.end / explore.start)
-            )
-        else:
-            # Thrown at trace time.
-            raise RuntimeError(
-                "Exploration config has unknown decay_type "
-                f"'{explore.decay_type}'"
-            )
-        epsilon = tf.maximum(explore.end, epsilon)
-        return epsilon
-
-    @tf.function(
-        input_signature=[tf.TensorSpec(shape=(), dtype=tf.int32, name="num")]
-    )
-    def _rand_actions(self, num):
-        return tf.map_fn(
-            lambda seed: tf.random.experimental.stateless_shuffle(
-                tf.range(len(ACTION_NAMES)), seed=seed
-            ),
-            tf.transpose(self.rng.make_seeds(num)),
-            fn_output_signature=tf.TensorSpec(
-                shape=(len(ACTION_NAMES),), dtype=tf.int32
-            ),
-        )
-
     def update_model(
         self,
-        state: AgentDict[np.ndarray],
+        state: AgentDict[tf.Tensor],
         reward: AgentDict[float],
-        next_state: AgentDict[np.ndarray],
+        next_state: AgentDict[tf.Tensor],
         terminated: AgentDict[bool],
         truncated: AgentDict[bool],
         info: AgentDict[InfoDict],
@@ -208,85 +150,73 @@ class DQNAgent(Agent):
         """
         Updates the model using the given experience data for each agent.
         """
-        # Track initial state.
-        # Note: Keys of states may be different from the rest of the arguments
-        # due to the env.step() returned dicts only containing entries for ready
-        # agents.
-        for key, agent_state in state.items():
-            if key.player == "previous":
-                continue
-            if self.last_state.get(key, None) is None:
-                self.last_state[key] = agent_state
+        # Note: state was the next_state of the last call, or an empty dict if
+        # this was the first call, so this arg can be safely ignored.
+        _ = state
 
         exps: list[Experience] = []
         for key in reward.keys():
             if key.player == "previous":
                 continue
+
+            # Note: Truncation yields no experience.
             if truncated[key]:
-                # Truncated indicates no more experience.
-                self.n_step.pop(key, None)
-                self.last_state.pop(key, None)
+                if self.agent_contexts.pop(key, None) is None:
+                    warnings.warn(f"Unknown key {key!r} was truncated")
                 continue
 
-            # Use saved last state since the current states arg often has
-            # different keys than next_states due to the asynchronous nature of
-            # the optionally-parallel multi-agent BattleEnv.
-            last_state = self.last_state.pop(key, None)
-            if last_state is None:
-                # Battle only just started for this agent.
-                # Need to wait for the next update_model() call before we can
-                # construct a full state transition (i.e. Experience).
-                continue
-
-            exp = Experience(
-                state=last_state,
-                action=info[key]["action"],
-                reward=reward[key],
-                next_state=next_state[key],
-                choices=info[key]["choices"],
-                done=terminated[key],
-            )
-            assert exp.action >= 0
-            if not exp.done:
-                assert len(exp.choices) > 0
-
-            if key not in self.n_step:
-                self.n_step[key] = NStepReturns(
-                    steps=self.config.experience.n_steps,
+            ctx = self.agent_contexts.get(key, None)
+            if ctx is None:
+                if terminated[key]:
+                    warnings.warn(f"Unknown key {key!r} was terminated")
+                    continue
+                ctx = DQNContext(
+                    n_steps=self.config.experience.n_steps,
                     discount_factor=self.config.experience.discount_factor,
                 )
-            processed_exps = self.n_step[key].add_experience(exp)
-            exps.extend(processed_exps)
+                self.agent_contexts[key] = ctx
+            exps.extend(
+                ctx.update(
+                    info[key]["action"],
+                    reward[key],
+                    next_state[key],
+                    info[key]["choices"],
+                    terminated[key],
+                )
+            )
+            if terminated[key]:
+                del self.agent_contexts[key]
 
         for exp in exps:
             self.replay_buffer.add(exp)
+            if self.replay_buffer.size < self.config.learn.buffer_prefill:
+                continue
             self.step.assign_add(1, read_value=False)
-            if (
-                self.replay_buffer.size >= self.config.learn.buffer_prefill
-                and self.step % self.config.learn.steps_per_update == 0
+            if self.step % self.config.learn.steps_per_update != 0:
+                continue
+            with tf.profiler.experimental.Trace(
+                "learn_step", step_num=self.step, _r=1
             ):
-                with tf.profiler.experimental.Trace(
-                    "learn_step",
-                    step_num=self.step,
-                    batch_size=self.config.learn.batch_size,
-                    _r=1,
+                with (
+                    tf.device(self.config.learn.batch_device)
+                    if self.config.learn.batch_device is not None
+                    else nullcontext()
                 ):
-                    with (
-                        tf.device(self.config.learn.batch_device)
-                        if self.config.learn.batch_device is not None
-                        else nullcontext()
-                    ):
-                        batch = self.replay_buffer.sample(
-                            self.config.learn.batch_size
-                        )
-                    self._learn_step(*batch)
+                    batch = self.replay_buffer.sample(
+                        self.config.learn.batch_size
+                    )
+                self._learn_step(*batch)
 
     @tf.function(
         input_signature=[
-            state_tensor_spec("state"),
+            tf.TensorSpec(
+                shape=(None, STATE_SIZE), dtype=tf.float32, name="state"
+            ),
             tf.TensorSpec(shape=(None,), dtype=tf.int32, name="action"),
             tf.TensorSpec(shape=(None,), dtype=tf.float32, name="reward"),
-            state_tensor_spec("next_state"),
+            tf.TensorSpec(
+                shape=(None, STATE_SIZE), dtype=tf.float32, name="next_state"
+            ),
             tf.TensorSpec(
                 shape=(None, len(ACTION_NAMES)),
                 dtype=tf.float32,
@@ -314,10 +244,14 @@ class DQNAgent(Agent):
 
     @tf.function(
         input_signature=[
-            state_tensor_spec("state"),
+            tf.TensorSpec(
+                shape=(None, STATE_SIZE), dtype=tf.float32, name="state"
+            ),
             tf.TensorSpec(shape=(None,), dtype=tf.int32, name="action"),
             tf.TensorSpec(shape=(None,), dtype=tf.float32, name="reward"),
-            state_tensor_spec("next_state"),
+            tf.TensorSpec(
+                shape=(None, STATE_SIZE), dtype=tf.float32, name="next_state"
+            ),
             tf.TensorSpec(
                 shape=(None, len(ACTION_NAMES)),
                 dtype=tf.float32,
@@ -328,32 +262,33 @@ class DQNAgent(Agent):
         jit_compile=True,
     )
     def _learn_step_impl(
-        self,
-        state: tf.Tensor,
-        action: tf.Tensor,
-        reward: tf.Tensor,
-        next_state: tf.Tensor,
-        choices: tf.Tensor,
-        done: tf.Tensor,
+        self, state, action, reward, next_state, choices, done
     ):
-        td_target = self._calculate_target(reward, next_state, choices, done)
-        td_target = tf.stop_gradient(td_target)  # (B,) or (B, D)
+        # Ensure runtime batch size.
+        batch_size = self.config.learn.batch_size
+        state = tf.ensure_shape(state, (batch_size, STATE_SIZE))
+        action = tf.ensure_shape(action, (batch_size,))
+        reward = tf.ensure_shape(reward, (batch_size,))
+        next_state = tf.ensure_shape(next_state, (batch_size, STATE_SIZE))
+        choices = tf.ensure_shape(choices, (batch_size, len(ACTION_NAMES)))
+        done = tf.ensure_shape(done, (batch_size,))
 
-        action_mask = tf.one_hot(action, len(ACTION_NAMES))  # (B, A)
+        td_target = self._calculate_target(reward, next_state, choices, done)
+        td_target = tf.stop_gradient(td_target)  # (N,) or (N,D)
+
+        action_mask = tf.one_hot(action, len(ACTION_NAMES))  # (N,A)
         if self.config.model.dist is not None:
             # Broadcast over selected action's Q distribution.
-            action_mask = action_mask[..., tf.newaxis]  # (B, A, 1)
+            action_mask = action_mask[..., tf.newaxis]  # (N,A,1)
         action_mask = tf.stop_gradient(action_mask)
 
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(self.model.trainable_weights)
             q_pred, activations = self.model(
                 state, training=True, return_activations=True
-            )  # (B, A) or (B, A, D)
-            # Select Q-value of taken action.
-            q_pred = tf.reduce_sum(
-                q_pred * action_mask, axis=1
-            )  # (B,) or (B, D)
+            )  # (N,A) or (N,A,D)
+            # Select Q-value of taken action: (N,) or (N,D)
+            q_pred = tf.reduce_sum(q_pred * action_mask, axis=1)
             loss = self._compute_loss(td_target, q_pred)
 
         # Update model.
@@ -363,27 +298,26 @@ class DQNAgent(Agent):
         )
 
         # Update target network.
-        if self.step % self.config.learn.steps_per_target_update == 0:
+        if (
+            self.config.experience.n_steps > 0
+            and self.step % self.config.learn.steps_per_target_update == 0
+        ):
             self._update_target()
 
         # Return data for metrics logging.
         if self.config.model.dist is not None:
             # Record mean of Q/tgt distributions for each sample in the batch.
             support = tf.linspace(
-                float(MIN_REWARD), float(MAX_REWARD), self.config.model.dist
-            )
-            support = support[tf.newaxis, ...]  # Broadcast: (1, D)
+                tf.constant(MIN_REWARD, dtype=q_pred.dtype, shape=(1,)),
+                tf.constant(MAX_REWARD, dtype=q_pred.dtype, shape=(1,)),
+                self.config.model.dist,
+                axis=-1,
+            )  # (1,D)
             q_pred = tf.reduce_sum(q_pred * support, axis=-1)
             td_target = tf.reduce_sum(td_target * support, axis=-1)
         return loss, activations, gradients, q_pred, td_target
 
-    def _calculate_target(
-        self,
-        reward: tf.Tensor,
-        next_state: tf.Tensor,
-        choices: tf.Tensor,
-        done: tf.Tensor,
-    ) -> tf.Tensor:
+    def _calculate_target(self, reward, next_state, choices, done):
         """
         Calculates the TD target for an experience batch.
 
@@ -393,139 +327,94 @@ class DQNAgent(Agent):
         :param done: Batched terminal state indicator for next state.
         :returns: Batched temporal difference target for learning.
         """
-        if self.config.model.dist is None and math.isinf(
-            self.config.experience.n_steps
-        ):
+        dist = self.config.model.dist
+        n_steps = self.config.experience.n_steps
+        discount_factor = self.config.experience.discount_factor
+        batch_size = self.config.learn.batch_size
+        if n_steps <= 0:
+            # Infinite n-step reduces to episodic Monte Carlo returns: y_t = R_t
+            if dist is None:
+                td_target = reward
+            else:
+                target_next_q = zero_q_dist(dist)
+                target_next_q = tf.tile(
+                    target_next_q[tf.newaxis, :], [batch_size, 1]
+                )  # (N,D)
+                td_target = project_target_update(
+                    reward,
+                    target_next_q,
+                    done,
+                    n_steps=n_steps,
+                    discount_factor=discount_factor,
+                )
+            return td_target
+
+        if dist is None and n_steps <= 0:
             # Infinite n-step reduces to episodic Monte Carlo returns.
             return reward
 
-        # Double DQN target: r + gamma^n * Qt(s', argmax_a(Q(s', a))).
+        # Double Q-learning target using n-step returns.
+        # y_t = R_t + gamma^n * Qt(s_{t+n}, argmax_a(Q(s_{t+n}, a)))
+        # Where R_t = r_t + gamma*r_{t+1} + ... + (gamma^(n-1))*r_{t+n-1}
+        # Note that R_t=reward (precomputed) and s_{t+n}=next_state.
 
-        tgt_next_q = self.target(next_state)  # (B, A) or (B, A, D)
-        next_q = self.model(next_state)  # (B, A) or (B, A, D)
-        tf.debugging.assert_same_float_dtype([tgt_next_q, next_q])
-
-        if self.config.model.dist is not None:
-            support = tf.linspace(
-                tf.constant(MIN_REWARD, dtype=next_q.dtype),
-                tf.constant(MAX_REWARD, dtype=next_q.dtype),
-                self.config.model.dist,
-            )
-            support = support[tf.newaxis, ...]  # Broadcast: (1, D)
-
-        if self.config.model.dist is not None:
+        # First compute Q(s_{t+n}, a)
+        next_q = self.model(next_state)  # (N,A) or (N,A,D)
+        if dist is not None:
             # Distributional RL: Take expectation (mean) of the Q distribution.
-            # (B, A, D) -> (B, A)
+            # (N,A,D) -> (N,A)
+            support = tf.linspace(
+                tf.constant(MIN_REWARD, dtype=next_q.dtype, shape=(1,)),
+                tf.constant(MAX_REWARD, dtype=next_q.dtype, shape=(1,)),
+                dist,
+                axis=-1,
+            )  # (1,D)
             next_q = tf.reduce_sum(next_q * support, axis=-1)
 
-        # Get best action for next state: argmax_{legal(a)}(Q(s', a))
+        # Get best action for next state: argmax_{legal(a)}(Q(s_{t+n}, a))
         next_q += (1 - choices) * (
             -1e9 if next_q.dtype != tf.float16 else tf.float16.min
         )
         next_action = tf.argmax(next_q, axis=-1, output_type=tf.int32)
 
-        # Get target Q value of best action: Qt(s', argmax_a(...))
+        # Get target Q-value of best action: Qt(s', argmax_a(...))
+        target_next_q = self.target(next_state)  # (N,A) or (N,A,D)
         next_action_mask = tf.one_hot(
-            next_action, depth=len(ACTION_NAMES), dtype=tgt_next_q.dtype
+            next_action, depth=len(ACTION_NAMES), dtype=target_next_q.dtype
         )
-        if self.config.model.dist is not None:
-            # Broadcast along distribution dimension.
-            next_action_mask = next_action_mask[..., tf.newaxis]  # (B, A, 1)
-        tgt_next_q = tf.reduce_sum(
-            tgt_next_q * next_action_mask,
-            axis=-1 if self.config.model.dist is None else -2,  # Dim A.
-        )  # (B,) or (B, D)
-
-        # Apply reward and discount factor: r + gamma^n * Qt(...)
-        if self.config.model.dist is not None:
-            # Distributional RL: Project target TD distribution onto original.
-
-            # Supports of TD target distribution.
-            td_target_support: tf.Tensor
-            if math.isinf(self.config.experience.n_steps):
-                # Infinite n-step reduces to episodic Monte Carlo returns.
-                td_target_support = tf.broadcast_to(
-                    tf.expand_dims(reward, axis=-1),
-                    shape=(
-                        self.config.learn.batch_size,
-                        self.config.model.dist,
-                    ),
-                )  # (B, D)
-            else:
-                td_target_support = tf.expand_dims(reward, axis=-1) + tf.where(
-                    tf.expand_dims(done, axis=-1),
-                    tf.constant(0, dtype=tf.float32),
-                    self.config.experience.discount_factor
-                    ** self.config.experience.n_steps
-                    * support,
-                )  # (B, D)
-
-            # Project TD target supports onto original Q-value distribution.
-            index = (td_target_support - MIN_REWARD) / (
-                (MAX_REWARD - MIN_REWARD) / (self.config.model.dist - 1)
-            )
-            low, high = tf.math.floor(index), tf.math.ceil(index)  # (B, D)
-            batch_indices = tf.range(
-                0, self.config.learn.batch_size, dtype=tf.int32
-            )
-            batch_indices = tf.expand_dims(
-                tf.broadcast_to(
-                    tf.expand_dims(batch_indices, axis=-1),
-                    shape=(
-                        self.config.learn.batch_size,
-                        self.config.model.dist,
-                    ),
-                ),
-                axis=-1,
-            )  # (B, D, 1)
-            # Should be correct and efficient for batched dist RL updates.
-            # Note: tf.concat() and tf.expand_dims() seem to be broken according
-            # to the linter.
-            # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
-            td_target = tf.tensor_scatter_nd_add(
-                tf.scatter_nd(
-                    indices=tf.concat(
-                        [
-                            batch_indices,
-                            tf.expand_dims(tf.cast(low, tf.int32), axis=-1),
-                        ],
-                        axis=-1,
-                    ),  # (B, D, 2)
-                    updates=tgt_next_q * (high - index),
-                    shape=(
-                        self.config.learn.batch_size,
-                        self.config.model.dist,
-                    ),
-                ),
-                indices=tf.concat(
-                    [
-                        batch_indices,
-                        tf.expand_dims(tf.cast(high, tf.int32), axis=-1),
-                    ],
-                    axis=-1,
-                ),  # (B, D, 2)
-                updates=tgt_next_q * (index - low),
-            )  # (B, D)
-            # pylint: enable=unexpected-keyword-arg, no-value-for-parameter
+        if dist is None:
+            target_next_q = tf.reduce_sum(
+                target_next_q * next_action_mask, axis=-1
+            )  # (N,)
         else:
-            # Apply n-step TD target normally.
-            tgt_next_q = tf.where(
-                done, tf.constant(0, dtype=tf.float32), tgt_next_q
+            # Broadcast one-hot selection mask along distribution dimension.
+            target_next_q = tf.reduce_sum(
+                target_next_q * tf.expand_dims(next_action_mask, axis=-1),
+                axis=-2,
+            )  # (N,D)
+
+        # Temporal difference target: y_t = R_{t+1} + gamma^n * Qt(...)
+        if dist is None:
+            target_next_q = tf.where(
+                done, tf.constant(0, dtype=tf.float32), target_next_q
             )
             td_target = (
-                reward
-                + (
-                    self.config.experience.discount_factor
-                    ** self.config.experience.n_steps
-                )
-                * tgt_next_q
-            )  # (B,)
+                reward + (discount_factor**n_steps) * target_next_q
+            )  # (N,)
+        else:
+            # Distributional RL: Project TD target distribution onto Q dist.
+            td_target = project_target_update(
+                reward,
+                target_next_q,
+                done,
+                n_steps=n_steps,
+                discount_factor=discount_factor,
+            )
 
         return td_target
 
-    def _compute_loss(
-        self, td_target: tf.Tensor, q_pred: tf.Tensor
-    ) -> tf.Tensor:
+    def _compute_loss(self, td_target, q_pred):
+        """Computes the training loss."""
         if self.config.model.dist is not None:
             # Distributional RL: Cross-entropy loss.
             return tf.reduce_mean(

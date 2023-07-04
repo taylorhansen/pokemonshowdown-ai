@@ -1,54 +1,8 @@
 """Model building utilities."""
-from typing import Optional
 
 import tensorflow as tf
 
-from ...gen.shapes import STATE_SIZE
 from .attention import PMA, SAB
-
-
-def state_input_spec() -> tf.keras.layers.InputSpec:
-    """Creates an input spec for the battle state."""
-    return tf.keras.layers.InputSpec(
-        dtype=tf.float32,
-        shape=(
-            None,
-            STATE_SIZE,
-        ),
-    )
-
-
-def state_tensor_spec(name="state") -> tf.TensorSpec:
-    """Creates a tensor spec for the battle state with batch dimension."""
-    return tf.TensorSpec(shape=(None, STATE_SIZE), dtype=tf.float32, name=name)
-
-
-def value_function(
-    units: tuple[int, ...],
-    name: str,
-    dist: Optional[int] = None,
-    use_layer_norm=False,
-) -> list[tf.keras.layers.Layer]:
-    """
-    Creates a stack of layers to compute action advantage values or state
-    value.
-
-    :param units: Size of each hidden layer.
-    :param name: Name scope prefix.
-    :param dist: Number of units for distributional Q-network. Default None
-    (i.e. disabled).
-    :param use_layer_norm: Whether to use layer normalization.
-    """
-    return create_dense_stack(
-        units=units, name=name, use_layer_norm=use_layer_norm, omit_last_ln=True
-    ) + [
-        tf.keras.layers.Dense(
-            units=dist or 1,
-            kernel_initializer="glorot_normal",
-            bias_initializer="zeros",
-            name=f"{name}/dense_{len(units)+1}",
-        )
-    ]
 
 
 def create_dense_stack(

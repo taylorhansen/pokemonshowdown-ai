@@ -28,6 +28,11 @@ interface ModelRequest {
     type: "model";
     /** Differentiates multiple requests from the same client. */
     id: number;
+    /**
+     * Key for looking up hidden states or other context used to continue a
+     * battle.
+     */
+    key: string;
 }
 
 /** Model prediction reply protocol. */
@@ -41,6 +46,13 @@ interface ModelReply {
     /** Predicted Q-values for each action. */
     // eslint-disable-next-line @typescript-eslint/naming-convention
     q_values?: {[T in Action]: number};
+}
+
+/** Request protocol for cleaning up stored prediction context from a battle. */
+interface CleanupRequest {
+    type: "cleanup";
+    /** Key identifier for the stored context. */
+    key: string;
 }
 
 /** Contains prediction data from the model server. */
@@ -152,11 +164,16 @@ export class ModelServer {
     /**
      * Sends a model prediction request and awaits its response.
      *
+     * @param key Key for looking up stored context used to continue a battle.
+     * Should be unique for each battle perspective.
      * @param state Battle state representation.
      * @returns Prediction data from the model server.
      */
-    public async predict(state: ReadonlyBattleState): Promise<ModelPrediction> {
-        const req: ModelRequest = {type: "model", id: ++this.requestCount};
+    public async predict(
+        key: string,
+        state: ReadonlyBattleState,
+    ): Promise<ModelPrediction> {
+        const req: ModelRequest = {type: "model", id: ++this.requestCount, key};
         const {data: stateData, original} = allocEncodedState();
         encodeState(stateData, state);
 
@@ -170,6 +187,16 @@ export class ModelServer {
             rankedActions: reply.ranked_actions,
             ...(reply.q_values && {qValues: reply.q_values}),
         };
+    }
+
+    /**
+     * Cleans up stored context from battle predictions.
+     *
+     * @param key Context key.
+     */
+    public async cleanup(key: string): Promise<void> {
+        const req: CleanupRequest = {type: "cleanup", key};
+        await this.ensureSocket().send([JSON.stringify(req)]);
     }
 
     /** Extracts async predictions from the subprocess. */

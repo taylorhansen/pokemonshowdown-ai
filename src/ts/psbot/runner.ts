@@ -51,9 +51,15 @@ void (async function psBotRunner() {
     bot.acceptChallenges("gen4randombattle", async (room, user, sender) => {
         const driver = new BattleDriver({
             username: user,
-            parser: main,
+            async parser(ctx) {
+                await main(ctx);
+                await modelServer.cleanup(room /*key*/);
+            },
             async agent(state, choices, agentLogger) {
-                const prediction = await modelServer.predict(state);
+                const prediction = await modelServer.predict(
+                    room /*key*/,
+                    state,
+                );
                 agentLogger?.debug(
                     "All ranked actions: " +
                         `[${prediction.rankedActions.join(", ")}]`,

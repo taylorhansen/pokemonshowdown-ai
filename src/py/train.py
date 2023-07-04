@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import reduce
 from itertools import chain
 from pathlib import Path
-from typing import Optional, TextIO
+from typing import Optional, TextIO, Union, cast
 
 if (
     __name__ == "__main__"
@@ -24,7 +24,8 @@ import yaml
 from tqdm import tqdm
 
 from .agents.dqn_agent import DQNAgent
-from .config import EvalOpponentConfig, TrainConfig
+from .agents.drqn_agent import DRQNAgent
+from .config import DQNConfig, DRQNConfig, EvalOpponentConfig, TrainConfig
 from .environments.battle_env import BattleEnv
 from .utils.paths import DEFAULT_CONFIG_PATH, PROJECT_DIR
 from .utils.random import randstr
@@ -77,7 +78,7 @@ class Wlt:
 async def run_eval(
     prefix: str,
     episode: tf.Variable,
-    agent: DQNAgent,
+    agent: Union[DQNAgent, DRQNAgent],
     env: BattleEnv,
     opponents: tuple[EvalOpponentConfig, ...],
     progbar_file: TextIO,
@@ -107,6 +108,11 @@ async def run_eval(
                 if ended:
                     state.pop(key)
                     info.pop(key)
+                    if isinstance(agent, DRQNAgent):
+                        # Note: This is usually handled by update_model() but we
+                        # have to do this manually during evaluation to prevent
+                        # memory leaks.
+                        agent.reset(key)
             for key, env_info in info.items():
                 if key.player != "__env__":
                     continue
@@ -141,6 +147,7 @@ async def run_eval(
                 pbar.update()
 
 
+# pylint: disable-next=too-many-branches
 async def train(config: TrainConfig):
     """Main training script."""
     save_path: Optional[Path] = None
@@ -166,7 +173,17 @@ async def train(config: TrainConfig):
         else tf.random.get_global_generator()
     )
 
-    agent = DQNAgent(config=config.dqn, rng=rng, writer=writer)
+    agent: Union[DQNAgent, DRQNAgent]
+    if config.agent.type == "dqn":
+        agent = DQNAgent(
+            config=cast(DQNConfig, config.agent.config), rng=rng, writer=writer
+        )
+    elif config.agent.type == "drqn":
+        agent = DRQNAgent(
+            config=cast(DRQNConfig, config.agent.config), rng=rng, writer=writer
+        )
+    else:
+        raise ValueError(f"Invalid agent type '{config.agent.type}'")
 
     env_id = randstr(rng, 6)
     env = BattleEnv(
@@ -252,14 +269,17 @@ async def train(config: TrainConfig):
             episode.assign_add(1, read_value=False)
             pbar.update()
 
+        rollout_battles = max(
+            0, config.rollout.num_episodes - (int(episode) - 1)
+        )
         state, info = env.reset(
-            rollout_battles=max(
-                0, config.rollout.num_episodes - (int(episode) - 1)
-            ),
+            rollout_battles=rollout_battles,
             rollout_opponents=config.rollout.opponents,
         )
         done = False
         while not done:
+            if rollout_battles <= 0:
+                break
             action = agent.select_action(
                 state, info, episode=episode, training=True
             )
@@ -300,7 +320,8 @@ async def train(config: TrainConfig):
                         )
                         tf.summary.scalar("rollout/num_ties", num_ties)
                         tf.summary.scalar(
-                            "rollout/exploration", agent.get_epsilon(episode)
+                            "rollout/exploration",
+                            agent.epsilon_greedy.get_epsilon(episode),
                         )
                 if (
                     config.rollout.eps_per_eval > 0
@@ -341,7 +362,7 @@ async def train(config: TrainConfig):
 
     if save_path is not None:
         save_path = Path(save_path, "model").resolve()
-        agent.model.save(save_path)
+        agent.model.save(save_path, save_traces=False)
         print(f"Saved model to {save_path}")
 
 
