@@ -84,8 +84,8 @@ function calcDamge(
     const weather = [ourActive.ability, theirActive.ability].some(a =>
         ["airlock", "cloudnine"].includes(a),
     )
-        ? state.status.weather.type
-        : "none";
+        ? "none"
+        : state.status.weather.type;
 
     //#endregion
 
