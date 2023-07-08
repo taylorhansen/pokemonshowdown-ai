@@ -24,8 +24,6 @@ export interface ReadonlyBattleState {
      * Encodes all state data into a string.
      *
      * @param indent Indentation level to use.
-     * @returns The BattleState in string form.
-     * @override
      */
     readonly toString: (indent?: number) => string;
 }

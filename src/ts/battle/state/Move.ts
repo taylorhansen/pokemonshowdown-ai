@@ -10,6 +10,14 @@ export interface ReadonlyMove {
     readonly pp: number;
     /** Max amount of power points this move can have. */
     readonly maxpp: number;
+
+    /**
+     * Encodes all move data into a string.
+     *
+     * @param info Optional. Extra info about this move that should be
+     * displayed.
+     */
+    readonly toString: (info?: string) => string;
 }
 
 /** Information about a certain move. */
@@ -64,12 +72,7 @@ export class Move implements ReadonlyMove {
     }
 
     // istanbul ignore next: Only used for logging.
-    /**
-     * Encodes all move data into a string.
-     *
-     * @param info Optional. Extra info about this move that should be
-     * displayed.
-     */
+    /** @override */
     public toString(info?: string): string {
         return (
             `${this.name}${info ? ` <${info}>` : ""} ` +

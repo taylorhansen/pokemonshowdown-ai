@@ -23,6 +23,13 @@ export interface ReadonlyTeam {
     readonly pokemon: readonly (ReadonlyPokemon | null | undefined)[];
     /** Team-related status conditions. */
     readonly status: ReadonlyTeamStatus;
+
+    /**
+     * Encodes all team data into a string.
+     *
+     * @param indent Indentation level to use.
+     */
+    readonly toString: (indent?: number) => string;
 }
 
 /** Data for handling a switch-in. */

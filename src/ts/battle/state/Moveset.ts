@@ -28,6 +28,20 @@ export interface ReadonlyMoveset {
      * no links to other Movesets.
      */
     readonly isIsolated: () => boolean;
+
+    /**
+     * Encodes all moveset data into a string.
+     *
+     * @param indent Indentation level to use.
+     * @param happiness Optional happiness value for calculating
+     * Return/Frustration power.
+     * @param hpType Optional Hidden Power type.
+     */
+    readonly toString: (
+        indent?: number,
+        happiness?: number | null,
+        hpType?: string,
+    ) => string;
 }
 
 /** Transform move source or target indicator type. */
@@ -412,14 +426,7 @@ export class Moveset implements ReadonlyMoveset {
     }
 
     // istanbul ignore next: Only used for logging.
-    /**
-     * Encodes all moveset data into a string.
-     *
-     * @param indent Indentation level to use.
-     * @param happiness Optional happiness value for calculating
-     * Return/Frustration power.
-     * @param hpType Optional Hidden Power type.
-     */
+    /** @override */
     public toString(
         indent = 0,
         happiness?: number | null,

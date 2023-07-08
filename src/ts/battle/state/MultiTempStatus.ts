@@ -23,6 +23,9 @@ export interface ReadonlyMultiTempStatus<TStatusType extends string> {
      * {@link duration} limit.
      */
     readonly silent: boolean;
+
+    /** Encodes status data into a log string. */
+    readonly toString: () => string;
 }
 
 /**
@@ -114,7 +117,7 @@ export class MultiTempStatus<TStatusType extends string>
     }
 
     // istanbul ignore next: Only used in logging.
-    /** Encodes status data into a log string. */
+    /** @override */
     public toString(): string {
         if (this._type === "none") {
             return "inactive";

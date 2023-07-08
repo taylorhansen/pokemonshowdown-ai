@@ -4,6 +4,13 @@ export interface ReadonlyHp {
     readonly current: number;
     /** Maximum HP. May be a percentage. */
     readonly max: number;
+
+    /**
+     * Encodes all HP data into a string.
+     *
+     * @param isPercent Whether to report HP as a percentage.
+     */
+    readonly toString: (isPercent?: boolean) => string;
 }
 
 /** Hit points info. */
@@ -33,12 +40,8 @@ export class Hp implements ReadonlyHp {
         this._current = Math.min(Math.max(0, current), this._max);
     }
 
-    /**
-     * Encodes all HP data into a string.
-     *
-     * @param isPercent Whether to report HP as a percentage.
-     * @returns The HP in string form.
-     */
+    // istanbul ignore next: Only used for logging.
+    /** @override */
     public toString(isPercent?: boolean): string {
         return `${this._current}/${this._max}${isPercent ? "%" : ""}`;
     }

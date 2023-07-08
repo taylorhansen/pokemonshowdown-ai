@@ -10,6 +10,9 @@ export interface ReadonlyStatTable extends ReadonlyStatRanges {
     readonly level: number;
     /** Hidden power type, or `null` if unknown. */
     readonly hpType: HpType | null;
+
+    /** Encodes all stat table data into a string. */
+    readonly toString: () => string;
 }
 
 /** Tracks stat ranges and species/level for stat calculations. */
@@ -47,8 +50,6 @@ export class StatTable implements ReadonlyStatTable, StatRanges {
         );
     }
 
-    // TODO(#311): Make hpType a separate obj backed by ivs implementing this
-    // interface.
     private constructor(
         level: number,
         baseStats: {readonly [T in StatName]: number | StatRange},
@@ -105,7 +106,7 @@ export class StatTable implements ReadonlyStatTable, StatRanges {
     }
 
     // istanbul ignore next: Only used in logging.
-    /** Encodes all stat table data into a string. */
+    /** @override */
     public toString(): string {
         return `[${[
             `L${this.level}`,

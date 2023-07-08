@@ -10,6 +10,9 @@ export interface ReadonlyStatRange {
     readonly min: number;
     /** Maximum possible stat value. */
     readonly max: number;
+
+    /** Encodes all stat range data into a string. */
+    readonly toString: () => string;
 }
 
 /** Represents a range of stat values from a base stat. */
@@ -25,8 +28,6 @@ export class StatRange implements ReadonlyStatRange {
         return this._max;
     }
     private _max: number;
-
-    // TODO(#311): Track underlying nature, EV, and IV possibilities.
 
     /**
      * Creates a StatRange.
@@ -92,7 +93,7 @@ export class StatRange implements ReadonlyStatRange {
     }
 
     // istanbul ignore next: Only used in logging.
-    /** Encodes all stat range data into a string. */
+    /** @override */
     public toString(): string {
         let s: string;
         if (this._min === this._max) {

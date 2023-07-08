@@ -8,7 +8,6 @@ import {pluralTurns, plus} from "./utility";
 /** Writable helper type. */
 type Writable<T> = T extends object ? {-readonly [U in keyof T]: T[U]} : never;
 
-// TODO: Factor into a separate class?
 /** Tracks a move status turn counter. */
 export interface ReadonlyMoveStatus {
     /** Name of the move, or null if inactive. */
@@ -187,6 +186,9 @@ export interface ReadonlyVolatileStatus {
     readonly yawn: ReadonlyTempStatus;
 
     //#endregion
+
+    /** Encodes all volatile status data into a string. */
+    readonly toString: () => string;
 }
 
 /**
@@ -741,7 +743,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     }
 
     // istanbul ignore next: Only used in logging.
-    /** Encodes all volatile status data into a string. */
+    /** @override */
     public toString(): string {
         return `[${([] as string[])
             .concat(

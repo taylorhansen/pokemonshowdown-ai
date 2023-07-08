@@ -89,6 +89,14 @@ export interface ReadonlyPokemon {
 
     /** Minor status conditions. Cleared on switch. */
     readonly volatile: ReadonlyVolatileStatus;
+
+    /**
+     * Encodes all pokemon data into a string.
+     *
+     * @param indent Indentation level to use.
+     * @param hpPercent Whether to report HP as a percentage.
+     */
+    readonly toString: (indent?: number, hpPercent?: boolean) => string;
 }
 
 /** Holds all the possibly incomplete info about a pokemon. */
@@ -483,13 +491,7 @@ export class Pokemon implements ReadonlyPokemon {
     }
 
     // istanbul ignore next: Only used for logging.
-    /**
-     * Encodes all pokemon data into a string.
-     *
-     * @param indent Indentation level to use.
-     * @param hpPercent Whether to report HP as a percentage.
-     * @returns The Pokemon in string form.
-     */
+    /** @override */
     public toString(indent = 0, hpPercent?: boolean): string {
         const s = " ".repeat(indent);
         return `\

@@ -9,6 +9,9 @@ export interface ReadonlyMajorStatusCounter {
     readonly turns: number;
     /** Max amount of turns this status can be active, or `null` if unknown. */
     readonly duration: number | null;
+
+    /** Stringifies the status, with turn info if applicable. */
+    readonly toString: () => string;
 }
 
 /** Mutually-exclusive turn-counter manager for major status conditions. */
@@ -82,7 +85,7 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter {
     }
 
     // istanbul ignore next: Only used for logging.
-    /** Stringifies the status, with turn info if applicable. */
+    /** @override */
     public toString(): string {
         const s = this._current;
         // Note: Only slp and tox care about the turn counter.

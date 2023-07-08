@@ -19,6 +19,9 @@ export interface ReadonlyTempStatus {
      * {@link duration} limit.
      */
     readonly silent: boolean;
+
+    /** Encodes all temp status data into a string. */
+    readonly toString: () => string;
 }
 
 /** Counts turns for a temporary status condition. */
@@ -103,7 +106,7 @@ export class TempStatus implements ReadonlyTempStatus {
     }
 
     // istanbul ignore next: Only used in logging.
-    /** Stringifies this TempStatus. */
+    /** @override */
     public toString(): string {
         return pluralTurns(this.name, this._turns, this.duration);
     }

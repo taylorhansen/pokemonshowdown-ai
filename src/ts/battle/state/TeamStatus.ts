@@ -34,6 +34,9 @@ export interface ReadonlyTeamStatus {
     readonly toxicspikes: number;
     /** Wish move status, always ends next turn. */
     readonly wish: ReadonlyTempStatus;
+
+    /** Encodes all team status data into a string. */
+    readonly toString: () => string;
 }
 
 /** Temporary status conditions for a certain team. */
@@ -97,11 +100,7 @@ export class TeamStatus implements ReadonlyTeamStatus {
     }
 
     // istanbul ignore next: Only used for logging.
-    /**
-     * Encodes all team status data into a string
-     *
-     * @returns The TeamStatus in string form.
-     */
+    /** @override */
     public toString(): string {
         return `[${([] as string[])
             .concat(

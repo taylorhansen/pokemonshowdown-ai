@@ -10,6 +10,9 @@ export interface ReadonlyRoomStatus {
     readonly trickroom: ReadonlyTempStatus;
     /** Weather effect (usually temporary). */
     readonly weather: ReadonlyMultiTempStatus<WeatherType>;
+
+    /** Encodes all room status data into a string. */
+    readonly toString: () => string;
 }
 
 /** Temporary status conditions for the entire field. */
@@ -30,11 +33,7 @@ export class RoomStatus implements ReadonlyRoomStatus {
     }
 
     // istanbul ignore next: Only used in logging.
-    /**
-     * Encodes all room status data into a string.
-     *
-     * @returns The RoomStatus in string form.
-     */
+    /** @override */
     public toString(): string {
         return `[${([] as string[])
             .concat(
