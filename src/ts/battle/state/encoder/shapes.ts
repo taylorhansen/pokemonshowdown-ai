@@ -14,11 +14,7 @@ export const numActive = 1;
 /** Number of moves in a moveset. */
 export const numMoves = Moveset.maxSize;
 
-/**
- * Input names for the model.
- *
- * Maps 1:1 to {@link modelInputShapes}.
- */
+/** Input names for the model. */
 export const modelInputNames: readonly string[] = [
     "room_status",
     "team_status",

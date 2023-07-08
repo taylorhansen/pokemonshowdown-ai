@@ -1,6 +1,6 @@
 /** @file Formats BattleState objects into data usable by the neural network. */
 import * as dex from "../../dex";
-import {UsageStats} from "../../usage";
+import {PokemonStats, UsageStats} from "../../usage";
 import {ReadonlyBattleState} from "../BattleState";
 import {ReadonlyHp} from "../Hp";
 import {ReadonlyMajorStatusCounter} from "../MajorStatusCounter";
@@ -142,9 +142,6 @@ export const teamStatusEncoder: Encoder<ReadonlyTeamStatus> = concat(
 
 //#region Team Pokemon traits/statuses.
 
-/** Team pokemon args. */
-export type PokemonArgs = ReadonlyPokemon | null | undefined;
-
 //#region Basic Pokemon traits/statuses.
 
 /** Encoder for an Hp object. */
@@ -216,11 +213,8 @@ export const emptyBasicEncoder: Encoder<undefined> = concat(
 );
 
 /** Encoder for a Pokemon's basic traits/statuses. */
-export const basicEncoder: Encoder<PokemonArgs> = optional(
-    definedBasicEncoder,
-    unknownBasicEncoder,
-    emptyBasicEncoder,
-);
+export const basicEncoder: Encoder<ReadonlyPokemon | null | undefined> =
+    optional(definedBasicEncoder, unknownBasicEncoder, emptyBasicEncoder);
 
 //#endregion
 
@@ -860,10 +854,18 @@ export interface StateArgs {
     readonly smoothing?: number;
 }
 
-interface StateContext extends StateArgs {
+interface StateContext {
+    readonly state: ReadonlyBattleState;
     readonly teams: readonly ReadonlyTeam[];
-    readonly pokemon: readonly (readonly PokemonArgs[])[];
+    readonly pokemon: readonly (readonly (
+        | ReadonlyPokemon
+        | null
+        | undefined
+    )[])[];
+    readonly pokemonUsage?: readonly (readonly (PokemonStats | undefined)[])[];
     readonly actives: readonly ReadonlyPokemon[];
+    readonly activeUsage?: readonly (PokemonStats | undefined)[];
+    readonly smoothing?: number;
 }
 
 const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
@@ -877,7 +879,7 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
             );
         case "volatile":
             return augment(
-                ({actives}) => actives.map(p => p.volatile),
+                ({actives}) => actives.map(active => active.volatile),
                 map(numTeams, volatileStatusEncoder),
             );
         case "basic":
@@ -927,7 +929,7 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
             );
         case "ability":
             return augment(
-                ({usage, smoothing, pokemon, actives}) =>
+                ({pokemon, pokemonUsage, actives, activeUsage, smoothing}) =>
                     pokemon.map<(AbilityArgs | null | undefined)[]>((t, i) => [
                         actives[i].hp.current > 0
                             ? {
@@ -935,19 +937,17 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
                                       ? [actives[i].ability]
                                       : dex.pokemon[actives[i].species]
                                             .abilities,
-                                  usage: usage?.get(actives[i].species)
-                                      ?.abilities,
+                                  usage: activeUsage?.[i]?.abilities,
                                   smoothing,
                               }
                             : undefined,
                         ...t.map(
-                            p =>
+                            (p, j) =>
                                 p && {
                                     ability: p.baseAbility
                                         ? [p.baseAbility]
                                         : dex.pokemon[p.baseSpecies].abilities,
-                                    usage: usage?.get(actives[i].baseSpecies)
-                                        ?.abilities,
+                                    usage: pokemonUsage?.[i][j]?.abilities,
                                     smoothing,
                                 },
                         ),
@@ -956,14 +956,14 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
             );
         case "item":
             return augment(
-                ({usage, smoothing, pokemon}) =>
-                    pokemon.map(t =>
+                ({pokemon, pokemonUsage, smoothing}) =>
+                    pokemon.map((t, i) =>
                         t.map<ItemArgs | null | undefined>(
-                            p =>
+                            (p, j) =>
                                 p && {
                                     item: p.item,
                                     lastItem: p.lastItem,
-                                    usage: usage?.get(p.species)?.items,
+                                    usage: pokemonUsage?.[i][j]?.items,
                                     smoothing,
                                 },
                         ),
@@ -972,7 +972,7 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
             );
         case "moves":
             return augment(
-                ({usage, smoothing, pokemon, actives}) =>
+                ({pokemon, pokemonUsage, actives, activeUsage, smoothing}) =>
                     pokemon.map<(DefinedMovesetArgs | null | undefined)[]>(
                         (t, i) => [
                             actives[i].hp.current > 0
@@ -981,24 +981,22 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
                                       volatile: actives[i].volatile,
                                       hpType:
                                           actives[i].hpType ??
-                                          usage?.get(actives[i].species)
-                                              ?.hpType ??
+                                          activeUsage?.[i]?.hpType ??
                                           null,
-                                      usage: usage?.get(actives[i].species)
-                                          ?.moves,
+                                      usage: activeUsage?.[i]?.moves,
                                       smoothing,
                                   }
                                 : undefined,
                             ...t.map(
-                                p =>
+                                (p, j) =>
                                     p && {
                                         moveset: p.baseMoveset,
                                         volatile: null,
                                         hpType:
                                             p.baseStats.hpType ??
-                                            usage?.get(p.baseSpecies)?.hpType ??
+                                            pokemonUsage?.[i][j]?.hpType ??
                                             null,
-                                        usage: usage?.get(p.species)?.moves,
+                                        usage: pokemonUsage?.[i][j]?.moves,
                                         smoothing,
                                     },
                             ),
@@ -1021,27 +1019,39 @@ export const stateEncoder: Encoder<StateArgs> = augment(
         const them = state.getTeam(state.ourSide === "p1" ? "p2" : "p1");
         const teams = [us, them];
         const pokemon = teams.map(team =>
-            Array.from<unknown, PokemonArgs>(
+            Array.from<unknown, ReadonlyPokemon | null | undefined>(
                 {length: numPokemon},
-                (_, i) =>
-                    // Treat fainted mons as nonexistent since they're
-                    // permanently removed from the game.
-                    // TODO: Is this necessary?
-                    team.pokemon[i] &&
-                    (team.pokemon[i]!.hp.current <= 0
-                        ? undefined
-                        : team.pokemon[i]!),
+                (_, i) => {
+                    const mon = team.pokemon[i];
+                    if (!mon) {
+                        return mon;
+                    }
+                    if (mon.hp.current <= 0) {
+                        // Treat fainted mons as nonexistent since they're
+                        // permanently removed from the game.
+                        // TODO(gen9): Can't do this due to revivalblessing.
+                        return undefined;
+                    }
+                    return mon;
+                },
             ),
         );
-        const actives = teams.map(t => t.active);
+        const pokemonUsage =
+            usage &&
+            pokemon.map(t =>
+                t.map(p => (p ? usage.get(p.baseSpecies) : undefined)),
+            );
+        const actives = teams.map(({active}) => active);
+        const activeUsage = usage && actives.map(p => usage.get(p.species));
 
         const ctx: StateContext = {
             state,
-            usage,
-            smoothing,
             teams,
             pokemon,
+            pokemonUsage,
             actives,
+            activeUsage,
+            smoothing,
         };
         return ctx;
     },

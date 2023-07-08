@@ -17,7 +17,11 @@ import * as rewards from "../src/ts/battle/worker/rewards";
 const projectDir = path.resolve(__dirname, "..");
 const shapesPyPath = path.join(projectDir, "src", "py", "gen", "shapes.py");
 
-/** Input shapes for the neural network model, without the batch dimension. */
+/**
+ * Input shapes for the neural network model, without the batch dimension.
+ *
+ * Should correspond to {@link modelInputNames}.
+ */
 const modelInputShapes: readonly (readonly number[])[] = [
     [encoders.roomStatusEncoder.size],
     [numTeams, encoders.teamStatusEncoder.size],
