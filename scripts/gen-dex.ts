@@ -506,7 +506,7 @@ ${exportArray(items, "itemKeys", "string", i => quote(i[0]))}
     const prettierConfig = await prettier.resolveConfig(projectDir, {
         editorconfig: true,
     });
-    dexTs = prettier.format(dexTs, {
+    dexTs = await prettier.format(dexTs, {
         ...(prettierConfig ?? undefined),
         filepath: dexTsPath,
     });

@@ -2816,9 +2816,9 @@ export const test = () =>
                         kwArgs: {},
                     });
                     await ph.return();
-                    expect(
-                        mon.volatile.encore.ts.isActive,
-                    ).to.be[start ? "true" : "false"];
+                    expect(mon.volatile.encore.ts.isActive).to.be[
+                        start ? "true" : "false"
+                    ];
                     if (start) {
                         expect(mon.volatile.encore.move).to.equal("tackle");
                     } else {
@@ -2861,9 +2861,9 @@ export const test = () =>
                     if (!start) {
                         team.status.futureMoves.doomdesire.start();
                     }
-                    expect(
-                        team.status.futureMoves.doomdesire.isActive,
-                    ).to.be[start ? "false" : "true"];
+                    expect(team.status.futureMoves.doomdesire.isActive).to.be[
+                        start ? "false" : "true"
+                    ];
 
                     await ph.handle({
                         args: [
@@ -2875,9 +2875,9 @@ export const test = () =>
                         kwArgs: {},
                     });
                     await ph.return();
-                    expect(
-                        team.status.futureMoves.doomdesire.isActive,
-                    ).to.be[start ? "true" : "false"];
+                    expect(team.status.futureMoves.doomdesire.isActive).to.be[
+                        start ? "true" : "false"
+                    ];
                 });
 
                 it("Should ignore invalid effect", async function () {

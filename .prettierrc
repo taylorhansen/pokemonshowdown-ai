@@ -7,7 +7,6 @@
   "semi": true,
   "singleQuote": false,
   "tabWidth": 4,
-  "trailingComma": "all",
   "overrides": [
     {
       "files": [".eslintrc", ".prettierrc", "**/*.json", "**/*.yml"],

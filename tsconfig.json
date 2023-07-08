@@ -17,5 +17,5 @@
     "skipLibCheck": true
   },
   "include": ["src/ts/**/*.ts"],
-  "exclude": ["src/ts/config/config.example.ts", "src/ts/**/*.test.ts"]
+  "exclude": ["src/ts/**/*.test.ts"]
 }
