@@ -1,4 +1,4 @@
-/** @file Generates `shapes.py` through stdout. */
+/** @file Generates `shapes.py`. */
 import {strict as assert} from "assert";
 import {spawnSync} from "child_process";
 import {writeFileSync} from "fs";

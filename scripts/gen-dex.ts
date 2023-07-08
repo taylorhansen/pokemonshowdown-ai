@@ -1,4 +1,4 @@
-/** @file Generates `dex.ts` through stdout.  */
+/** @file Generates `dex.ts`.  */
 import {writeFileSync} from "fs";
 import * as path from "path";
 import {Generations} from "@pkmn/data";
@@ -9,7 +9,8 @@ import * as prettier from "prettier";
 import * as dex from "../src/ts/battle/dex/dex-util";
 import {toIdName} from "../src/ts/battle/helpers";
 
-// TODO: Most of this can just be (lazily?) computed via the same Dex API.
+// TODO: Most of this can just be (lazily?) computed via the same Dex API at
+// runtime rather than pre-computing a giant dex.ts file.
 
 const projectDir = path.resolve(__dirname, "..");
 const dexTsPath = path.join(projectDir, "src", "ts", "battle", "dex", "dex.ts");
