@@ -638,69 +638,53 @@ export const test = () =>
                         const team = state.getTeam("p1");
                         expect(team.size).to.equal(0);
 
-                        await ph.handle({
-                            args: [
-                                "request",
-                                toRequestJSON({
-                                    requestType: "move",
-                                    active: [
+                        await ph.handle(
+                            requestEvent(
+                                "move",
+                                [
+                                    {
+                                        active: true,
+                                        details: toDetails(smeargle),
+                                        ident: toIdent("p1", smeargle),
+                                        pokeball: toID("pokeball"),
+                                        ability: toID("owntempo"),
+                                        baseAbility: toID("owntempo"),
+                                        condition: toHPStatus(100, 100),
+                                        item: toID("mail"),
+                                        moves: [toID("tackle")],
+                                        stats: {
+                                            atk: 18,
+                                            def: 29,
+                                            spa: 18,
+                                            spd: 36,
+                                            spe: 58,
+                                        },
+                                        hp: smeargle.hp,
+                                        maxhp: smeargle.hpMax,
+                                        hpcolor: "g",
+                                        name: toSpeciesName(smeargle.species),
+                                        speciesForme: toSpeciesName(
+                                            smeargle.species,
+                                        ),
+                                        level: smeargle.level,
+                                        shiny: true,
+                                        gender: smeargle.gender,
+                                        searchid: toSearchID("p1", smeargle),
+                                    },
+                                ],
+                                {
+                                    moves: [
                                         {
-                                            moves: [
-                                                {
-                                                    id: toID("tackle"),
-                                                    name: toMoveName("tackle"),
-                                                    pp: 32,
-                                                    maxpp: 32,
-                                                    target: "normal",
-                                                },
-                                            ],
+                                            id: toID("tackle"),
+                                            name: toMoveName("tackle"),
+                                            pp: 32,
+                                            maxpp: 32,
+                                            target: "normal",
                                         },
                                     ],
-                                    side: {
-                                        name: toUsername("username"),
-                                        id: "p1",
-                                        pokemon: [
-                                            {
-                                                active: true,
-                                                details: toDetails(smeargle),
-                                                ident: toIdent("p1", smeargle),
-                                                pokeball: toID("pokeball"),
-                                                ability: toID("owntempo"),
-                                                baseAbility: toID("owntempo"),
-                                                condition: toHPStatus(100, 100),
-                                                item: toID("mail"),
-                                                moves: [toID("tackle")],
-                                                stats: {
-                                                    atk: 18,
-                                                    def: 29,
-                                                    spa: 18,
-                                                    spd: 36,
-                                                    spe: 58,
-                                                },
-                                                hp: smeargle.hp,
-                                                maxhp: smeargle.hpMax,
-                                                hpcolor: "g",
-                                                name: toSpeciesName(
-                                                    smeargle.species,
-                                                ),
-                                                speciesForme: toSpeciesName(
-                                                    smeargle.species,
-                                                ),
-                                                level: smeargle.level,
-                                                shiny: true,
-                                                gender: smeargle.gender,
-                                                searchid: toSearchID(
-                                                    "p1",
-                                                    smeargle,
-                                                ),
-                                            },
-                                        ],
-                                    },
-                                    rqid: 1,
-                                }),
-                            ],
-                            kwArgs: {},
-                        });
+                                },
+                            ),
+                        );
                         await ph.return();
                         expect(team.size).to.equal(1);
                         expect(() => team.active).to.not.throw();
@@ -715,65 +699,46 @@ export const test = () =>
                             hpMax: 55,
                         };
 
-                        await ph.handle({
-                            args: [
-                                "request",
-                                toRequestJSON({
-                                    requestType: "move",
-                                    active: [],
-                                    side: {
-                                        id: "p1",
-                                        name: toUsername("username"),
-                                        pokemon: [
-                                            {
-                                                active: true,
-                                                details:
-                                                    toDetails(deoxysdefense),
-                                                // Note: PS can sometimes omit
-                                                // the forme name in the ident.
-                                                ident: toIdent("p1", {
-                                                    ...deoxysdefense,
-                                                    species: "deoxys",
-                                                }),
-                                                pokeball: toID("pokeball"),
-                                                ability: toID("pressure"),
-                                                baseAbility: toID("pressure"),
-                                                condition: toHPStatus(
-                                                    deoxysdefense.hp,
-                                                    deoxysdefense.hpMax,
-                                                ),
-                                                item: toID("mail"),
-                                                moves: [toID("tackle")],
-                                                stats: {
-                                                    atk: 30,
-                                                    def: 75,
-                                                    spa: 30,
-                                                    spd: 75,
-                                                    spe: 58,
-                                                },
-                                                hp: deoxysdefense.hp,
-                                                maxhp: deoxysdefense.hpMax,
-                                                hpcolor: "g",
-                                                name: toSpeciesName("deoxys"),
-                                                speciesForme:
-                                                    toSpeciesName(
-                                                        "deoxysdefense",
-                                                    ),
-                                                level: deoxysdefense.level,
-                                                shiny: false,
-                                                gender: deoxysdefense.gender,
-                                                searchid: toSearchID(
-                                                    "p1",
-                                                    deoxysdefense,
-                                                ),
-                                            },
-                                        ],
+                        await ph.handle(
+                            requestEvent("move", [
+                                {
+                                    active: true,
+                                    details: toDetails(deoxysdefense),
+                                    // Note: PS can sometimes omit the form
+                                    // name in the ident.
+                                    ident: toIdent("p1", {
+                                        ...deoxysdefense,
+                                        species: "deoxys",
+                                    }),
+                                    pokeball: toID("pokeball"),
+                                    ability: toID("pressure"),
+                                    baseAbility: toID("pressure"),
+                                    condition: toHPStatus(
+                                        deoxysdefense.hp,
+                                        deoxysdefense.hpMax,
+                                    ),
+                                    item: toID("mail"),
+                                    moves: [toID("tackle")],
+                                    stats: {
+                                        atk: 30,
+                                        def: 75,
+                                        spa: 30,
+                                        spd: 75,
+                                        spe: 58,
                                     },
-                                    rqid: 2,
-                                }),
-                            ],
-                            kwArgs: {},
-                        });
+                                    hp: deoxysdefense.hp,
+                                    maxhp: deoxysdefense.hpMax,
+                                    hpcolor: "g",
+                                    name: toSpeciesName("deoxys"),
+                                    speciesForme:
+                                        toSpeciesName("deoxysdefense"),
+                                    level: deoxysdefense.level,
+                                    shiny: false,
+                                    gender: deoxysdefense.gender,
+                                    searchid: toSearchID("p1", deoxysdefense),
+                                },
+                            ]),
+                        );
                         await ph.return();
                     });
                 });

@@ -71,7 +71,7 @@ export const castformsunny: SwitchOptions = {
 export function requestEvent(
     type: "move",
     sidePokemon: Protocol.Request.Pokemon[],
-    active: Protocol.Request.ActivePokemon,
+    active?: Protocol.Request.ActivePokemon,
 ): Event<"|request|">;
 export function requestEvent(
     type: "switch",
@@ -87,7 +87,7 @@ export function requestEvent(
             "request",
             toRequestJSON({
                 ...(type === "move"
-                    ? {requestType: "move", active: [active!]}
+                    ? {requestType: "move", active: active ? [active] : []}
                     : {requestType: "switch", forceSwitch: [true]}),
                 side: {
                     name: toUsername("username"),
