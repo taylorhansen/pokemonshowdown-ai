@@ -206,12 +206,17 @@ function initRequest(ctx: BattleParserContext, req: Protocol.Request) {
     for (const reqMon of req.side.pokemon) {
         // Preprocess moves to possibly extract hiddenpower type and happiness.
         const moves: string[] = [];
-        let happiness: number | undefined;
         let hpType: dex.HpType | undefined;
+        let happiness: number | undefined;
         for (const moveId of reqMon.moves) {
-            let id: string = moveId;
-            ({id, happiness, hpType} = sanitizeMoveId(id));
-            moves.push(id);
+            const parsedMove = sanitizeMoveId(moveId);
+            moves.push(parsedMove.id);
+            if (parsedMove.hpType !== undefined) {
+                ({hpType} = parsedMove);
+            }
+            if (parsedMove.happiness !== undefined) {
+                ({happiness} = parsedMove);
+            }
         }
 
         const revealOpts: TeamRevealOptions = {
@@ -224,9 +229,11 @@ function initRequest(ctx: BattleParserContext, req: Protocol.Request) {
         };
         const mon = team.reveal(revealOpts)!;
 
-        mon.happiness = happiness ?? null;
         if (hpType) {
             mon.stats.hpType = hpType;
+        }
+        if (happiness !== undefined) {
+            mon.happiness = happiness;
         }
 
         mon.baseStats.hp.set(reqMon.maxhp);
@@ -270,16 +277,19 @@ export function sanitizeMoveId(id: string): {
     } else if (id.startsWith("return") && id.length > "return".length) {
         // Format: return<base power>
         // Equation: base power = happiness / 2.5
-        happiness = 2.5 * parseInt(id.substring("return".length), 10);
+        // Assume min happiness if min power.
+        const power = parseInt(id.substring("return".length), 10);
+        happiness = power === 1 ? 0 : 2.5 * power;
         id = "return";
     } else if (
         id.startsWith("frustration") &&
         id.length > "frustration".length
     ) {
         // Format: frustration<base power>
+        const power = parseInt(id.substring("frustration".length), 10);
         // Equation: base power = (255-happiness) / 2.5
-        const scaled = 2.5 * parseInt(id.substring("frustration".length), 10);
-        happiness = 255 - scaled;
+        // Assume max happiness if min power.
+        happiness = power === 1 ? 255 : 255 - 2.5 * power;
         id = "frustration";
     }
     return {id, happiness, hpType, hpPower};

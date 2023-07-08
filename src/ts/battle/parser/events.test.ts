@@ -690,6 +690,78 @@ export const test = () =>
                         expect(() => team.active).to.not.throw();
                     });
 
+                    it("Should initialize team with hiddenpower type and happiness annotations", async function () {
+                        const team = state.getTeam("p1");
+                        expect(team.size).to.equal(0);
+
+                        await ph.handle(
+                            requestEvent(
+                                "move",
+                                [
+                                    {
+                                        active: true,
+                                        details: toDetails(smeargle),
+                                        ident: toIdent("p1", smeargle),
+                                        pokeball: toID("pokeball"),
+                                        ability: toID("owntempo"),
+                                        baseAbility: toID("owntempo"),
+                                        condition: toHPStatus(100, 100),
+                                        item: toID("mail"),
+                                        moves: [
+                                            toID("hiddenpowerfire"),
+                                            toID("return102"),
+                                        ],
+                                        stats: {
+                                            atk: 18,
+                                            def: 29,
+                                            spa: 18,
+                                            spd: 36,
+                                            spe: 58,
+                                        },
+                                        hp: smeargle.hp,
+                                        maxhp: smeargle.hpMax,
+                                        hpcolor: "g",
+                                        name: toSpeciesName(smeargle.species),
+                                        speciesForme: toSpeciesName(
+                                            smeargle.species,
+                                        ),
+                                        level: smeargle.level,
+                                        shiny: true,
+                                        gender: smeargle.gender,
+                                        searchid: toSearchID("p1", smeargle),
+                                    },
+                                ],
+                                {
+                                    moves: [
+                                        {
+                                            id: toID("hiddenpower"),
+                                            name: (toMoveName("hiddenpower") +
+                                                " Fire 70") as Protocol.MoveName,
+                                            pp: 24,
+                                            maxpp: 24,
+                                            target: "normal",
+                                            disabled: false,
+                                        },
+                                        {
+                                            id: toID("return"),
+                                            name: (toMoveName("return") +
+                                                " 102") as Protocol.MoveName,
+                                            pp: 32,
+                                            maxpp: 32,
+                                            target: "normal",
+                                            disabled: false,
+                                        },
+                                    ],
+                                },
+                            ),
+                        );
+                        await ph.return();
+                        expect(team.size).to.equal(1);
+                        expect(() => team.active).to.not.throw();
+                        expect(team.active.happiness).to.equal(255);
+                        expect(team.active.stats.hpType).to.equal("fire");
+                    });
+
                     it("Should handle |request| with alt form", async function () {
                         const deoxysdefense: SwitchOptions = {
                             species: "deoxysdefense",
