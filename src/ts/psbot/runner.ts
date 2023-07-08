@@ -59,6 +59,7 @@ void (async function psBotRunner() {
                 await modelServer.cleanup(room /*key*/);
             },
             async agent(state, choices, agentLogger) {
+                agentLogger?.debug(`State:\n${state.toString()}`);
                 const prediction = await modelServer.predict(
                     room /*key*/,
                     state,

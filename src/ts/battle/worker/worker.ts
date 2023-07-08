@@ -302,6 +302,8 @@ class BattleWorker {
             m.set(name, res),
         ).finally(() => m.delete(name));
 
+        logger?.debug(`State:\n${state.toString()}`);
+
         const {data: stateData, original} = allocEncodedState();
         encodeState(stateData, state, this.usage, this.smoothing);
         const req: AgentRequest = {
