@@ -27,6 +27,10 @@ work on Linux and likely also Windows WSL2.
 git clone https://github.com/taylorhansen/pokemonshowdown-ai
 cd pokemonshowdown-ai
 
+# Checkout submodules.
+git submodule init
+git submodule update
+
 # Setup Python/TensorFlow.
 conda env create --name psai --file environment.yml
 conda activate psai
