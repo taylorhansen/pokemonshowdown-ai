@@ -1,5 +1,7 @@
 /** @file Formats BattleState objects into data usable by the neural network. */
 import * as dex from "../../dex";
+import {UsageStats} from "../../usage";
+import {ReadonlyBattleState} from "../BattleState";
 import {ReadonlyHp} from "../Hp";
 import {ReadonlyMajorStatusCounter} from "../MajorStatusCounter";
 import {ReadonlyMove} from "../Move";
@@ -9,6 +11,7 @@ import {ReadonlyPokemon} from "../Pokemon";
 import {ReadonlyRoomStatus} from "../RoomStatus";
 import {ReadonlyStatRange, StatRange} from "../StatRange";
 import {ReadonlyStatTable} from "../StatTable";
+import {ReadonlyTeam} from "../Team";
 import {ReadonlyTeamStatus} from "../TeamStatus";
 import {ReadonlyTempStatus} from "../TempStatus";
 import {ReadonlyVolatileStatus} from "../VolatileStatus";
@@ -24,6 +27,7 @@ import {
     rebalanceDist,
     zeroEncoder,
 } from "./helpers";
+import {modelInputNames, numActive, numPokemon, numTeams} from "./shapes";
 
 //#region Helper encoders.
 
@@ -838,5 +842,210 @@ export const movesetEncoder: Encoder<DefinedMovesetArgs | null | undefined> =
     optional(definedMovesetEncoder, unknownMovesetEncoder, emptyMovesetEncoder);
 
 //#endregion
+
+//#endregion
+
+//#region Battle state.
+
+/** Args for {@link stateEncoder}. */
+export interface StateArgs {
+    /** Battle state to encode. */
+    readonly state: ReadonlyBattleState;
+    /** Optional usage stats to help with encoding unknown info. */
+    readonly usage?: UsageStats;
+    /**
+     * Amount of smoothing to apply to usage stats when encoding probability
+     * constraints.
+     */
+    readonly smoothing?: number;
+}
+
+interface StateContext extends StateArgs {
+    readonly teams: readonly ReadonlyTeam[];
+    readonly pokemon: readonly (readonly PokemonArgs[])[];
+    readonly actives: readonly ReadonlyPokemon[];
+}
+
+const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
+    switch (name) {
+        case "room_status":
+            return augment(({state: {status}}) => status, roomStatusEncoder);
+        case "team_status":
+            return augment(
+                ({teams}) => teams.map(t => t.status),
+                map(numTeams, teamStatusEncoder),
+            );
+        case "volatile":
+            return augment(
+                ({actives}) => actives.map(p => p.volatile),
+                map(numTeams, volatileStatusEncoder),
+            );
+        case "basic":
+            return augment(
+                ({pokemon}) => pokemon,
+                map(numTeams, map(numPokemon, basicEncoder)),
+            );
+        case "species":
+            return augment(
+                ({pokemon, actives}) =>
+                    pokemon.map((t, i) => [
+                        // Include active pokemon's override traits.
+                        actives[i].hp.current > 0
+                            ? actives[i].species
+                            : undefined,
+                        // Note: Don't use optional chain (?.) operator since
+                        // that turns null into undefined, which has a different
+                        // meaning in this context.
+                        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+                        ...t.map(p => p && p.baseSpecies),
+                    ]),
+                map(numTeams, map(numPokemon + numActive, speciesEncoder)),
+            );
+        case "types":
+            return augment(
+                ({pokemon, actives}) =>
+                    pokemon.map((t, i) => [
+                        actives[i].hp.current > 0
+                            ? actives[i].types
+                            : undefined,
+                        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+                        ...t.map(p => p && p.baseTypes),
+                    ]),
+                map(numTeams, map(numPokemon + numActive, typesEncoder)),
+            );
+        case "stats":
+            return augment(
+                ({pokemon, actives}) =>
+                    pokemon.map((t, i) => [
+                        actives[i].hp.current > 0
+                            ? actives[i].stats
+                            : undefined,
+                        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+                        ...t.map(p => p && p.baseStats),
+                    ]),
+                map(numTeams, map(numPokemon + numActive, statTableEncoder)),
+            );
+        case "ability":
+            return augment(
+                ({usage, smoothing, pokemon, actives}) =>
+                    pokemon.map<(AbilityArgs | null | undefined)[]>((t, i) => [
+                        actives[i].hp.current > 0
+                            ? {
+                                  ability: actives[i].ability
+                                      ? [actives[i].ability]
+                                      : dex.pokemon[actives[i].species]
+                                            .abilities,
+                                  usage: usage?.get(actives[i].species)
+                                      ?.abilities,
+                                  smoothing,
+                              }
+                            : undefined,
+                        ...t.map(
+                            p =>
+                                p && {
+                                    ability: p.baseAbility
+                                        ? [p.baseAbility]
+                                        : dex.pokemon[p.baseSpecies].abilities,
+                                    usage: usage?.get(actives[i].baseSpecies)
+                                        ?.abilities,
+                                    smoothing,
+                                },
+                        ),
+                    ]),
+                map(numTeams, map(numPokemon + numActive, abilityEncoder)),
+            );
+        case "item":
+            return augment(
+                ({usage, smoothing, pokemon}) =>
+                    pokemon.map(t =>
+                        t.map<ItemArgs | null | undefined>(
+                            p =>
+                                p && {
+                                    item: p.item,
+                                    lastItem: p.lastItem,
+                                    usage: usage?.get(p.species)?.items,
+                                    smoothing,
+                                },
+                        ),
+                    ),
+                map(numTeams, map(numPokemon, itemEncoder)),
+            );
+        case "moves":
+            return augment(
+                ({usage, smoothing, pokemon, actives}) =>
+                    pokemon.map<(DefinedMovesetArgs | null | undefined)[]>(
+                        (t, i) => [
+                            actives[i].hp.current > 0
+                                ? {
+                                      moveset: actives[i].moveset,
+                                      volatile: actives[i].volatile,
+                                      hpType:
+                                          actives[i].hpType ??
+                                          usage?.get(actives[i].species)
+                                              ?.hpType ??
+                                          null,
+                                      usage: usage?.get(actives[i].species)
+                                          ?.moves,
+                                      smoothing,
+                                  }
+                                : undefined,
+                            ...t.map(
+                                p =>
+                                    p && {
+                                        moveset: p.baseMoveset,
+                                        volatile: null,
+                                        hpType:
+                                            p.baseStats.hpType ??
+                                            usage?.get(p.baseSpecies)?.hpType ??
+                                            null,
+                                        usage: usage?.get(p.species)?.moves,
+                                        smoothing,
+                                    },
+                            ),
+                        ],
+                    ),
+                map(numTeams, map(numPokemon + numActive, movesetEncoder)),
+            );
+        default:
+            throw new Error(`Unknown input name '${name}'`);
+    }
+});
+
+/** Encoder for the battle state. Requires pre-allocated float array input. */
+export const stateEncoder: Encoder<StateArgs> = augment(
+    ({state, usage, smoothing}) => {
+        if (!state.ourSide) {
+            throw new Error("state.ourSide is undefined");
+        }
+        const us = state.getTeam(state.ourSide);
+        const them = state.getTeam(state.ourSide === "p1" ? "p2" : "p1");
+        const teams = [us, them];
+        const pokemon = teams.map(team =>
+            Array.from<unknown, PokemonArgs>(
+                {length: numPokemon},
+                (_, i) =>
+                    // Treat fainted mons as nonexistent since they're
+                    // permanently removed from the game.
+                    // TODO: Is this necessary?
+                    team.pokemon[i] &&
+                    (team.pokemon[i]!.hp.current <= 0
+                        ? undefined
+                        : team.pokemon[i]!),
+            ),
+        );
+        const actives = teams.map(t => t.active);
+
+        const ctx: StateContext = {
+            state,
+            usage,
+            smoothing,
+            teams,
+            pokemon,
+            actives,
+        };
+        return ctx;
+    },
+    concat(...inputEncoders),
+);
 
 //#endregion

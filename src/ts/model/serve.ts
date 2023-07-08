@@ -4,7 +4,7 @@ import * as readline from "readline";
 import * as zmq from "zeromq";
 import {Action} from "../battle/agent";
 import {ReadonlyBattleState} from "../battle/state";
-import {allocEncodedState, encodeState} from "../battle/state/encoder";
+import {stateEncoder} from "../battle/state/encoder";
 import {UsageStats} from "../battle/usage";
 import {Logger} from "../utils/logging/Logger";
 
@@ -179,14 +179,14 @@ export class ModelServer {
         smoothing?: number,
     ): Promise<ModelPrediction> {
         const req: ModelRequest = {type: "model", id: ++this.requestCount, key};
-        const {data: stateData, original} = allocEncodedState();
-        encodeState(stateData, state, usage, smoothing);
+        const stateData = new Float32Array(stateEncoder.size);
+        stateEncoder.encode(stateData, {state, usage, smoothing});
 
         const replyPromise = new Promise<ModelReply>(res =>
             this.pendingRequests.set(req.id, res),
         ).finally(() => this.pendingRequests.delete(req.id));
 
-        await this.ensureSocket().send([JSON.stringify(req), original]);
+        await this.ensureSocket().send([JSON.stringify(req), stateData.buffer]);
         const reply = await replyPromise;
         return {
             rankedActions: reply.ranked_actions,

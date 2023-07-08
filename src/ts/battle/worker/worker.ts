@@ -7,7 +7,7 @@ import {maxDamage} from "../agent/maxDamage.js";
 import {randomAgent} from "../agent/random.js";
 import {main} from "../parser/main";
 import {ReadonlyBattleState} from "../state";
-import {allocEncodedState, encodeState} from "../state/encoder";
+import {stateEncoder} from "../state/encoder";
 import {UsageStats, lookup} from "../usage";
 import {PlayerOptions, simulateBattle} from "./battle";
 import {
@@ -304,8 +304,12 @@ class BattleWorker {
 
         logger?.debug(`State:\n${state.toString()}`);
 
-        const {data: stateData, original} = allocEncodedState();
-        encodeState(stateData, state, this.usage, this.smoothing);
+        const stateData = new Float32Array(stateEncoder.size);
+        stateEncoder.encode(stateData, {
+            state,
+            usage: this.usage,
+            smoothing: this.smoothing,
+        });
         const req: AgentRequest = {
             type: "agent",
             battle,
@@ -314,7 +318,7 @@ class BattleWorker {
             ...(lastAction && {lastAction}),
             ...(reward !== undefined && {reward}),
         };
-        await this.agentSock.send([JSON.stringify(req), original.buffer]);
+        await this.agentSock.send([JSON.stringify(req), stateData.buffer]);
 
         const rep = await replyPromise;
         if (battle !== rep.battle || name !== rep.name) {

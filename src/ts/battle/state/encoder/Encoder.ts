@@ -15,7 +15,10 @@ export interface Encoder<TState> {
      * @param args Data to encode.
      */
     readonly encode: (data: Float32Array, args: TState) => void;
-    /** Minimum size of data required for `#encode()` array. */
+    /**
+     * Minimum size of the data input array that's required for the
+     * {@link encode} method.
+     */
     readonly size: number;
 }
 

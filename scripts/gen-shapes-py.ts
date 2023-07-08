@@ -1,22 +1,44 @@
 /** @file Generates `shapes.py` through stdout. */
+import {strict as assert} from "assert";
 import {spawnSync} from "child_process";
 import {writeFileSync} from "fs";
 import * as path from "path";
 import {actions} from "../src/ts/battle/agent";
+import * as encoders from "../src/ts/battle/state/encoder";
 import {
     numTeams,
     numPokemon,
     numActive,
     modelInputNames,
-    modelInputShapes,
-    flattenedInputShapes,
-    totalInputSize,
     numMoves,
 } from "../src/ts/battle/state/encoder/shapes";
 import * as rewards from "../src/ts/battle/worker/rewards";
 
 const projectDir = path.resolve(__dirname, "..");
 const shapesPyPath = path.join(projectDir, "src", "py", "gen", "shapes.py");
+
+/** Input shapes for the neural network model, without the batch dimension. */
+const modelInputShapes: readonly (readonly number[])[] = [
+    [encoders.roomStatusEncoder.size],
+    [numTeams, encoders.teamStatusEncoder.size],
+    [numTeams, numActive, encoders.volatileStatusEncoder.size],
+    [numTeams, numPokemon, encoders.basicEncoder.size],
+    [numTeams, numPokemon + numActive, encoders.speciesEncoder.size],
+    [numTeams, numPokemon + numActive, encoders.typesEncoder.size],
+    [numTeams, numPokemon + numActive, encoders.statTableEncoder.size],
+    [numTeams, numPokemon + numActive, encoders.abilityEncoder.size],
+    [numTeams, numPokemon, 2 /*curr + last*/, encoders.itemEncoder.size / 2],
+    [numTeams, numPokemon + numActive, numMoves, encoders.moveSlotEncoder.size],
+];
+
+/** Flattened version of {@link modelInputShapes}. */
+const flattenedInputShapes: readonly number[] = modelInputShapes.map(shape =>
+    shape.reduce((a, s) => a * s),
+);
+
+/** Total size of the input. Derived from {@link modelInputShapes}. */
+const totalInputSize = flattenedInputShapes.reduce((a, b) => a + b);
+assert.equal(encoders.stateEncoder.size, totalInputSize);
 
 const shapesPy = `\
 """

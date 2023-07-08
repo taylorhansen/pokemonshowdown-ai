@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import "mocha";
-import {alloc} from "../../../utils/buf";
 import * as dex from "../../dex";
 import {Hp} from "../../state/Hp";
 import {MajorStatusCounter} from "../../state/MajorStatusCounter";
@@ -15,18 +14,10 @@ import {TeamStatus} from "../../state/TeamStatus";
 import {TempStatus} from "../../state/TempStatus";
 import {VolatileStatus} from "../../state/VolatileStatus";
 import {setAllVolatiles} from "../../state/VolatileStatus.test";
+import {BattleState} from "../BattleState";
+import {SwitchOptions} from "../Team";
 import {Encoder} from "./Encoder";
 import * as encoders from "./encoders";
-
-/**
- * Allocates an array filled with `NaN`. This is used to test that encoders
- * completely fill in the arrays that they're given.
- *
- * @param size Array size.
- */
-function allocNaN(size: number): Float32Array {
-    return alloc(size, "unsafe").fill(NaN);
-}
 
 export const test = () =>
     describe("encoders", function () {
@@ -56,9 +47,11 @@ export const test = () =>
                         c.name ? ` (${c.name})` : ""
                     }`, function () {
                         let state: unknown;
+                        let arr: Float32Array;
 
                         beforeEach(`Initialize ${name}`, function () {
                             state = c.init();
+                            arr = new Float32Array(encoder.size).fill(NaN);
                         });
 
                         const {encoder, values} = c;
@@ -71,19 +64,22 @@ export const test = () =>
                                         `size ${values.length}`,
                                 );
 
-                                const arr = allocNaN(encoder.size);
                                 encoder.encode(arr, state);
                                 expect(arr).to.deep.include(values);
                             });
                         } else {
                             it("Should contain only numbers between -1 and 1", function () {
-                                const arr = allocNaN(encoder.size);
                                 encoder.encode(arr, state);
                                 for (let j = 0; j < encoder.size; ++j) {
                                     const x = arr[j];
                                     expect(
+                                        x,
+                                        `Value at index ${j} is NaN or was ` +
+                                            "not filled",
+                                    ).to.not.be.NaN;
+                                    expect(
                                         x >= -1 && x <= 1,
-                                        `Value ${x} at index ${j} was out of ` +
+                                        `Value ${x} at index ${j} is out of ` +
                                             "range",
                                     ).to.be.true;
                                 }
@@ -557,4 +553,25 @@ export const test = () =>
                 init: () => undefined,
             },
         );
+
+        testEncoder("stateEncoder", {
+            name: "Fully Initialized",
+            encoder: encoders.stateEncoder,
+            init: () => {
+                const switchOptions: SwitchOptions = {
+                    species: "magikarp",
+                    level: 100,
+                    gender: "M",
+                    hp: 200,
+                    hpMax: 200,
+                };
+                const state = new BattleState("username");
+                state.ourSide = "p2";
+                state.teams.p1!.size = 2;
+                state.teams.p1!.switchIn(switchOptions);
+                state.teams.p2!.size = 2;
+                state.teams.p2!.switchIn(switchOptions);
+                return {state};
+            },
+        });
     });
