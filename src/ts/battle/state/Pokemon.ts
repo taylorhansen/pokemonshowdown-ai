@@ -495,7 +495,7 @@ export class Pokemon implements ReadonlyPokemon {
     public toString(indent = 0, hpPercent?: boolean): string {
         const s = " ".repeat(indent);
         return `\
-${s}${this.stringifySpecies()}${this.gender ? ` ${this.gender}` : ""} \
+${this.stringifySpecies()}${this.gender ? ` ${this.gender}` : ""} \
 ${this.hp.toString(hpPercent)}
 ${s}stats: ${this.stringifyStats()}
 ${s}status: ${this.majorStatus.toString()}
@@ -585,7 +585,7 @@ ${this.stringifyMoveset(indent)}`;
         const s = " ".repeat(indent);
 
         // Stringify hp type.
-        const hpTypeStr = this.stats.hpType ?? "<unknown>";
+        const hpTypeStr = this.stats.hpType ?? "unknown";
 
         // Stringify moveset.
         let result =
@@ -597,7 +597,7 @@ ${this.stringifyMoveset(indent)}`;
             // Need to also include base moveset.
 
             // Stringify base Hidden Power type.
-            const baseHpTypeStr = this.baseStats.hpType ?? "<unknown>";
+            const baseHpTypeStr = this.baseStats.hpType ?? "unknown";
 
             // Stringify base moveset.
             result +=

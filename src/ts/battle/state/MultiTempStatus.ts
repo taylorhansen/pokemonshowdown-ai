@@ -120,7 +120,7 @@ export class MultiTempStatus<TStatusType extends string>
     /** @override */
     public toString(): string {
         if (this._type === "none") {
-            return "inactive";
+            return this._type;
         }
         return pluralTurns(
             this._type,

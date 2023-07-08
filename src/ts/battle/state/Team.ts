@@ -257,14 +257,14 @@ export class Team implements ReadonlyTeam {
         let res = `${s}status: ${this.status.toString()}`;
         for (let i = 0; i < this._pokemon.length; ++i) {
             const mon = this._pokemon[i];
-            res += `\n${s}mon${i + 1}:`;
+            res += `\n${s}pokemon${i + 1}: `;
             if (mon === null) {
-                res += " <unrevealed>";
+                res += "<unrevealed>";
             } else if (!mon) {
-                res += " <empty>";
+                res += "<empty>";
             } else {
                 const isOurSide = this.state?.ourSide === this.side;
-                res += "\n" + mon.toString(indent + 4, !isOurSide);
+                res += mon.toString(indent + 4, !isOurSide);
             }
         }
         return res;
