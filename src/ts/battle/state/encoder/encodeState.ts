@@ -1,11 +1,15 @@
 import {alloc} from "../../../utils/buf";
 import * as dex from "../../dex";
+import {UsageStats} from "../../usage";
 import {ReadonlyBattleState} from "../BattleState";
 import {map} from "./Encoder";
 import {
+    AbilityArgs,
     abilityEncoder,
-    allItemEncoder,
     basicEncoder,
+    DefinedMovesetArgs,
+    ItemArgs,
+    itemEncoder,
     movesetEncoder,
     PokemonArgs,
     roomStatusEncoder,
@@ -72,7 +76,7 @@ const pokemonAbilityEncoders = map(
     numTeams,
     map(numPokemon + numActive, abilityEncoder),
 );
-const pokemonItemEncoders = map(numTeams, map(numPokemon, allItemEncoder));
+const pokemonItemEncoders = map(numTeams, map(numPokemon, itemEncoder));
 const pokemonMovesetEncoders = map(
     numTeams,
     map(numPokemon + numActive, movesetEncoder),
@@ -84,11 +88,16 @@ const pokemonMovesetEncoders = map(
  *
  * @param data Arrays to fill with encoded data.
  * @param state Battle state to encode.
+ * @param usage Optional usage stats to help with encoding unknown info.
+ * @param smoothing Amount of smoothing to apply to usage stats when encoding
+ * probability constraints.
  * @see {@link allocEncodedState} to allocate the arrays.
  */
 export function encodeState(
     data: Float32Array[],
     state: ReadonlyBattleState,
+    usage?: UsageStats,
+    smoothing?: number,
 ): void {
     if (data.length !== modelInputNames.length) {
         throw new Error(
@@ -185,18 +194,28 @@ export function encodeState(
             case "ability":
                 pokemonAbilityEncoders.encode(
                     arr,
-                    pokemon.map((a, j) => [
+                    pokemon.map<(AbilityArgs | null | undefined)[]>((a, j) => [
                         actives[j].hp.current > 0
-                            ? actives[j].ability
-                                ? [actives[j].ability]
-                                : dex.pokemon[actives[j].species].abilities
+                            ? {
+                                  ability: actives[j].ability
+                                      ? [actives[j].ability]
+                                      : dex.pokemon[actives[j].species]
+                                            .abilities,
+                                  usage: usage?.get(actives[j].species)
+                                      ?.abilities,
+                                  smoothing,
+                              }
                             : undefined,
                         ...a.map(
                             p =>
-                                p &&
-                                (p.baseAbility
-                                    ? [p.baseAbility]
-                                    : dex.pokemon[p.baseSpecies].abilities),
+                                p && {
+                                    ability: p.baseAbility
+                                        ? [p.baseAbility]
+                                        : dex.pokemon[p.baseSpecies].abilities,
+                                    usage: usage?.get(actives[j].baseSpecies)
+                                        ?.abilities,
+                                    smoothing,
+                                },
                         ),
                     ]),
                 );
@@ -205,29 +224,52 @@ export function encodeState(
                 pokemonItemEncoders.encode(
                     arr,
                     pokemon.map(a =>
-                        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-                        a.map(p => [p && p.item, p && p.lastItem]),
+                        a.map<ItemArgs | null | undefined>(
+                            p =>
+                                p && {
+                                    item: p.item,
+                                    lastItem: p.lastItem,
+                                    usage: usage?.get(p.species)?.items,
+                                    smoothing,
+                                },
+                        ),
                     ),
                 );
                 break;
             case "moves":
                 pokemonMovesetEncoders.encode(
                     arr,
-                    pokemon.map((a, j) => [
-                        actives[j].hp.current > 0
-                            ? {
-                                  moveset: actives[j].moveset,
-                                  volatile: actives[j].volatile,
-                              }
-                            : undefined,
-                        ...a.map(
-                            p =>
-                                p && {
-                                    moveset: p.baseMoveset,
-                                    volatile: null,
-                                },
-                        ),
-                    ]),
+                    pokemon.map<(DefinedMovesetArgs | null | undefined)[]>(
+                        (a, j) => [
+                            actives[j].hp.current > 0
+                                ? {
+                                      moveset: actives[j].moveset,
+                                      volatile: actives[j].volatile,
+                                      hpType:
+                                          actives[j].hpType ??
+                                          usage?.get(actives[j].species)
+                                              ?.hpType ??
+                                          null,
+                                      usage: usage?.get(actives[j].species)
+                                          ?.moves,
+                                      smoothing,
+                                  }
+                                : undefined,
+                            ...a.map(
+                                p =>
+                                    p && {
+                                        moveset: p.baseMoveset,
+                                        volatile: null,
+                                        hpType:
+                                            p.baseStats.hpType ??
+                                            usage?.get(p.baseSpecies)?.hpType ??
+                                            null,
+                                        usage: usage?.get(p.species)?.moves,
+                                        smoothing,
+                                    },
+                            ),
+                        ],
+                    ),
                 );
                 break;
             default:

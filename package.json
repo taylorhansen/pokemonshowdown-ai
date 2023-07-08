@@ -43,7 +43,8 @@
       "src/ts/config/",
       "src/ts/**/*.test.ts",
       "src/ts/**/*.js",
-      "test/"
+      "test/",
+      "vendor/"
     ],
     "reporter": [
       "html",

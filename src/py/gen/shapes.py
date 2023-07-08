@@ -47,10 +47,10 @@ STATE_SHAPES: Final = types.MappingProxyType(
         "basic": (2, 6, 11),
         "species": (2, 7, 557),
         "types": (2, 7, 17),
-        "stats": (2, 7, 35),
+        "stats": (2, 7, 19),
         "ability": (2, 7, 123),
         "item": (2, 6, 2, 209),
-        "moves": (2, 7, 4, 472),
+        "moves": (2, 7, 4, 487),
     }
 )
 """
@@ -66,10 +66,10 @@ STATE_SHAPES_FLAT: Final = types.MappingProxyType(
         "basic": 132,
         "species": 7798,
         "types": 238,
-        "stats": 490,
+        "stats": 266,
         "ability": 1722,
         "item": 5016,
-        "moves": 26432,
+        "moves": 27272,
     }
 )
 """
@@ -77,7 +77,7 @@ Dictionary of flattened shapes for encoded battle state tensors, to be used in
 (de)serialization.
 """
 
-STATE_SIZE: Final = 42002
+STATE_SIZE: Final = 42618
 """Total size of battle state tensor input."""
 
 ACTION_IDS: Final = types.MappingProxyType(

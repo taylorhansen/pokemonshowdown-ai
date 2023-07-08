@@ -441,7 +441,7 @@ export const test = () =>
             {
                 name: "Ability",
                 encoder: encoders.definedAbilityEncoder,
-                init: () => ["sturdy", "illuminate"],
+                init: () => ({ability: ["sturdy", "illuminate"]}),
             },
             {
                 name: "Unrevealed",
@@ -460,7 +460,7 @@ export const test = () =>
             {
                 name: "Item",
                 encoder: encoders.definedItemEncoder,
-                init: () => "leftovers",
+                init: () => ({item: "leftovers", lastItem: "none"}),
             },
             {
                 name: "Unrevealed",
@@ -482,6 +482,7 @@ export const test = () =>
                 init: () => ({
                     move: new Move("tackle"),
                     volatile: new VolatileStatus(),
+                    hpType: null,
                 }),
             },
             {
@@ -517,6 +518,7 @@ export const test = () =>
                         "return",
                     ]),
                     volatile: new VolatileStatus(),
+                    hpType: null,
                 }),
             },
             {
@@ -528,7 +530,11 @@ export const test = () =>
                         3,
                     );
                     moveset.reveal("splash");
-                    return {moveset, volatile: new VolatileStatus()};
+                    return {
+                        moveset,
+                        volatile: new VolatileStatus(),
+                        hpType: null,
+                    };
                 },
             },
             {
@@ -537,6 +543,7 @@ export const test = () =>
                 init: () => ({
                     moveset: new Moveset(),
                     volatile: new VolatileStatus(),
+                    hpType: null,
                 }),
             },
             {

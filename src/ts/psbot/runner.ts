@@ -5,6 +5,7 @@ import * as yaml from "yaml";
 import {BattleDriver} from "../battle/BattleDriver";
 import {localizeAction} from "../battle/agent/localAction";
 import {main} from "../battle/parser/main";
+import {lookup} from "../battle/usage";
 import {ModelServer} from "../model/serve";
 import {Logger} from "../utils/logging/Logger";
 import {PsBot} from "./PsBot";
@@ -48,6 +49,8 @@ void (async function psBotRunner() {
         bot.setAvatar(config.avatar);
     }
 
+    const usage = await lookup("gen4randombattle");
+
     bot.acceptChallenges("gen4randombattle", async (room, user, sender) => {
         const driver = new BattleDriver({
             username: user,
@@ -59,6 +62,8 @@ void (async function psBotRunner() {
                 const prediction = await modelServer.predict(
                     room /*key*/,
                     state,
+                    usage,
+                    config.usageSmoothing,
                 );
                 agentLogger?.debug(
                     "All ranked actions: " +

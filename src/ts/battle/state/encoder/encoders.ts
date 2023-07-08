@@ -16,26 +16,41 @@ import {augment, concat, Encoder, map, nullable, optional} from "./Encoder";
 import {
     booleanEncoder,
     checkLength,
+    constraintWithUsage,
     fillEncoder,
     limitedStatusTurns,
     numberEncoder,
     oneHotEncoder,
+    rebalanceDist,
     zeroEncoder,
 } from "./helpers";
 
 //#region Helper encoders.
 
-/** Encoder for an unknown key with a set of possible values. */
+/**
+ * Encoder for an unknown key with a set of possible values or probabilities.
+ */
 export function unknownKeyEncoder(
     domain: readonly string[],
-): Encoder<readonly string[]> {
+): Encoder<
+    readonly string[] | ReadonlySet<string> | ReadonlyMap<string, number>
+> {
     return {
         encode(arr, possible) {
             checkLength(arr, this.size);
-
-            const x = 1 / possible.length;
-            for (let i = 0; i < this.size; ++i) {
-                arr[i] = possible.includes(domain[i]) ? x : 0;
+            if (Array.isArray(possible) || possible instanceof Set) {
+                const possibleSet: ReadonlySet<string> = Array.isArray(possible)
+                    ? new Set(possible)
+                    : possible;
+                const p = 1.0 / possibleSet.size;
+                for (let i = 0; i < this.size; ++i) {
+                    arr[i] = possibleSet.has(domain[i]) ? p : 0.0;
+                }
+            } else {
+                const possibleMap = possible as ReadonlyMap<string, number>;
+                for (let i = 0; i < this.size; ++i) {
+                    arr[i] = possibleMap.get(domain[i]) ?? 0.0;
+                }
             }
         },
         size: domain.length,
@@ -410,24 +425,20 @@ export const definedStatTableEncoder: Encoder<ReadonlyStatTable> = concat(
             definedStatRangeEncoder,
         ),
     ),
-    augment(st => (st.level ?? 0) / 100, numberEncoder), // Level out of 100.
-    augment(
-        st => ({id: st.hpType ? dex.hpTypes[st.hpType] : null}),
-        oneHotEncoder(dex.hpTypeKeys.length),
-    ),
+    augment(st => st.level / 100, numberEncoder), // Level out of 100.
+    // Note: Hiddenpower type included in move encoder.
 );
 
 /** Encoder for an unknown StatTable. */
 export const unknownStatTableEncoder: Encoder<null> = concat(
     ...Array.from(dex.statKeys, () => unknownStatRangeEncoder),
     fillEncoder(0.8, 1), // Level out of 100 (guess).
-    fillEncoder(1 / dex.hpTypeKeys.length, dex.hpTypeKeys.length), // Hp type.
 );
 
 /** Encoder for a nonexistent StatTable. */
 export const emptyStatTableEncoder: Encoder<undefined> = concat(
     ...Array.from(dex.statKeys, () => emptyStatRangeEncoder),
-    zeroEncoder(1 + dex.hpTypeKeys.length), // No level + hp type possibilities.
+    zeroEncoder(1), // No level.
 );
 
 /** Encoder for a StatTable. */
@@ -442,13 +453,33 @@ export const statTableEncoder: Encoder<ReadonlyStatTable | null | undefined> =
 
 //#region Ability.
 
+/** Args for {@link abilityEncoder}. */
+export interface AbilityArgs {
+    /** Possible abilities. */
+    readonly ability: readonly string[];
+    /**
+     * Optional usage stats to help with encoding unknown abilities. Entries
+     * should sum to 1.
+     */
+    readonly usage?: ReadonlyMap<string, number>;
+    /** Smoothing applied to usage probabilities. */
+    readonly smoothing?: number;
+}
+
+const abilityKeyEncoder = unknownKeyEncoder(dex.abilityKeys);
+
 /** Encoder for a defined Pokemon's ability. */
-export const definedAbilityEncoder: Encoder<readonly string[]> =
-    unknownKeyEncoder(dex.abilityKeys);
+export const definedAbilityEncoder: Encoder<AbilityArgs> = augment(
+    ({ability, usage, smoothing}) =>
+        usage && usage.size > 0
+            ? constraintWithUsage(ability, usage, smoothing)
+            : ability,
+    abilityKeyEncoder,
+);
 
 /** Encoder for an unknown Pokemon's ability. */
 export const unknownAbilityEncoder: Encoder<null> = fillEncoder(
-    1 / dex.abilityKeys.length,
+    1.0 / dex.abilityKeys.length,
     dex.abilityKeys.length,
 );
 
@@ -458,60 +489,74 @@ export const emptyAbilityEncoder: Encoder<undefined> = zeroEncoder(
 );
 
 /** Encoder for a Pokemon's ability. */
-export const abilityEncoder: Encoder<readonly string[] | null | undefined> =
-    optional(definedAbilityEncoder, unknownAbilityEncoder, emptyAbilityEncoder);
+export const abilityEncoder: Encoder<AbilityArgs | null | undefined> = optional(
+    definedAbilityEncoder,
+    unknownAbilityEncoder,
+    emptyAbilityEncoder,
+);
 
 //#endregion
 
 //#region Item.
 
-const itemKeysEncoder: Encoder<readonly string[]> = unknownKeyEncoder(
-    dex.itemKeys,
+/** Args for {@link itemEncoder}. */
+export interface ItemArgs {
+    /** Current held item. */
+    readonly item: string;
+    /** Last held item. */
+    readonly lastItem: string;
+    /**
+     * Optional usage stats to help with encoding unknown items. Entries should
+     * sum to 1.
+     */
+    readonly usage?: ReadonlyMap<string, number>;
+    /** Smoothing applied to usage probabilities. */
+    readonly smoothing?: number;
+}
+
+const itemSet = new Set(dex.itemKeys);
+const itemKeyEncoder = unknownKeyEncoder(dex.itemKeys);
+
+/** Encoder for a defined Pokemon's item and last item. */
+export const definedItemEncoder: Encoder<ItemArgs> = concat(
+    // Note: Assuming that unknown item corresponds to the item that the pokemon
+    // started with.
+    augment(
+        ({item, usage, smoothing}) =>
+            item
+                ? [item]
+                : usage && usage.size > 0
+                ? constraintWithUsage(dex.itemKeys, usage, smoothing)
+                : itemSet,
+        itemKeyEncoder,
+    ),
+    augment(
+        ({lastItem, usage, smoothing}) =>
+            lastItem
+                ? [lastItem]
+                : usage && usage.size > 0
+                ? constraintWithUsage(dex.itemKeys, usage, smoothing)
+                : itemSet,
+        itemKeyEncoder,
+    ),
 );
 
-/** Encoder for a defined Pokemon's item. */
-export const definedItemEncoder: Encoder<string> = augment(
-    item => (item ? [item] : []),
-    itemKeysEncoder,
+/** Encoder for an unknown Pokemon's item and last item. */
+export const unknownItemEncoder: Encoder<null> = concat(
+    fillEncoder(1.0 / dex.itemKeys.length, dex.itemKeys.length),
+    augment(() => ["none"], itemKeyEncoder),
 );
 
-/** Encoder for an unknown Pokemon's item. */
-export const unknownItemEncoder: Encoder<null> = augment(
-    () => [],
-    itemKeysEncoder,
-);
-
-/** Encoder for a nonexistent Pokemon's item. */
+/** Encoder for a nonexistent Pokemon's item and last item. */
 export const emptyItemEncoder: Encoder<undefined> = zeroEncoder(
-    dex.itemKeys.length,
-);
-
-/** Encoder for a Pokemon's current held item. */
-export const itemEncoder: Encoder<string | null | undefined> = optional(
-    definedItemEncoder,
-    unknownItemEncoder,
-    emptyItemEncoder,
-);
-
-/** Encoder for an unknown Pokemon's last item. */
-export const unknownLastItemEncoder: Encoder<null> = augment(
-    () => ["none"],
-    itemKeysEncoder,
-);
-
-/** Encoder for a Pokemon's last item. */
-export const lastItemEncoder: Encoder<string | null | undefined> = optional(
-    definedItemEncoder,
-    unknownLastItemEncoder,
-    emptyItemEncoder,
+    2 * dex.itemKeys.length,
 );
 
 /** Encoder for both the current and last held item of a Pokemon. */
-export const allItemEncoder: Encoder<
-    [string | null | undefined, string | null | undefined]
-> = concat(
-    augment(([item]) => item, itemEncoder),
-    augment(([, lastItem]) => lastItem, lastItemEncoder),
+export const itemEncoder: Encoder<ItemArgs | null | undefined> = optional(
+    definedItemEncoder,
+    unknownItemEncoder,
+    emptyItemEncoder,
 );
 
 //#endregion
@@ -522,11 +567,28 @@ export const allItemEncoder: Encoder<
 export interface KnownMoveArgs {
     /** Move to encode. */
     readonly move: ReadonlyMove;
-    /**
-     * Conveys move status information, e.g. disabled/encore. Null if inactive.
-     */
+    /** Contains move-specific status information, or null if inactive. */
     readonly volatile: ReadonlyVolatileStatus | null;
+    /**
+     * Information about the possible type of the hiddenpower move. Either a
+     * string if known, null if completely unknown, or a Map with usage stats.
+     */
+    readonly hpType: dex.HpType | ReadonlyMap<dex.HpType, number> | null;
+    /** Smoothing used for hiddenpower type probability distribution. */
+    readonly smoothing?: number;
 }
+
+const hiddenPowerMoveKeys = dex.hpTypeKeys.map(
+    hpType => `hiddenpower${hpType}`,
+);
+const hiddenPowerMoveKeysSet = new Set(hiddenPowerMoveKeys);
+
+const moveKeysWithHiddenPower = dex.moveKeys
+    .filter(m => m !== "hiddenpower")
+    .concat(hiddenPowerMoveKeys)
+    .sort();
+
+const moveKeyEncoder = unknownKeyEncoder(moveKeysWithHiddenPower);
 
 /** Max PP of any move. */
 export const maxPossiblePp = Math.max(
@@ -546,30 +608,37 @@ export const unknownPpEncoder: Encoder<unknown> = {
 /** Encoder for a defined Pokemon's known Move. */
 export const definedMoveEncoder: Encoder<KnownMoveArgs> = concat(
     augment(
-        ({move: m}) => ({id: m.data.uid}),
-        oneHotEncoder(dex.moveKeys.length),
+        ({move, hpType, smoothing}) =>
+            move.name !== "hiddenpower"
+                ? [move.name]
+                : typeof hpType === "string"
+                ? [`hiddenpower${hpType}`]
+                : hpType instanceof Map && hpType.size > 0
+                ? constraintWithUsage(hiddenPowerMoveKeys, hpType, smoothing)
+                : hiddenPowerMoveKeysSet,
+        moveKeyEncoder,
     ),
     // Ratio of pp to maxpp.
-    augment(({move: m}) => m.pp / m.maxpp, numberEncoder),
+    augment(({move}) => move.pp / move.maxpp, numberEncoder),
     // Ratio of maxpp to max possible pp.
-    augment(({move: m}) => m.maxpp / maxPossiblePp, numberEncoder),
-    // Disabled/encore move statuses.
+    augment(({move}) => move.maxpp / maxPossiblePp, numberEncoder),
+    // Move-specific statuses.
     {
-        encode(arr, {move: m, volatile: vs}) {
+        encode(arr, {move, volatile}) {
             checkLength(arr, 3);
-            if (!vs) {
+            if (!volatile) {
                 arr.fill(0, 0, 3);
                 return;
             }
             arr[0] =
-                m.name === vs.disabled.move
-                    ? tempStatusEncoderImpl(vs.disabled.ts)
+                move.name === volatile.disabled.move
+                    ? tempStatusEncoderImpl(volatile.disabled.ts)
                     : 0;
             arr[1] =
-                m.name === vs.encore.move
-                    ? tempStatusEncoderImpl(vs.encore.ts)
+                move.name === volatile.encore.move
+                    ? tempStatusEncoderImpl(volatile.encore.ts)
                     : 0;
-            arr[2] = +(m.name === vs.lastMove);
+            arr[2] = +(move.name === volatile.lastMove);
         },
         size: 3,
     },
@@ -579,19 +648,12 @@ export const definedMoveEncoder: Encoder<KnownMoveArgs> = concat(
 export interface ConstrainedMoveArgs {
     readonly move: "constrained";
     /** Set of possible moves. */
-    readonly constraint: ReadonlySet<string>;
+    readonly constraint: ReadonlySet<string> | ReadonlyMap<string, number>;
 }
 
 /** Encoder for a defined Pokemon's unknown Move with a constraint. */
 export const constrainedMoveEncoder: Encoder<ConstrainedMoveArgs> = concat(
-    {
-        encode(arr, {constraint}) {
-            checkLength(arr, dex.moveKeys.length);
-            // Encode constraint data.
-            arr.fill(1 / constraint.size, 0, dex.moveKeys.length);
-        },
-        size: dex.moveKeys.length,
-    } as Encoder<ConstrainedMoveArgs>,
+    augment(({constraint}) => constraint, moveKeyEncoder),
     unknownPpEncoder,
     // Disabled/encore/lastMove.
     zeroEncoder(3),
@@ -600,7 +662,10 @@ export const constrainedMoveEncoder: Encoder<ConstrainedMoveArgs> = concat(
 /** Encoder for an unknown Pokemon's Move . */
 export const unknownMoveEncoder: Encoder<null> = concat(
     // Assume each move is equally probable.
-    fillEncoder(1 / dex.moveKeys.length, dex.moveKeys.length),
+    fillEncoder(
+        1 / moveKeysWithHiddenPower.length,
+        moveKeysWithHiddenPower.length,
+    ),
     unknownPpEncoder,
     // Disabled/encore/lastMove.
     zeroEncoder(3),
@@ -608,8 +673,8 @@ export const unknownMoveEncoder: Encoder<null> = concat(
 
 /** Encoder for a nonexistent Move. */
 export const emptyMoveEncoder: Encoder<undefined> =
-    // No likelihood for any move type + 0 pp/maxpp + disabled/encore/lastMove.
-    zeroEncoder(dex.moveKeys.length + 5);
+    // No likelihood for any move + 0 pp/maxpp + disabled/encore/lastMove.
+    zeroEncoder(moveKeysWithHiddenPower.length + 5);
 
 /** Args for {@link moveSlotEncoder}. */
 export type MoveSlotArgs = KnownMoveArgs | ConstrainedMoveArgs | undefined;
@@ -637,6 +702,18 @@ export interface DefinedMovesetArgs {
      * Conveys move status information, e.g. disabled/encore. Null if inactive.
      */
     readonly volatile: ReadonlyVolatileStatus | null;
+    /**
+     * Information about the possible type of the hiddenpower move. Either a
+     * string if known, null if completely unknown, or a Map with usage stats.
+     */
+    readonly hpType: dex.HpType | ReadonlyMap<dex.HpType, number> | null;
+    /**
+     * Optional usage stats to help with encoding unknown moves. Entries should
+     * sum to the expected moveset size.
+     */
+    readonly usage?: ReadonlyMap<string, number>;
+    /** Smoothing applied to usage probabilities. */
+    readonly smoothing?: number;
 }
 
 /** Encoder for a defined Pokemon's Moveset. */
@@ -648,30 +725,99 @@ export const definedMovesetEncoder: Encoder<DefinedMovesetArgs> = augment(
 /**
  * Gets data about every moveslot in the given Moveset.
  *
- * @param ms Moveset to extract from.
  * @returns An array of partially-encoded {@link moveEncoder} args.
  */
 function getMoveArgs({
-    moveset: ms,
+    moveset,
     volatile,
+    hpType,
+    usage,
+    smoothing,
 }: DefinedMovesetArgs): MoveSlotArgs[] {
     const result: MoveSlotArgs[] = [];
     // Known.
-    for (const move of ms.moves.values()) {
-        result.push({move, volatile});
+    for (const move of moveset.moves.values()) {
+        result.push({move, volatile, hpType, smoothing});
     }
     // Unknown.
-    if (ms.moves.size < ms.size) {
-        const constrainedArgs: ConstrainedMoveArgs = {
-            move: "constrained",
-            constraint: ms.constraint,
-        };
-        for (let i = ms.moves.size; i < ms.size; ++i) {
+    if (moveset.moves.size < moveset.size) {
+        const moveUsages: ReadonlyMap<string, number>[] = [];
+        if (usage) {
+            let numUnknown = moveset.size - moveset.moves.size;
+            const lastUsageEntries: [string, number][] = [];
+            let lastProbSum = 0.0;
+            for (const [m, p] of usage) {
+                if (
+                    moveset.moves.has(m) ||
+                    !moveset.constraint.has(m) ||
+                    // Note: Usage dict includes hiddenpower type but the dex
+                    // treats it as a single move.
+                    (m.startsWith("hiddenpower") &&
+                        ([...moveset.moves.keys()].some(key =>
+                            key.startsWith("hiddenpower"),
+                        ) ||
+                            !moveset.constraint.has("hiddenpower")))
+                ) {
+                    continue;
+                }
+                if (p >= 1) {
+                    // Add a moveslot with a mono distribution, as we are
+                    // *mostly* confident that the moveset has this move, just
+                    // it hasn't been revealed yet.
+                    moveUsages.push(new Map([[m, p]]));
+                    --numUnknown;
+                    if (numUnknown <= 0) {
+                        break;
+                    }
+                } else {
+                    // Final slot contains the rest of the probabilities.
+                    lastUsageEntries.push([m, p]);
+                    lastProbSum += p;
+                }
+            }
+            if (lastUsageEntries.length > 0 && numUnknown > 0) {
+                // Normalize probabilities for single-moveslot.
+                // Note: Ideally lastProbSum = numUnknown.
+                for (const entry of lastUsageEntries) {
+                    entry[1] /= lastProbSum;
+                }
+                for (let i = 0; i < numUnknown; ++i) {
+                    if (i > 0) {
+                        // Note: Since the probability distribution is (likely)
+                        // non-uniform, we have to re-balance the probabilities
+                        // as we are *hypothetically* sampling from this
+                        // distribution for for each additional unknown
+                        // move-slot.
+                        const newProbs = rebalanceDist(
+                            lastUsageEntries.map(([, p]) => p),
+                        );
+                        for (let j = 0; j < lastUsageEntries.length; ++j) {
+                            lastUsageEntries[j][1] = newProbs[j];
+                        }
+                    }
+                    moveUsages.push(new Map(lastUsageEntries));
+                }
+            }
+        }
+        for (let i = moveset.moves.size; i < moveset.size; ++i) {
+            const constrainedArgs: ConstrainedMoveArgs = {
+                move: "constrained",
+                constraint:
+                    moveset.constraint.size > 0 &&
+                    i < moveUsages.length &&
+                    moveUsages[i].size > 0
+                        ? constraintWithUsage(
+                              moveset.constraint,
+                              moveUsages[i],
+                              smoothing,
+                          )
+                        : moveset.constraint,
+            };
             result.push(constrainedArgs);
         }
     }
     // Empty.
-    for (let i = ms.size; i < Moveset.maxSize; ++i) {
+    for (let i = moveset.size; i < Moveset.maxSize; ++i) {
         result.push(undefined);
     }
     return result;

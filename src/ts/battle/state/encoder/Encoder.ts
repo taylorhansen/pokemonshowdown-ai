@@ -42,6 +42,7 @@ export function assertEncoder<TState>(
  *
  * @param getter Function to transform the new input type into the old one.
  * @param encoder Encoder that works with the old input type.
+ * @returns An Encoder that takes the new input type.
  */
 export function augment<TState1, TState2>(
     getter: (args: TState1) => TState2,
@@ -108,7 +109,7 @@ export function concat<TState>(
 export function map<TState>(
     length: number,
     encoder: Encoder<TState>,
-): Encoder<ArrayLike<TState>> {
+): Encoder<Readonly<ArrayLike<TState>>> {
     return concat(
         assertEncoder(states => checkLength(states, length)),
         ...Array.from({length}, (_, i) =>
@@ -136,7 +137,7 @@ export function nullable<TState>(
     }
     return {
         encode(arr, state) {
-            if (!state) {
+            if (state === undefined) {
                 alt.encode(arr, undefined);
             } else {
                 encoder.encode(arr, state);

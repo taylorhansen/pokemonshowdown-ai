@@ -8,6 +8,7 @@ import {randomAgent} from "../agent/random.js";
 import {main} from "../parser/main";
 import {ReadonlyBattleState} from "../state";
 import {allocEncodedState, encodeState} from "../state/encoder";
+import {UsageStats, lookup} from "../usage";
 import {PlayerOptions, simulateBattle} from "./battle";
 import {
     ExperienceBattleParserResult,
@@ -49,10 +50,14 @@ class BattleWorker {
      *
      * @param addrId Id for socket address.
      * @param workerId Routing id for the worker.
+     * @param usage Usage stats to impute for state encoder.
+     * @param smoothing Confidence smoothing used in imputation algorithm.
      */
     public constructor(
         public readonly addrId: string,
         public readonly workerId: string,
+        private readonly usage?: UsageStats,
+        private readonly smoothing?: number,
     ) {
         const context = new zmq.Context();
         this.battleSock = new zmq.Dealer({
@@ -298,7 +303,7 @@ class BattleWorker {
         ).finally(() => m.delete(name));
 
         const {data: stateData, original} = allocEncodedState();
-        encodeState(stateData, state);
+        encodeState(stateData, state, this.usage, this.smoothing);
         const req: AgentRequest = {
             type: "agent",
             battle,
@@ -356,7 +361,9 @@ class BattleWorker {
 
 void (async function pyJsBattleWorker() {
     const [, , addrId, workerId] = process.argv;
-    const worker = new BattleWorker(addrId, workerId);
+    const usage = await lookup("gen4randombattle");
+    const smoothing = 0.1;
+    const worker = new BattleWorker(addrId, workerId, usage, smoothing);
     try {
         await worker.ready();
         await worker.run();

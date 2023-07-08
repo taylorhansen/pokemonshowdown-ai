@@ -1,0 +1,4 @@
+[submodule "vendor/randbats"]
+	path = vendor/randbats
+	url = https://github.com/pkmn/randbats
+	shallow = true

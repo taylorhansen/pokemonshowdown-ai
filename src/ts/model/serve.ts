@@ -5,6 +5,7 @@ import * as zmq from "zeromq";
 import {Action} from "../battle/agent";
 import {ReadonlyBattleState} from "../battle/state";
 import {allocEncodedState, encodeState} from "../battle/state/encoder";
+import {UsageStats} from "../battle/usage";
 import {Logger} from "../utils/logging/Logger";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -167,15 +168,19 @@ export class ModelServer {
      * @param key Key for looking up stored context used to continue a battle.
      * Should be unique for each battle perspective.
      * @param state Battle state representation.
+     * @param usage Usage stats to impute for state encoder.
+     * @param smoothing Confidence smoothing used in imputation algorithm.
      * @returns Prediction data from the model server.
      */
     public async predict(
         key: string,
         state: ReadonlyBattleState,
+        usage?: UsageStats,
+        smoothing?: number,
     ): Promise<ModelPrediction> {
         const req: ModelRequest = {type: "model", id: ++this.requestCount, key};
         const {data: stateData, original} = allocEncodedState();
-        encodeState(stateData, state);
+        encodeState(stateData, state, usage, smoothing);
 
         const replyPromise = new Promise<ModelReply>(res =>
             this.pendingRequests.set(req.id, res),

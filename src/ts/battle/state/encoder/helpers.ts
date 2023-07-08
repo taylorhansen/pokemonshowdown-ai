@@ -51,9 +51,6 @@ export const booleanEncoder: Encoder<boolean> = {
     size: 1,
 };
 
-/** Memoized results of {@link fillEncoder}. */
-const memoizedFillEncoders = new Map<number, Map<number, Encoder<unknown>>>();
-
 /**
  * Encoder that fills an array with some value.
  *
@@ -61,26 +58,13 @@ const memoizedFillEncoders = new Map<number, Map<number, Encoder<unknown>>>();
  * @param size Amount of numbers to fill with the given value.
  */
 export function fillEncoder(value: number, size: number): Encoder<unknown> {
-    let memoValue = memoizedFillEncoders.get(value);
-    if (memoValue) {
-        const memoValueSize = memoValue.get(size);
-        if (memoValueSize) {
-            return memoValueSize;
-        }
-    } else {
-        memoValue = new Map();
-        memoizedFillEncoders.set(value, memoValue);
-    }
-
-    const encoder: Encoder<unknown> = {
+    return {
         encode(arr) {
             checkLength(arr, this.size);
             arr.fill(value);
         },
         size,
     };
-    memoValue.set(size, encoder);
-    return encoder;
 }
 
 /**
@@ -106,21 +90,13 @@ export interface OneHotEncoderArgs {
     readonly zero?: number;
 }
 
-/** Memoized results of {@link oneHotEncoder}. */
-const memoizedOneHotEncoders = new Map<number, Encoder<OneHotEncoderArgs>>();
-
 /**
  * Creates a one-hot encoder.
  *
  * @param size Number of discrete categories to encode.
  */
 export function oneHotEncoder(size: number): Encoder<OneHotEncoderArgs> {
-    const memo = memoizedOneHotEncoders.get(size);
-    if (memo) {
-        return memo;
-    }
-
-    const encoder: Encoder<OneHotEncoderArgs> = {
+    return {
         encode(arr, {id, one = 1, zero = 0}) {
             checkLength(arr, this.size);
             if (id === null || id < 0 || id >= this.size) {
@@ -133,6 +109,71 @@ export function oneHotEncoder(size: number): Encoder<OneHotEncoderArgs> {
         },
         size,
     };
-    memoizedOneHotEncoders.set(size, encoder);
-    return encoder;
+}
+
+/**
+ * Creates a constraint map with all of the smoothed probabilities.
+ *
+ * @param constraint Contains all of the keys that should be considered.
+ * @param usage Probabilities in {@link constraint} that should be overridden.
+ * Should only contain keys in constraint.
+ * @param smoothing Amount of smoothing to apply onto the probability
+ * distribution. A value of 1 turns this into a uniform distribution, while 0
+ * leaves the probabilities unchanged.
+ * @returns Complete probability map for the cosntraint.
+ */
+export function constraintWithUsage(
+    constraint: readonly string[] | ReadonlySet<string>,
+    usage: ReadonlyMap<string, number>,
+    smoothing?: number,
+): ReadonlyMap<string, number> {
+    const numKeys = Array.isArray(constraint)
+        ? constraint.length
+        : (constraint as ReadonlySet<string>).size;
+    if (numKeys <= 0) {
+        throw new Error("Empty constraint");
+    }
+
+    const constraintMap = new Map<string, number>();
+    const probScale = smoothing ? 1.0 - smoothing : 1.0;
+    const zeroProb = smoothing ? smoothing / numKeys : 0.0;
+    for (const key of constraint) {
+        let prob = usage.get(key);
+        // Relax confidence in override probabilities via label smoothing.
+        prob = prob ? probScale * prob + zeroProb : zeroProb;
+        constraintMap.set(key, prob);
+    }
+    return constraintMap;
+}
+
+/**
+ * Given probabilities that sum to 1, outputs a probability distribution where
+ * the probability of each element is the probability given that one of the
+ * items `i` was previously removed with probability `probs[i]` and the rest of
+ * the probabilities were re-balanced (i.e. divided by the remaining sum
+ * `1-probs[i]`).
+ *
+ * Calling this function multiple times on the previous call's output should
+ * tend toward a uniform distribution, and calling this function on an
+ * already-uniform distribution should return the same probabilities.
+ */
+export function rebalanceDist(probs: readonly number[]): number[] {
+    // Note: O(n^2), not sure if this can be optimized further.
+    const output = new Array<number>(probs.length).fill(0.0);
+    const sum = probs.reduce((a, b) => a + b, 0.0);
+    for (let i = 0; i < probs.length; ++i) {
+        // Combine selection prob and the divisor used for re-balancing.
+        const tmp = probs[i] / (sum - probs[i]);
+        for (let j = 0; j < probs.length; ++j) {
+            if (i === j) {
+                continue;
+            }
+            // New probability of selecting item j is the weighted average
+            // of the probabilities that were re-balanced due to each possible
+            // removal of some item i, weighted by that item's selection
+            // probability.
+            output[j] += probs[j] * tmp;
+        }
+    }
+    return output;
 }

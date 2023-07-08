@@ -24,7 +24,7 @@ export const modelInputShapes: readonly (readonly number[])[] = [
     [numTeams, numPokemon + numActive, encoders.typesEncoder.size],
     [numTeams, numPokemon + numActive, encoders.statTableEncoder.size],
     [numTeams, numPokemon + numActive, encoders.abilityEncoder.size],
-    [numTeams, numPokemon, 2 /*curr + last item*/, encoders.itemEncoder.size],
+    [numTeams, numPokemon, 2 /*curr + last*/, encoders.itemEncoder.size / 2],
     [numTeams, numPokemon + numActive, numMoves, encoders.moveSlotEncoder.size],
 ];
 

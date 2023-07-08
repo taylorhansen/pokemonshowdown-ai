@@ -8,6 +8,8 @@ export interface PsBotConfig {
     readonly websocketRoute: string;
     /** Path to the model to serve. */
     readonly modelPath: string;
+    /** Confidence smoothing used in state encoder imputation algorithm. */
+    readonly usageSmoothing?: number;
     /** Max batch size for inference. */
     readonly maxBatch: number;
     /** Login options. If unspecified, a guest account will be used instead. */
