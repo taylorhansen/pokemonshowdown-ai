@@ -160,6 +160,7 @@ export function constraintWithUsage(
 export function rebalanceDist(probs: readonly number[]): number[] {
     // Note: O(n^2), not sure if this can be optimized further.
     const output = new Array<number>(probs.length).fill(0.0);
+    // Use actual sum instead of 1.0 for numerical stability.
     const sum = probs.reduce((a, b) => a + b, 0.0);
     for (let i = 0; i < probs.length; ++i) {
         // Combine selection prob and the divisor used for re-balancing.
