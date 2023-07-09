@@ -39,11 +39,7 @@ void (async function psBotRunner() {
     await bot.connect(config.websocketRoute);
 
     if (config.login) {
-        await bot.login({
-            username: config.login.username,
-            ...(config.login.password && {password: config.login.password}),
-            loginUrl: config.login.loginUrl,
-        });
+        await bot.login(config.login);
     }
     if (config.avatar) {
         bot.setAvatar(config.avatar);

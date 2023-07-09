@@ -1,3 +1,5 @@
+import {LoginDetails} from "@pkmn/login";
+
 /** Configuration for the PsBot. */
 export interface PsBotConfig {
     /**
@@ -13,18 +15,10 @@ export interface PsBotConfig {
     /** Max batch size for inference. */
     readonly maxBatch: number;
     /** Login options. If unspecified, a guest account will be used instead. */
-    readonly login?: {
-        /**
-         * Url for the server used to login to an account. Typically this should
-         * just point to the official server
-         * `"https://play.pokemonshowdown.com/"`.
-         */
-        readonly loginUrl: string;
-        /** Account username. */
-        readonly username: string;
-        /** Account password. If unspecified, attempt to login without it. */
-        readonly password?: string;
-    };
+    readonly login: LoginConfig;
     /** Specify profile avatar. */
     readonly avatar?: string;
 }
+
+/** Config for PsBot login. */
+export type LoginConfig = Omit<LoginDetails, "challstr">;

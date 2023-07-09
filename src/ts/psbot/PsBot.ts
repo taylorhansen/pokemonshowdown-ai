@@ -1,21 +1,13 @@
+import * as https from "https";
 import {URL} from "url";
+import {Action, Actions} from "@pkmn/login";
 import {Protocol} from "@pkmn/protocol";
-import fetch, {RequestInit} from "node-fetch";
 import {client as WSClient} from "websocket";
 import {HaltEvent, RoomEvent} from "../protocol/Event";
 import {EventParser} from "../protocol/EventParser";
 import {Logger} from "../utils/logging/Logger";
+import {LoginConfig} from "./config";
 import * as handlers from "./handlers";
-
-/** Options for login. */
-export interface LoginOptions {
-    /** Account username. */
-    readonly username: string;
-    /** Account password. */
-    readonly password?: string;
-    /** Server url used for login. */
-    readonly loginUrl: string;
-}
 
 /**
  * Function type for sending responses to a server.
@@ -54,7 +46,7 @@ export class PsBot {
 
     /** Sends a response to the server. */
     private sender: Sender = () => {
-        throw new Error("Sender not initialized");
+        throw new Error("Connection not initialized");
     };
 
     /** Promise that resolves once we've connected to the server. */
@@ -138,78 +130,26 @@ export class PsBot {
     /**
      * Sets up this PsBot to login once connected.
      *
-     * @param options Login options.
+     * @param config Login config.
      * @returns A Promise that resolves once logged in.
      */
-    public async login(options: LoginOptions): Promise<void> {
+    public async login(config: LoginConfig): Promise<void> {
         if (this.loggedIn) {
             // TODO: Add logout functionality?
             this.logger.debug("Cannot login: Already logged in");
             return;
         }
 
-        this.logger.info(`Logging in under username '${options.username}'`);
+        this.logger.info(`Logging in under username '${config.username}'`);
 
         const challstr = await this.globalHandler.challstr;
 
-        const init: RequestInit = {
-            method: "POST",
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        };
-
-        // Get the assertion string used to confirm login.
-        let assertion: string;
-
-        const loginServer = new URL("~~showdown/action.php", options.loginUrl);
-
-        if (!options.password) {
-            // Login without password.
-            init.body =
-                `act=getassertion&userid=${options.username}` +
-                `&challstr=${challstr}`;
-            const result = await fetch(loginServer.href, init);
-            assertion = await result.text();
-
-            if (assertion.startsWith(";")) {
-                // Login attempt was rejected.
-                if (assertion.startsWith(";;")) {
-                    // Error message was provided.
-                    throw new Error(assertion.substring(2));
-                }
-                throw new Error(
-                    `A password is required for user '${options.username}'`,
-                );
-            }
-        } else {
-            // Login with password.
-            init.body =
-                `act=login&name=${options.username}` +
-                `&pass=${options.password}&challstr=${challstr}`;
-            const result = await fetch(loginServer.href, init);
-            const text = await result.text();
-            // Response text returns "]" followed by json.
-            const json = JSON.parse(text.substring(1)) as {
-                assertion: string;
-                actionsuccess: string;
-            };
-
-            ({assertion} = json);
-            if (!json.actionsuccess) {
-                // Login attempt was rejected.
-                if (assertion.startsWith(";;")) {
-                    // Error message was provided.
-                    throw new Error(assertion.substring(2));
-                }
-                throw new Error("Invalid password");
-            }
+        const action = Actions.login({...config, challstr});
+        const data = await fetch(action);
+        const cmd = action.onResponse(data);
+        if (cmd) {
+            this.loggedIn = this.sender(cmd);
         }
-
-        // Complete the login.
-        this.loggedIn = this.addResponses(
-            "",
-            `|/trn ${options.username},0,${assertion}`,
-        );
     }
 
     /** Sets avatar id. */
@@ -354,4 +294,30 @@ export class PsBot {
     private addResponses(room: string, ...responses: string[]): boolean {
         return this.sender(...responses.map(res => room + res));
     }
+}
+
+/** Utility function for processing login actions. */
+async function fetch(action: Action): Promise<string> {
+    return await new Promise((resolve, reject) => {
+        let data = "";
+        const req = https.request(
+            action.url,
+            {
+                method: action.method,
+                headers: action.headers,
+            },
+            res => {
+                if (res.statusCode !== 200) {
+                    return reject(new Error(`HTTP ${res.statusCode}`));
+                }
+                res.on("data", (chunk: string) => {
+                    data += chunk;
+                });
+                res.on("end", () => resolve(data));
+            },
+        );
+        req.on("error", reject);
+        req.write(action.data);
+        req.end();
+    });
 }
