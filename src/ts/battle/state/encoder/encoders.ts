@@ -892,9 +892,7 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
                 ({pokemon, actives}) =>
                     pokemon.map((t, i) => [
                         // Include active pokemon's override traits.
-                        actives[i].hp.current > 0
-                            ? actives[i].species
-                            : undefined,
+                        actives[i].species,
                         // Note: Don't use optional chain (?.) operator since
                         // that turns null into undefined, which has a different
                         // meaning in this context.
@@ -907,9 +905,7 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
             return augment(
                 ({pokemon, actives}) =>
                     pokemon.map((t, i) => [
-                        actives[i].hp.current > 0
-                            ? actives[i].types
-                            : undefined,
+                        actives[i].types,
                         // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
                         ...t.map(p => p && p.baseTypes),
                     ]),
@@ -919,9 +915,7 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
             return augment(
                 ({pokemon, actives}) =>
                     pokemon.map((t, i) => [
-                        actives[i].hp.current > 0
-                            ? actives[i].stats
-                            : undefined,
+                        actives[i].stats,
                         // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
                         ...t.map(p => p && p.baseStats),
                     ]),
@@ -931,16 +925,13 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
             return augment(
                 ({pokemon, pokemonUsage, actives, activeUsage, smoothing}) =>
                     pokemon.map<(AbilityArgs | null | undefined)[]>((t, i) => [
-                        actives[i].hp.current > 0
-                            ? {
-                                  ability: actives[i].ability
-                                      ? [actives[i].ability]
-                                      : dex.pokemon[actives[i].species]
-                                            .abilities,
-                                  usage: activeUsage?.[i]?.abilities,
-                                  smoothing,
-                              }
-                            : undefined,
+                        {
+                            ability: actives[i].ability
+                                ? [actives[i].ability]
+                                : dex.pokemon[actives[i].species].abilities,
+                            usage: activeUsage?.[i]?.abilities,
+                            smoothing,
+                        },
                         ...t.map(
                             (p, j) =>
                                 p && {
@@ -975,18 +966,16 @@ const inputEncoders = modelInputNames.map<Encoder<StateContext>>(name => {
                 ({pokemon, pokemonUsage, actives, activeUsage, smoothing}) =>
                     pokemon.map<(DefinedMovesetArgs | null | undefined)[]>(
                         (t, i) => [
-                            actives[i].hp.current > 0
-                                ? {
-                                      moveset: actives[i].moveset,
-                                      volatile: actives[i].volatile,
-                                      hpType:
-                                          actives[i].hpType ??
-                                          activeUsage?.[i]?.hpType ??
-                                          null,
-                                      usage: activeUsage?.[i]?.moves,
-                                      smoothing,
-                                  }
-                                : undefined,
+                            {
+                                moveset: actives[i].moveset,
+                                volatile: actives[i].volatile,
+                                hpType:
+                                    actives[i].hpType ??
+                                    activeUsage?.[i]?.hpType ??
+                                    null,
+                                usage: activeUsage?.[i]?.moves,
+                                smoothing,
+                            },
                             ...t.map(
                                 (p, j) =>
                                     p && {
@@ -1021,19 +1010,8 @@ export const stateEncoder: Encoder<StateArgs> = augment(
         const pokemon = teams.map(team =>
             Array.from<unknown, ReadonlyPokemon | null | undefined>(
                 {length: numPokemon},
-                (_, i) => {
-                    const mon = team.pokemon[i];
-                    if (!mon) {
-                        return mon;
-                    }
-                    if (mon.hp.current <= 0) {
-                        // Treat fainted mons as nonexistent since they're
-                        // permanently removed from the game.
-                        // TODO(gen9): Can't do this due to revivalblessing.
-                        return undefined;
-                    }
-                    return mon;
-                },
+                (_, i) =>
+                    i < team.pokemon.length ? team.pokemon[i] : undefined,
             ),
         );
         const pokemonUsage =
