@@ -1,8 +1,8 @@
 """DRQN agent."""
 import warnings
-from contextlib import nullcontext
-from typing import Optional
+from typing import Optional, Union
 
+import numpy as np
 import tensorflow as tf
 
 from ..config import DRQNConfig
@@ -89,7 +89,7 @@ class DRQNAgent(Agent):
 
     def select_action(
         self,
-        state: AgentDict[tf.Tensor],
+        state: AgentDict[Union[np.ndarray, tf.Tensor]],
         info: AgentDict[InfoDict],
         episode: Optional[tf.Variable] = None,
         training=False,
@@ -132,14 +132,16 @@ class DRQNAgent(Agent):
                     discount_factor=self.config.experience.discount_factor,
                 )
 
-            with (
-                tf.device(self.config.inference.batch_device)
-                if self.config.inference.batch_device is not None
-                else nullcontext()
-            ):
+            if tf.is_tensor(state[keys[0]]):
                 batch_states = tf.stack([state[key] for key in keys])  # (N,X)
                 # Add sequence dim: (N,L,X), L=1
                 batch_states = tf.expand_dims(batch_states, axis=-2)
+            else:
+                batch_states = np.stack([state[key] for key in keys])
+                batch_states = np.expand_dims(batch_states, axis=-2)
+                batch_states = tf.convert_to_tensor(
+                    batch_states, dtype=tf.float32
+                )
 
             batch_hidden = list(
                 map(
@@ -178,9 +180,9 @@ class DRQNAgent(Agent):
 
     def update_model(
         self,
-        state: AgentDict[tf.Tensor],
+        state: AgentDict[Union[np.ndarray, tf.Tensor]],
         reward: AgentDict[float],
-        next_state: AgentDict[tf.Tensor],
+        next_state: AgentDict[Union[np.ndarray, tf.Tensor]],
         terminated: AgentDict[bool],
         truncated: AgentDict[bool],
         info: AgentDict[InfoDict],
@@ -218,20 +220,15 @@ class DRQNAgent(Agent):
                     discount_factor=self.config.experience.discount_factor,
                 )
                 self.agent_contexts[key] = ctx
-            with (
-                tf.device(self.config.learn.batch_device)
-                if self.config.learn.batch_device is not None
-                else nullcontext()
-            ):
-                trajs.extend(
-                    ctx.update(
-                        info[key]["action"],
-                        reward[key],
-                        next_state[key],
-                        info[key]["choices"],
-                        terminated[key],
-                    )
+            trajs.extend(
+                ctx.update(
+                    info[key]["action"],
+                    reward[key],
+                    next_state[key],
+                    info[key]["choices"],
+                    terminated[key],
                 )
+            )
             if terminated[key]:
                 del self.agent_contexts[key]
 
@@ -245,14 +242,7 @@ class DRQNAgent(Agent):
             with tf.profiler.experimental.Trace(
                 "learn_step", step_num=self.step, _r=1
             ):
-                with (
-                    tf.device(self.config.learn.batch_device)
-                    if self.config.learn.batch_device is not None
-                    else nullcontext()
-                ):
-                    batch = self.replay_buffer.sample(
-                        self.config.learn.batch_size
-                    )
+                batch = self.replay_buffer.sample(self.config.learn.batch_size)
                 self._learn_step(*batch)
 
     @tf.function(

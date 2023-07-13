@@ -1,8 +1,8 @@
 """DQN agent."""
 import warnings
-from contextlib import nullcontext
-from typing import Optional
+from typing import Optional, Union
 
+import numpy as np
 import tensorflow as tf
 
 from ..config import DQNConfig
@@ -81,7 +81,7 @@ class DQNAgent(Agent):
 
     def select_action(
         self,
-        state: AgentDict[tf.Tensor],
+        state: AgentDict[Union[np.ndarray, tf.Tensor]],
         info: AgentDict[InfoDict],
         episode: Optional[tf.Variable] = None,
         training=False,
@@ -125,13 +125,15 @@ class DQNAgent(Agent):
                 continue
 
             # Exploitation.
-            with (
-                tf.device(self.config.inference.batch_device)
-                if self.config.inference.batch_device is not None
-                else nullcontext()
-            ):
+            if tf.is_tensor(state[keys[0]]):
                 batch_states = tf.stack(
                     [state[key] for key in keys], name="state"
+                )
+            else:
+                batch_states = tf.convert_to_tensor(
+                    np.stack([state[key] for key in keys]),
+                    dtype=tf.float32,
+                    name="state",
                 )
             greedy_actions = model.greedy(batch_states)
             result |= zip(keys, decode_action_rankings(greedy_actions))
@@ -140,9 +142,9 @@ class DQNAgent(Agent):
 
     def update_model(
         self,
-        state: AgentDict[tf.Tensor],
+        state: AgentDict[Union[np.ndarray, tf.Tensor]],
         reward: AgentDict[float],
-        next_state: AgentDict[tf.Tensor],
+        next_state: AgentDict[Union[np.ndarray, tf.Tensor]],
         terminated: AgentDict[bool],
         truncated: AgentDict[bool],
         info: AgentDict[InfoDict],
@@ -197,14 +199,7 @@ class DQNAgent(Agent):
             with tf.profiler.experimental.Trace(
                 "learn_step", step_num=self.step, _r=1
             ):
-                with (
-                    tf.device(self.config.learn.batch_device)
-                    if self.config.learn.batch_device is not None
-                    else nullcontext()
-                ):
-                    batch = self.replay_buffer.sample(
-                        self.config.learn.batch_size
-                    )
+                batch = self.replay_buffer.sample(self.config.learn.batch_size)
                 self._learn_step(*batch)
 
     @tf.function(

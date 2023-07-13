@@ -59,7 +59,12 @@ class TrajectoryReplayBuffer:
         indices = np.random.choice(self.size, size=batch_size, replace=False)
         hidden = list(map(tf.stack, zip(*self.hiddens[indices])))
         mask = tf.stack(self.masks[indices], name="mask")
-        states = tf.stack(self.states[indices], name="state")
+        if tf.is_tensor(self.states[indices[0]]):
+            states = tf.stack(self.states[indices], name="state")
+        else:
+            states = tf.convert_to_tensor(
+                np.stack(self.states[indices]), dtype=tf.float32, name="state"
+            )
         choices = tf.stack(self.choices[indices], name="choices")
         actions = tf.stack(self.actions[indices], name="action")
         rewards = tf.stack(self.rewards[indices], name="reward")

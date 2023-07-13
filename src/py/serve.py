@@ -13,7 +13,7 @@ from .models.dqn_model import DQNModel
 from .models.drqn_model import DRQNModel
 from .models.utils.greedy import decode_action_rankings
 from .models.utils.q_value import decode_q_values
-from .utils.state import decode_tensor_state
+from .utils.state import decode_state
 
 
 class Ready(TypedDict):
@@ -145,7 +145,9 @@ async def server(
             assert req["type"] == "model"
             assert key not in pending
 
-            state = decode_tensor_state(msg[2].buffer)
+            state = tf.convert_to_tensor(
+                decode_state(msg[2].buffer), dtype=tf.float32
+            )
             pending[key] = Pending(routing_id=routing_id, req=req, state=state)
             if is_recurrent and key not in hiddens:
                 hiddens[key] = DRQNModel.new_hidden()

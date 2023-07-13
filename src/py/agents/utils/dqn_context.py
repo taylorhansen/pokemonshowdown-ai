@@ -1,5 +1,6 @@
 """Experience tracker for DQNAgent."""
 from collections import deque
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
@@ -21,7 +22,7 @@ class DQNContext:
         self.n_steps = n_steps
         self.discount_factor = discount_factor
 
-        self._states = deque[tf.Tensor]()
+        self._states = deque[Union[np.ndarray, tf.Tensor]]()
         self._choices = deque[np.ndarray]()
         self._actions = deque[int]()
         self._rewards = deque[float]()
@@ -31,7 +32,7 @@ class DQNContext:
         self,
         action: int,
         reward: float,
-        next_state: tf.Tensor,
+        next_state: Union[np.ndarray, tf.Tensor],
         choices: np.ndarray,
         terminated=False,
     ) -> list[Experience]:

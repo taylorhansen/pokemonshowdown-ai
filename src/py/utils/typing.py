@@ -1,5 +1,5 @@
 """Common types."""
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -8,7 +8,7 @@ import tensorflow as tf
 class Experience(NamedTuple):
     """Stores information about a state transition for use in learning."""
 
-    state: tf.Tensor
+    state: Union[np.ndarray, tf.Tensor]
     """State at beginning of transition."""
 
     action: int
@@ -17,7 +17,7 @@ class Experience(NamedTuple):
     reward: float
     """Reward from action, or pre-computed n-step returns."""
 
-    next_state: tf.Tensor
+    next_state: Union[np.ndarray, tf.Tensor]
     """
     State at end of transition. Zero if `done`. Could be multiple steps ahead if
     using n-step returns.
@@ -66,11 +66,11 @@ class Trajectory(NamedTuple):
     beyond the actual unroll length for n-step returns.
     """
 
-    states: tf.Tensor
+    states: Union[np.ndarray, tf.Tensor]
     """
     States at each timestep, excluding terminal. First entry is initial state.
     Empty (i.e. masked) entries are 0. May contain extra entries beyond the
-    actual unroll length for n-step returns.
+    actual unroll length for n-step returns and burn-in.
     """
 
     choices: tf.Tensor

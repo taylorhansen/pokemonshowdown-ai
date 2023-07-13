@@ -1,6 +1,7 @@
 """Hidden state and trajectory tracker for DRQNAgent."""
 import itertools
 from collections import deque
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
@@ -41,7 +42,7 @@ class DRQNContext:
         reassigned on each call.
         """
 
-        self._states = deque[tf.Tensor]()
+        self._states = deque[Union[np.ndarray, tf.Tensor]]()
         self._choices = deque[np.ndarray]()
         self._actions = deque[int]()
         self._rewards = deque[float]()
@@ -52,7 +53,7 @@ class DRQNContext:
         self,
         action: int,
         reward: float,
-        next_state: tf.Tensor,
+        next_state: Union[np.ndarray, tf.Tensor],
         choices: np.ndarray,
         terminated=False,
     ) -> list[Trajectory]:
@@ -134,13 +135,15 @@ class DRQNContext:
 
         length = len(self._states)
 
-        states = tf.stack(
-            [
-                *self._unroll_helper(self._states),
-                # Note: Also overlap by n-steps for learning.
-                *self._unroll_n_steps(self._states),
-            ]
-        )
+        states_list = [
+            *self._unroll_helper(self._states),
+            # Note: Also overlap by n-steps for learning.
+            *self._unroll_n_steps(self._states),
+        ]
+        if tf.is_tensor(states_list[0]):
+            states = tf.stack(states_list)
+        else:
+            states = np.stack(states_list)
         choices = tf.convert_to_tensor(
             np.stack(
                 [
@@ -175,13 +178,26 @@ class DRQNContext:
                 ],
                 axis=0,
             )
-            states = tf.concat(
-                [
-                    states,
-                    tf.zeros((n_pad_len, states.shape[-1]), dtype=states.dtype),
-                ],
-                axis=0,
-            )
+            if tf.is_tensor(states):
+                states = tf.concat(
+                    [
+                        states,
+                        tf.zeros(
+                            (n_pad_len, states.shape[-1]), dtype=states.dtype
+                        ),
+                    ],
+                    axis=0,
+                )
+            else:
+                states = np.concatenate(
+                    [
+                        states,
+                        np.zeros(
+                            (n_pad_len, states.shape[-1]), dtype=states.dtype
+                        ),
+                    ],
+                    axis=0,
+                )
             choices = tf.concat(
                 [
                     choices,
@@ -204,13 +220,26 @@ class DRQNContext:
                 ],
                 axis=0,
             )
-            states = tf.concat(
-                [
-                    states,
-                    tf.zeros((n_pad_len, states.shape[-1]), dtype=states.dtype),
-                ],
-                axis=0,
-            )
+            if tf.is_tensor(states):
+                states = tf.concat(
+                    [
+                        states,
+                        tf.zeros(
+                            (n_pad_len, states.shape[-1]), dtype=states.dtype
+                        ),
+                    ],
+                    axis=0,
+                )
+            else:
+                states = np.concatenate(
+                    [
+                        states,
+                        np.zeros(
+                            (n_pad_len, states.shape[-1]), dtype=states.dtype
+                        ),
+                    ],
+                    axis=0,
+                )
             choices = tf.concat(
                 [
                     choices,

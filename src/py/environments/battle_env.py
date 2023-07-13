@@ -1,6 +1,5 @@
 """Main RL environment for training script."""
 import asyncio
-from contextlib import nullcontext
 from pathlib import Path
 from typing import NamedTuple, Optional, TypedDict, TypeVar, Union, cast
 
@@ -70,12 +69,11 @@ class BattleEnv(Environment):
         self.queue_task: Optional[asyncio.Task[None]] = None
         self.active_battles: dict[BattleKey, ActiveBattle] = {}
 
-        with (
-            tf.device(config.device)
-            if config.device is not None
-            else nullcontext()
-        ):
-            self._zero_state = tf.zeros(shape=(STATE_SIZE,), dtype=tf.float32)
+        self._zero_state = (
+            tf.zeros(shape=(STATE_SIZE,), dtype=tf.float32)
+            if config.state_type == "tensor"
+            else np.zeros(shape=(STATE_SIZE,), dtype=np.float32)
+        )
 
     def __del__(self):
         self.close()
@@ -99,7 +97,7 @@ class BattleEnv(Environment):
         rollout_battles=0,
         rollout_opponents: tuple[RolloutOpponentConfig, ...] = (),
         eval_opponents: tuple[EvalOpponentConfig, ...] = (),
-    ) -> tuple[AgentDict[np.ndarray], AgentDict[InfoDict]]:
+    ) -> tuple[AgentDict[Union[np.ndarray, tf.Tensor]], AgentDict[InfoDict]]:
         """
         Resets the env.
 
@@ -221,7 +219,7 @@ class BattleEnv(Environment):
     async def step(
         self, action: AgentDict[list[str]]
     ) -> tuple[
-        AgentDict[tf.Tensor],
+        AgentDict[Union[np.ndarray, tf.Tensor]],
         AgentDict[float],
         AgentDict[bool],
         AgentDict[bool],
@@ -263,7 +261,7 @@ class BattleEnv(Environment):
         for key, ranked_actions in action.items():
             await self.battle_pool.agent_send(key, ranked_actions)
 
-        states: AgentDict[tf.Tensor] = {}
+        states: AgentDict[Union[np.ndarray, tf.Tensor]] = {}
         rewards: AgentDict[float] = {}
         terminateds: AgentDict[bool] = {}
         truncateds: AgentDict[bool] = {}
@@ -293,12 +291,14 @@ class BattleEnv(Environment):
                     key.player in self.active_battles[key.battle].active_agents
                 )
                 assert state is not None
-                with (
-                    tf.device(self.config.device)
-                    if self.config.device is not None
-                    else nullcontext()
-                ):
+                if self.config.state_type == "tensor":
                     states[key] = tf.convert_to_tensor(state, dtype=tf.float32)
+                elif self.config.state_type == "numpy":
+                    states[key] = state
+                else:
+                    raise RuntimeError(
+                        f"Unknown state_type '{self.config.state_type}'"
+                    )
                 rewards[key] = (
                     req["reward"]
                     if "reward" in req and req["reward"] is not None
