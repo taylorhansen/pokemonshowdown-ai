@@ -91,7 +91,7 @@ def project_target_update(
         td_target_support, MIN_REWARD, MAX_REWARD
     )
 
-    # Scatter indices for batch dims: (*N,D,1)
+    # Scatter indices for batch dims.
     if len(batch_shape) > 0:
         batch_indices = [
             tf.tile(
@@ -111,40 +111,18 @@ def project_target_update(
     proj_lo = tf.math.floor(proj_index)
     proj_hi = tf.math.ceil(proj_index)
 
-    # Note: There's a bug in Algorithm 1 in the paper which can cause an invalid
-    # projection to be emitted whenever the projection index is an integer. This
-    # can happen often when a reward is received and the target support gets
-    # clipped, causing certain positions to have b_j = u = l. In this case we
-    # should use the projection index b_j directly rather than the floor and
-    # ceil versions l and u respectively.
-    # Using the notation from the paper, this would correspond to adding:
-    #   if u = l = b_j:
-    #       m_{b_j} <- m_{b_j} + p_j(x_{t+1},a^*)
-    # at the end of the for loop.
-    indices_exact = tf.expand_dims(
-        tf.where(proj_lo == proj_hi, tf.cast(proj_index, tf.int32), 0), axis=-1
-    )
-    if len(batch_shape) > 0:
-        # (*N,D,|N|+1)
-        # For some reason pylint reports errors on valid tf.concat() usage.
-        # pylint: disable-next=unexpected-keyword-arg, no-value-for-parameter
-        indices_exact = tf.concat([*batch_indices, indices_exact], axis=-1)
-    updates_exact = tf.where(
-        proj_lo == proj_hi,
-        target_next_q,
-        tf.constant(0.0, dtype=target_next_q.dtype),
-    )
-    td_target = tf.scatter_nd(
-        indices_exact, updates_exact, (*batch_shape, dist)
-    )
-
     # m_l <- m_l + p_j(x_{t+1},a^*)*(u-b_j)
     indices_lo = tf.expand_dims(tf.cast(proj_lo, tf.int32), axis=-1)
     if len(batch_shape) > 0:
         # pylint: disable-next=unexpected-keyword-arg, no-value-for-parameter
         indices_lo = tf.concat([*batch_indices, indices_lo], axis=-1)
-    updates_lo = target_next_q * (proj_hi - proj_index)
-    td_target = tf.tensor_scatter_nd_add(td_target, indices_lo, updates_lo)
+    # Note: Also check for l=u=b_j which can produce an invalid distribution.
+    updates_lo = tf.where(
+        proj_lo == proj_hi,  # == proj_index (implied)
+        target_next_q,
+        target_next_q * (proj_hi - proj_index),
+    )
+    td_target = tf.scatter_nd(indices_lo, updates_lo, (*batch_shape, dist))
 
     # m_u <- m_u + p_j(x_{t+1},a^*)*(b_j-l)
     indices_hi = tf.expand_dims(tf.cast(proj_hi, tf.int32), axis=-1)
@@ -162,7 +140,7 @@ def project_target_update(
 def _get_projection_index(td_target_support: tf.Tensor, dist: int):
     if dist <= 1:
         return tf.zeros_like(td_target_support, dtype=tf.int32)
-    atom_diff = tf.cast(
+    atom_diff = tf.constant(
         (MAX_REWARD - MIN_REWARD) / (dist - 1),
         dtype=td_target_support.dtype,
     )
