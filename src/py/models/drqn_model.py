@@ -95,6 +95,7 @@ class DRQNModel(tf.keras.Model):
             if config.pooling == "attention"
             else None,
             use_layer_norm=config.use_layer_norm,
+            relu_options=config.relu_options,
             name=f"{self.name}/state",
         )
         # Note: Don't use an actual LSTM layer since its optional cuDNN kernel
@@ -114,6 +115,7 @@ class DRQNModel(tf.keras.Model):
             state_units=(256,),
             dist=config.dist,
             use_layer_norm=config.use_layer_norm,
+            relu_options=config.relu_options,
             name=f"{self.name}/q_value",
         )
 

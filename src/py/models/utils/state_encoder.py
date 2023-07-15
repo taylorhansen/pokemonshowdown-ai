@@ -47,6 +47,7 @@ class StateEncoder(tf.keras.layers.Layer):
         bench_pooling_type="max",
         bench_pooling_attention: Optional[tuple[int, int]] = None,
         use_layer_norm=False,
+        relu_options: Optional[dict[str, float]] = None,
         **kwargs,
     ):
         """
@@ -74,6 +75,7 @@ class StateEncoder(tf.keras.layers.Layer):
         `(num_heads, depth)` for pooling via set-based attention on each
         non-active pokemon. Otherwise ignored.
         :param use_layer_norm: Whether to use layer normalization.
+        :param relu_options: Options for the ReLU layers.
         """
         super().__init__(**kwargs)
         self.input_units = input_units
@@ -87,19 +89,29 @@ class StateEncoder(tf.keras.layers.Layer):
         self.bench_pooling_type = bench_pooling_type
         self.bench_pooling_attention = bench_pooling_attention
         self.use_layer_norm = use_layer_norm
+        self.relu_options = relu_options
 
         assert set(STATE_NAMES) == set(input_units.keys())
         self.input_fcs = {
             label: create_dense_stack(
-                units=units, use_layer_norm=use_layer_norm, name=label
+                units=units,
+                use_layer_norm=use_layer_norm,
+                relu_options=relu_options,
+                name=label,
             )
             for label, units in input_units.items()
         }
         self.active_fcs = create_dense_stack(
-            units=active_units, use_layer_norm=use_layer_norm, name="active"
+            units=active_units,
+            use_layer_norm=use_layer_norm,
+            relu_options=relu_options,
+            name="active",
         )
         self.bench_fcs = create_dense_stack(
-            units=bench_units, use_layer_norm=use_layer_norm, name="bench"
+            units=bench_units,
+            use_layer_norm=use_layer_norm,
+            relu_options=relu_options,
+            name="bench",
         )
         if move_attention is not None:
             num_heads, depth = move_attention
@@ -108,6 +120,7 @@ class StateEncoder(tf.keras.layers.Layer):
                 depth=depth,
                 rff_units=num_heads * depth,
                 use_layer_norm=use_layer_norm,
+                relu_options=relu_options,
                 name="pokemon/moves",
             )
         if move_pooling_type == "attention":
@@ -120,6 +133,7 @@ class StateEncoder(tf.keras.layers.Layer):
                 rff_units=num_heads * depth,
                 rff_s_units=num_heads * depth,
                 use_layer_norm=use_layer_norm,
+                relu_options=relu_options,
                 name="pokemon/moves",
             )
         if bench_attention is not None:
@@ -129,6 +143,7 @@ class StateEncoder(tf.keras.layers.Layer):
                 depth=depth,
                 rff_units=num_heads * depth,
                 use_layer_norm=use_layer_norm,
+                relu_options=relu_options,
                 name="bench",
             )
         if bench_pooling_type == "attention":
@@ -141,10 +156,14 @@ class StateEncoder(tf.keras.layers.Layer):
                 rff_units=num_heads * depth,
                 rff_s_units=num_heads * depth,
                 use_layer_norm=use_layer_norm,
+                relu_options=relu_options,
                 name="bench",
             )
         self.global_fcs = create_dense_stack(
-            units=global_units, use_layer_norm=use_layer_norm, name="global"
+            units=global_units,
+            use_layer_norm=use_layer_norm,
+            relu_options=relu_options,
+            name="global",
         )
 
     # pylint: disable-next=too-many-branches
@@ -341,4 +360,5 @@ class StateEncoder(tf.keras.layers.Layer):
             "bench_pooling_type": self.bench_pooling_type,
             "bench_pooling_attention": self.bench_pooling_attention,
             "use_layer_norm": self.use_layer_norm,
+            "relu_options": self.relu_options,
         }

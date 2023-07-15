@@ -96,6 +96,7 @@ class QValue(tf.keras.layers.Layer):
         state_units: Optional[tuple[int, ...]] = None,
         dist: Optional[int] = None,
         use_layer_norm=False,
+        relu_options: Optional[dict[str, float]] = None,
         **kwargs,
     ):
         """
@@ -107,6 +108,7 @@ class QValue(tf.keras.layers.Layer):
         :param state_units: Size of hidden layers for processing state value.
         :param dist: Number of atoms for Q-value distribution.
         :param use_layer_norm: Whether to use layer normalization.
+        :param relu_options: Options for the ReLU layers.
         """
         super().__init__(**kwargs)
         self.move_units = move_units
@@ -114,17 +116,20 @@ class QValue(tf.keras.layers.Layer):
         self.state_units = state_units
         self.dist = dist
         self.use_layer_norm = use_layer_norm
+        self.relu_options = relu_options
 
         self.action_move = value_function(
             units=move_units,
             dist=dist,
             use_layer_norm=use_layer_norm,
+            relu_options=relu_options,
             name="move",
         )
         self.action_switch = value_function(
             units=switch_units,
             dist=dist,
             use_layer_norm=use_layer_norm,
+            relu_options=relu_options,
             name="switch",
         )
         if state_units is not None:
@@ -132,6 +137,7 @@ class QValue(tf.keras.layers.Layer):
                 units=state_units,
                 dist=dist,
                 use_layer_norm=use_layer_norm,
+                relu_options=relu_options,
                 name="state",
             )
 
@@ -206,6 +212,7 @@ class QValue(tf.keras.layers.Layer):
             "state_units": self.state_units,
             "dist": self.dist,
             "use_layer_norm": self.use_layer_norm,
+            "relu_options": self.relu_options,
         }
 
 
@@ -214,6 +221,7 @@ def value_function(
     name: str,
     dist: Optional[int] = None,
     use_layer_norm=False,
+    relu_options: Optional[dict[str, float]] = None,
 ) -> list[tf.keras.layers.Layer]:
     """
     Creates a stack of layers to compute action advantage values or state
@@ -224,9 +232,14 @@ def value_function(
     :param dist: Number of units for distributional Q-network. Default None
     (i.e. disabled).
     :param use_layer_norm: Whether to use layer normalization.
+    :param relu_options: Options for the ReLU layers.
     """
     return create_dense_stack(
-        units=units, name=name, use_layer_norm=use_layer_norm, omit_last_ln=True
+        units=units,
+        name=name,
+        use_layer_norm=use_layer_norm,
+        omit_last_ln=True,
+        relu_options=relu_options,
     ) + [
         tf.keras.layers.Dense(
             units=dist or 1,

@@ -72,6 +72,7 @@ class DQNModel(tf.keras.Model):
             if config.pooling == "attention"
             else None,
             use_layer_norm=config.use_layer_norm,
+            relu_options=config.relu_options,
             name=f"{self.name}/state",
         )
         self.q_value = QValue(
@@ -80,6 +81,7 @@ class DQNModel(tf.keras.Model):
             state_units=(256,),
             dist=config.dist,
             use_layer_norm=config.use_layer_norm,
+            relu_options=config.relu_options,
             name=f"{self.name}/q_value",
         )
 

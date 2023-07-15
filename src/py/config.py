@@ -27,6 +27,9 @@ class DQNModelConfig:
     `attention`, `mean`, and `max`.
     """
 
+    relu_options: Optional[dict[str, float]] = None
+    """Options for the ReLU layers."""
+
 
 @dataclass
 class DRQNModelConfig(DQNModelConfig):
