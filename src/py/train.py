@@ -254,24 +254,19 @@ async def train(config: TrainConfig):
         initial=min(int(episode), config.rollout.num_episodes),
         position=1,
     ) as pbar:
-        if episode == 0 and not restored:
-            # Pre-evaluation to compare the trained model against.
-            if config.rollout.eps_per_eval > 0:
-                await run_eval(
-                    prefix=eps_fmt.format(int(episode)),
-                    episode=episode,
-                    agent=agent,
-                    env=eval_env,
-                    opponents=config.eval.opponents,
-                    progbar_file=original_stdout,
-                    writer=writer,
-                )
-            episode.assign_add(1, read_value=False)
-            pbar.update()
+        if config.rollout.eps_per_eval > 0 and not restored and episode == 0:
+            # Pre-evaluation for comparison against the later trained model.
+            await run_eval(
+                prefix=eps_fmt.format(int(episode)),
+                episode=episode,
+                agent=agent,
+                env=eval_env,
+                opponents=config.eval.opponents,
+                progbar_file=original_stdout,
+                writer=writer,
+            )
 
-        rollout_battles = max(
-            0, config.rollout.num_episodes - (int(episode) - 1)
-        )
+        rollout_battles = max(0, config.rollout.num_episodes - int(episode))
         state, info = env.reset(
             rollout_battles=rollout_battles,
             rollout_opponents=config.rollout.opponents,
@@ -310,7 +305,11 @@ async def train(config: TrainConfig):
                 battle_result = env_info.get("battle_result", None)
                 if battle_result is None:
                     continue
+
                 # Finished a rollout episode.
+                episode.assign_add(1, read_value=False)
+                pbar.update()
+
                 if battle_result.get("winner", None) is None:
                     num_ties.assign_add(1, read_value=False)
                 if writer is not None:
@@ -354,8 +353,6 @@ async def train(config: TrainConfig):
                         f"{eps_fmt.format(int(episode))}: "
                         f"Saved checkpoint: {ckpt_path}"
                     )
-                episode.assign_add(1, read_value=False)
-                pbar.update()
 
     if writer is not None:
         writer.flush()
