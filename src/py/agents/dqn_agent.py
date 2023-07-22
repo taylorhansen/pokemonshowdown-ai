@@ -10,7 +10,7 @@ from ..environments.battle_env import AgentDict, InfoDict
 from ..gen.shapes import ACTION_NAMES, MAX_REWARD, MIN_REWARD, STATE_SIZE
 from ..models.dqn_model import DQNModel
 from ..models.utils.greedy import decode_action_rankings
-from ..utils.typing import Experience
+from ..utils.typing import Experience, TensorExperience
 from .agent import Agent
 from .utils.dqn_context import DQNContext
 from .utils.epsilon_greedy import EpsilonGreedy
@@ -60,8 +60,8 @@ class DQNAgent(Agent):
             self._update_target()
             self.target.trainable = False
 
-        self.replay_buffer = ReplayBuffer(
-            max_size=config.experience.buffer_size
+        self.replay_buffer = ReplayBuffer[Experience, TensorExperience](
+            max_size=config.experience.buffer_size, batch_cls=TensorExperience
         )
         self.agent_contexts: AgentDict[DQNContext] = {}
 
@@ -191,7 +191,7 @@ class DQNAgent(Agent):
 
         for exp in exps:
             self.replay_buffer.add(exp)
-            if self.replay_buffer.size < self.config.learn.buffer_prefill:
+            if len(self.replay_buffer) < self.config.learn.buffer_prefill:
                 continue
             self.step.assign_add(1, read_value=False)
             if self.step % self.config.learn.steps_per_update != 0:

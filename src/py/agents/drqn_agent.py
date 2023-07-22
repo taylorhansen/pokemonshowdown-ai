@@ -15,7 +15,7 @@ from .agent import Agent
 from .utils.drqn_context import DRQNContext
 from .utils.epsilon_greedy import EpsilonGreedy
 from .utils.q_dist import project_target_update, zero_q_dist
-from .utils.trajectory_replay_buffer import TrajectoryReplayBuffer
+from .utils.replay_buffer import ReplayBuffer
 
 
 class DRQNAgent(Agent):
@@ -60,8 +60,8 @@ class DRQNAgent(Agent):
             self._update_target()
             self.target.trainable = False
 
-        self.replay_buffer = TrajectoryReplayBuffer(
-            max_size=config.experience.buffer_size
+        self.replay_buffer = ReplayBuffer[Trajectory, Trajectory](
+            max_size=config.experience.buffer_size, batch_cls=Trajectory
         )
 
         self.agent_contexts: AgentDict[DRQNContext] = {}
@@ -158,7 +158,8 @@ class DRQNAgent(Agent):
             result |= zip(keys, decode_action_rankings(greedy_actions))
 
             # Update hidden state for the next call.
-            hiddens = zip(*map(tf.unstack, batch_hidden))
+            # Note: Recurrent state prefers list instead of zip()'s tuples.
+            hiddens = map(list, zip(*map(tf.unstack, batch_hidden)))
             for key, hidden in zip(keys, hiddens):
                 self.agent_contexts[key].hidden = hidden
 
@@ -234,7 +235,7 @@ class DRQNAgent(Agent):
 
         for traj in trajs:
             self.replay_buffer.add(traj)
-            if self.replay_buffer.size < self.config.learn.buffer_prefill:
+            if len(self.replay_buffer) < self.config.learn.buffer_prefill:
                 continue
             self.step.assign_add(1, read_value=False)
             if self.step % self.config.learn.steps_per_update != 0:
