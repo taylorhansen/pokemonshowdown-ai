@@ -138,10 +138,10 @@ class ReplayBuffer(Generic[ExampleT, BatchT]):
 
         indices = self._priorities_sum.find_prefix_sum(bounds)
         # Note: Since unpopulated priorities on the right (postfix) side of
-        # the sum tree are zeroed on init, this may cause the algorithm to
+        # the sum tree are zeroed on init, this may cause find_prefix_sum to
         # instead return a higher out-of-bounds index, since
         # sum(0, ..., 0) <= bound).
-        # The upper bound on index fixes this corner case.
+        # The upper bound on the indices fixes this corner case.
         indices = np.minimum(indices, self._size - 1)
         priorities = self._priorities_sum.get(indices)
         return indices, priorities
@@ -159,13 +159,13 @@ class ReplayBuffer(Generic[ExampleT, BatchT]):
     def _calculate_is_weights(
         self, priorities, step, total_priority, min_priority, capacity
     ):
+        """Calculates importance sampling weights."""
         capacity = tf.cast(capacity, tf.float32)
-        # Importance sampling weights.
         beta = self.get_beta(step)
         probs = priorities / total_priority
         is_weights = (probs * capacity) ** -beta
 
-        # Normalize by max weight over buffer for stability.
+        # Normalize by max weight over the buffer for stability.
         min_prob = min_priority / total_priority
         max_weight = (min_prob * capacity) ** -beta
         is_weights /= max_weight
