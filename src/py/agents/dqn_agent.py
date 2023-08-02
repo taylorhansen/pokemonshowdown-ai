@@ -61,7 +61,9 @@ class DQNAgent(Agent):
             self.target.trainable = False
 
         self.replay_buffer = ReplayBuffer[Experience, TensorExperience](
-            max_size=config.experience.buffer_size, batch_cls=TensorExperience
+            max_size=config.experience.buffer_size,
+            batch_cls=TensorExperience,
+            priority=config.experience.priority,
         )
         self.agent_contexts: AgentDict[DQNContext] = {}
 
@@ -199,8 +201,11 @@ class DQNAgent(Agent):
             with tf.profiler.experimental.Trace(
                 "learn_step", step_num=self.step, _r=1
             ):
-                batch = self.replay_buffer.sample(self.config.learn.batch_size)
-                self._learn_step(*batch)
+                batch, is_weights, indices = self.replay_buffer.sample(
+                    self.config.learn.batch_size, step=self.step
+                )
+                td_error = self._learn_step(*batch, is_weights)
+                self.replay_buffer.update_priorities(indices, td_error)
 
     @tf.function(
         input_signature=[
@@ -218,24 +223,35 @@ class DQNAgent(Agent):
                 name="choices",
             ),
             tf.TensorSpec(shape=(None,), dtype=tf.bool, name="done"),
+            tf.TensorSpec(shape=(None,), dtype=tf.float32, name="is_weights"),
         ],
     )
     def _learn_step(
-        self,
-        state: tf.Tensor,
-        action: tf.Tensor,
-        reward: tf.Tensor,
-        next_state: tf.Tensor,
-        choices: tf.Tensor,
-        done: tf.Tensor,
+        self, state, action, reward, next_state, choices, done, is_weights
     ):
         """Computes a model update for an experience batch."""
-        loss, activations, gradients, q_pred, td_target = self._learn_step_impl(
-            state, action, reward, next_state, choices, done
+        (
+            loss,
+            td_error,
+            activations,
+            gradients,
+            q_pred,
+            td_target,
+        ) = self._learn_step_impl(
+            state, action, reward, next_state, choices, done, is_weights
         )
         self._log_metrics(
-            loss, activations, gradients, q_pred, td_target, action, reward
+            loss,
+            td_error,
+            activations,
+            gradients,
+            q_pred,
+            td_target,
+            action,
+            reward,
+            is_weights,
         )
+        return td_error
 
     @tf.function(
         input_signature=[
@@ -253,11 +269,12 @@ class DQNAgent(Agent):
                 name="choices",
             ),
             tf.TensorSpec(shape=(None,), dtype=tf.bool, name="done"),
+            tf.TensorSpec(shape=(None,), dtype=tf.float32, name="is_weights"),
         ],
         jit_compile=True,
     )
     def _learn_step_impl(
-        self, state, action, reward, next_state, choices, done
+        self, state, action, reward, next_state, choices, done, is_weights
     ):
         # Ensure runtime batch size.
         batch_size = self.config.learn.batch_size
@@ -284,7 +301,8 @@ class DQNAgent(Agent):
             )  # (N,A) or (N,A,D)
             # Select Q-value of taken action: (N,) or (N,D)
             q_pred = tf.reduce_sum(q_pred * action_mask, axis=1)
-            loss = self._compute_loss(td_target, q_pred)
+            # Loss and TD error with importance sampling weights.
+            loss, td_error = self._compute_loss(td_target, q_pred, is_weights)
 
         # Update model.
         gradients = tape.gradient(loss, self.model.trainable_weights)
@@ -310,7 +328,7 @@ class DQNAgent(Agent):
             )  # (1,D)
             q_pred = tf.reduce_sum(q_pred * support, axis=-1)
             td_target = tf.reduce_sum(td_target * support, axis=-1)
-        return loss, activations, gradients, q_pred, td_target
+        return loss, td_error, activations, gradients, q_pred, td_target
 
     def _calculate_target(self, reward, next_state, choices, done):
         """
@@ -408,16 +426,18 @@ class DQNAgent(Agent):
 
         return td_target
 
-    def _compute_loss(self, td_target, q_pred):
+    def _compute_loss(self, td_target, q_pred, is_weights):
         """Computes the training loss."""
-        if self.config.model.dist is not None:
-            # Distributional RL: Cross-entropy loss.
-            return tf.reduce_mean(
-                tf.keras.losses.categorical_crossentropy(td_target, q_pred)
-            )
-        return tf.reduce_mean(
-            tf.keras.losses.mean_squared_error(td_target, q_pred)
-        )
+        if self.config.model.dist is None:
+            # MSE on Q-values.
+            step_loss = tf.math.squared_difference(td_target, q_pred)
+            td_error = tf.abs(td_target - q_pred)
+        else:
+            # Cross-entropy loss on Q-value distributions.
+            step_loss = -tf.reduce_sum(td_target * tf.math.log(q_pred), axis=-1)
+            td_error = step_loss
+        loss = tf.reduce_mean(is_weights * step_loss)
+        return loss, td_error
 
     @tf.function(jit_compile=True)
     def _update_target(self):
@@ -425,12 +445,26 @@ class DQNAgent(Agent):
             tgt_wt.assign(curr_wt, read_value=False)
 
     def _log_metrics(
-        self, loss, activations, gradients, q_pred, td_target, action, reward
+        self,
+        loss,
+        td_error,
+        activations,
+        gradients,
+        q_pred,
+        td_target,
+        action,
+        reward,
+        is_weights,
     ):
         if self.writer is None:
             return
         with self.writer.as_default(step=self.step):
             self._record_var("loss", loss)
+
+            if self.config.experience.priority is not None:
+                beta = self.replay_buffer.get_beta(self.step)
+                self._record_var("is_exponent", beta)
+
             # pylint: disable-next=not-context-manager
             with tf.summary.record_if(
                 lambda: self.config.learn.steps_per_histogram is not None
@@ -450,6 +484,10 @@ class DQNAgent(Agent):
 
                 self._record_var("q_pred", q_pred)
                 self._record_var("td_target", td_target)
+
+                if self.config.experience.priority is not None:
+                    self._record_var("td_error", td_error)
+                    self._record_var("is_weights", is_weights)
 
                 self.writer.flush()
 

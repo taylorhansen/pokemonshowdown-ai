@@ -82,7 +82,9 @@ class EpsilonGreedy:
                 "Exploration config has unknown decay_type "
                 f"'{explore.decay_type}'"
             )
-        epsilon = tf.maximum(explore.end, epsilon)
+        epsilon = tf.clip_by_value(
+            epsilon, *sorted((explore.start, explore.end))
+        )
         return epsilon
 
     @tf.function(

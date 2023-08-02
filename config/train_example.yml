@@ -20,6 +20,9 @@ agent:
       n_steps: 2
       discount_factor: 0.99
       buffer_size: 5000
+      priority:
+        exponent: 0.5
+        importance: 0.4
     learn:
       buffer_prefill: 500
       learning_rate: 1.e-4

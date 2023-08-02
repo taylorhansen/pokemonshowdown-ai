@@ -57,6 +57,41 @@ class ExplorationConfig:
 
 
 @dataclass
+class AnnealConfig:
+    """Config for annealing a hyperparameter during training."""
+
+    start: float
+    """Starting value."""
+
+    end: float
+    """End value."""
+
+    steps: int
+    """Number of steps to linearly anneal from `start` to `end`."""
+
+
+@dataclass
+class PriorityConfig:
+    """Config for priority replay."""
+
+    exponent: float
+    """Priority exponent."""
+
+    importance: Union[float, AnnealConfig]
+    """Importance sampling exponent."""
+
+    epsilon: float = 1e-6
+    """Epsilon for priority calculation."""
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a PriorityConfig from a JSON dictionary."""
+        if isinstance(config["importance"], dict):
+            config["importance"] = AnnealConfig(**config["importance"])
+        return cls(**config)
+
+
+@dataclass
 class ExperienceConfig:
     """Config for experience collection."""
 
@@ -71,6 +106,16 @@ class ExperienceConfig:
 
     buffer_size: int
     """Size of the replay buffer for storing experience."""
+
+    priority: Optional[PriorityConfig] = None
+    """Config for priority replay."""
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates an ExperienceConfig from a JSON dictionary."""
+        if config.get("priority", None) is not None:
+            config["priority"] = PriorityConfig.from_dict(config["priority"])
+        return cls(**config)
 
 
 @dataclass
@@ -133,7 +178,7 @@ class DQNConfig:
         config["model"] = DQNModelConfig(**config["model"])
         if not isinstance(config["exploration"], float):
             config["exploration"] = ExplorationConfig(**config["exploration"])
-        config["experience"] = ExperienceConfig(**config["experience"])
+        config["experience"] = ExperienceConfig.from_dict(config["experience"])
         config["learn"] = DQNLearnConfig(**config["learn"])
         return cls(**config)
 
@@ -181,13 +226,20 @@ class DRQNConfig:
     https://openreview.net/pdf?id=r1lyTjAqYX
     """
 
+    priority_mix: Optional[float] = None
+    """
+    Interpolate between max (1.0) and mean (0.0) TD-error when calculating
+    replay priorities over each sequence. Used in the R2D2 paper. Only
+    applicable when using prioritized replay.
+    """
+
     @classmethod
     def from_dict(cls, config: dict):
         """Creates a DRQNConfig from a JSON dictionary."""
         config["model"] = DRQNModelConfig(**config["model"])
         if not isinstance(config["exploration"], float):
             config["exploration"] = ExplorationConfig(**config["exploration"])
-        config["experience"] = ExperienceConfig(**config["experience"])
+        config["experience"] = ExperienceConfig.from_dict(config["experience"])
         config["learn"] = DRQNLearnConfig(**config["learn"])
         return cls(**config)
 
