@@ -42,7 +42,8 @@ class DRQNAgent(Agent):
         self.rng = rng
         self.writer = writer
 
-        self.epsilon_greedy = EpsilonGreedy(config.exploration, rng)
+        if config.exploration is not None:
+            self.epsilon_greedy = EpsilonGreedy(config.exploration, rng)
 
         self.model = DRQNModel(config=config.model, name="model")
         self.model.init()
@@ -94,7 +95,7 @@ class DRQNAgent(Agent):
         state: AgentDict[Union[np.ndarray, tf.Tensor]],
         info: AgentDict[InfoDict],
         episode: Optional[tf.Variable] = None,
-        training=False,
+        can_explore=True,
     ) -> AgentDict[list[str]]:
         """
         Selects action for each agent.
@@ -103,7 +104,7 @@ class DRQNAgent(Agent):
         :param info: Dictionaries that include additional info for each
         battle's ready players.
         :param episode: Variable indicating the current episode.
-        :param training: Whether to use epsilon-greedy exploration.
+        :param can_explore: Whether to allow exploration.
         :returns: Action names ranked by Q-value according to the model, for
         each player.
         """
@@ -152,9 +153,16 @@ class DRQNAgent(Agent):
                 )
             )
 
-            greedy_actions, batch_hidden = model.greedy(
-                batch_states, batch_hidden
-            )
+            if can_explore and model.num_noisy > 0:
+                # Note: Pylint breaks on tf.function.
+                # pylint: disable-next=unpacking-non-sequence
+                greedy_actions, batch_hidden = model.greedy_noisy(
+                    batch_states, batch_hidden, model.make_seeds(self.rng)
+                )
+            else:
+                greedy_actions, batch_hidden = model.greedy(
+                    batch_states, batch_hidden
+                )
             # Remove sequence dim: (N,L,A) -> (N,A)
             greedy_actions = tf.squeeze(greedy_actions, axis=-2)
             result |= zip(keys, decode_action_rankings(greedy_actions))
@@ -168,9 +176,15 @@ class DRQNAgent(Agent):
         # Exploration.
         # Note: We explore _after_ calling the model in order to ensure the
         # continuity of the recurrent hidden state for future calls.
-        if training and len(model_keys) > 0:
+        if (
+            can_explore
+            and len(model_keys) > 0
+            and self.config.exploration is not None
+        ):
             if episode is None:
-                raise ValueError("Missing `episode` argument in training mode")
+                raise ValueError(
+                    "Missing `episode` argument for epsilon-greedy"
+                )
             exploring = memoryview(
                 self.epsilon_greedy.explore(len(model_keys), episode)
             )
@@ -423,18 +437,45 @@ class DRQNAgent(Agent):
             rewards = rewards[:, burn_in:]
 
             if n_steps > 0:
+                burnin_target_seed = (
+                    self.target.make_seeds(self.rng)
+                    if self.target.num_noisy > 0
+                    else None
+                )
                 _, target_hidden = self.target(
-                    [burnin_states, hidden], mask=burnin_mask
+                    [burnin_states, hidden]
+                    + (
+                        [burnin_target_seed]
+                        if burnin_target_seed is not None
+                        else []
+                    ),
+                    mask=burnin_mask,
                 )
                 target_hidden = list(map(tf.stop_gradient, target_hidden))
 
-            _, hidden = self.model([burnin_states, hidden], mask=burnin_mask)
+            burnin_seed = (
+                self.model.make_seeds(self.rng)
+                if self.model.num_noisy > 0
+                else None
+            )
+            _, hidden = self.model(
+                [burnin_states, hidden]
+                + ([burnin_seed] if burnin_seed is not None else []),
+                mask=burnin_mask,
+            )
             hidden = list(map(tf.stop_gradient, hidden))
         elif n_steps > 0:
             target_hidden = hidden
 
+        seed = (
+            self.model.make_seeds(self.rng)
+            if self.model.num_noisy > 0
+            else None
+        )
         q_values, _, activations = self.model(
-            [states, hidden], mask=mask, return_activations=True
+            [states, hidden] + ([seed] if seed is not None else []),
+            mask=mask,
+            return_activations=True,
         )  # (N,L+n,A) or (N,L+n,A,D)
 
         # Q-values of chosen actions: Q(s_t, a_t)
@@ -510,7 +551,16 @@ class DRQNAgent(Agent):
                 )  # (N,L)
 
             # Qt(s_{t+n}, argmax_a(...))
-            target_q, _ = self.target([states, target_hidden], mask=mask)
+            target_seed = (
+                self.target.make_seeds(self.rng)
+                if self.target.num_noisy > 0
+                else None
+            )
+            target_q, _ = self.target(
+                [states, target_hidden]
+                + ([target_seed] if target_seed is not None else []),
+                mask=mask,
+            )
             best_action_mask = tf.one_hot(
                 best_action, len(ACTION_NAMES), dtype=target_q.dtype
             )

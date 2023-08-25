@@ -1,4 +1,5 @@
 """Module for calculating Q-values."""
+from itertools import chain
 from typing import Optional, Union
 
 import numpy as np
@@ -13,6 +14,7 @@ from ...gen.shapes import (
     NUM_POKEMON,
 )
 from .model import create_dense_stack
+from .noisy_dense import NoisyDense
 
 
 def rank_q(
@@ -79,6 +81,8 @@ class QValue(tf.keras.layers.Layer):
         switch actions.
       - global: Tensor of shape `(N, Dg)` for encoding all actions.
         Concattenated onto both move and bench vectors.
+      - seed: Stacked random seed tensors for NoisyDense layers. Integers of
+        shape `(2, self.num_noisy)`. Omit to not use random.
     - return_activations: Whether to also return a dictionary containing all the
       layer activations. Default false.
 
@@ -97,6 +101,7 @@ class QValue(tf.keras.layers.Layer):
         dist: Optional[int] = None,
         use_layer_norm=False,
         relu_options: Optional[dict[str, float]] = None,
+        std_init: Optional[float] = None,
         **kwargs,
     ):
         """
@@ -109,6 +114,8 @@ class QValue(tf.keras.layers.Layer):
         :param dist: Number of atoms for Q-value distribution.
         :param use_layer_norm: Whether to use layer normalization.
         :param relu_options: Options for the ReLU layers.
+        :param std_init: Enables NoisyNet with the given initial standard
+        deviation.
         """
         super().__init__(**kwargs)
         self.move_units = move_units
@@ -117,12 +124,14 @@ class QValue(tf.keras.layers.Layer):
         self.dist = dist
         self.use_layer_norm = use_layer_norm
         self.relu_options = relu_options
+        self.std_init = std_init
 
         self.action_move = value_function(
             units=move_units,
             dist=dist,
             use_layer_norm=use_layer_norm,
             relu_options=relu_options,
+            std_init=std_init,
             name="move",
         )
         self.action_switch = value_function(
@@ -130,6 +139,7 @@ class QValue(tf.keras.layers.Layer):
             dist=dist,
             use_layer_norm=use_layer_norm,
             relu_options=relu_options,
+            std_init=std_init,
             name="switch",
         )
         if state_units is not None:
@@ -138,13 +148,39 @@ class QValue(tf.keras.layers.Layer):
                 dist=dist,
                 use_layer_norm=use_layer_norm,
                 relu_options=relu_options,
+                std_init=std_init,
                 name="state",
             )
 
+        self.num_noisy = 0
+        for layer in chain(
+            self.action_move,
+            self.action_switch,
+            self.state_value if state_units is not None else [],
+        ):
+            if isinstance(layer, NoisyDense):
+                self.num_noisy += 1
+
     def call(self, inputs, *args, return_activations=False, **kwargs):
-        moves, bench, global_features = inputs
+        if len(inputs) == 4:
+            moves, bench, global_features, seed = inputs
+        else:
+            moves, bench, global_features = inputs
+            seed = None
 
         activations = {}
+
+        seed_index = 0
+
+        def apply_layer(layer, inputs):
+            if not isinstance(layer, NoisyDense) or seed is None:
+                output = layer(inputs)
+            else:
+                nonlocal seed_index
+                # pylint: disable-next=used-before-assignment
+                output = layer([inputs, seed[:, seed_index]])
+                seed_index += 1
+            return output
 
         # Broadcast: (N,1,X)
         global_features = global_features[..., tf.newaxis, :]
@@ -158,7 +194,7 @@ class QValue(tf.keras.layers.Layer):
             axis=-1,
         )
         for layer in self.action_move:
-            action_move = layer(action_move)
+            action_move = apply_layer(layer, action_move)
             if return_activations:
                 activations[f"{self.name}/{layer.name}"] = action_move
 
@@ -173,7 +209,7 @@ class QValue(tf.keras.layers.Layer):
             axis=-1,
         )
         for layer in self.action_switch:
-            action_switch = layer(action_switch)
+            action_switch = apply_layer(layer, action_switch)
             if return_activations:
                 activations[f"{self.name}/{layer.name}"] = action_switch
 
@@ -187,7 +223,7 @@ class QValue(tf.keras.layers.Layer):
             # (N,1,D)
             state_value = global_features
             for layer in self.state_value:
-                state_value = layer(state_value)
+                state_value = apply_layer(layer, state_value)
                 if return_activations:
                     activations[f"{self.name}/{layer.name}"] = state_value
 
@@ -203,6 +239,10 @@ class QValue(tf.keras.layers.Layer):
             # (N,9,D)
             q_values = tf.nn.softmax(action_value, axis=-1)
 
+        assert (
+            seed is None or seed_index == self.num_noisy
+        ), f"seed_index mismatch: {seed_index} != {self.num_noisy}"
+
         return q_values, activations
 
     def get_config(self):
@@ -213,6 +253,7 @@ class QValue(tf.keras.layers.Layer):
             "dist": self.dist,
             "use_layer_norm": self.use_layer_norm,
             "relu_options": self.relu_options,
+            "std_init": self.std_init,
         }
 
 
@@ -222,6 +263,7 @@ def value_function(
     dist: Optional[int] = None,
     use_layer_norm=False,
     relu_options: Optional[dict[str, float]] = None,
+    std_init: Optional[float] = None,
 ) -> list[tf.keras.layers.Layer]:
     """
     Creates a stack of layers to compute action advantage values or state
@@ -233,6 +275,7 @@ def value_function(
     (i.e. disabled).
     :param use_layer_norm: Whether to use layer normalization.
     :param relu_options: Options for the ReLU layers.
+    :param std_init: Enables NoisyNet with the given initial standard deviation.
     """
     return create_dense_stack(
         units=units,
@@ -240,11 +283,18 @@ def value_function(
         use_layer_norm=use_layer_norm,
         omit_last_ln=True,
         relu_options=relu_options,
+        std_init=std_init,
     ) + [
         tf.keras.layers.Dense(
             units=dist or 1,
             kernel_initializer="glorot_normal",
             bias_initializer="zeros",
             name=f"{name}/dense_{len(units)+1}",
+        )
+        if std_init is None
+        else NoisyDense(
+            units=dist or 1,
+            std_init=std_init,
+            name=f"{name}/noisy_dense_{len(units)+1}",
         )
     ]

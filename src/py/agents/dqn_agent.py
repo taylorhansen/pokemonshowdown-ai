@@ -42,7 +42,8 @@ class DQNAgent(Agent):
         self.rng = rng
         self.writer = writer
 
-        self.epsilon_greedy = EpsilonGreedy(config.exploration, rng)
+        if config.exploration is not None:
+            self.epsilon_greedy = EpsilonGreedy(config.exploration, rng)
 
         self.model = DQNModel(config=config.model, name="model")
         self.model.init()
@@ -86,7 +87,7 @@ class DQNAgent(Agent):
         state: AgentDict[Union[np.ndarray, tf.Tensor]],
         info: AgentDict[InfoDict],
         episode: Optional[tf.Variable] = None,
-        training=False,
+        can_explore=False,
     ) -> AgentDict[list[str]]:
         """
         Selects action for each agent.
@@ -95,7 +96,7 @@ class DQNAgent(Agent):
         :param info: Dictionaries that include additional info for each
         battle's ready players.
         :param episode: Variable indicating the current episode.
-        :param training: Whether to use epsilon-greedy exploration.
+        :param can_explore: Whether to allow exploration.
         :returns: Action names ranked by Q-value according to the model, for
         each player.
         """
@@ -106,9 +107,15 @@ class DQNAgent(Agent):
 
         result: AgentDict[tf.Tensor] = {}
 
-        if training and len(model_keys) > 0:
+        if (
+            can_explore
+            and len(model_keys) > 0
+            and self.config.exploration is not None
+        ):
             if episode is None:
-                raise ValueError("Missing `episode` argument in training mode")
+                raise ValueError(
+                    "Missing `episode` argument for epsilon-greedy"
+                )
             exploring = memoryview(
                 self.epsilon_greedy.explore(len(model_keys), episode)
             )
@@ -137,7 +144,12 @@ class DQNAgent(Agent):
                     dtype=tf.float32,
                     name="state",
                 )
-            greedy_actions = model.greedy(batch_states)
+            if can_explore and model.num_noisy > 0:
+                greedy_actions = model.greedy_noisy(
+                    batch_states, model.make_seeds(self.rng)
+                )
+            else:
+                greedy_actions = model.greedy(batch_states)
             result |= zip(keys, decode_action_rankings(greedy_actions))
 
         return result
@@ -294,10 +306,17 @@ class DQNAgent(Agent):
             action_mask = action_mask[..., tf.newaxis]  # (N,A,1)
         action_mask = tf.stop_gradient(action_mask)
 
+        seed = (
+            tf.stop_gradient(self.model.make_seeds(self.rng))
+            if self.model.num_noisy > 0
+            else None
+        )
+
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(self.model.trainable_weights)
             q_pred, activations = self.model(
-                state, training=True, return_activations=True
+                [state, seed] if seed is not None else state,
+                return_activations=True,
             )  # (N,A) or (N,A,D)
             # Select Q-value of taken action: (N,) or (N,D)
             q_pred = tf.reduce_sum(q_pred * action_mask, axis=1)
@@ -372,7 +391,14 @@ class DQNAgent(Agent):
         # Note that R_t=reward (precomputed) and s_{t+n}=next_state.
 
         # First compute Q(s_{t+n}, a)
-        next_q = self.model(next_state)  # (N,A) or (N,A,D)
+        seed = (
+            self.model.make_seeds(self.rng)
+            if self.model.num_noisy > 0
+            else None
+        )
+        next_q = self.model(
+            [next_state, seed] if seed is not None else next_state
+        )  # (N,A) or (N,A,D)
         if dist is not None:
             # Distributional RL: Take expectation (mean) of the Q distribution.
             # (N,A,D) -> (N,A)
@@ -391,7 +417,14 @@ class DQNAgent(Agent):
         next_action = tf.argmax(next_q, axis=-1, output_type=tf.int32)
 
         # Get target Q-value of best action: Qt(s', argmax_a(...))
-        target_next_q = self.target(next_state)  # (N,A) or (N,A,D)
+        target_seed = (
+            self.target.make_seeds(self.rng)
+            if self.target.num_noisy > 0
+            else None
+        )
+        target_next_q = self.target(
+            [next_state, target_seed] if target_seed is not None else next_state
+        )  # (N,A) or (N,A,D)
         next_action_mask = tf.one_hot(
             next_action, depth=len(ACTION_NAMES), dtype=target_next_q.dtype
         )

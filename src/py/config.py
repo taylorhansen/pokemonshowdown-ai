@@ -30,6 +30,9 @@ class DQNModelConfig:
     relu_options: Optional[dict[str, float]] = None
     """Options for the ReLU layers."""
 
+    std_init: Optional[float] = None
+    """Enables NoisyNet with the given initial standard deviation."""
+
 
 @dataclass
 class DRQNModelConfig(DQNModelConfig):
@@ -88,6 +91,8 @@ class PriorityConfig:
         """Creates a PriorityConfig from a JSON dictionary."""
         if isinstance(config["importance"], dict):
             config["importance"] = AnnealConfig(**config["importance"])
+        else:
+            config["importance"] = float(config["importance"])
         return cls(**config)
 
 
@@ -161,9 +166,10 @@ class DQNConfig:
     model: DQNModelConfig
     """Config for the model."""
 
-    exploration: Union[float, ExplorationConfig]
+    exploration: Union[float, ExplorationConfig, None]
     """
     Exploration rate for epsilon-greedy. Either a constant or a decay schedule.
+    Set to None to disable exploration.
     """
 
     experience: ExperienceConfig
@@ -176,7 +182,11 @@ class DQNConfig:
     def from_dict(cls, config: dict):
         """Creates a DQNConfig from a JSON dictionary."""
         config["model"] = DQNModelConfig(**config["model"])
-        if not isinstance(config["exploration"], float):
+        if config.get("exploration", None) is None:
+            config["exploration"] = None
+        elif isinstance(config["exploration"], (int, float)):
+            config["exploration"] = float(config["exploration"])
+        else:
             config["exploration"] = ExplorationConfig(**config["exploration"])
         config["experience"] = ExperienceConfig.from_dict(config["experience"])
         config["learn"] = DQNLearnConfig(**config["learn"])
@@ -198,7 +208,7 @@ class DRQNConfig:
     model: DRQNModelConfig
     """Config for the model."""
 
-    exploration: Union[float, ExplorationConfig]
+    exploration: Union[float, ExplorationConfig, None]
     """
     Exploration rate for epsilon-greedy. Either a constant or a decay schedule.
     """
@@ -237,7 +247,11 @@ class DRQNConfig:
     def from_dict(cls, config: dict):
         """Creates a DRQNConfig from a JSON dictionary."""
         config["model"] = DRQNModelConfig(**config["model"])
-        if not isinstance(config["exploration"], float):
+        if config.get("exploration", None) is None:
+            config["exploration"] = None
+        elif isinstance(config["exploration"], (int, float)):
+            config["exploration"] = float(config["exploration"])
+        else:
             config["exploration"] = ExplorationConfig(**config["exploration"])
         config["experience"] = ExperienceConfig.from_dict(config["experience"])
         config["learn"] = DRQNLearnConfig(**config["learn"])

@@ -1,8 +1,8 @@
 [DESIGN]
 max-args=20
-max-attributes=20
+max-attributes=25
 max-branches=20
-max-locals=50
+max-locals=55
 max-statements=100
 min-public-methods=1
 

@@ -101,7 +101,7 @@ async def run_eval(
         done = False
         while not done:
             action = agent.select_action(
-                state, info, episode=episode, training=False
+                state, info, episode=episode, can_explore=False
             )
             state, _, terminated, truncated, info, done = await env.step(action)
             for key, ended in chain(terminated.items(), truncated.items()):
@@ -276,7 +276,7 @@ async def train(config: TrainConfig):
             if rollout_battles <= 0:
                 break
             action = agent.select_action(
-                state, info, episode=episode, training=True
+                state, info, episode=episode, can_explore=True
             )
             (
                 next_state,
@@ -318,10 +318,11 @@ async def train(config: TrainConfig):
                             "rollout/tie_rate", num_ties / episode
                         )
                         tf.summary.scalar("rollout/num_ties", num_ties)
-                        tf.summary.scalar(
-                            "rollout/exploration",
-                            agent.epsilon_greedy.get_epsilon(episode),
-                        )
+                        if config.agent.config.exploration is not None:
+                            tf.summary.scalar(
+                                "rollout/exploration",
+                                agent.epsilon_greedy.get_epsilon(episode),
+                            )
                 if (
                     config.rollout.eps_per_eval > 0
                     and episode > 0

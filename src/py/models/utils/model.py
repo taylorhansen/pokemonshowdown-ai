@@ -5,6 +5,7 @@ from typing import Optional
 import tensorflow as tf
 
 from .attention import PMA, SAB
+from .noisy_dense import NoisyDense
 
 
 def create_dense_stack(
@@ -13,6 +14,7 @@ def create_dense_stack(
     use_layer_norm=False,
     omit_last_ln=False,
     relu_options: Optional[dict[str, float]] = None,
+    std_init: Optional[float] = None,
 ) -> list[tf.keras.layers.Layer]:
     """
     Creates a stack of dense layers for an input tensor.
@@ -23,6 +25,7 @@ def create_dense_stack(
     :param omit_last_ln: If true and `use_layer_norm`, disables layer
     normalization for the final layer.
     :param relu_options: Options for the ReLU layers.
+    :param std_init: Enables NoisyNet with the given initial standard deviation.
     """
     if relu_options is None:
         relu_options = {}
@@ -35,6 +38,12 @@ def create_dense_stack(
                 kernel_initializer="he_normal",
                 bias_initializer="zeros",
                 name=f"{name}/dense_{i+1}",
+            )
+            if std_init is None
+            else NoisyDense(
+                units=hidden,
+                std_init=std_init,
+                name=f"{name}/noisy_dense_{i+1}",
             ),
             *(
                 [tf.keras.layers.LayerNormalization(name=f"{name}/ln_{i+1}")]

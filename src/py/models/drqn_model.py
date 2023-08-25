@@ -29,12 +29,14 @@ class DRQNModel(tf.keras.Model):
     Deep Recurrent Q-Network (DRQN) model implementation for Pokemon AI.
 
     Call args:
-    - inputs: A list containing:
+    - inputs: Input tensor, or a list of:
       - state: Tensor of shape `(N, L, Ds)` describing the battle state, where
         N=batch, L=timesteps, and Ds=`STATE_SIZE`.
       - hidden: Optional list of recurrent hidden states used to continue a
         battle, either returned from the last call or created for a new battle
         via `new_hidden()`.
+      - seed: Stacked random seed tensors for NoisyDense layers. Integers of
+        shape `(2, self.num_noisy)`. Omit to not use random.
     - mask: Optional boolean tensor of shape `(N, L)` to mask out certain
       timesteps.
     - return_activations: Whether to also return a dictionary containing all the
@@ -96,6 +98,7 @@ class DRQNModel(tf.keras.Model):
             else None,
             use_layer_norm=config.use_layer_norm,
             relu_options=config.relu_options,
+            std_init=config.std_init,
             name=f"{self.name}/state",
         )
         # Note: Don't use an actual LSTM layer since its optional cuDNN kernel
@@ -116,8 +119,32 @@ class DRQNModel(tf.keras.Model):
             dist=config.dist,
             use_layer_norm=config.use_layer_norm,
             relu_options=config.relu_options,
+            std_init=config.std_init,
             name=f"{self.name}/q_value",
         )
+
+        self.num_noisy = self.state_encoder.num_noisy + self.q_value.num_noisy
+
+        if self.num_noisy > 0:
+            self.greedy_noisy = tf.function(
+                self._greedy_noisy,
+                input_signature=[
+                    tf.TensorSpec(
+                        shape=(None, None, STATE_SIZE),
+                        dtype=tf.float32,
+                        name="state",
+                    ),
+                    hidden_spec(),
+                    tf.TensorSpec(
+                        shape=(2, self.num_noisy), dtype=tf.int64, name="seed"
+                    ),
+                ],
+                jit_compile=True,
+            )
+            """
+            Like `greedy()` but with additional seed input for generating random
+            values for the NoisyNet component.
+            """
 
     @staticmethod
     def new_hidden(batch_size: Optional[int] = None) -> list[tf.Tensor]:
@@ -135,18 +162,40 @@ class DRQNModel(tf.keras.Model):
         """Initializes model weights."""
         self.build((None, None, STATE_SIZE))
 
+    def make_seeds(self, rng: Optional[tf.random.Generator] = None):
+        """Creates the seed vector required for a model call."""
+        if rng is None:
+            rng = tf.random.get_global_generator()
+        return rng.make_seeds(self.num_noisy)
+
     def call(self, inputs, training=False, mask=None, return_activations=False):
         if isinstance(inputs, (list, tuple)):
-            state, hidden = inputs
+            if len(inputs) == 3:
+                state, hidden, seed = inputs
+                state_seed, q_seed = tf.split(
+                    seed,
+                    [self.state_encoder.num_noisy, self.q_value.num_noisy],
+                    axis=-1,
+                )
+            else:
+                state, hidden = inputs
+                state_seed = None
+                q_seed = None
         else:
             state = inputs
             hidden = None
+            state_seed = None
+            q_seed = None
+
         (
             global_features,
             our_active_moves,
             our_bench,
             activations,
-        ) = self.state_encoder(state, return_activations=return_activations)
+        ) = self.state_encoder(
+            state if state_seed is None else [state, state_seed],
+            return_activations=return_activations,
+        )
 
         global_features, *hidden = self.recurrent(
             global_features,
@@ -161,7 +210,8 @@ class DRQNModel(tf.keras.Model):
         our_active_moves = tf.squeeze(our_active_moves, axis=-3)
 
         q_values, q_activations = self.q_value(
-            [our_active_moves, our_bench, global_features],
+            [our_active_moves, our_bench, global_features]
+            + ([q_seed] if q_seed is not None else []),
             return_activations=return_activations,
         )
         activations |= q_activations
@@ -236,3 +286,8 @@ class DRQNModel(tf.keras.Model):
             output, dist=self.config.dist, return_q=True
         )
         return ranked_actions, hidden, q_values
+
+    def _greedy_noisy(self, state, hidden, seed):
+        output, hidden = self([state, hidden, seed])
+        ranked_actions = rank_q(output, dist=self.config.dist)
+        return ranked_actions, hidden

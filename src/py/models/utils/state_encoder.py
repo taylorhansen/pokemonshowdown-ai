@@ -1,4 +1,5 @@
 """Module for encoding the battle state."""
+from itertools import chain
 from typing import Optional
 
 import tensorflow as tf
@@ -12,6 +13,7 @@ from ...gen.shapes import (
     STATE_SHAPES_FLAT,
 )
 from .model import create_dense_stack, pooling_attention, self_attention_block
+from .noisy_dense import NoisyDense
 
 
 @tf.keras.saving.register_keras_serializable()
@@ -20,7 +22,10 @@ class StateEncoder(tf.keras.layers.Layer):
     Layer that processes a battle state vector.
 
     Call args:
-    - inputs: Tensor with batch dim that describes the battle state.
+    - inputs: Input tensor, or list of:
+      - inputs: Tensor with batch dim that describes the battle state.
+      - seed: Stacked random seed tensors for NoisyDense layers. Integers of
+        shape `(2, self.num_noisy)`. Omit to not use random.
     - return_activations: Whether to also return a dictionary containing all the
       layer activations. Default false.
 
@@ -48,6 +53,7 @@ class StateEncoder(tf.keras.layers.Layer):
         bench_pooling_attention: Optional[tuple[int, int]] = None,
         use_layer_norm=False,
         relu_options: Optional[dict[str, float]] = None,
+        std_init: Optional[float] = None,
         **kwargs,
     ):
         """
@@ -76,6 +82,8 @@ class StateEncoder(tf.keras.layers.Layer):
         non-active pokemon. Otherwise ignored.
         :param use_layer_norm: Whether to use layer normalization.
         :param relu_options: Options for the ReLU layers.
+        :param std_init: Enables NoisyNet with the given initial standard
+        deviation.
         """
         super().__init__(**kwargs)
         self.input_units = input_units
@@ -90,6 +98,7 @@ class StateEncoder(tf.keras.layers.Layer):
         self.bench_pooling_attention = bench_pooling_attention
         self.use_layer_norm = use_layer_norm
         self.relu_options = relu_options
+        self.std_init = std_init
 
         assert set(STATE_NAMES) == set(input_units.keys())
         self.input_fcs = {
@@ -97,6 +106,7 @@ class StateEncoder(tf.keras.layers.Layer):
                 units=units,
                 use_layer_norm=use_layer_norm,
                 relu_options=relu_options,
+                std_init=std_init,
                 name=label,
             )
             for label, units in input_units.items()
@@ -105,12 +115,14 @@ class StateEncoder(tf.keras.layers.Layer):
             units=active_units,
             use_layer_norm=use_layer_norm,
             relu_options=relu_options,
+            std_init=std_init,
             name="active",
         )
         self.bench_fcs = create_dense_stack(
             units=bench_units,
             use_layer_norm=use_layer_norm,
             relu_options=relu_options,
+            std_init=std_init,
             name="bench",
         )
         if move_attention is not None:
@@ -163,11 +175,27 @@ class StateEncoder(tf.keras.layers.Layer):
             units=global_units,
             use_layer_norm=use_layer_norm,
             relu_options=relu_options,
+            std_init=std_init,
             name="global",
         )
 
+        self.num_noisy = 0
+        for layer in chain(
+            *self.input_fcs.values(),
+            self.active_fcs,
+            self.bench_fcs,
+            self.global_fcs,
+        ):
+            if isinstance(layer, NoisyDense):
+                self.num_noisy += 1
+
     # pylint: disable-next=too-many-branches
     def call(self, inputs, *args, return_activations=False, **kwargs):
+        if isinstance(inputs, (list, tuple)):
+            inputs, seed = inputs
+        else:
+            seed = None
+
         batch_shape = tf.shape(inputs)[:-1]  # = [N] or [N, L]
 
         features = dict(
@@ -183,6 +211,18 @@ class StateEncoder(tf.keras.layers.Layer):
 
         activations = {}
 
+        seed_index = 0
+
+        def apply_layer(layer, inputs):
+            if not isinstance(layer, NoisyDense) or seed is None:
+                output = layer(inputs)
+            else:
+                nonlocal seed_index
+                # pylint: disable-next=used-before-assignment
+                output = layer([inputs, seed[:, seed_index]])
+                seed_index += 1
+            return output
+
         # Note: tf.concat() seems to be broken for pylint.
         # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
 
@@ -193,7 +233,7 @@ class StateEncoder(tf.keras.layers.Layer):
                 shape=tf.concat([batch_shape, STATE_SHAPES[label]], axis=0),
             )
             for layer in self.input_fcs.get(label, []):
-                features[label] = layer(features[label])
+                features[label] = apply_layer(layer, features[label])
                 if return_activations:
                     activations[f"{self.name}/{layer.name}"] = features[label]
 
@@ -276,16 +316,12 @@ class StateEncoder(tf.keras.layers.Layer):
         # (N,2,1,X)
         active = tf.concat([features["volatile"], active1, active2], axis=-1)
         for layer in self.active_fcs:
-            active = layer(
-                active,
-            )
+            active = apply_layer(layer, active)
 
         # (N,2,5,X)
         bench = tf.concat([bench1, bench2], axis=-1)
         for layer in self.bench_fcs:
-            bench = layer(
-                bench,
-            )
+            bench = apply_layer(layer, bench)
             if return_activations:
                 activations[f"{self.name}/{layer.name}"] = bench
         if self.bench_attention is not None:
@@ -331,9 +367,7 @@ class StateEncoder(tf.keras.layers.Layer):
             global_features_list.append(tensor)
         global_features = tf.concat(global_features_list, axis=-1)
         for layer in self.global_fcs:
-            global_features = layer(
-                global_features,
-            )
+            global_features = apply_layer(layer, global_features)
             if return_activations:
                 activations[f"{self.name}/{layer.name}"] = global_features
 
@@ -344,6 +378,10 @@ class StateEncoder(tf.keras.layers.Layer):
 
         # (N,2,5,X) -> (N,5,X)
         our_bench = bench[..., 0, :, :]
+
+        assert (
+            seed is None or seed_index == self.num_noisy
+        ), f"seed_index mismatch: {seed_index} != {self.num_noisy}"
 
         return global_features, our_active_moves, our_bench, activations
 
@@ -361,4 +399,5 @@ class StateEncoder(tf.keras.layers.Layer):
             "bench_pooling_attention": self.bench_pooling_attention,
             "use_layer_norm": self.use_layer_norm,
             "relu_options": self.relu_options,
+            "std_init": self.std_init,
         }
