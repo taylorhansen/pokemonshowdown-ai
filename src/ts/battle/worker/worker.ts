@@ -115,15 +115,19 @@ class BattleWorker {
         for await (const [msg] of this.battleSock) {
             const req = JSON.parse(msg.toString()) as BattleRequest;
             if (req.type !== "battle") {
-                throw new Error(`Unknown request type '${req.type}'`);
+                console.error(
+                    `${this.workerId}: Unknown request type '${req.type}' ` +
+                        `(id=${req.id})`,
+                );
+                continue;
             }
 
             // Since the simulator is very efficient compared to the number
             // crunching required by the model agents (which can batch multiple
             // requests for the same agent), we allow this single-threaded Node
             // server to run many battles "in parallel" (asynchronously).
-            // As for how many parallel/async battles should be allowed, load
-            // balancing/etc is handled by the sender.
+            // We don't limit the amount of async-parallel battles here, instead
+            // relying on how the sender uses this worker.
             const battlePromise = this.dispatchBattle(req).catch(e =>
                 console.error(
                     `${this.workerId}:`,
