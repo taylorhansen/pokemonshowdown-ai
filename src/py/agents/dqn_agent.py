@@ -392,6 +392,8 @@ class DQNAgent(Agent):
         # Note that R_t=reward (precomputed) and s_{t+n}=next_state.
 
         # First compute Q(s_{t+n}, a)
+        # Note that we want to sample a separate NoisyNet from the one that's
+        # used to later calculate the loss.
         seed = (
             self.model.make_seeds(self.rng)
             if self.model.num_noisy > 0

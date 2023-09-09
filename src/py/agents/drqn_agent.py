@@ -423,6 +423,18 @@ class DRQNAgent(Agent):
         discount_factor = self.config.experience.discount_factor
         batch_size = self.config.learn.batch_size
 
+        if n_steps > 0:
+            target_seed = (
+                self.target.make_seeds(self.rng)
+                if self.target.num_noisy > 0
+                else None
+            )
+        seed = (
+            tf.stop_gradient(self.model.make_seeds(self.rng))
+            if self.model.num_noisy > 0
+            else None
+        )
+
         burn_in = self.config.burn_in
         unroll_length = self.config.unroll_length
         if burn_in > 0:
@@ -438,41 +450,21 @@ class DRQNAgent(Agent):
             rewards = rewards[:, burn_in:]
 
             if n_steps > 0:
-                burnin_target_seed = (
-                    self.target.make_seeds(self.rng)
-                    if self.target.num_noisy > 0
-                    else None
-                )
                 _, target_hidden = self.target(
                     [burnin_states, hidden]
-                    + (
-                        [burnin_target_seed]
-                        if burnin_target_seed is not None
-                        else []
-                    ),
+                    + ([target_seed] if target_seed is not None else []),
                     mask=burnin_mask,
                 )
                 target_hidden = list(map(tf.stop_gradient, target_hidden))
 
-            burnin_seed = (
-                self.model.make_seeds(self.rng)
-                if self.model.num_noisy > 0
-                else None
-            )
             _, hidden = self.model(
-                [burnin_states, hidden]
-                + ([burnin_seed] if burnin_seed is not None else []),
+                [burnin_states, hidden] + ([seed] if seed is not None else []),
                 mask=burnin_mask,
             )
             hidden = list(map(tf.stop_gradient, hidden))
         elif n_steps > 0:
             target_hidden = hidden
 
-        seed = (
-            self.model.make_seeds(self.rng)
-            if self.model.num_noisy > 0
-            else None
-        )
         q_values, _, activations = self.model(
             [states, hidden] + ([seed] if seed is not None else []),
             mask=mask,
@@ -552,11 +544,6 @@ class DRQNAgent(Agent):
                 )  # (N,L)
 
             # Qt(s_{t+n}, argmax_a(...))
-            target_seed = (
-                self.target.make_seeds(self.rng)
-                if self.target.num_noisy > 0
-                else None
-            )
             target_q, _ = self.target(
                 [states, target_hidden]
                 + ([target_seed] if target_seed is not None else []),
