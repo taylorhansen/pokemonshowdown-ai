@@ -355,6 +355,7 @@ class DRQNAgent(Agent):
         rewards = tf.ensure_shape(
             rewards, (batch_size, burn_in + unroll_length)
         )
+        is_weights = tf.ensure_shape(is_weights, (batch_size,))
 
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(self.model.trainable_weights)

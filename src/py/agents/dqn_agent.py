@@ -296,6 +296,7 @@ class DQNAgent(Agent):
         next_state = tf.ensure_shape(next_state, (batch_size, STATE_SIZE))
         choices = tf.ensure_shape(choices, (batch_size, len(ACTION_NAMES)))
         done = tf.ensure_shape(done, (batch_size,))
+        is_weights = tf.ensure_shape(is_weights, (batch_size,))
 
         td_target = self._calculate_target(reward, next_state, choices, done)
         td_target = tf.stop_gradient(td_target)  # (N,) or (N,D)
