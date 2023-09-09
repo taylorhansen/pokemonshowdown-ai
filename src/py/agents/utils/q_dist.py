@@ -39,15 +39,15 @@ def project_target_update(
     Requires concrete tensor ranks, but more efficient if all shapes are known.
     Supports multiple batch dimensions.
 
-    :param reward: Tensor of shape `(N,)` containing returns.
-    :param target_next_q: Tensor of shape `(N,D)` containing the target
+    :param reward: Tensor of shape `(*N,)` containing returns.
+    :param target_next_q: Tensor of shape `(*N,D)` containing the target
     Q-value distributions for the next states.
-    :param done: Boolean tensor of shape `(N,)` to mask out target Q-values
+    :param done: Boolean tensor of shape `(*N,)` to mask out target Q-values
     of terminal states.
     :param n_steps: Lookahead steps for n-step returns, or zero for infinite.
     :param discount_factor: Discount factor for future rewards.
     :returns: Tensor containing the projected distribution, of shape
-    `(N,D)`.
+    `(*N,D)`.
     """
     *batch_shape, dist = target_next_q.shape
 
