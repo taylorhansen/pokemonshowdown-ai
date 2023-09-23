@@ -11,6 +11,7 @@ from ...gen.shapes import (
     STATE_NAMES,
     STATE_SHAPES,
     STATE_SHAPES_FLAT,
+    STATE_SIZE,
 )
 from .model import create_dense_stack, pooling_attention, self_attention_block
 from .noisy_dense import NoisyDense
@@ -23,7 +24,8 @@ class StateEncoder(tf.keras.layers.Layer):
 
     Call args:
     - inputs: Input tensor, or list of:
-      - inputs: Tensor with batch dim that describes the battle state.
+      - inputs: Batched tensor of shape `(*N, STATE_SIZE)` describing the battle
+        state(s).
       - seed: Stacked random seed tensors for NoisyDense layers. Integers of
         shape `(2, self.num_noisy)`. Omit to not use random.
     - return_activations: Whether to also return a dictionary containing all the
@@ -198,6 +200,7 @@ class StateEncoder(tf.keras.layers.Layer):
 
         batch_shape = tf.shape(inputs)[:-1]  # = [N] or [N, L]
 
+        inputs = tf.ensure_shape(inputs, [*inputs.shape[:-1], STATE_SIZE])
         features = dict(
             zip(
                 STATE_NAMES,

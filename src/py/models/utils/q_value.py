@@ -76,11 +76,11 @@ class QValue(tf.keras.layers.Layer):
 
     Call args:
     - inputs: List of:
-      - moves: Tensor of shape `(N, NUM_MOVES, Dm)` for encoding move actions.
-      - bench: Tensor of shape `(N, NUM_POKEMON - NUM_ACTIVE, Dp)` for encoding
+      - moves: Tensor of shape `(*N, NUM_MOVES, Dm)` for encoding move actions.
+      - bench: Tensor of shape `(*N, NUM_POKEMON - NUM_ACTIVE, Dp)` for encoding
         switch actions.
-      - global: Tensor of shape `(N, Dg)` for encoding all actions.
-        Concattenated onto both move and bench vectors.
+      - global: Tensor of shape `(*N, Dg)` for encoding all actions.
+        Concatenated onto both move and bench vectors.
       - seed: Stacked random seed tensors for NoisyDense layers. Integers of
         shape `(2, self.num_noisy)`. Omit to not use random.
     - return_activations: Whether to also return a dictionary containing all the
