@@ -1,10 +1,30 @@
 """Epsilon-greedy implementation."""
+from dataclasses import dataclass
 from typing import Optional, Union
 
 import tensorflow as tf
 
-from ...config import ExplorationConfig
 from ...gen.shapes import ACTION_NAMES
+
+
+@dataclass
+class ExplorationConfig:
+    """Defines the schedule for decayed epsilon-greedy."""
+
+    decay_type: str
+    """Algorithm for decay schedule. Can be `"linear"` or `"exponential"`."""
+
+    start: float
+    """Beginning exploration rate."""
+
+    end: float
+    """End exploration rate."""
+
+    episodes: int
+    """
+    Number of episodes it should take to decay the exploration rate from `start`
+    to `end`.
+    """
 
 
 class EpsilonGreedy:

@@ -5,6 +5,7 @@ import os
 import shutil
 from asyncio.subprocess import Process
 from collections import deque
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, NamedTuple, Optional, Union
 
@@ -13,7 +14,6 @@ import tensorflow as tf
 import zmq
 import zmq.asyncio
 
-from ...config import BattlePoolConfig
 from ...utils.paths import PROJECT_DIR
 from ...utils.random import make_prng_seeds, randstr
 from ...utils.state import decode_state
@@ -34,6 +34,26 @@ TS_ARGS: Final = ("-r", "source-map-support/register")
 WORKER_JS: Final = os.fspath(
     Path(PROJECT_DIR, "dist", "ts", "battle", "worker", "worker.js").resolve()
 )
+
+
+@dataclass
+class BattlePoolConfig:
+    """Config for setting up simulator workers."""
+
+    workers: int
+    """Number of parallel workers to create."""
+
+    per_worker: int
+    """
+    Number of async-parallel battles per worker. Useful for increasing
+    throughput.
+    """
+
+    battles_per_log: Optional[int] = None
+    """
+    Store battle logs every `battles_per_log` battles. Always stored on error
+    regardless of this value. Omit to not store logs except on error.
+    """
 
 
 class BattleKey(NamedTuple):

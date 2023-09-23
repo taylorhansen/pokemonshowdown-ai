@@ -1,12 +1,44 @@
 """DQN implementation."""
+
+from dataclasses import dataclass
 from typing import Optional
 
 import tensorflow as tf
 
-from ..config import DQNModelConfig
 from ..gen.shapes import STATE_SIZE
 from .utils.q_value import QValue, rank_q
 from .utils.state_encoder import StateEncoder
+
+
+@dataclass
+class DQNModelConfig:
+    """Config for the DQN model."""
+
+    dueling: bool = False
+    """Whether to use dueling DQN architecture."""
+
+    dist: Optional[int] = None
+    """Number of atoms for Q-value distribution. Omit to disable."""
+
+    use_layer_norm: bool = False
+    """Whether to use layer normaliation."""
+
+    attention: bool = True
+    """
+    Whether to use attention layers to encode move and pokemon information.
+    """
+
+    pooling: str = "attention"
+    """
+    Pooling method to use for movesets and teams. Supported options are
+    `attention`, `mean`, and `max`.
+    """
+
+    relu_options: Optional[dict[str, float]] = None
+    """Options for the ReLU layers."""
+
+    std_init: Optional[float] = None
+    """Enables NoisyNet with the given initial standard deviation."""
 
 
 class DQNModel(tf.keras.Model):

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import reduce
 from itertools import chain
 from pathlib import Path
-from typing import Optional, TextIO, Union, cast
+from typing import Optional, TextIO, Union
 
 if (
     __name__ == "__main__"
@@ -23,10 +23,10 @@ import tensorflow as tf
 import yaml
 from tqdm import tqdm
 
-from .agents.dqn_agent import DQNAgent
-from .agents.drqn_agent import DRQNAgent
-from .config import DQNConfig, DRQNConfig, EvalOpponentConfig, TrainConfig
-from .environments.battle_env import BattleEnv
+from .agents.dqn_agent import DQNAgent, DQNAgentConfig
+from .agents.drqn_agent import DRQNAgent, DRQNAgentConfig
+from .config import TrainConfig
+from .environments.battle_env import BattleEnv, EvalOpponentConfig
 from .utils.paths import DEFAULT_CONFIG_PATH, PROJECT_DIR
 from .utils.random import randstr
 from .utils.tqdm_redirect import std_out_err_redirect_tqdm
@@ -175,15 +175,13 @@ async def train(config: TrainConfig):
 
     agent: Union[DQNAgent, DRQNAgent]
     if config.agent.type == "dqn":
-        agent = DQNAgent(
-            config=cast(DQNConfig, config.agent.config), rng=rng, writer=writer
-        )
+        assert isinstance(config.agent.config, DQNAgentConfig)
+        agent = DQNAgent(config=config.agent.config, rng=rng, writer=writer)
     elif config.agent.type == "drqn":
-        agent = DRQNAgent(
-            config=cast(DRQNConfig, config.agent.config), rng=rng, writer=writer
-        )
+        assert isinstance(config.agent.config, DRQNAgentConfig)
+        agent = DRQNAgent(config=config.agent.config, rng=rng, writer=writer)
     else:
-        raise ValueError(f"Invalid agent type '{config.agent.type}'")
+        raise ValueError(f"Unknown agent type '{config.agent.type}'")
 
     env_id = randstr(rng, 6)
     env = BattleEnv(

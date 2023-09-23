@@ -1,11 +1,36 @@
 """Replay buffer for DQN."""
-from typing import Generic, Optional, TypeVar
+from dataclasses import dataclass
+from typing import Generic, Optional, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
 
-from ...config import PriorityConfig
+from .config import AnnealConfig
 from .segment_tree import MinTree, SumTree
+
+
+@dataclass
+class PriorityConfig:
+    """Config for priority replay."""
+
+    exponent: float
+    """Priority exponent."""
+
+    importance: Union[float, AnnealConfig]
+    """Importance sampling exponent."""
+
+    epsilon: float = 1e-6
+    """Epsilon for priority calculation."""
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a PriorityConfig from a JSON dictionary."""
+        if isinstance(config["importance"], dict):
+            config["importance"] = AnnealConfig(**config["importance"])
+        else:
+            config["importance"] = float(config["importance"])
+        return cls(**config)
+
 
 ExampleT = TypeVar("ExampleT", bound=tuple)
 BatchT = TypeVar("BatchT", bound=tuple)

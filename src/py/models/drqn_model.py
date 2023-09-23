@@ -1,10 +1,11 @@
 """DRQN implementation."""
+from dataclasses import dataclass
 from typing import Final, Optional
 
 import tensorflow as tf
 
-from ..config import DRQNModelConfig
 from ..gen.shapes import STATE_SIZE
+from .dqn_model import DQNModelConfig
 from .utils.q_value import QValue, rank_q
 from .utils.recurrent import LayerNormLSTMCell
 from .utils.state_encoder import StateEncoder
@@ -13,6 +14,11 @@ RECURRENT_UNITS: Final = 256
 
 HIDDEN_SHAPES: Final = ((None, RECURRENT_UNITS), (None, RECURRENT_UNITS))
 """Shapes of recurrent hidden states for the DRQNModel."""
+
+
+@dataclass
+class DRQNModelConfig(DQNModelConfig):
+    """Config for the DRQN model."""
 
 
 def hidden_spec():

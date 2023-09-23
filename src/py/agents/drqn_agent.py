@@ -1,21 +1,98 @@
 """DRQN agent."""
 import warnings
+from dataclasses import dataclass
 from typing import Optional, Union
 
 import numpy as np
 import tensorflow as tf
 
-from ..config import DRQNConfig
 from ..environments.battle_env import AgentDict, AgentKey, InfoDict
 from ..gen.shapes import ACTION_NAMES, MAX_REWARD, MIN_REWARD, STATE_SIZE
-from ..models.drqn_model import HIDDEN_SHAPES, DRQNModel, hidden_spec
+from ..models.drqn_model import (
+    HIDDEN_SHAPES,
+    DRQNModel,
+    DRQNModelConfig,
+    hidden_spec,
+)
 from ..models.utils.greedy import decode_action_rankings
 from ..utils.typing import Trajectory
 from .agent import Agent
+from .config import ExperienceConfig
+from .dqn_agent import DQNLearnConfig
 from .utils.drqn_context import DRQNContext
-from .utils.epsilon_greedy import EpsilonGreedy
+from .utils.epsilon_greedy import EpsilonGreedy, ExplorationConfig
 from .utils.q_dist import project_target_update, zero_q_dist
 from .utils.replay_buffer import ReplayBuffer
+
+
+@dataclass
+class DRQNLearnConfig(DQNLearnConfig):
+    """Config for DRQN learning algorithm."""
+
+
+@dataclass
+class DRQNAgentConfig:
+    """
+    Config for DRQN algorithm.
+
+    This is the recurrent version of DQN, where recurrent hidden states are
+    tracked and the replay buffer stores entire episodes from one perspective of
+    the battle. As such, learning steps are not counted by individual
+    environment steps (i.e. experiences or state transitions) but instead by
+    collected trajectories.
+    """
+
+    model: DRQNModelConfig
+    """Config for the model."""
+
+    exploration: Optional[Union[float, ExplorationConfig]]
+    """
+    Exploration rate for epsilon-greedy. Either a constant or a decay schedule.
+    """
+
+    experience: ExperienceConfig
+    """Config for experience collection."""
+
+    learn: DRQNLearnConfig
+    """Config for learning."""
+
+    unroll_length: int
+    """
+    Number of agent steps to unroll at once when storing trajectories in the
+    replay buffer and later learning from them.
+    """
+
+    burn_in: int = 0
+    """
+    Number of agent steps to include before the main unroll that gets skipped
+    during learning, used only for deriving a useful hidden state before
+    learning on the main `unroll_length`.
+
+    Used in the R2D2 paper to counteract staleness in the hidden states that get
+    stored in the replay buffer.
+    https://openreview.net/pdf?id=r1lyTjAqYX
+    """
+
+    priority_mix: Optional[float] = None
+    """
+    Interpolate between max (1.0) and mean (0.0) TD-error when calculating
+    replay priorities over each sequence. Used in the R2D2 paper. Only
+    applicable when using prioritized replay.
+    """
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a DRQNAgentConfig from a JSON dictionary."""
+        config["model"] = DRQNModelConfig(**config["model"])
+        if config.get("exploration", None) is None:
+            config["exploration"] = None
+        elif isinstance(config["exploration"], (int, float)):
+            config["exploration"] = float(config["exploration"])
+        else:
+            config["exploration"] = ExplorationConfig(**config["exploration"])
+        config["experience"] = ExperienceConfig.from_dict(config["experience"])
+        config["learn"] = DRQNLearnConfig(**config["learn"])
+        return cls(**config)
 
 
 class DRQNAgent(Agent):
@@ -23,7 +100,7 @@ class DRQNAgent(Agent):
 
     def __init__(
         self,
-        config: DRQNConfig,
+        config: DRQNAgentConfig,
         rng: Optional[tf.random.Generator] = None,
         writer: Optional[tf.summary.SummaryWriter] = None,
     ):

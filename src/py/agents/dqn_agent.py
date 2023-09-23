@@ -1,21 +1,87 @@
 """DQN agent."""
 import warnings
+from dataclasses import dataclass
 from typing import Optional, Union
 
 import numpy as np
 import tensorflow as tf
 
-from ..config import DQNConfig
 from ..environments.battle_env import AgentDict, InfoDict
 from ..gen.shapes import ACTION_NAMES, MAX_REWARD, MIN_REWARD, STATE_SIZE
-from ..models.dqn_model import DQNModel
+from ..models.dqn_model import DQNModel, DQNModelConfig
 from ..models.utils.greedy import decode_action_rankings
 from ..utils.typing import Experience, TensorExperience
 from .agent import Agent
+from .config import ExperienceConfig
 from .utils.dqn_context import DQNContext
-from .utils.epsilon_greedy import EpsilonGreedy
+from .utils.epsilon_greedy import EpsilonGreedy, ExplorationConfig
 from .utils.q_dist import project_target_update, zero_q_dist
 from .utils.replay_buffer import ReplayBuffer
+
+
+@dataclass
+class DQNLearnConfig:
+    """Config for DQN learning algorithm."""
+
+    buffer_prefill: int
+    """
+    Fill replay buffer with some experience before starting training. Must be
+    larger than `batch_size`.
+    """
+
+    learning_rate: float
+    """Learning rate for gradient descent."""
+
+    batch_size: int
+    """
+    Batch size for gradient descent. Must be smaller than `buffer_prefill`.
+    """
+
+    steps_per_update: int
+    """Step interval for computing model updates."""
+
+    steps_per_target_update: int
+    """Step interval for updating the target network."""
+
+    steps_per_histogram: Optional[int] = None
+    """
+    Step interval for storing histograms of model weights, gradients, etc. Set
+    to None to disable.
+    """
+
+
+@dataclass
+class DQNAgentConfig:
+    """Config for DQN agent."""
+
+    model: DQNModelConfig
+    """Config for the model."""
+
+    exploration: Optional[Union[float, ExplorationConfig]]
+    """
+    Exploration rate for epsilon-greedy. Either a constant or a decay schedule.
+    Set to None to disable exploration.
+    """
+
+    experience: ExperienceConfig
+    """Config for experience collection."""
+
+    learn: DQNLearnConfig
+    """Config for learning."""
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a DQNAgentConfig from a JSON dictionary."""
+        config["model"] = DQNModelConfig(**config["model"])
+        if config.get("exploration", None) is None:
+            config["exploration"] = None
+        elif isinstance(config["exploration"], (int, float)):
+            config["exploration"] = float(config["exploration"])
+        else:
+            config["exploration"] = ExplorationConfig(**config["exploration"])
+        config["experience"] = ExperienceConfig.from_dict(config["experience"])
+        config["learn"] = DQNLearnConfig(**config["learn"])
+        return cls(**config)
 
 
 class DQNAgent(Agent):
@@ -23,7 +89,7 @@ class DQNAgent(Agent):
 
     def __init__(
         self,
-        config: DQNConfig,
+        config: DQNAgentConfig,
         rng: Optional[tf.random.Generator] = None,
         writer: Optional[tf.summary.SummaryWriter] = None,
     ):

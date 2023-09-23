@@ -2,9 +2,8 @@
 import numpy as np
 import tensorflow as tf
 
-from ...config import PriorityConfig
 from ...utils.typing import Experience, TensorExperience, Trajectory
-from .replay_buffer import ReplayBuffer
+from .replay_buffer import PriorityConfig, ReplayBuffer
 
 
 class ReplayBufferTest(tf.test.TestCase):

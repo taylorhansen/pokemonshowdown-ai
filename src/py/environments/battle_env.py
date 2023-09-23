@@ -1,5 +1,6 @@
 """Main RL environment for training script."""
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple, Optional, TypedDict, TypeVar, Union, cast
 
@@ -7,11 +8,76 @@ import numpy as np
 import tensorflow as tf
 import zmq
 
-from ..config import BattleEnvConfig, EvalOpponentConfig, RolloutOpponentConfig
 from ..gen.shapes import ACTION_IDS, ACTION_NAMES, STATE_SIZE
 from .environment import Environment
-from .utils.battle_pool import AgentKey, BattleKey, BattlePool
+from .utils.battle_pool import AgentKey, BattleKey, BattlePool, BattlePoolConfig
 from .utils.protocol import AgentFinalRequest, AgentRequest, BattleReply
+
+
+@dataclass
+class BattleEnvConfig:
+    """Config for the battle environment."""
+
+    max_turns: int
+    """Max amount of turns before game truncation."""
+
+    batch_limit: int
+    """
+    Max number of parallel environment steps for batch inference, excluding
+    terminal or truncation steps. Useful for increasing throughput.
+    """
+
+    pool: BattlePoolConfig
+    """Config for the worker pool."""
+
+    state_type: str = "numpy"
+    """
+    Array type used to store game state data. Either `"numpy"` for NumPy arrays,
+    or `"tensor"` for TensorFlow tensors. Recommended to use tensor for
+    evaluation and numpy for training, unless your GPU has enough VRAM to
+    contain the entire replay buffer in which case tensor can be used on both.
+    """
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a BattleEnvConfig from a JSON dictionary."""
+        config["pool"] = BattlePoolConfig(**config["pool"])
+        return cls(**config)
+
+
+@dataclass
+class RolloutOpponentConfig:
+    """Config for rollout opponents."""
+
+    name: str
+    """Display name of agent for logging."""
+
+    prob: float
+    """Fraction of rollout battles to run against this agent."""
+
+    type: str
+    """Agent type. Can be a builtin agent or `"model"` for a custom model."""
+
+    model: Optional[str] = None
+    """If `type="model"`, specifies the name of the model."""
+
+
+@dataclass
+class EvalOpponentConfig:
+    """Config for model evaluation opponents."""
+
+    name: str
+    """Display name of agent for logging."""
+
+    battles: int
+    """Number of battles to run against this agent."""
+
+    type: str
+    """Agent type. Can be a builtin agent or `"model"` for a custom model."""
+
+    model: Optional[str] = None
+    """If `type="model"`, specifies the name of the model."""
+
 
 T = TypeVar("T")
 AgentDict = dict[AgentKey, T]
