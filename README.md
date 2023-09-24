@@ -19,7 +19,7 @@ _Me (left) vs a model (right) that was trained over ~16k games against itself_
 
 ## Build Instructions
 
-Make sure you have at least Node v16 (LTS) and Miniconda 3 installed. Should
+Make sure you have at least Node v18 (LTS) and Miniconda 3 installed. Should
 work on Linux and likely also Windows WSL2.
 
 ```sh
