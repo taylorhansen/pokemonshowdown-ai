@@ -37,6 +37,7 @@ conda activate psai
 
 # If using GPU, ensure cuDNN gets loaded correctly.
 # Copied from https://www.tensorflow.org/install/pip.
+# May have to re-activate the Conda environment for changes to apply.
 mkdir -p $CONDA_PREFIX/etc/conda/activate.d
 echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
 echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
@@ -82,7 +83,7 @@ Training logs are saved to `./experiments/` by default.
 Metrics such as loss and evaluation scores can be viewed using TensorBoard.
 
 ```sh
-pip install tensorboard
+pip install tensorboard==2.13
 tensorboard --logdir experiments
 ```
 
