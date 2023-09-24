@@ -184,35 +184,50 @@ export async function simulateBattle<
                 let loopErr: Error | undefined;
                 try {
                     for await (const event of eventParser) {
-                        if (truncated) {
-                            break;
-                        }
-                        const e = event as RoomEvent | HaltEvent;
-                        if (e.args[0] === "turn") {
-                            if (
-                                options.maxTurns &&
-                                Number(e.args[1]) >= options.maxTurns
-                            ) {
-                                playerLog.info("Max turns reached; truncating");
-                                if (!battleStream.atEOF) {
-                                    await battleStream.writeEnd();
-                                }
-                                truncated = true;
+                        try {
+                            if (truncated) {
+                                // Note: We must explicitly end the stream
+                                // before we're allowed to prematurely exit the
+                                // loop, otherwise the stream's destroy()
+                                // method will be called implicitly by the async
+                                // iterator and will throw a really cryptic
+                                // AbortError.
+                                eventParser.end();
                                 break;
                             }
-                        } else if (e.args[0] === "win") {
-                            const [, winnerName] = e.args;
-                            if (winnerName === options.players[id].name) {
-                                winner = id;
+                            const e = event as RoomEvent | HaltEvent;
+                            if (e.args[0] === "turn") {
+                                if (
+                                    options.maxTurns &&
+                                    Number(e.args[1]) >= options.maxTurns
+                                ) {
+                                    playerLog.info(
+                                        "Max turns reached; truncating",
+                                    );
+                                    if (!battleStream.atEOF) {
+                                        await battleStream.writeEnd();
+                                    }
+                                    truncated = true;
+                                    eventParser.end();
+                                    break;
+                                }
+                            } else if (e.args[0] === "win") {
+                                const [, winnerName] = e.args;
+                                if (winnerName === options.players[id].name) {
+                                    winner = id;
+                                }
+                            } else if (e.args[0] === "halt") {
+                                driver.halt();
+                                continue;
                             }
-                        } else if (e.args[0] === "halt") {
-                            driver.halt();
-                            continue;
+                            await wrapTimeout(
+                                async () => await driver.handle(e as RoomEvent),
+                                timeoutMs,
+                            );
+                        } catch (e) {
+                            eventParser.end();
+                            throw e;
                         }
-                        await wrapTimeout(
-                            async () => await driver.handle(e as RoomEvent),
-                            timeoutMs,
-                        );
                     }
                 } catch (e) {
                     // Log game errors and leave a new exception specifying
