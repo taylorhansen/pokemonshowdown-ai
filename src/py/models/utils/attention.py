@@ -89,6 +89,7 @@ class MHA(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.num_heads = num_heads
         self.depth = depth
+        self.use_bias = use_bias
 
         dim = num_heads * depth
         self.query = tf.keras.layers.Dense(
@@ -234,7 +235,11 @@ class MHA(tf.keras.layers.Layer):
         return (
             super().get_config()
             | self.get_initializer_config()
-            | {"num_heads": self.num_heads, "depth": self.depth}
+            | {
+                "num_heads": self.num_heads,
+                "depth": self.depth,
+                "use_bias": self.use_bias,
+            }
         )
 
 
@@ -331,6 +336,7 @@ class MAB(tf.keras.layers.Layer):
                 "depth": self.mha.depth,
                 "rff": self.rff,
                 "use_layer_norm": self.use_layer_norm,
+                "use_bias": self.mha.use_bias,
             }
         )
 
@@ -409,6 +415,7 @@ class SAB(tf.keras.layers.Layer):
                 "depth": self.mab.mha.depth,
                 "rff": self.mab.rff,
                 "use_layer_norm": self.mab.use_layer_norm,
+                "use_bias": self.mab.mha.use_bias,
             }
         )
 
@@ -514,6 +521,7 @@ class PMA(tf.keras.layers.Layer):
                 "rff": self.mab.rff,
                 "rff_s": self.rff_s,
                 "use_layer_norm": self.mab.use_layer_norm,
+                "use_bias": self.mab.mha.use_bias,
                 "seed_initializer": tf.keras.initializers.serialize(
                     self.seed_initializer
                 ),
