@@ -224,7 +224,7 @@ export async function simulateBattle<
                     playerLog.info("Finishing");
                     try {
                         await wrapTimeout(async () => {
-                            if (loopErr || truncated) {
+                            if (loopErr ?? truncated) {
                                 players[id] = await driver.forceFinish();
                             } else {
                                 players[id] = await driver.finish();

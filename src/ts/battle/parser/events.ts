@@ -1401,7 +1401,7 @@ handlersImpl["|-enditem|"] = async function (ctx) {
 
     // Item-removal and steal-eat moves effectively delete the item.
     let consumed: boolean | string;
-    if (event.kwArgs.from || event.kwArgs.move || event.kwArgs.of) {
+    if (event.kwArgs.from ?? event.kwArgs.move ?? event.kwArgs.of) {
         consumed = false;
     } else if (event.kwArgs.eat) {
         // Eating a berry item.

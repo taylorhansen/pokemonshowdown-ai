@@ -74,7 +74,7 @@ export function toIdent(
     pos: Protocol.PositionLetter | null = "a",
 ): Protocol.PokemonIdent {
     const species = dex.pokemon[opt.species];
-    return `${side}${pos !== null ? pos : ""}: ${
+    return `${side}${pos ?? ""}: ${
         species?.display ?? opt.species
     }` as Protocol.PokemonIdent;
 }

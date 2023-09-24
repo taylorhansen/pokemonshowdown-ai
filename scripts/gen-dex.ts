@@ -62,7 +62,7 @@ void (async function buildDex(): Promise<void> {
     for (const move of [...gen.moves].sort((a, b) =>
         a.id < b.id ? -1 : +(a.id > b.id),
     )) {
-        if (move.realMove || move.isNonstandard) {
+        if (move.realMove ?? move.isNonstandard) {
             continue;
         }
 

@@ -68,7 +68,7 @@ export class Move implements ReadonlyMove {
             maxpp = Math.max(1, Math.min(maxpp, this.data.pp[1]));
         }
         this.maxpp = maxpp;
-        this.pp = pp === undefined ? maxpp : pp;
+        this.pp = pp ?? maxpp;
     }
 
     // istanbul ignore next: Only used for logging.

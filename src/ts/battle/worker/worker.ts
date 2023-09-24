@@ -125,9 +125,9 @@ class BattleWorker {
             // Since the simulator is very efficient compared to the number
             // crunching required by the model agents (which can batch multiple
             // requests for the same agent), we allow this single-threaded Node
-            // server to run many battles "in parallel" (asynchronously).
+            // server to run many battles in async-parallel.
             // We don't limit the amount of async-parallel battles here, instead
-            // relying on how the sender uses this worker.
+            // relying on how many battle requests the sender gives this worker.
             const battlePromise = this.dispatchBattle(req).catch(e =>
                 console.error(
                     `${this.workerId}:`,
@@ -136,7 +136,7 @@ class BattleWorker {
                 ),
             );
             this.pendingBattles.add(battlePromise);
-            battlePromise.finally(() =>
+            void battlePromise.finally(() =>
                 this.pendingBattles.delete(battlePromise),
             );
         }
