@@ -83,7 +83,7 @@ class DRQNAgentConfig:
     @classmethod
     def from_dict(cls, config: dict):
         """Creates a DRQNAgentConfig from a JSON dictionary."""
-        config["model"] = DRQNModelConfig(**config["model"])
+        config["model"] = DRQNModelConfig.from_dict(config["model"])
         if config.get("exploration", None) is None:
             config["exploration"] = None
         elif isinstance(config["exploration"], (int, float)):
@@ -454,12 +454,12 @@ class DRQNAgent(Agent):
             self._update_target()
 
         # Return data for metrics logging.
-        if self.config.model.dist is not None:
+        if self.config.model.q_value.dist is not None:
             # Record mean of Q/tgt distributions for each sample in the batch.
             support = tf.linspace(
                 tf.constant(MIN_REWARD, dtype=q_pred.dtype, shape=(1, 1)),
                 tf.constant(MAX_REWARD, dtype=q_pred.dtype, shape=(1, 1)),
-                self.config.model.dist,
+                self.config.model.q_value.dist,
                 axis=-1,
             )  # (1,1,D)
             q_pred = tf.reduce_sum(q_pred * support, axis=-1)
@@ -496,7 +496,7 @@ class DRQNAgent(Agent):
         `(N,L)`.
         - td_target: TD target used for loss calculation, of shape `(N,L)`.
         """
-        dist = self.config.model.dist
+        dist = self.config.model.q_value.dist
         n_steps = max(0, self.config.experience.n_steps)
         discount_factor = self.config.experience.discount_factor
         batch_size = self.config.learn.batch_size

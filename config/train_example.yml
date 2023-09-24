@@ -6,16 +6,42 @@ agent:
   type: dqn
   config:
     model:
-      dueling: true
-      dist: 51
-      use_layer_norm: true
-      attention: true
-      pooling: attention
-    exploration:
-      decay_type: linear
-      start: 1.0
-      end: 0.1
-      episodes: 5_000
+      state_encoder:
+        input_units:
+          room_status: [64]
+          team_status: [64]
+          volatile: [128]
+          basic: [64]
+          species: [128]
+          types: [128]
+          stats: [128]
+          ability: [128]
+          item: [128]
+          moves: [128]
+        active_units: [256]
+        bench_units: [256]
+        global_units: [256]
+        move_attention: [4, 32]
+        move_pooling_type: attention
+        move_pooling_attention: [4, 32]
+        bench_attention: [8, 32]
+        bench_pooling_type: attention
+        bench_pooling_attention: [8, 32]
+        use_layer_norm: true
+        std_init: 0.5 # NoisyNet.
+      q_value:
+        move_units: [256]
+        switch_units: [256]
+        state_units: [256] # Dueling.
+        dist: 51
+        use_layer_norm: true
+        std_init: 0.5 # NoisyNet.
+    # Uncomment if not using NoisyNet.
+    #exploration:
+    #  decay_type: linear
+    #  start: 1.0
+    #  end: 0.1
+    #  episodes: 5_000
     experience:
       n_steps: 2
       discount_factor: 0.99

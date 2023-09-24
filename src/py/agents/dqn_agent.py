@@ -72,7 +72,7 @@ class DQNAgentConfig:
     @classmethod
     def from_dict(cls, config: dict):
         """Creates a DQNAgentConfig from a JSON dictionary."""
-        config["model"] = DQNModelConfig(**config["model"])
+        config["model"] = DQNModelConfig.from_dict(config["model"])
         if config.get("exploration", None) is None:
             config["exploration"] = None
         elif isinstance(config["exploration"], (int, float)):
@@ -368,7 +368,7 @@ class DQNAgent(Agent):
         td_target = tf.stop_gradient(td_target)  # (N,) or (N,D)
 
         action_mask = tf.one_hot(action, len(ACTION_NAMES))  # (N,A)
-        if self.config.model.dist is not None:
+        if self.config.model.q_value.dist is not None:
             # Broadcast over selected action's Q distribution.
             action_mask = action_mask[..., tf.newaxis]  # (N,A,1)
         action_mask = tf.stop_gradient(action_mask)
@@ -404,12 +404,12 @@ class DQNAgent(Agent):
             self._update_target()
 
         # Return data for metrics logging.
-        if self.config.model.dist is not None:
+        if self.config.model.q_value.dist is not None:
             # Record mean of Q/tgt distributions for each sample in the batch.
             support = tf.linspace(
                 tf.constant(MIN_REWARD, dtype=q_pred.dtype, shape=(1,)),
                 tf.constant(MAX_REWARD, dtype=q_pred.dtype, shape=(1,)),
-                self.config.model.dist,
+                self.config.model.q_value.dist,
                 axis=-1,
             )  # (1,D)
             q_pred = tf.reduce_sum(q_pred * support, axis=-1)
@@ -426,7 +426,7 @@ class DQNAgent(Agent):
         :param done: Batched terminal state indicator for next state.
         :returns: Batched temporal difference target for learning.
         """
-        dist = self.config.model.dist
+        dist = self.config.model.q_value.dist
         n_steps = self.config.experience.n_steps
         discount_factor = self.config.experience.discount_factor
         batch_size = self.config.learn.batch_size
@@ -530,7 +530,7 @@ class DQNAgent(Agent):
 
     def _compute_loss(self, td_target, q_pred, is_weights):
         """Computes the training loss."""
-        if self.config.model.dist is None:
+        if self.config.model.q_value.dist is None:
             # MSE on Q-values.
             step_loss = tf.math.squared_difference(td_target, q_pred)
             td_error = tf.abs(td_target - q_pred)

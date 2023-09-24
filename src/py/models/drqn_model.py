@@ -1,14 +1,13 @@
 """DRQN implementation."""
 from dataclasses import dataclass
-from typing import Final, Optional
+from typing import Any, Final, Optional
 
 import tensorflow as tf
 
 from ..gen.shapes import STATE_SIZE
-from .dqn_model import DQNModelConfig
-from .utils.q_value import QValue, rank_q
+from .utils.q_value import QValue, QValueConfig, rank_q
 from .utils.recurrent import LayerNormLSTMCell
-from .utils.state_encoder import StateEncoder
+from .utils.state_encoder import StateEncoder, StateEncoderConfig
 
 RECURRENT_UNITS: Final = 256
 
@@ -17,8 +16,45 @@ HIDDEN_SHAPES: Final = ((None, RECURRENT_UNITS), (None, RECURRENT_UNITS))
 
 
 @dataclass
-class DRQNModelConfig(DQNModelConfig):
+class RecurrentConfig:
+    """Config for a recurrent module."""
+
+    # TODO: Include layer size rather than using RECURRENT_UNITS constant.
+
+    use_layer_norm: bool = False
+    """Whether to use layer normalization."""
+
+
+@dataclass
+class DRQNModelConfig:
     """Config for the DRQN model."""
+
+    state_encoder: StateEncoderConfig
+    """Config for the state encoder layer."""
+
+    recurrent: RecurrentConfig
+    """Config for the recurrent layer."""
+
+    q_value: QValueConfig
+    """Config for the Q-value output layer."""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Converts this object to a JSON dictionary."""
+        return {
+            "state_encoder": self.state_encoder.to_dict(),
+            "recurrent": self.recurrent.__dict__,
+            "q_value": self.q_value.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a DQNModelConfig from a JSON dictionary."""
+        config["state_encoder"] = StateEncoderConfig.from_dict(
+            config["state_encoder"]
+        )
+        config["recurrent"] = RecurrentConfig(**config["recurrent"])
+        config["q_value"] = QValueConfig.from_dict(config["q_value"])
+        return cls(**config)
 
 
 def hidden_spec():
@@ -62,7 +98,7 @@ class DRQNModel(tf.keras.Model):
 
     def __init__(
         self,
-        config: Optional[DRQNModelConfig] = None,
+        config: DRQNModelConfig,
         name: Optional[str] = None,
     ):
         """
@@ -72,61 +108,24 @@ class DRQNModel(tf.keras.Model):
         :param name: Name of the model.
         """
         super().__init__(name=name)
-        if config is None:
-            config = DRQNModelConfig()
         self.config = config
 
         self.state_encoder = StateEncoder(
-            input_units={
-                "room_status": (64,),
-                "team_status": (64,),
-                "volatile": (128,),
-                "basic": (64,),
-                "species": (128,),
-                "types": (128,),
-                "stats": (128,),
-                "ability": (128,),
-                "item": (128,),
-                "moves": (128,),
-            },
-            active_units=(256,),
-            bench_units=(256,),
-            global_units=(256,),
-            move_attention=(4, 32) if config.attention else None,
-            move_pooling_type=config.pooling,
-            move_pooling_attention=(4, 32)
-            if config.pooling == "attention"
-            else None,
-            bench_attention=(8, 32) if config.attention else None,
-            bench_pooling_type=config.pooling,
-            bench_pooling_attention=(8, 32)
-            if config.pooling == "attention"
-            else None,
-            use_layer_norm=config.use_layer_norm,
-            relu_options=config.relu_options,
-            std_init=config.std_init,
-            name=f"{self.name}/state",
+            config=config.state_encoder, name=f"{self.name}/state"
         )
         # Note: Don't use an actual LSTM layer since its optional cuDNN kernel
         # doesn't seem to work with XLA compilation. Instead force it to use the
         # pure TF implementation by wrapping the base LSTMCell in an RNN layer.
         self.recurrent = tf.keras.layers.RNN(
             cell=LayerNormLSTMCell(RECURRENT_UNITS, name="lstm_cell")
-            if config.use_layer_norm
+            if config.recurrent.use_layer_norm
             else tf.keras.layers.LSTMCell(RECURRENT_UNITS, name="lstm_cell"),
             return_sequences=True,
             return_state=True,
             name=f"{self.name}/state/global/lstm",
         )
         self.q_value = QValue(
-            move_units=(256,),
-            switch_units=(256,),
-            state_units=(256,),
-            dist=config.dist,
-            use_layer_norm=config.use_layer_norm,
-            relu_options=config.relu_options,
-            std_init=config.std_init,
-            name=f"{self.name}/q_value",
+            config=config.q_value, name=f"{self.name}/q_value"
         )
 
         self.num_noisy = self.state_encoder.num_noisy + self.q_value.num_noisy
@@ -227,11 +226,11 @@ class DRQNModel(tf.keras.Model):
         return q_values, hidden
 
     def get_config(self):
-        return super().get_config() | {"config": self.config.__dict__}
+        return super().get_config() | {"config": self.config.to_dict()}
 
     @classmethod
     def from_config(cls, config, custom_objects=None):
-        config["config"] = DRQNModelConfig(**config["config"])
+        config["config"] = DRQNModelConfig.from_dict(config["config"])
         return cls(**config)
 
     @tf.function(
@@ -258,7 +257,7 @@ class DRQNModel(tf.keras.Model):
           sequence, to be used in future calls to continue the same battle.
         """
         output, hidden = self([state, hidden])
-        ranked_actions = rank_q(output, dist=self.config.dist)
+        ranked_actions = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions, hidden
 
     @tf.function(
@@ -289,11 +288,11 @@ class DRQNModel(tf.keras.Model):
         """
         output, hidden = self([state, hidden])
         ranked_actions, q_values = rank_q(
-            output, dist=self.config.dist, return_q=True
+            output, dist=self.config.q_value.dist, return_q=True
         )
         return ranked_actions, hidden, q_values
 
     def _greedy_noisy(self, state, hidden, seed):
         output, hidden = self([state, hidden, seed])
-        ranked_actions = rank_q(output, dist=self.config.dist)
+        ranked_actions = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions, hidden

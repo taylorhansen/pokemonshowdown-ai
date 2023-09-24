@@ -1,6 +1,7 @@
 """Module for encoding the battle state."""
+from dataclasses import dataclass
 from itertools import chain
-from typing import Optional
+from typing import Any, Optional
 
 import tensorflow as tf
 
@@ -15,6 +16,106 @@ from ...gen.shapes import (
 )
 from .model import create_dense_stack, pooling_attention, self_attention_block
 from .noisy_dense import NoisyDense
+
+
+@dataclass
+class StateEncoderConfig:
+    """Config for the state encoder layer."""
+
+    input_units: dict[str, tuple[int, ...]]
+    """Size of hidden layers for encoding individual state features."""
+
+    active_units: tuple[int, ...]
+    """Size of hidden layers for encoding active pokemon."""
+
+    bench_units: tuple[int, ...]
+    """Size of hidden layers for encoding non-active pokemon."""
+
+    global_units: tuple[int, ...]
+    """Size of hidden layers for encoding the global state vector."""
+
+    # TODO: Make into another json dataclass.
+    move_attention: Optional[tuple[int, int]] = None
+    """
+    Tuple of `(num_heads, depth)` for set-based attention on the movesets of
+    each pokemon. Omit to not include an attention layer.
+    """
+
+    move_pooling_type: str = "max"
+    """
+    Pooling method to use for movesets. Can be `attention`, `mean`, or `max`.
+    """
+
+    move_pooling_attention: Optional[tuple[int, int]] = None
+    """
+    If `move_pooling_type="attention"`, tuple of `(num_heads, depth)` for
+    pooling via set-based attention on the movesets of each pokemon. Otherwise
+    ignored.
+    """
+
+    bench_attention: Optional[tuple[int, int]] = None
+    """
+    Tuple of `(num_heads, depth)` for set-based attention on each non-active
+    pokemon. Omit to not include an attention layer.
+    """
+
+    bench_pooling_type: str = "max"
+    """
+    Pooling method to use for movesets. Can be `attention`, `mean`, or `max`.
+    """
+
+    bench_pooling_attention: Optional[tuple[int, int]] = None
+    """
+    If `bench_pooling_type="attention"`, tuple of `(num_heads, depth)` for
+    pooling via set-based attention on each non-active pokemon. Otherwise
+    ignored.
+    """
+
+    use_layer_norm: bool = False
+    """Whether to use layer normalization."""
+
+    relu_options: Optional[dict[str, float]] = None
+    """Options for the ReLU layers."""
+
+    std_init: Optional[float] = None
+    """Enables NoisyNet with the given initial standard deviation."""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Converts this object to a JSON dictionary."""
+        return {
+            "input_units": {
+                label: list(units) for label, units in self.input_units.items()
+            },
+            "active_units": list(self.active_units),
+            "bench_units": list(self.bench_units),
+            "global_units": list(self.global_units),
+            "move_attention": list(self.move_attention)
+            if self.move_attention is not None
+            else None,
+            "move_pooling_type": self.move_pooling_type,
+            "move_pooling_attention": list(self.move_pooling_attention)
+            if self.move_pooling_attention is not None
+            else None,
+            "bench_pooling_type": self.bench_pooling_type,
+            "bench_pooling_attention": list(self.bench_pooling_attention)
+            if self.bench_pooling_attention is not None
+            else None,
+            "use_layer_norm": self.use_layer_norm,
+            "relu_options": self.relu_options,
+            "std_init": self.std_init,
+        }
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a StateEncoderConfig from a JSON dictionary."""
+        config["input_units"] = {
+            label: tuple(map(int, config["input_units"][label]))
+            for label in STATE_NAMES
+        }
+        config["active_units"] = tuple(map(int, config["active_units"]))
+        config["bench_units"] = tuple(map(int, config["bench_units"]))
+        config["global_units"] = tuple(map(int, config["global_units"]))
+        return cls(**config)
 
 
 @tf.keras.saving.register_keras_serializable()
@@ -43,141 +144,89 @@ class StateEncoder(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        input_units: dict[str, tuple[int, ...]],
-        active_units: tuple[int, ...],
-        bench_units: tuple[int, ...],
-        global_units: tuple[int, ...],
-        move_attention: Optional[tuple[int, int]] = None,
-        move_pooling_type="max",
-        move_pooling_attention: Optional[tuple[int, int]] = None,
-        bench_attention: Optional[tuple[int, int]] = None,
-        bench_pooling_type="max",
-        bench_pooling_attention: Optional[tuple[int, int]] = None,
-        use_layer_norm=False,
-        relu_options: Optional[dict[str, float]] = None,
-        std_init: Optional[float] = None,
+        config: StateEncoderConfig,
         **kwargs,
     ):
-        """
-        Creates a StateEncoder layer.
-
-        :param input_units: Size of hidden layers for encoding individual state
-        features.
-        :param active_units: Size of hidden layers for encoding active pokemon.
-        :param bench_units: Size of hidden layers for encoding non-active
-        pokemon.
-        :param global_units: Size of hidden layers for encoding the global
-        state vector.
-        :param move_attention: Tuple of `(num_heads, depth)` for set-based
-        attention on the movesets of each pokemon.
-        :param move_pooling_type: Pooling method to use for movesets. Can be
-        `attention`, `mean`, and `max`.
-        :param move_pooling_attention: If `move_pooling="attention"`, tuple of
-        `(num_heads, depth)` for pooling via set-based attention on the movesets
-        of each pokemon. Otherwise ignored.
-        :param bench_attention: Tuple of `(num_heads, depth)` for set-based
-        attention on each non-active pokemon.
-        :param bench_pooling_type: Pooling method to use for movesets. Can be
-        `attention`, `mean`, and `max`.
-        :param bench_pooling_attention: If `bench_pooling="attention"`, tuple of
-        `(num_heads, depth)` for pooling via set-based attention on each
-        non-active pokemon. Otherwise ignored.
-        :param use_layer_norm: Whether to use layer normalization.
-        :param relu_options: Options for the ReLU layers.
-        :param std_init: Enables NoisyNet with the given initial standard
-        deviation.
-        """
+        """Creates a StateEncoder layer."""
         super().__init__(**kwargs)
-        self.input_units = input_units
-        self.active_units = active_units
-        self.bench_units = bench_units
-        self.global_units = global_units
-        self.move_attention = move_attention
-        self.move_pooling_type = move_pooling_type
-        self.move_pooling_attention = move_pooling_attention
-        self.bench_attention = bench_attention
-        self.bench_pooling_type = bench_pooling_type
-        self.bench_pooling_attention = bench_pooling_attention
-        self.use_layer_norm = use_layer_norm
-        self.relu_options = relu_options
-        self.std_init = std_init
+        self.config = config
 
-        assert set(STATE_NAMES) == set(input_units.keys())
+        assert set(STATE_NAMES) == set(config.input_units.keys())
         self.input_fcs = {
             label: create_dense_stack(
                 units=units,
-                use_layer_norm=use_layer_norm,
-                relu_options=relu_options,
-                std_init=std_init,
+                use_layer_norm=config.use_layer_norm,
+                relu_options=config.relu_options,
+                std_init=config.std_init,
                 name=label,
             )
-            for label, units in input_units.items()
+            for label, units in config.input_units.items()
         }
         self.active_fcs = create_dense_stack(
-            units=active_units,
-            use_layer_norm=use_layer_norm,
-            relu_options=relu_options,
-            std_init=std_init,
+            units=config.active_units,
+            use_layer_norm=config.use_layer_norm,
+            relu_options=config.relu_options,
+            std_init=config.std_init,
             name="active",
         )
         self.bench_fcs = create_dense_stack(
-            units=bench_units,
-            use_layer_norm=use_layer_norm,
-            relu_options=relu_options,
-            std_init=std_init,
+            units=config.bench_units,
+            use_layer_norm=config.use_layer_norm,
+            relu_options=config.relu_options,
+            std_init=config.std_init,
             name="bench",
         )
-        if move_attention is not None:
-            num_heads, depth = move_attention
+        if config.move_attention is not None:
+            num_heads, depth = config.move_attention
             self.moveset_encoder = self_attention_block(
                 num_heads=num_heads,
                 depth=depth,
                 rff_units=num_heads * depth,
-                use_layer_norm=use_layer_norm,
-                relu_options=relu_options,
+                use_layer_norm=config.use_layer_norm,
+                relu_options=config.relu_options,
                 name="pokemon/moves",
             )
-        if move_pooling_type == "attention":
-            assert move_pooling_attention is not None
-            num_heads, depth = move_pooling_attention
+        if config.move_pooling_type == "attention":
+            assert config.move_pooling_attention is not None
+            num_heads, depth = config.move_pooling_attention
             self.move_pooling = pooling_attention(
                 num_seeds=1,
                 num_heads=num_heads,
                 depth=depth,
                 rff_units=num_heads * depth,
                 rff_s_units=num_heads * depth,
-                use_layer_norm=use_layer_norm,
-                relu_options=relu_options,
+                use_layer_norm=config.use_layer_norm,
+                relu_options=config.relu_options,
                 name="pokemon/moves",
             )
-        if bench_attention is not None:
-            num_heads, depth = bench_attention
+        if config.bench_attention is not None:
+            num_heads, depth = config.bench_attention
             self.bench_encoder = self_attention_block(
                 num_heads=num_heads,
                 depth=depth,
                 rff_units=num_heads * depth,
-                use_layer_norm=use_layer_norm,
-                relu_options=relu_options,
+                use_layer_norm=config.use_layer_norm,
+                relu_options=config.relu_options,
                 name="bench",
             )
-        if bench_pooling_type == "attention":
-            assert bench_pooling_attention is not None
-            num_heads, depth = bench_pooling_attention
+        if config.bench_pooling_type == "attention":
+            assert config.bench_pooling_attention is not None
+            num_heads, depth = config.bench_pooling_attention
             self.bench_pooling = pooling_attention(
                 num_seeds=1,
                 num_heads=num_heads,
                 depth=depth,
                 rff_units=num_heads * depth,
                 rff_s_units=num_heads * depth,
-                use_layer_norm=use_layer_norm,
-                relu_options=relu_options,
+                use_layer_norm=config.use_layer_norm,
+                relu_options=config.relu_options,
                 name="bench",
             )
         self.global_fcs = create_dense_stack(
-            units=global_units,
-            use_layer_norm=use_layer_norm,
-            relu_options=relu_options,
-            std_init=std_init,
+            units=config.global_units,
+            use_layer_norm=config.use_layer_norm,
+            relu_options=config.relu_options,
+            std_init=config.std_init,
             name="global",
         )
 
@@ -242,7 +291,7 @@ class StateEncoder(tf.keras.layers.Layer):
 
         # (N,2,7,4,X)
         moveset = features["moves"]
-        if self.move_attention is not None:
+        if self.config.move_attention is not None:
             moveset = self.moveset_encoder(moveset)
             if return_activations:
                 activations[
@@ -250,7 +299,7 @@ class StateEncoder(tf.keras.layers.Layer):
                 ] = moveset
 
         # (N,2,7,X)
-        if self.move_pooling_type == "attention":
+        if self.config.move_pooling_type == "attention":
             pooled_moveset = self.move_pooling(moveset)
             # Collapse PMA seed dimension.
             pooled_moveset = tf.squeeze(pooled_moveset, axis=-2)
@@ -258,12 +307,14 @@ class StateEncoder(tf.keras.layers.Layer):
                 activations[
                     f"{self.name}/{self.move_pooling.name}"
                 ] = pooled_moveset
-        elif self.move_pooling_type == "mean":
+        elif self.config.move_pooling_type == "mean":
             pooled_moveset = tf.reduce_mean(moveset, axis=-2)
-        elif self.move_pooling_type == "max":
+        elif self.config.move_pooling_type == "max":
             pooled_moveset = tf.reduce_max(moveset, axis=-2)
         else:
-            raise ValueError(f"Invalid move_pooling_type '{self.move_pooling}'")
+            raise ValueError(
+                f"Invalid move_pooling_type '{self.config.move_pooling_type}'"
+            )
 
         # Concat pre-batched item + last_item tensors.
         # (N,2,6,2,X) -> (N,2,6,2*X)
@@ -327,7 +378,7 @@ class StateEncoder(tf.keras.layers.Layer):
             bench = apply_layer(layer, bench)
             if return_activations:
                 activations[f"{self.name}/{layer.name}"] = bench
-        if self.bench_attention is not None:
+        if self.config.bench_attention is not None:
             bench = self.bench_encoder(
                 bench,
             )
@@ -335,7 +386,7 @@ class StateEncoder(tf.keras.layers.Layer):
                 activations[f"{self.name}/{self.bench_encoder.name}"] = bench
 
         # (N,2,X)
-        if self.bench_pooling_type == "attention":
+        if self.config.bench_pooling_type == "attention":
             pooled_bench = self.bench_pooling(
                 bench,
             )
@@ -345,13 +396,13 @@ class StateEncoder(tf.keras.layers.Layer):
                 activations[
                     f"{self.name}/{self.bench_pooling.name}"
                 ] = pooled_bench
-        elif self.bench_pooling_type == "mean":
+        elif self.config.bench_pooling_type == "mean":
             pooled_bench = tf.reduce_mean(bench, axis=-2)
-        elif self.bench_pooling_type == "max":
+        elif self.config.bench_pooling_type == "max":
             pooled_bench = tf.reduce_max(bench, axis=-2)
         else:
             raise ValueError(
-                f"Invalid bench_pooling_type '{self.bench_pooling}'"
+                f"Invalid bench_pooling_type '{self.config.bench_pooling_type}'"
             )
 
         # (N,X)
@@ -389,18 +440,9 @@ class StateEncoder(tf.keras.layers.Layer):
         return global_features, our_active_moves, our_bench, activations
 
     def get_config(self):
-        return super().get_config() | {
-            "input_units": self.input_units,
-            "active_units": self.active_units,
-            "bench_units": self.bench_units,
-            "global_units": self.global_units,
-            "move_attention": self.move_attention,
-            "move_pooling_type": self.move_pooling_type,
-            "move_pooling_attention": self.move_pooling_attention,
-            "bench_attention": self.bench_attention,
-            "bench_pooling_type": self.bench_pooling_type,
-            "bench_pooling_attention": self.bench_pooling_attention,
-            "use_layer_norm": self.use_layer_norm,
-            "relu_options": self.relu_options,
-            "std_init": self.std_init,
-        }
+        return super().get_config() | {"config": self.config.__dict__}
+
+    @classmethod
+    def from_config(cls, config):
+        config["config"] = StateEncoderConfig.from_dict(config["config"])
+        return cls(**config)

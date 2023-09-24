@@ -1,44 +1,40 @@
 """DQN implementation."""
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import tensorflow as tf
 
 from ..gen.shapes import STATE_SIZE
-from .utils.q_value import QValue, rank_q
-from .utils.state_encoder import StateEncoder
+from .utils.q_value import QValue, QValueConfig, rank_q
+from .utils.state_encoder import StateEncoder, StateEncoderConfig
 
 
 @dataclass
 class DQNModelConfig:
     """Config for the DQN model."""
 
-    dueling: bool = False
-    """Whether to use dueling DQN architecture."""
+    state_encoder: StateEncoderConfig
+    """Config for the state encoder layer."""
 
-    dist: Optional[int] = None
-    """Number of atoms for Q-value distribution. Omit to disable."""
+    q_value: QValueConfig
+    """Config for the Q-value output layer."""
 
-    use_layer_norm: bool = False
-    """Whether to use layer normaliation."""
+    def to_dict(self) -> dict[str, Any]:
+        """Converts this object to a JSON dictionary."""
+        return {
+            "state_encoder": self.state_encoder.to_dict(),
+            "q_value": self.q_value.to_dict(),
+        }
 
-    attention: bool = True
-    """
-    Whether to use attention layers to encode move and pokemon information.
-    """
-
-    pooling: str = "attention"
-    """
-    Pooling method to use for movesets and teams. Supported options are
-    `attention`, `mean`, and `max`.
-    """
-
-    relu_options: Optional[dict[str, float]] = None
-    """Options for the ReLU layers."""
-
-    std_init: Optional[float] = None
-    """Enables NoisyNet with the given initial standard deviation."""
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a DQNModelConfig from a JSON dictionary."""
+        config["state_encoder"] = StateEncoderConfig.from_dict(
+            config["state_encoder"]
+        )
+        config["q_value"] = QValueConfig.from_dict(config["q_value"])
+        return cls(**config)
 
 
 class DQNModel(tf.keras.Model):
@@ -66,7 +62,7 @@ class DQNModel(tf.keras.Model):
 
     def __init__(
         self,
-        config: Optional[DQNModelConfig] = None,
+        config: DQNModelConfig,
         name: Optional[str] = None,
     ):
         """
@@ -76,50 +72,13 @@ class DQNModel(tf.keras.Model):
         :param name: Name of the model.
         """
         super().__init__(name=name)
-        if config is None:
-            config = DQNModelConfig()
         self.config = config
 
         self.state_encoder = StateEncoder(
-            input_units={
-                "room_status": (64,),
-                "team_status": (64,),
-                "volatile": (128,),
-                "basic": (64,),
-                "species": (128,),
-                "types": (128,),
-                "stats": (128,),
-                "ability": (128,),
-                "item": (128,),
-                "moves": (128,),
-            },
-            active_units=(256,),
-            bench_units=(256,),
-            global_units=(256,),
-            move_attention=(4, 32) if config.attention else None,
-            move_pooling_type=config.pooling,
-            move_pooling_attention=(4, 32)
-            if config.pooling == "attention"
-            else None,
-            bench_attention=(8, 32) if config.attention else None,
-            bench_pooling_type=config.pooling,
-            bench_pooling_attention=(8, 32)
-            if config.pooling == "attention"
-            else None,
-            use_layer_norm=config.use_layer_norm,
-            relu_options=config.relu_options,
-            std_init=config.std_init,
-            name=f"{self.name}/state",
+            config=config.state_encoder, name=f"{self.name}/state"
         )
         self.q_value = QValue(
-            move_units=(256,),
-            switch_units=(256,),
-            state_units=(256,),
-            dist=config.dist,
-            use_layer_norm=config.use_layer_norm,
-            relu_options=config.relu_options,
-            std_init=config.std_init,
-            name=f"{self.name}/q_value",
+            config=config.q_value, name=f"{self.name}/q_value"
         )
 
         self.num_noisy = self.state_encoder.num_noisy + self.q_value.num_noisy
@@ -195,11 +154,11 @@ class DQNModel(tf.keras.Model):
         return q_values
 
     def get_config(self):
-        return super().get_config() | {"config": self.config.__dict__}
+        return super().get_config() | {"config": self.config.to_dict()}
 
     @classmethod
     def from_config(cls, config, custom_objects=None):
-        config["config"] = DQNModelConfig(**config["config"])
+        config["config"] = DQNModelConfig.from_dict(config["config"])
         return cls(**config)
 
     @tf.function(
@@ -220,7 +179,7 @@ class DQNModel(tf.keras.Model):
         batch of input states.
         """
         output = self(state)
-        ranked_actions = rank_q(output, dist=self.config.dist)
+        ranked_actions = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions
 
     @tf.function(
@@ -246,11 +205,11 @@ class DQNModel(tf.keras.Model):
         """
         output = self(state)
         ranked_actions, q_values = rank_q(
-            output, dist=self.config.dist, return_q=True
+            output, dist=self.config.q_value.dist, return_q=True
         )
         return ranked_actions, q_values
 
     def _greedy_noisy(self, state, seed):
         output = self([state, seed])
-        ranked_actions = rank_q(output, dist=self.config.dist)
+        ranked_actions = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions
