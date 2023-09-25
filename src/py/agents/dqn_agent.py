@@ -1,7 +1,7 @@
 """DQN agent."""
 import warnings
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import numpy as np
 import tensorflow as tf
@@ -12,7 +12,7 @@ from ..models.dqn_model import DQNModel, DQNModelConfig
 from ..models.utils.greedy import decode_action_rankings
 from ..utils.typing import Experience, TensorExperience
 from .agent import Agent
-from .config import ExperienceConfig
+from .config import ExperienceConfig, KerasObjectConfig
 from .utils.dqn_context import DQNContext
 from .utils.epsilon_greedy import EpsilonGreedy, ExplorationConfig
 from .utils.q_dist import project_target_update, zero_q_dist
@@ -23,14 +23,14 @@ from .utils.replay_buffer import ReplayBuffer
 class DQNLearnConfig:
     """Config for DQN learning algorithm."""
 
+    optimizer: KerasObjectConfig
+    """Config for the TF Optimizer."""
+
     buffer_prefill: int
     """
     Fill replay buffer with some experience before starting training. Must be
     larger than `batch_size`.
     """
-
-    learning_rate: float
-    """Learning rate for gradient descent."""
 
     batch_size: int
     """
@@ -48,6 +48,12 @@ class DQNLearnConfig:
     Step interval for storing histograms of model weights, gradients, etc. Set
     to None to disable.
     """
+
+    @classmethod
+    def from_dict(cls, config: dict):
+        """Creates a DQNLearnConfig from a JSON dictionary."""
+        config["optimizer"] = KerasObjectConfig(**config["optimizer"])
+        return cls(**config)
 
 
 @dataclass
@@ -80,7 +86,7 @@ class DQNAgentConfig:
         else:
             config["exploration"] = ExplorationConfig(**config["exploration"])
         config["experience"] = ExperienceConfig.from_dict(config["experience"])
-        config["learn"] = DQNLearnConfig(**config["learn"])
+        config["learn"] = DQNLearnConfig.from_dict(config["learn"])
         return cls(**config)
 
 
@@ -102,7 +108,6 @@ class DQNAgent(Agent):
         """
         super().__init__()
         self.config = config
-        self.optimizer = tf.keras.optimizers.Adam(config.learn.learning_rate)
         if rng is None:
             rng = tf.random.get_global_generator()
         self.rng = rng
@@ -135,7 +140,11 @@ class DQNAgent(Agent):
         self.agent_contexts: AgentDict[DQNContext] = {}
 
         self.step = tf.Variable(0, name="step", dtype=tf.int64)
+
         # Ensure optimizer state is loaded from checkpoint.
+        self.optimizer = cast(
+            tf.keras.optimizers.Optimizer, config.learn.optimizer.deserialize()
+        )
         self.optimizer.build(self.model.trainable_weights)
 
         # Log initial weights.

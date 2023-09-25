@@ -50,8 +50,12 @@ agent:
         exponent: 0.5
         importance: 0.4
     learn:
+      optimizer:
+        class_name: Adam
+        config:
+          learning_rate: 1.e-4
+        module: keras.optimizers
       buffer_prefill: 500
-      learning_rate: 1.e-4
       batch_size: 64
       steps_per_update: 2
       steps_per_target_update: 5000

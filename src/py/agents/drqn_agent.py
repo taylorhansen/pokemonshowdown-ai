@@ -1,7 +1,7 @@
 """DRQN agent."""
 import warnings
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import numpy as np
 import tensorflow as tf
@@ -91,7 +91,7 @@ class DRQNAgentConfig:
         else:
             config["exploration"] = ExplorationConfig(**config["exploration"])
         config["experience"] = ExperienceConfig.from_dict(config["experience"])
-        config["learn"] = DRQNLearnConfig(**config["learn"])
+        config["learn"] = DRQNLearnConfig.from_dict(config["learn"])
         return cls(**config)
 
 
@@ -113,7 +113,6 @@ class DRQNAgent(Agent):
         """
         super().__init__()
         self.config = config
-        self.optimizer = tf.keras.optimizers.Adam(config.learn.learning_rate)
         if rng is None:
             rng = tf.random.get_global_generator()
         self.rng = rng
@@ -147,7 +146,11 @@ class DRQNAgent(Agent):
         self.agent_contexts: AgentDict[DRQNContext] = {}
 
         self.step = tf.Variable(0, name="step", dtype=tf.int64)
+
         # Ensure optimizer state is loaded from checkpoint.
+        self.optimizer = cast(
+            tf.keras.optimizers.Optimizer, config.learn.optimizer.deserialize()
+        )
         self.optimizer.build(self.model.trainable_weights)
 
         # Log initial weights.
