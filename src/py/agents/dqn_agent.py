@@ -317,27 +317,22 @@ class DQNAgent(Agent):
         self, state, action, reward, next_state, choices, done, is_weights
     ):
         """Computes a model update for an experience batch."""
-        (
-            loss,
-            td_error,
-            activations,
-            gradients,
-            q_pred,
-            td_target,
-        ) = self._learn_step_impl(
+        loss, td_error, hists = self._learn_step_impl(
             state, action, reward, next_state, choices, done, is_weights
         )
-        self._log_metrics(
-            loss,
-            td_error,
-            activations,
-            gradients,
-            q_pred,
-            td_target,
-            action,
-            reward,
-            is_weights,
-        )
+
+        hists["action"] = action
+        hists["reward"] = reward
+        if self.config.experience.priority is not None:
+            hists["td_error"] = td_error
+            hists["is_weights"] = is_weights
+
+        logs = {"loss": loss}
+        if self.config.experience.priority is not None:
+            logs["is_exponent"] = self.replay_buffer.get_beta(self.step)
+
+        self._log_metrics(logs, hists)
+
         return td_error
 
     @tf.function(
@@ -423,7 +418,22 @@ class DQNAgent(Agent):
             )  # (1,D)
             q_pred = tf.reduce_sum(q_pred * support, axis=-1)
             td_target = tf.reduce_sum(td_target * support, axis=-1)
-        return loss, td_error, activations, gradients, q_pred, td_target
+        return (
+            loss,
+            td_error,
+            {
+                "q_pred": q_pred,
+                "td_target": td_target,
+                **{f"{n}/activation": a for n, a in activations.items()},
+                **{
+                    f"{w.name}/grads": g
+                    for w, g in zip(gradients, self.model.trainable_weights)
+                },
+                **{
+                    f"{w.name}/weights": w for w in self.model.trainable_weights
+                },
+            },
+        )
 
     def _calculate_target(self, reward, next_state, choices, done):
         """
@@ -556,50 +566,21 @@ class DQNAgent(Agent):
             tgt_wt.assign(curr_wt, read_value=False)
 
     def _log_metrics(
-        self,
-        loss,
-        td_error,
-        activations,
-        gradients,
-        q_pred,
-        td_target,
-        action,
-        reward,
-        is_weights,
+        self, logs: dict[str, tf.Tensor], hists: dict[str, tf.Tensor]
     ):
         if self.writer is None:
             return
         with self.writer.as_default(step=self.step):
-            self._record_var("loss", loss)
-
-            if self.config.experience.priority is not None:
-                beta = self.replay_buffer.get_beta(self.step)
-                self._record_var("is_exponent", beta)
+            for name, tensor in logs.items():
+                self._record_var(name, tensor)
 
             # pylint: disable-next=not-context-manager
             with tf.summary.record_if(
                 lambda: self.config.learn.steps_per_histogram is not None
                 and self.step % self.config.learn.steps_per_histogram == 0
             ):
-                for name, activation in activations.items():
-                    self._record_var(f"{name}/activation", activation)
-
-                for weight, grad in zip(
-                    self.model.trainable_weights, gradients
-                ):
-                    self._record_var(f"{weight.name}/weights", weight)
-                    self._record_var(f"{weight.name}/grads", grad)
-
-                self._record_var("action", action)
-                self._record_var("reward", reward)
-
-                self._record_var("q_pred", q_pred)
-                self._record_var("td_target", td_target)
-
-                if self.config.experience.priority is not None:
-                    self._record_var("td_error", td_error)
-                    self._record_var("is_weights", is_weights)
-
+                for name, tensor in hists.items():
+                    self._record_var(name, tensor)
                 self.writer.flush()
 
     def _record_var(self, name: str, tensor: tf.Tensor):
