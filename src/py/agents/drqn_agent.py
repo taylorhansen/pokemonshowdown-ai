@@ -471,7 +471,11 @@ class DRQNAgent(Agent):
                 **{f"{n}/activation": a for n, a in activations.items()},
                 **{
                     f"{w.name}/grads": g
-                    for w, g in zip(gradients, self.model.trainable_weights)
+                    for g, w in zip(gradients, self.model.trainable_weights)
+                },
+                **{
+                    f"{w.name}/grad_norm": tf.sqrt(tf.reduce_sum(tf.square(g)))
+                    for g, w in zip(gradients, self.model.trainable_weights)
                 },
                 **{
                     f"{w.name}/weights": w for w in self.model.trainable_weights
