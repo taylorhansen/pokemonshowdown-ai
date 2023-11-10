@@ -1,6 +1,6 @@
 """DRQN implementation."""
 from dataclasses import dataclass
-from typing import Any, Final, Optional
+from typing import Any, Final, Optional, cast
 
 import tensorflow as tf
 
@@ -37,6 +37,14 @@ class DRQNModelConfig:
 
     q_value: QValueConfig
     """Config for the Q-value output layer."""
+
+    time_distributed: bool = False
+    """
+    Whether to wrap non-recurrent layers in a TimeDistributed layer, which will
+    apply the layers to each timestep separately (over the entire batch) rather
+    than all at once. This can help keep memory usage down when using large
+    unrolls during training.
+    """
 
     def to_dict(self) -> dict[str, Any]:
         """Converts this object to a JSON dictionary."""
@@ -110,9 +118,18 @@ class DRQNModel(tf.keras.Model):
         super().__init__(name=name)
         self.config = config
 
-        self.state_encoder = StateEncoder(
-            config=config.state_encoder, name=f"{self.name}/state"
-        )
+        if config.time_distributed:
+            self.state_encoder = tf.keras.layers.TimeDistributed(
+                StateEncoder(config=config.state_encoder, name="state"),
+                name=f"{self.name}/td1",
+            )
+            self.state_encoder.num_noisy = cast(
+                StateEncoder, self.state_encoder.layer
+            ).num_noisy
+        else:
+            self.state_encoder = StateEncoder(
+                config=config.state_encoder, name=f"{self.name}/state"
+            )
         # Note: Don't use an actual LSTM layer since its optional cuDNN kernel
         # doesn't seem to work with XLA compilation. Instead force it to use the
         # pure TF implementation by wrapping the base LSTMCell in an RNN layer.
@@ -124,9 +141,16 @@ class DRQNModel(tf.keras.Model):
             return_state=True,
             name=f"{self.name}/state/global/lstm",
         )
-        self.q_value = QValue(
-            config=config.q_value, name=f"{self.name}/q_value"
-        )
+        if config.time_distributed:
+            self.q_value = tf.keras.layers.TimeDistributed(
+                QValue(config=config.q_value, name="q_value"),
+                name=f"{self.name}/td2",
+            )
+            self.q_value.num_noisy = cast(QValue, self.q_value.layer).num_noisy
+        else:
+            self.q_value = QValue(
+                config=config.q_value, name=f"{self.name}/q_value"
+            )
 
         self.num_noisy = self.state_encoder.num_noisy + self.q_value.num_noisy
 
@@ -191,6 +215,29 @@ class DRQNModel(tf.keras.Model):
             hidden = None
             state_seed = None
             q_seed = None
+
+        """def state_encoder_step(x, _):
+            # Note: We keep the same noise seed for the entire call, increasing
+            # stepwise exploration while stabilizing multi-step training.
+            return (
+                self.state_encoder(
+                    x if state_seed is None else [x, state_seed],
+                    return_activations=return_activations,
+                ),
+                [],
+            )
+
+        (
+            global_features,
+            our_active_moves,
+            our_bench,
+            activations,
+        ), _ = tf.keras.backend.rnn(
+            state_encoder_step,
+            state,
+            initial_states=[],
+            mask=mask,
+        )"""
 
         (
             global_features,
