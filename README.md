@@ -76,7 +76,7 @@ Training logs are saved to `./experiments/` by default.
 Metrics such as loss and evaluation scores can be viewed using TensorBoard.
 
 ```sh
-pip install tensorboard==2.13
+pip install tensorboard
 tensorboard --logdir experiments
 ```
 
