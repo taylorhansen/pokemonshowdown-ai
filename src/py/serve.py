@@ -178,7 +178,7 @@ async def server(
                 )
                 q_values = None
             ranked_actions = tf.squeeze(ranked_actions, axis=1)
-            hiddens |= zip(keys, zip(*map(tf.unstack, new_hiddens)))
+            hiddens |= zip(keys, map(list, zip(*map(tf.unstack, new_hiddens))))
 
         ranked_actions = decode_action_rankings(ranked_actions)
         if q_values is not None:
