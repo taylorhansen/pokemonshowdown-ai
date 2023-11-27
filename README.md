@@ -35,13 +35,6 @@ git submodule update
 conda env create --name psai --file environment.yml
 conda activate psai
 
-# If using GPU, ensure cuDNN gets loaded correctly.
-# Copied from https://www.tensorflow.org/install/pip.
-# May have to re-activate the Conda environment for changes to apply.
-mkdir -p $CONDA_PREFIX/etc/conda/activate.d
-echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
-echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
-
 # Setup TS.
 npm install
 npm run build

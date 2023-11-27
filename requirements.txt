@@ -1,11 +1,10 @@
-nvidia-cudnn-cu11==8.6.0.163
-tensorflow==2.13.0
+tensorflow[and-cuda]==2.14.1
 pyzmq==25.1.1
 tqdm==4.66.1
-types-tqdm==4.66.0.2
+types-tqdm==4.66.0.5
 pyyaml==6.0.1
 types-pyyaml==6.0.12.12
 isort==5.12.0
-black==23.9.1
-pylint==2.17.5
-mypy==1.5.1
+black==23.11.0
+pylint==3.0.2
+mypy==1.7.1
