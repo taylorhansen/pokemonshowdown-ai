@@ -287,12 +287,10 @@ class DRQNModel(tf.keras.Model):
           Q-values indexed by action id (i.e. unsorted).
         """
         output, hidden = self([state, hidden])
-        ranked_actions, q_values = rank_q(
-            output, dist=self.config.q_value.dist, return_q=True
-        )
+        ranked_actions, q_values = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions, hidden, q_values
 
     def _greedy_noisy(self, state, hidden, seed):
         output, hidden = self([state, hidden, seed])
-        ranked_actions = rank_q(output, dist=self.config.q_value.dist)
+        ranked_actions, _ = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions, hidden

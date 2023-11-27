@@ -179,7 +179,7 @@ class DQNModel(tf.keras.Model):
         batch of input states.
         """
         output = self(state)
-        ranked_actions = rank_q(output, dist=self.config.q_value.dist)
+        ranked_actions, _ = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions
 
     @tf.function(
@@ -204,12 +204,10 @@ class DQNModel(tf.keras.Model):
           indexed by action id (i.e. unsorted).
         """
         output = self(state)
-        ranked_actions, q_values = rank_q(
-            output, dist=self.config.q_value.dist, return_q=True
-        )
+        ranked_actions, q_values = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions, q_values
 
     def _greedy_noisy(self, state, seed):
         output = self([state, seed])
-        ranked_actions = rank_q(output, dist=self.config.q_value.dist)
+        ranked_actions, _ = rank_q(output, dist=self.config.q_value.dist)
         return ranked_actions

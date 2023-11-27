@@ -1,7 +1,7 @@
 """Module for calculating Q-values."""
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import numpy as np
 import tensorflow as tf
@@ -19,17 +19,15 @@ from .noisy_dense import NoisyDense
 
 
 def rank_q(
-    output: tf.Tensor, dist: Optional[int] = None, return_q=False
-) -> Union[tf.Tensor, tuple[tf.Tensor, tf.Tensor]]:
+    output: tf.Tensor, dist: Optional[int] = None
+) -> tuple[tf.Tensor, tf.Tensor]:
     """
     Interprets QValue layer output into action rankings.
 
     :param output: Layer output of shape `(N,A)` (or `(N,A,D)` where D=dist).
     :param dist: Number of atoms for Q-value distribution.
-    :param return_q: Whether to also return Q-values.
-    :returns: Integer tensor of shape `(N,A)` containing action rankings and,
-    if `return_q` is true, the unranked Q-values of shape `(N,A)` that were used
-    to generate the rankings.
+    :returns: Integer tensor of shape `(N,A)` containing action rankings and the
+    unranked Q-values of shape `(N,A)` that were used to generate the rankings.
     """
     if dist is None:
         q_values = output
@@ -51,12 +49,10 @@ def rank_q(
         )  # (1..., D)
         q_values = tf.reduce_sum(output * support, -1)
     # Create action id rankings based on the Q-values.
-    # Note: Let the battle simulator filter out illegal actions so the code
-    # is simpler here.
+    # Note: Let the battle simulator filter out illegal actions so the code is
+    # simpler here.
     ranked_actions = tf.argsort(q_values, axis=-1, direction="DESCENDING")
-    if return_q:
-        return ranked_actions, q_values
-    return ranked_actions
+    return ranked_actions, q_values
 
 
 def decode_q_values(q_values: tf.Tensor) -> list[dict[str, float]]:
