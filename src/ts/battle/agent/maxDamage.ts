@@ -335,8 +335,8 @@ function calcDamge(
                 benchMon === undefined
                     ? "<empty>"
                     : benchMon === null
-                    ? "<unknown>"
-                    : benchMon.species,
+                      ? "<unknown>"
+                      : benchMon.species,
             ];
         }
 
@@ -692,16 +692,16 @@ function calcDamge(
             critRatio === true
                 ? 1
                 : critRatio === false
-                ? 0
-                : critRatio < 1
-                ? 1 / 16
-                : critRatio < 2
-                ? 1 / 8
-                : critRatio < 3
-                ? 1 / 4
-                : critRatio < 4
-                ? 1 / 3
-                : 1 / 2;
+                  ? 0
+                  : critRatio < 1
+                    ? 1 / 16
+                    : critRatio < 2
+                      ? 1 / 8
+                      : critRatio < 3
+                        ? 1 / 4
+                        : critRatio < 4
+                          ? 1 / 3
+                          : 1 / 2;
 
         let critModifier = psMove.critModifier ?? 2;
         if (ourActive.ability === "sniper") {
@@ -730,12 +730,12 @@ function calcDamge(
                     ratio < 1
                         ? 40
                         : ratio < 2
-                        ? 60
-                        : ratio < 3
-                        ? 80
-                        : ratio < 4
-                        ? 120
-                        : 150;
+                          ? 60
+                          : ratio < 3
+                            ? 80
+                            : ratio < 4
+                              ? 120
+                              : 150;
                 break;
             }
             case "eruption":
@@ -755,14 +755,14 @@ function calcDamge(
                     ratio < 2
                         ? 200
                         : ratio < 6
-                        ? 150
-                        : ratio < 13
-                        ? 100
-                        : ratio < 22
-                        ? 80
-                        : ratio < 43
-                        ? 40
-                        : 20;
+                          ? 150
+                          : ratio < 13
+                            ? 100
+                            : ratio < 22
+                              ? 80
+                              : ratio < 43
+                                ? 40
+                                : 20;
                 break;
             }
             case "fling":
@@ -782,14 +782,14 @@ function calcDamge(
                     theirSpecies.weightkg < 10
                         ? 20
                         : theirSpecies.weightkg < 25
-                        ? 40
-                        : theirSpecies.weightkg < 50
-                        ? 60
-                        : theirSpecies.weightkg < 100
-                        ? 80
-                        : theirSpecies.weightkg < 200
-                        ? 100
-                        : 120;
+                          ? 40
+                          : theirSpecies.weightkg < 50
+                            ? 60
+                            : theirSpecies.weightkg < 100
+                              ? 80
+                              : theirSpecies.weightkg < 200
+                                ? 100
+                                : 120;
                 break;
             case "gyroball":
                 basePower = 1 + Math.floor((25 * theirSpe) / ourSpe);
@@ -855,12 +855,12 @@ function calcDamge(
                     move.pp > 3
                         ? 40
                         : move.pp > 2
-                        ? 50
-                        : move.pp > 1
-                        ? 60
-                        : move.pp > 0
-                        ? 80
-                        : 200;
+                          ? 50
+                          : move.pp > 1
+                            ? 60
+                            : move.pp > 0
+                              ? 80
+                              : 200;
                 break;
             case "wringout":
                 basePower =

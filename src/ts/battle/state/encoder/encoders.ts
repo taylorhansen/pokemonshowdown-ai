@@ -169,10 +169,10 @@ export const definedMajorStatusCounterEncoder: Encoder<ReadonlyMajorStatusCounte
                       // Note: Damage is actually turns * max(1, floor(hp/16)).
                       Math.min(15 / 16, msc.turns / 16)
                     : msc.current === "slp"
-                    ? // Chance of staying asleep.
-                      limitedStatusTurns(msc.turns, msc.duration!)
-                    : // Irrelevant.
-                      1,
+                      ? // Chance of staying asleep.
+                        limitedStatusTurns(msc.turns, msc.duration!)
+                      : // Irrelevant.
+                        1,
         }),
         oneHotEncoder(dex.majorStatusKeys.length),
     );
@@ -524,8 +524,8 @@ export const definedItemEncoder: Encoder<ItemArgs> = concat(
             item
                 ? [item]
                 : usage && usage.size > 0
-                ? constraintWithUsage(dex.itemKeys, usage, smoothing)
-                : itemSet,
+                  ? constraintWithUsage(dex.itemKeys, usage, smoothing)
+                  : itemSet,
         itemKeyEncoder,
     ),
     augment(
@@ -533,8 +533,8 @@ export const definedItemEncoder: Encoder<ItemArgs> = concat(
             lastItem
                 ? [lastItem]
                 : usage && usage.size > 0
-                ? constraintWithUsage(dex.itemKeys, usage, smoothing)
-                : itemSet,
+                  ? constraintWithUsage(dex.itemKeys, usage, smoothing)
+                  : itemSet,
         itemKeyEncoder,
     ),
 );
@@ -610,10 +610,14 @@ export const definedMoveEncoder: Encoder<KnownMoveArgs> = concat(
             move.name !== "hiddenpower"
                 ? [move.name]
                 : typeof hpType === "string"
-                ? [`hiddenpower${hpType}`]
-                : hpType instanceof Map && hpType.size > 0
-                ? constraintWithUsage(hiddenPowerMoveKeys, hpType, smoothing)
-                : hiddenPowerMoveKeysSet,
+                  ? [`hiddenpower${hpType}`]
+                  : hpType instanceof Map && hpType.size > 0
+                    ? constraintWithUsage(
+                          hiddenPowerMoveKeys,
+                          hpType,
+                          smoothing,
+                      )
+                    : hiddenPowerMoveKeysSet,
         moveKeyEncoder,
     ),
     // Ratio of pp to maxpp.

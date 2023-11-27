@@ -761,8 +761,8 @@ handlersImpl["|-fail|"] = async function (ctx) {
         const side = event.kwArgs.of
             ? Protocol.parsePokemonIdent(event.kwArgs.of).player
             : ident.player === "p1"
-            ? "p2"
-            : "p1";
+              ? "p2"
+              : "p1";
         const mon = ctx.state.getTeam(side).active;
         if (from.type === "ability") {
             mon.revealAbility(from.name);
@@ -1567,8 +1567,8 @@ handlersImpl["|-activate|"] = async function (ctx) {
             const targetSide = event.kwArgs.of
                 ? Protocol.parsePokemonIdent(event.kwArgs.of).player
                 : ident.player === "p1"
-                ? "p2"
-                : "p1";
+                  ? "p2"
+                  : "p1";
             const opp = ctx.state.getTeam(targetSide).active;
             opp.moveset.reveal(warnMoveId);
 
@@ -1605,8 +1605,8 @@ handlersImpl["|-activate|"] = async function (ctx) {
             const targetSide = event.kwArgs.of
                 ? Protocol.parsePokemonIdent(event.kwArgs.of).player
                 : ident.player === "p1"
-                ? "p2"
-                : "p1";
+                  ? "p2"
+                  : "p1";
             v.lockOn(ctx.state.getTeam(targetSide).active.volatile);
             break;
         }
@@ -1783,14 +1783,14 @@ export const handlers =
                       },
                   }
                 : handlersImpl[key] === "unsupported"
-                ? {
-                      // Unsupported parser throws an error.
-                      async [key](ctx: BattleParserContext) {
-                          await unsupportedParser(ctx, key);
-                      },
-                  }
-                : // Handler already implemented, don't override it.
-                  undefined,
+                  ? {
+                        // Unsupported parser throws an error.
+                        async [key](ctx: BattleParserContext) {
+                            await unsupportedParser(ctx, key);
+                        },
+                    }
+                  : // Handler already implemented, don't override it.
+                    undefined,
         ),
     ) as Required<HandlerMap>;
 
