@@ -7,4 +7,7 @@ export class FakeRoomHandler implements RoomHandler {
 
     /** @override */
     public halt() {}
+
+    /** @override */
+    public finish() {}
 }

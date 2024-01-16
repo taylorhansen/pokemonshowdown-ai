@@ -9,23 +9,24 @@ import {RoomHandler} from "./RoomHandler";
  * @template TAgent Battle agent type.
  * @template TResult Parser result type.
  */
-export class BattleHandler<
-    TAgent extends BattleAgent = BattleAgent,
-    TResult = unknown,
-> implements RoomHandler
+export class BattleHandler<TAgent extends BattleAgent = BattleAgent>
+    implements RoomHandler
 {
     /** Creates a BattleHandler. */
-    public constructor(
-        private readonly driver: BattleDriver<TAgent, TResult>,
-    ) {}
+    public constructor(private readonly driver: BattleDriver<TAgent>) {}
 
     /** @override */
     public async handle(event: Event): Promise<void> {
-        return await this.driver.handle(event);
+        await this.driver.handle(event);
     }
 
     /** @override */
     public halt(): void {
-        return this.driver.halt();
+        this.driver.halt();
+    }
+
+    /** @override */
+    public finish(): void {
+        this.driver.finish();
     }
 }

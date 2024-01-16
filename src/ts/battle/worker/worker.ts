@@ -5,15 +5,16 @@ import {rng} from "../../utils/random";
 import {Action, BattleAgent} from "../agent";
 import {maxDamage} from "../agent/maxDamage.js";
 import {randomAgent} from "../agent/random.js";
-import {main} from "../parser/main";
+import {BattleParser} from "../parser/BattleParser";
+import {gen4Parser} from "../parser/gen4";
 import {ReadonlyBattleState} from "../state";
 import {stateEncoder} from "../state/encoder";
 import {UsageStats, lookup} from "../usage";
-import {PlayerOptions, simulateBattle} from "./battle";
 import {
-    ExperienceBattleParserResult,
-    experienceBattleParser,
-} from "./experienceBattleParser";
+    ExperienceBattleAgent,
+    ExperienceBattleParser,
+} from "./ExperienceBattleParser";
+import {PlayerOptions, simulateBattle} from "./battle";
 import {
     AgentFinalRequest,
     AgentReply,
@@ -64,11 +65,15 @@ class BattleWorker {
             context,
             routingId: workerId,
             linger: 0,
+            receiveHighWaterMark: 0,
+            sendHighWaterMark: 0,
         });
         this.agentSock = new zmq.Dealer({
             context,
             routingId: workerId,
             linger: 0,
+            receiveHighWaterMark: 0,
+            sendHighWaterMark: 0,
         });
     }
 
@@ -181,38 +186,36 @@ class BattleWorker {
             throw new Error(`Battle '${req.id}' is already running`);
         }
         this.agentReplyCallbacks.set(req.id, new Map());
-        let rep: BattleReply;
-        try {
-            const result = await simulateBattle({
-                players: {
-                    p1: this.configurePlayer(req.agents.p1, req.id),
-                    p2: this.configurePlayer(req.agents.p2, req.id),
-                },
-                ...(req.maxTurns && {maxTurns: req.maxTurns}),
-                ...(req.logPath && {logPath: req.logPath}),
-                ...(req.onlyLogOnError && {onlyLogOnError: true}),
-                ...(req.seed && {seed: req.seed}),
-            });
-            rep = {
-                type: "battle",
-                id: req.id,
-                agents: {p1: req.agents.p1.name, p2: req.agents.p2.name},
-                ...(result.winner !== undefined && {
-                    winner: result.winner,
-                }),
-                ...(result.truncated && {truncated: true}),
-                ...(result.err && {
-                    err: result.err.stack ?? result.err.toString(),
-                }),
-            };
-        } catch (err) {
-            rep = {
-                type: "battle",
-                id: req.id,
-                agents: {p1: req.agents.p1.name, p2: req.agents.p2.name},
-                err: (err as Error).stack ?? (err as Error).toString(),
-            };
-        }
+        const {options: p1, cleanup: cleanup1} = this.configurePlayer(
+            req.agents.p1,
+            req.id,
+        );
+        const {options: p2, cleanup: cleanup2} = this.configurePlayer(
+            req.agents.p2,
+            req.id,
+        );
+        const result = await simulateBattle({
+            players: {p1, p2},
+            ...(req.maxTurns && {maxTurns: req.maxTurns}),
+            ...(req.logPath && {logPath: req.logPath}),
+            ...(req.onlyLogOnError && {onlyLogOnError: true}),
+            ...(req.seed && {seed: req.seed}),
+            ...(req.timeoutMs && {timeoutMs: req.timeoutMs}),
+        });
+        const rep: BattleReply = {
+            type: "battle",
+            id: req.id,
+            agents: {p1: req.agents.p1.name, p2: req.agents.p2.name},
+            ...(result.winner !== undefined && {
+                winner: result.winner,
+            }),
+            ...(result.truncated && {truncated: true}),
+            ...(result.logPath && {logPath: result.logPath}),
+            ...(result.err && {
+                err: result.err.stack ?? result.err.toString(),
+            }),
+        };
+        await Promise.all([cleanup1?.(), cleanup2?.()]);
         await this.battleSock.send(JSON.stringify(rep));
     }
 
@@ -220,65 +223,73 @@ class BattleWorker {
     private configurePlayer(
         options: BattleAgentOptions,
         battle: string,
-    ): PlayerOptions {
+    ): {options: PlayerOptions; cleanup?: () => Promise<void>} {
         if (options.type !== "model") {
             // Custom agent that doesn't rely on model agent server.
             return {
-                name: options.name,
-                agent: BattleWorker.getCustomAgent(
-                    options.type,
-                    options.randSeed,
-                ),
-                async parser(ctx) {
-                    await main(ctx);
-                    return undefined;
+                options: {
+                    name: options.name,
+                    agent: BattleWorker.getCustomAgent(
+                        options.type,
+                        options.randSeed,
+                    ),
+                    parser: gen4Parser,
+                    ...(options.teamSeed && {seed: options.teamSeed}),
                 },
-                ...(options.teamSeed && {seed: options.teamSeed}),
+            };
+        }
+
+        const agent: ExperienceBattleAgent = async (
+            state: ReadonlyBattleState,
+            choices: Action[],
+            logger?: Logger,
+            lastAction?: Action,
+            reward?: number,
+        ) =>
+            await this.socketAgent(
+                battle,
+                options.model!,
+                state,
+                choices,
+                logger,
+                lastAction,
+                reward,
+            );
+        let parser: BattleParser = gen4Parser;
+        let cleanup: () => Promise<void>;
+        if (options.experience) {
+            const expParser = new ExperienceBattleParser(parser, options.name);
+            parser = async (ctx, event) => await expParser.parse(ctx, event);
+            cleanup = async () => {
+                const result = expParser.finish();
+                const req: AgentFinalRequest = {
+                    type: "agent_final",
+                    battle,
+                    name: options.model!,
+                    action: result.action,
+                    reward: result.reward,
+                    ...(result.terminated && {terminated: true}),
+                };
+                await this.agentSock.send(JSON.stringify(req));
+            };
+        } else {
+            cleanup = async () => {
+                const req: AgentFinalRequest = {
+                    type: "agent_final",
+                    battle,
+                    name: options.model!,
+                };
+                await this.agentSock.send(JSON.stringify(req));
             };
         }
         return {
-            name: options.name,
-            agent: async (
-                state: ReadonlyBattleState,
-                choices: Action[],
-                logger?: Logger,
-                lastAction?: Action,
-                reward?: number,
-            ) =>
-                await this.socketAgent(
-                    battle,
-                    options.model!,
-                    state,
-                    choices,
-                    logger,
-                    lastAction,
-                    reward,
-                ),
-            parser: async ctx => {
-                let result: ExperienceBattleParserResult | undefined;
-                try {
-                    if (!options.experience) {
-                        return await main(ctx);
-                    }
-                    result = await experienceBattleParser(
-                        main,
-                        options.name,
-                    )(ctx);
-                } finally {
-                    const req: AgentFinalRequest = {
-                        type: "agent_final",
-                        battle,
-                        name: options.model!,
-                        ...(result && {
-                            action: result.action,
-                            reward: result.reward,
-                            ...(result.terminated && {terminated: true}),
-                        }),
-                    };
-                    await this.agentSock.send(JSON.stringify(req));
-                }
+            options: {
+                name: options.name,
+                agent,
+                parser,
+                ...(options.teamSeed && {seed: options.teamSeed}),
             },
-            ...(options.teamSeed && {seed: options.teamSeed}),
+            cleanup,
         };
     }
 
@@ -348,18 +359,20 @@ class BattleWorker {
                 return async (state, choices, logger) =>
                     await maxDamage(state, choices, logger, random);
             case "random_move":
-                return async (state, choices) =>
+                return async (state, choices, logger) =>
                     await randomAgent(
                         state,
                         choices,
+                        logger,
                         true /*moveOnly*/,
                         random,
                     );
             case "random":
-                return async (state, choices) =>
+                return async (state, choices, logger) =>
                     await randomAgent(
                         state,
                         choices,
+                        logger,
                         false /*moveOnly*/,
                         random,
                     );

@@ -15,6 +15,7 @@ export const test = () =>
                     await randomAgent(
                         null as unknown as ReadonlyBattleState,
                         arr,
+                        undefined /*logger*/,
                         false /*moveOnly*/,
                         random,
                     );
@@ -30,6 +31,7 @@ export const test = () =>
                         await randomAgent(
                             null as unknown as ReadonlyBattleState,
                             arr,
+                            undefined /*logger*/,
                             true /*moveOnly*/,
                             random,
                         );

@@ -1,11 +1,11 @@
-import * as stream from "stream";
 import {TeamGenerators} from "@pkmn/randoms";
-import {BattleStreams, PRNGSeed, Teams} from "@pkmn/sim";
+import {BattleStreams, PRNGSeed, Streams, Teams} from "@pkmn/sim";
 import {SideID} from "@pkmn/types";
-import {HaltEvent, RoomEvent} from "../../protocol/Event";
-import {EventParser} from "../../protocol/EventParser";
+import {RoomEvent} from "../../protocol/Event";
+import {protocolParser} from "../../protocol/parser";
 import {Sender} from "../../psbot/PsBot";
 import {DeferredFile} from "../../utils/DeferredFile";
+import {WrappedError} from "../../utils/errors/WrappedError";
 import {LogFunc, Logger} from "../../utils/logging/Logger";
 import {Verbose} from "../../utils/logging/Verbose";
 import {wrapTimeout} from "../../utils/timeout";
@@ -18,16 +18,10 @@ Teams.setGeneratorFactory(TeamGenerators);
 /** Identifier type for the sides of a battle. */
 export type PlayerSide = Exclude<SideID, "p3" | "p4">;
 
-/**
- * Options for {@link simulateBattle}.
- *
- * @param TResult Result from each player's {@link BattleParser}.
- */
-export interface BattleOptions<
-    TResult extends {[P in PlayerSide]: unknown} = {[P in PlayerSide]: unknown},
-> {
+/** Options for {@link simulateBattle}. */
+export interface BattleOptions {
     /** Player configs. */
-    readonly players: {readonly [P in PlayerSide]: PlayerOptions<TResult[P]>};
+    readonly players: {readonly [P in PlayerSide]: PlayerOptions};
     /**
      * Maximum amount of turns until the game is truncated. The
      * {@link PlayerOptions.agent BattleAgents} will not be called at the end of
@@ -50,6 +44,12 @@ export interface BattleOptions<
     readonly onlyLogOnError?: boolean;
     /** Seed for the battle PRNG. */
     readonly seed?: PRNGSeed;
+    /**
+     * Timeout in milliseconds for processing battle-related actions and events.
+     * Used for catching rare async bugs or timing out BattleAgent
+     * communications.
+     */
+    readonly timeoutMs?: number;
 }
 
 /**
@@ -57,13 +57,13 @@ export interface BattleOptions<
  *
  * @template TResult Parser result type.
  */
-export interface PlayerOptions<TResult = unknown> {
+export interface PlayerOptions {
     /** Player name. */
     readonly name: string;
     /** Battle decision-maker. */
     readonly agent: BattleAgent;
     /** Battle event parser. Responsible for calling the {@link agent}. */
-    readonly parser: BattleParser<BattleAgent, [], TResult>;
+    readonly parser: BattleParser;
     /** Seed for generating the random team. */
     readonly seed?: PRNGSeed;
 }
@@ -73,18 +73,17 @@ export interface PlayerOptions<TResult = unknown> {
  *
  * @template TResult Result from each player's {@link BattleParser}.
  */
-export interface BattleResult<
-    TResult extends {[P in PlayerSide]: unknown} = {[P in PlayerSide]: unknown},
-> {
+export interface BattleResult {
     /** Side of the winner if it's not a tie. */
     winner?: PlayerSide;
-    /**
-     * Results from each player's {@link PlayerOptions.parser BattleParser}. May
-     * not be fully defined if an {@link err error} was encountered.
-     */
-    players: {[P in PlayerSide]?: TResult[P]};
     /** Whether the game was truncated due to max turn limit. */
     truncated?: boolean;
+    /**
+     * Path to the file containing game logs if enabled. Should be equal to
+     * {@link BattleOptions.logPath} if specified, otherwise points to a temp
+     * file.
+     */
+    logPath?: string;
     /**
      * If an exception was thrown during the game, store it here instead of
      * propagating it through the pipeline.
@@ -95,20 +94,18 @@ export interface BattleResult<
 /** Temp log file template. */
 const template = "psbattle-XXXXXX";
 
-/** Timeout for catching rare hanging promise bugs. */
-const timeoutMs = 600_000; /*10min*/
-
 /**
  * Runs a simulated PS battle.
  *
  * @template TResult Result from each player's {@link BattleParser}.
  */
-export async function simulateBattle<
-    TResult extends {[P in PlayerSide]: unknown} = {[P in PlayerSide]: unknown},
->(options: BattleOptions<TResult>): Promise<BattleResult<TResult>> {
+export async function simulateBattle(
+    options: BattleOptions,
+): Promise<BattleResult> {
+    let logPath: string | undefined;
     const file = new DeferredFile();
-    if (options.logPath && !options.onlyLogOnError) {
-        await file.ensure(options.logPath, template);
+    if (!options.onlyLogOnError) {
+        logPath = await file.ensure(options.logPath, template);
     }
 
     // Setup logger.
@@ -128,137 +125,56 @@ export async function simulateBattle<
     );
 
     const gamePromises: Promise<void>[] = [];
-    let truncated: boolean | undefined;
-    let winner: PlayerSide | undefined;
 
-    const players: {[P in PlayerSide]?: TResult[P]} = {};
+    let truncated: boolean | undefined;
+    const truncate = async () => {
+        truncated = true;
+        if (!battleStream.atEOF) {
+            await battleStream.writeEnd();
+        }
+    };
+
+    let winner: PlayerSide | undefined;
+    gamePromises.push(
+        (async function omniscientStreamHandler() {
+            try {
+                const winnerName = await omniscientEventPipeline(
+                    streams.omniscient,
+                    options.timeoutMs,
+                );
+                for (const id of ["p1", "p2"] as const) {
+                    if (winnerName === options.players[id].name) {
+                        winner = id;
+                    }
+                }
+            } catch (err) {
+                await truncate();
+                logPath = await file.ensure(options.logPath, template);
+                handleEventPipelineError(err as Error, logger, logPath);
+            }
+        })(),
+    );
+
     for (const id of ["p1", "p2"] as const) {
         const playerLog = logger.addPrefix(
             `${id}(${options.players[id].name}): `,
         );
 
-        const sender: Sender = (...responses) => {
-            for (const res of responses) {
-                // Extract choice from args.
-                // Format: |/choose <choice>
-                if (res.startsWith("|/choose ")) {
-                    const choice = res.substring("|/choose ".length);
-                    if (!battleStream.atEOF) {
-                        void streams[id].write(choice);
-                    } else {
-                        playerLog.error("Can't send choice: At end of stream");
-                        return false;
-                    }
-                }
-            }
-            return true;
-        };
-
-        const driver = new BattleDriver({
-            username: options.players[id].name,
-            agent: options.players[id].agent,
-            parser: options.players[id].parser,
-            sender,
-            logger: playerLog,
-        });
-
-        // Setup battle event pipeline.
-
-        const battleTextStream = streams[id];
-        const eventParser = new EventParser(
-            playerLog.addPrefix("EventParser: "),
-        );
-
         gamePromises.push(
-            stream.promises.pipeline(battleTextStream, eventParser),
-        );
-
-        // Start event loop for this side of the battle.
-
-        // Note: Keep this separate from the above pipeline promise since for
-        // some reason it causes the whole worker process to crash when an
-        // error is encountered due to the underlying handler.finish() promise
-        // rejecting before the method itself can be called/caught.
-        gamePromises.push(
-            (async function playerLoop() {
-                let loopErr: Error | undefined;
+            (async function playerStreamHandler() {
                 try {
-                    for await (const event of eventParser) {
-                        try {
-                            if (truncated) {
-                                // Note: We must explicitly end the stream
-                                // before we're allowed to prematurely exit the
-                                // loop, otherwise the stream's destroy()
-                                // method will be called implicitly by the async
-                                // iterator and will throw a really cryptic
-                                // AbortError.
-                                eventParser.end();
-                                break;
-                            }
-                            const e = event as RoomEvent | HaltEvent;
-                            if (e.args[0] === "turn") {
-                                if (
-                                    options.maxTurns &&
-                                    Number(e.args[1]) >= options.maxTurns
-                                ) {
-                                    playerLog.info(
-                                        "Max turns reached; truncating",
-                                    );
-                                    if (!battleStream.atEOF) {
-                                        await battleStream.writeEnd();
-                                    }
-                                    truncated = true;
-                                    eventParser.end();
-                                    break;
-                                }
-                            } else if (e.args[0] === "win") {
-                                const [, winnerName] = e.args;
-                                if (winnerName === options.players[id].name) {
-                                    winner = id;
-                                }
-                            } else if (e.args[0] === "halt") {
-                                driver.halt();
-                                continue;
-                            }
-                            await wrapTimeout(
-                                async () => await driver.handle(e as RoomEvent),
-                                timeoutMs,
-                            );
-                        } catch (e) {
-                            eventParser.end();
-                            throw e;
-                        }
-                    }
-                } catch (e) {
-                    // Log game errors and leave a new exception specifying
-                    // where to find it.
-                    loopErr = e as Error;
-                    logError(playerLog, battleStream, loopErr);
-                    throwLog(await file.ensure(options.logPath, template));
-                } finally {
-                    playerLog.info("Finishing");
-                    try {
-                        await wrapTimeout(async () => {
-                            if (loopErr ?? truncated) {
-                                players[id] = await driver.forceFinish();
-                            } else {
-                                players[id] = await driver.finish();
-                            }
-                        }, timeoutMs);
-                    } catch (e) {
-                        if (loopErr !== e) {
-                            logError(playerLog, battleStream, e as Error);
-                        } else {
-                            playerLog.debug(
-                                "Same error encountered while finishing",
-                            );
-                        }
-                        if (!loopErr) {
-                            throwLog(
-                                await file.ensure(options.logPath, template),
-                            );
-                        }
-                    }
+                    await playerEventPipeline(
+                        streams[id],
+                        options.players[id],
+                        playerLog,
+                        options.maxTurns,
+                        truncate,
+                        options.timeoutMs,
+                    );
+                } catch (err) {
+                    await truncate();
+                    logPath = await file.ensure(options.logPath, template);
+                    handleEventPipelineError(err as Error, playerLog, logPath);
                 }
             })(),
         );
@@ -267,11 +183,11 @@ export async function simulateBattle<
             name: options.players[id].name,
             ...(options.players[id].seed && {seed: options.players[id].seed}),
         };
-        await battleStream.write(
-            `>player ${id} ${JSON.stringify(playerOptions)}`,
-        );
         playerLog.debug(
             `Setting up player with options: ${JSON.stringify(playerOptions)}`,
+        );
+        await battleStream.write(
+            `>player ${id} ${JSON.stringify(playerOptions)}`,
         );
     }
 
@@ -279,6 +195,9 @@ export async function simulateBattle<
     let err: Error | undefined;
     try {
         await Promise.all(gamePromises);
+        if (!battleStream.atEOF) {
+            await battleStream.writeEnd();
+        }
     } catch (e) {
         err = e as Error;
     }
@@ -301,30 +220,160 @@ export async function simulateBattle<
     await file.finish();
     return {
         winner,
-        players,
         ...(truncated && {truncated: true}),
+        ...(logPath && {logPath}),
         ...(err && {err}),
     };
 }
 
-/** Swallows an error into the logger then stops the BattleStream. */
-function logError(
+/** Wraps the error for top-level and/or points to log file in the err msg. */
+function handleEventPipelineError(
+    err: Error,
     logger: Logger,
-    battleStream: BattleStreams.BattleStream,
-    err?: Error,
-): void {
-    if (err) {
-        logger.error(err.stack ?? err.toString());
-    }
+    logPath?: string,
+): never {
+    logger.error(err.stack ?? err.toString());
     logger.info("Error encountered; truncating");
-    if (!battleStream.atEOF) {
-        void battleStream.writeEnd();
+    if (logPath) {
+        throw new Error(
+            `${simulateBattle.name}() encountered an error; check ${logPath} ` +
+                "for details",
+        );
+    }
+    throw new WrappedError(
+        err,
+        msg => `${simulateBattle.name}() encountered an error: ${msg}`,
+    );
+}
+
+/**
+ * Processes the omniscient battle stream and returns the name of the winner if
+ * there was one.
+ */
+async function omniscientEventPipeline(
+    battleTextStream: Streams.ObjectReadWriteStream<string>,
+    timeoutMs?: number,
+): Promise<string | undefined> {
+    const maybeTimeout: <T>(p: () => Promise<T>) => Promise<T> = timeoutMs
+        ? async p => await wrapTimeout(p, timeoutMs)
+        : async p => await p();
+
+    let winner: string | undefined;
+    let chunk: string | null | undefined;
+    while (
+        (chunk = await maybeTimeout(async () => await battleTextStream.read()))
+    ) {
+        for (const event of protocolParser(chunk)) {
+            if (event.args[0] === "win") {
+                [, winner] = event.args;
+            }
+        }
+    }
+    return winner;
+}
+
+async function playerEventPipeline(
+    battleTextStream: Streams.ObjectReadWriteStream<string>,
+    options: PlayerOptions,
+    logger: Logger,
+    maxTurns?: number,
+    truncate?: () => Promise<void>,
+    timeoutMs?: number,
+): Promise<void> {
+    const sender = createSender(battleTextStream, logger);
+    const driver = new BattleDriver({
+        username: options.name,
+        agent: options.agent,
+        parser: options.parser,
+        sender,
+        logger,
+    });
+
+    const maybeTimeout: <T>(p: () => Promise<T>) => Promise<T> = timeoutMs
+        ? async p => await wrapTimeout(p, timeoutMs)
+        : async p => await p();
+
+    let truncated = false;
+    let loopErr: Error | undefined;
+    try {
+        let chunk: string | null | undefined;
+        while (
+            (chunk = await maybeTimeout(
+                async () => await battleTextStream.read(),
+            ))
+        ) {
+            logger.debug(`Received:\n${chunk}`);
+            for (const event of protocolParser(chunk)) {
+                if (event.args[0] === "halt") {
+                    driver.halt();
+                    continue;
+                }
+                await maybeTimeout(
+                    async () => await driver.handle(event as RoomEvent),
+                );
+                if (
+                    event.args[0] === "turn" &&
+                    maxTurns &&
+                    Number(event.args[1]) >= maxTurns
+                ) {
+                    logger.info(`Reached max turn ${maxTurns}; truncating`);
+                    truncated = true;
+                    break;
+                }
+            }
+            if (truncated) {
+                break;
+            }
+        }
+    } catch (err) {
+        loopErr = err as Error;
+        truncated = true;
+        throw err;
+    } finally {
+        try {
+            if (truncated) {
+                await maybeTimeout(
+                    async () =>
+                        await Promise.all([truncate?.(), driver.forceFinish()]),
+                );
+            } else {
+                driver.finish();
+            }
+        } catch (err) {
+            if (loopErr) {
+                // Preserve and bubble up original error.
+                logger.error(
+                    `Error while finishing: ${
+                        (err as Error).stack ?? (err as Error).toString()
+                    }`,
+                );
+                // eslint-disable-next-line no-unsafe-finally
+                throw loopErr;
+            }
+            // eslint-disable-next-line no-unsafe-finally
+            throw err;
+        }
     }
 }
 
-function throwLog(logPath?: string): never {
-    throw new Error(
-        "simulateBattle() encountered an error" +
-            (logPath ? `; check ${logPath} for details` : ""),
-    );
+function createSender(
+    battleTextStream: Streams.ObjectReadWriteStream<string>,
+    logger: Logger,
+): Sender {
+    return (...responses) => {
+        for (const res of responses) {
+            // Extract choice from args.
+            // Format: |/choose <choice>
+            if (res.startsWith("|/choose ")) {
+                const choice = res.substring("|/choose ".length);
+                if (!battleTextStream.atEOF) {
+                    void battleTextStream.write(choice);
+                } else {
+                    logger.error("Can't send choice: At end of stream");
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
 }

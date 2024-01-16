@@ -5,11 +5,9 @@ import {Logger} from "../utils/logging/Logger";
 import {BattleAgent} from "./agent";
 import {
     BattleParser,
-    ActionExecutor,
     ExecutorResult,
+    BattleParserContext,
 } from "./parser/BattleParser";
-import {BattleIterator} from "./parser/iterators";
-import {startBattleParser, StartBattleParserArgs} from "./parser/parsing";
 import {BattleState} from "./state";
 
 /**
@@ -18,10 +16,7 @@ import {BattleState} from "./state";
  * @template TAgent Battle agent type.
  * @template TResult Parser result type.
  */
-export interface BattleDriverArgs<
-    TAgent extends BattleAgent = BattleAgent,
-    TResult = unknown,
-> {
+export interface BattleDriverArgs<TAgent extends BattleAgent = BattleAgent> {
     /** Client's username. */
     readonly username: string;
     /**
@@ -29,7 +24,7 @@ export interface BattleDriverArgs<
      * {@link agent}'s decision process. Should call the agent on `|request|`
      * events and forward selected actions to the {@link sender}.
      */
-    readonly parser: BattleParser<TAgent, [], TResult>;
+    readonly parser: BattleParser<TAgent>;
     /** Function for deciding what to do when asked for a decision. */
     readonly agent: TAgent;
     /** Used for sending messages to the battle stream. */
@@ -45,12 +40,11 @@ export interface BattleDriverArgs<
  * @template TAgent Battle agent type.
  * @template TResult Parser result type.
  */
-export class BattleDriver<
-    TAgent extends BattleAgent = BattleAgent,
-    TResult = unknown,
-> {
-    /** Used for sending messages to the assigned server room. */
-    private readonly sender: Sender;
+export class BattleDriver<TAgent extends BattleAgent = BattleAgent> {
+    /** Parses events to update the battle state. */
+    private readonly parser: BattleParser<TAgent>;
+    /** Parser state. */
+    private readonly ctx: BattleParserContext<TAgent>;
     /** Logger object. */
     private readonly logger: Logger;
 
@@ -70,18 +64,14 @@ export class BattleDriver<
      */
     private unavailableChoice: "move" | "switch" | null = null;
 
-    /** Iterator for sending PS Events to the {@link BattleParser}. */
-    private readonly iter: BattleIterator;
     /**
      * Promise for the {@link BattleParser} to finish making a decision after
      * parsing a `|request|` event.
      */
-    private decisionPromise: ReturnType<BattleIterator["next"]> | null = null;
-    /** Promise for the entire {@link BattleParser} to finish. */
-    private readonly finishPromise: Promise<TResult>;
+    private decisionPromise: Promise<void> | null = null;
 
-    /** Whether the game has been fully initialized. */
-    private battling = false;
+    /** Will be true (battling) or false (game over) once initialized. */
+    private battling: boolean | null = null;
     /**
      * Whether {@link handle} has parsed any relevant game events since the last
      * {@link halt} call. When this and {@link battling} are true, then we
@@ -96,39 +86,35 @@ export class BattleDriver<
         agent,
         sender,
         logger,
-    }: BattleDriverArgs<TAgent, TResult>) {
-        this.sender = sender;
+    }: BattleDriverArgs<TAgent>) {
+        this.parser = parser;
         this.logger = logger;
-
-        const executor: ActionExecutor = async (action, debug) =>
-            await new Promise<ExecutorResult>(res => {
-                this.executorRes = res;
-                this.logger.info(`Sending choice: ${action}`);
-                if (
-                    !this.sender(
-                        `|/choose ${action}`,
-                        ...(debug !== undefined ? [`|DEBUG: ${debug}`] : []),
-                    )
-                ) {
-                    this.logger.debug("Can't send action, force accept");
-                    res(false);
-                }
-            }).finally(() => (this.executorRes = null));
-
-        const cfg: StartBattleParserArgs<TAgent> = {
+        this.ctx = {
             agent,
-            logger: this.logger.addPrefix("BattleParser: "),
-            executor,
-            getState: () => new BattleState(username),
+            logger,
+            executor: async (action, debug) =>
+                await new Promise<ExecutorResult>(res => {
+                    this.executorRes = res;
+                    this.logger.info(`Sending choice: ${action}`);
+                    if (
+                        !sender(
+                            `|/choose ${action}`,
+                            ...(debug !== undefined
+                                ? [`|DEBUG: ${debug}`]
+                                : []),
+                        )
+                    ) {
+                        this.logger.debug("Can't send action, force accept");
+                        res(false);
+                    }
+                }).finally(() => (this.executorRes = null)),
+            state: new BattleState(username),
         };
-
-        const {iter, finish} = startBattleParser(cfg, parser);
-
-        this.iter = iter;
-        this.finishPromise = finish;
     }
 
-    /** Handles a battle event. */
+    /**
+     * Handles a battle event. Returns results from zero or more parser calls.
+     */
     public async handle(event: Event): Promise<void> {
         // Filter out irrelevant/non-battle events.
         // TODO: Should be gen-specific.
@@ -136,12 +122,11 @@ export class BattleDriver<
             return;
         }
 
-        // Game start.
         if (event.args[0] === "start") {
+            // Game start.
             this.battling = true;
-        }
-        // Game over.
-        else if (["win", "tie"].includes(event.args[0])) {
+        } else if (["win", "tie"].includes(event.args[0])) {
+            // Game over.
             this.battling = false;
         }
 
@@ -153,9 +138,9 @@ export class BattleDriver<
                 return;
             }
             this.handleRequest(event as Event<"|request|">);
-            // Use the first valid |request| event to also initialize during the
-            // init phase of parsing.
-            if (this.battling) {
+            // If this is the initial |request| before a |start| event, we
+            // should also pass this to the parser normally.
+            if (this.battling !== null) {
                 return;
             }
         }
@@ -165,19 +150,16 @@ export class BattleDriver<
         }
 
         // After verifying that this is a relevant game event that progresses
-        // the battle, we can safely assume that this means that our last sent
-        // decision from the last |request| event was accepted.
+        // the battle, we can safely assume that our last sent decision from the
+        // last |request| event was accepted.
         this.executorRes?.(false);
-        if (this.decisionPromise && (await this.decisionPromise).done) {
-            await this.finish();
-            return;
+        if (this.decisionPromise) {
+            await this.decisionPromise;
         }
 
         // Process the game event normally.
         this.progress = true;
-        if ((await this.iter.next(event)).done) {
-            await this.finish();
-        }
+        await this.parser(this.ctx, event);
     }
 
     /** Handles a halt signal after parsing a block of battle events. */
@@ -195,16 +177,21 @@ export class BattleDriver<
         }
 
         // Send the last saved |request| event to the BattleParser here.
-        // This reordering allows us to treat |request| as an actual request for
-        // a decision _after_ handling all of the relevant game events, since
-        // normally the |request| is sent first.
-        // Our BattleParser expects this ordering and is expected to possibly
-        // call our ActionExecutor here. Once the server sends a response, we
-        // can then use it to acknowledge or refuse the executor promise in
-        // handle() via this.executorRes.
-        this.decisionPromise = this.iter
-            .next(this.pendingRequest)
-            .finally(() => (this.decisionPromise = null));
+        // Normally a |request| is sent before the events leading up to the
+        // actual request for a decision. Our BattleParser expects it to come
+        // after so we reorder it here.
+        // Typically this will cause ctx.executor to be called so we also want
+        // to resolve this parser call once the server sends a response instead
+        // of blocking here.
+        // FIXME: If the outer battle expects a decision (sent via ctx.executor) but the parser call doesn't send one during this call, this can cause a deadlock while waiting for new battle events.
+        this.decisionPromise = this.parser(this.ctx, this.pendingRequest).then(
+            () => {
+                this.decisionPromise = null;
+            },
+        );
+        // Prevent crashing due to possible uncaught rejection as we will await
+        // this later.
+        this.decisionPromise.catch(() => {});
         // Reset for the next |request| event and the next block of
         // game-progressing events.
         this.pendingRequest = null;
@@ -212,26 +199,27 @@ export class BattleDriver<
     }
 
     /**
-     * Waits for the internal {@link BattleParser} to return after handling a
-     * game-over.
+     * Finishes the BattleDriver normally.
      *
      * @returns Parser result.
      */
-    public async finish(): Promise<TResult> {
-        const result = await this.finishPromise;
+    public finish(): void {
         if (this.decisionPromise) {
             throw new Error(
-                "BattleParser finished but still has a pending decision. Was " +
-                    "the ActionExecutor not called or awaited on |request|?",
+                "Battle finished but still has a pending decision. " +
+                    "Likely ActionExecutor not called or the call hasn't " +
+                    "resolved.",
             );
         }
-        return result;
     }
 
     /** Forces the internal {@link BattleParser} to finish. */
-    public async forceFinish(): Promise<TResult> {
-        await this.iter.return?.();
-        return await this.finish();
+    public async forceFinish(): Promise<void> {
+        this.executorRes?.(false);
+        if (this.decisionPromise) {
+            await this.decisionPromise;
+        }
+        this.finish();
     }
 
     private handleRequest(event: Event<"|request|">): void {

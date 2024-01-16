@@ -9,7 +9,7 @@ import {
     toSearchID,
     toSpeciesName,
     toUsername,
-} from "../parser/helpers.test";
+} from "../parser/protocolHelpers.test";
 import {SwitchOptions} from "./Team";
 
 // TODO: May need to move this to a separate folder or remove some members.

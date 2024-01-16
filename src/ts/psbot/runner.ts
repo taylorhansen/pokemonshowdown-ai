@@ -4,13 +4,14 @@ import * as path from "path";
 import * as yaml from "yaml";
 import {BattleDriver} from "../battle/BattleDriver";
 import {localizeAction} from "../battle/agent/localAction";
-import {main} from "../battle/parser/main";
+import {gen4Parser} from "../battle/parser/gen4";
 import {lookup} from "../battle/usage";
 import {ModelServer} from "../model/serve";
 import {Logger} from "../utils/logging/Logger";
 import {PsBot} from "./PsBot";
 import {PsBotConfig} from "./config";
 import {BattleHandler} from "./handlers/BattleHandler";
+import {wrapFinish} from "./handlers/wrappers";
 
 const projectDir = path.resolve(__dirname, "..", "..", "..");
 const defaultConfigPath = path.resolve(projectDir, "config", "psbot.yml");
@@ -50,10 +51,7 @@ void (async function psBotRunner() {
     bot.acceptChallenges("gen4randombattle", async (room, user, sender) => {
         const driver = new BattleDriver({
             username: user,
-            async parser(ctx) {
-                await main(ctx);
-                await modelServer.cleanup(room /*key*/);
-            },
+            parser: gen4Parser,
             async agent(state, choices, agentLogger) {
                 agentLogger?.debug(`State:\n${state.toString()}`);
                 const prediction = await modelServer.predict(
@@ -86,11 +84,14 @@ void (async function psBotRunner() {
             sender,
             logger: logger.addPrefix(`BattleHandler(${room}): `),
         });
-        // Make sure ports aren't dangling.
-        void driver.finish().catch(() => {});
 
         const handler = new BattleHandler(driver);
-        return await Promise.resolve(handler);
+        return await Promise.resolve(
+            wrapFinish(
+                handler,
+                async () => await modelServer.cleanup(room /*key*/),
+            ),
+        );
     });
 
     logger.debug("Ready");

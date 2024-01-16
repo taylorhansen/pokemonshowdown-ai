@@ -1,7 +1,7 @@
 import "mocha";
-import * as eventParser from "./EventParser.test";
+import * as parser from "./parser.test";
 
 export const test = () =>
     describe("protocol", function () {
-        eventParser.test();
+        parser.test();
     });

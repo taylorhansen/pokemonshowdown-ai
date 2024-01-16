@@ -55,6 +55,18 @@ class BattlePoolConfig:
     regardless of this value. Omit to not store logs except on error.
     """
 
+    worker_timeout_ms: Optional[int] = None
+    """
+    Worker communication timeout in milliseconds for both starting battles and
+    managing battle agents. Used for catching rare async bugs.
+    """
+
+    sim_timeout_ms: Optional[int] = None
+    """
+    Simulator timeout in milliseconds for processing battle-related actions and
+    events. Used for catching rare async bugs.
+    """
+
 
 class BattleKey(NamedTuple):
     """Key type used to identify individual battles when using many workers."""
@@ -119,21 +131,16 @@ class BattlePool:
         self.ctx.setsockopt(zmq.LINGER, 0)
         # Prevent messages from getting dropped.
         self.ctx.setsockopt(zmq.ROUTER_MANDATORY, 1)
-        self.ctx.setsockopt(zmq.SNDHWM, 0)
         self.ctx.setsockopt(zmq.RCVHWM, 0)
+        self.ctx.setsockopt(zmq.SNDHWM, 0)
+        if config.worker_timeout_ms is not None:
+            self.ctx.setsockopt(zmq.RCVTIMEO, config.worker_timeout_ms)
+            self.ctx.setsockopt(zmq.SNDTIMEO, config.worker_timeout_ms)
 
         self.battle_sock = self.ctx.socket(zmq.ROUTER)
-        # Prevent indefinite blocking.
-        self.battle_sock.setsockopt(zmq.SNDTIMEO, 10_000)  # 10s
-        self.battle_sock.setsockopt(zmq.RCVTIMEO, 10_000)
         self.battle_sock.bind(f"ipc:///tmp/psai-battle-socket-{self.sock_id}")
 
         self.agent_sock = self.ctx.socket(zmq.ROUTER)
-        # The JS simulator is very fast compared to the ML code so it shouldn't
-        # take long at all to send predictions to or receive requests from any
-        # of the connected workers.
-        self.agent_sock.setsockopt(zmq.SNDTIMEO, 10_000)  # 10s
-        self.agent_sock.setsockopt(zmq.RCVTIMEO, 10_000)
         self.agent_sock.bind(f"ipc:///tmp/psai-agent-socket-{self.sock_id}")
 
         self.agent_poller = zmq.asyncio.Poller()
@@ -260,6 +267,9 @@ class BattlePool:
             "onlyLogOnError": self.config.battles_per_log is None
             or self.battle_count % self.config.battles_per_log != 0,
             "seed": prng_seeds[0],
+            "timeoutMs": self.config.sim_timeout_ms
+            if self.config.sim_timeout_ms is not None
+            else None,
         }
         await self.battle_sock.send_multipart(
             [worker_id, json.dumps(req).encode()]

@@ -43,6 +43,9 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler {
     /** @override */
     public halt(): void {}
 
+    /** @override */
+    public finish(): void {}
+
     // List taken from Protocol.GlobalArgs.
 
     public "|popup|"(args: Args["|popup|"]) {

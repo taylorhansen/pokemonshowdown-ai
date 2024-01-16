@@ -72,6 +72,8 @@ rollout:
       workers: 1
       per_worker: 1
       battles_per_log: 1000
+      worker_timeout_ms: 60_000 # 1m
+      sim_timeout_ms: 300_000 # 5m
     state_type: numpy
   opponents:
     - name: previous
@@ -86,6 +88,8 @@ eval:
       workers: 4
       per_worker: 2
       battles_per_log: 100
+      worker_timeout_ms: 60_000 # 1m
+      sim_timeout_ms: 300_000 # 5m
     state_type: tensor
   opponents:
     - name: previous

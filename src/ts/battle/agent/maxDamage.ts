@@ -5,10 +5,15 @@ import {Rng} from "../../utils/random";
 import * as dex from "../dex";
 import {ReadonlyBattleState} from "../state";
 import {Action} from "./Action";
+import {BattleAgent} from "./BattleAgent";
 import {randomAgent} from "./random";
 
 const gens = new Generations(Dex);
 const psDex = gens.get(4);
+
+// Enforce type compatibility.
+const _: BattleAgent = maxDamage;
+void _;
 
 /**
  * BattleAgent that chooses the move with the max expected damage against the
@@ -22,7 +27,7 @@ export async function maxDamage(
     logger?: Logger,
     random?: Rng,
 ): Promise<string | undefined> {
-    await randomAgent(state, choices, true /*moveOnly*/, random);
+    await randomAgent(state, choices, logger, true /*moveOnly*/, random);
 
     const {damage, debug} = calcDamge(state, choices);
     const info = Object.fromEntries(

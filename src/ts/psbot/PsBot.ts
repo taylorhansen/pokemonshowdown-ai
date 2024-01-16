@@ -4,7 +4,7 @@ import {Action, Actions} from "@pkmn/login";
 import {Protocol} from "@pkmn/protocol";
 import {client as WSClient} from "websocket";
 import {HaltEvent, RoomEvent} from "../protocol/Event";
-import {EventParser} from "../protocol/EventParser";
+import {protocolParser} from "../protocol/parser";
 import {Logger} from "../utils/logging/Logger";
 import {LoginConfig} from "./config";
 import * as handlers from "./handlers";
@@ -56,10 +56,6 @@ export class PsBot {
 
     /** Used for handling global PS events. */
     private readonly globalHandler = new handlers.global.GlobalHandler();
-    /** Stream used for parsing PS protocol events. */
-    private readonly parser = new EventParser(
-        this.logger.addPrefix("EventParser: "),
-    );
 
     /**
      * Creates a PsBot.
@@ -84,11 +80,6 @@ export class PsBot {
         this.globalHandler.updateUser = username => this.updateUser(username);
         this.globalHandler.respondToChallenge = (user, format) =>
             this.respondToChallenge(user, format);
-
-        // Setup async event parser.
-        // TODO: Tie this to a method that can be awaited after setting up the
-        // PsBot.
-        void this.parserReadLoop();
     }
 
     /**
@@ -180,7 +171,16 @@ export class PsBot {
             );
             connection.on("message", data => {
                 if (data.type === "utf8" && data.utf8Data) {
-                    this.parser.write(data.utf8Data);
+                    void (async () => {
+                        this.logger.debug(`Received:\n${data.utf8Data}`);
+                        for (const event of protocolParser(data.utf8Data)) {
+                            await this.dispatch(event);
+                        }
+                    })().catch(err =>
+                        this.logger.error(
+                            (err as Error).stack ?? (err as Error).toString(),
+                        ),
+                    );
                 }
             });
 
@@ -209,30 +209,22 @@ export class PsBot {
         }
     }
 
-    /**
-     * Sets up a read loop from the EventParser stream and dispatches parsed
-     * events to their respective room handlers.
-     */
-    private async parserReadLoop(): Promise<void> {
-        for await (const event of this.parser) {
-            await this.dispatch(event as RoomEvent | HaltEvent);
-        }
-    }
-
     /** Handles parsed protocol events received from the PS serer. */
     private async dispatch({
         roomid,
         args,
         kwArgs,
     }: RoomEvent | HaltEvent): Promise<void> {
+        let handler = this.rooms.get(roomid);
+
         if (args[0] === "deinit") {
             // The roomid defaults to lobby if the |deinit event didn't come
             // from a room.
+            await handler?.finish();
             this.rooms.delete(roomid || ("lobby" as Protocol.RoomID));
             return;
         }
 
-        let handler = this.rooms.get(roomid);
         if (!handler) {
             // First msg when joining a battle room must be an |init|battle
             // event.

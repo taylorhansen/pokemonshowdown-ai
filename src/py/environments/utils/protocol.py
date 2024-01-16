@@ -1,7 +1,7 @@
 """
 Describes the JSON protocol for the BattlePool.
 
-Corresponds to src/ts/battle/worker/protocol.ts.
+MUST keep this in sync with src/ts/battle/worker/protocol.ts.
 """
 from typing import Optional, TypedDict
 
@@ -75,6 +75,12 @@ class BattleRequest(TypedDict):
     seed: Optional[PRNGSeed]
     """Seed for battle engine."""
 
+    timeoutMs: Optional[int]
+    """
+    Simulator timeout in milliseconds for processing battle-related actions and
+    events. Used for catching rare async bugs.
+    """
+
 
 class BattleReply(TypedDict):
     """Result of finished battle."""
@@ -93,6 +99,9 @@ class BattleReply(TypedDict):
 
     truncated: Optional[bool]
     """Whether the battle was truncated due to max turn limit or error."""
+
+    logPath: Optional[str]
+    """Resolved path to the log file."""
 
     err: Optional[str]
     """Captured exception with stack trace if it was thrown during the game."""

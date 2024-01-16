@@ -95,7 +95,7 @@ async def run_eval(
         unit="battles",
         unit_scale=True,
         dynamic_ncols=True,
-        position=0,
+        position=1,
     ) as pbar:
         state, info = env.reset(eval_opponents=opponents)
         done = False
@@ -250,7 +250,7 @@ async def train(config: TrainConfig):
         dynamic_ncols=True,
         smoothing=0.1,
         initial=min(int(episode), config.rollout.num_episodes),
-        position=1,
+        position=0,
     ) as pbar:
         if config.rollout.eps_per_eval > 0 and not restored and episode == 0:
             # Pre-evaluation for comparison against the later trained model.

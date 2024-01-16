@@ -1,4 +1,8 @@
-/** @file Describes the JSON protocol for the BattleWorker. */
+/**
+ * @file Describes the JSON protocol for the BattleWorker.
+ *
+ * MUST keep this in sync with src/py/environments/utils/protocol.py.
+ */
 import {PRNGSeed} from "@pkmn/sim";
 import {Action} from "../agent";
 import {PlayerSide} from "./battle";
@@ -32,6 +36,11 @@ export interface BattleRequest {
     onlyLogOnError?: boolean;
     /** Seed for battle engine. */
     seed?: PRNGSeed;
+    /**
+     * Timeout in milliseconds for processing battle-related actions and events.
+     * Used for catching rare async bugs.
+     */
+    timeoutMs?: number;
 }
 
 /** Options for configuring an agent to use in battle */
@@ -64,6 +73,8 @@ export interface BattleReply {
     winner?: PlayerSide;
     /** Whether the battle was truncated due to max turn limit or error. */
     truncated?: boolean;
+    /** Resolved path to the log file. */
+    logPath?: string;
     /** Captured exception with stack trace if it was thrown during the game. */
     err?: string;
 }

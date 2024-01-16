@@ -1,4 +1,4 @@
-import {setTimeout} from "timers";
+import {clearTimeout, setTimeout} from "timers";
 
 /**
  * Wraps a Promise in a timeout.
@@ -12,14 +12,13 @@ export async function wrapTimeout<T>(
     p: () => Promise<T>,
     ms: number,
 ): Promise<T> {
-    return await new Promise<T>((res, rej) => {
-        const timer = setTimeout(
-            () => rej(new Error(`Timeout exceeded: ${ms}ms`)),
-            ms,
-        );
-        void p()
-            .then(value => res(value))
-            .catch(reason => rej(reason))
-            .finally(() => clearTimeout(timer));
-    });
+    let timeoutRes: () => void;
+    const timeoutPromise = new Promise<void>(res => (timeoutRes = res));
+    const timeout = setTimeout(() => timeoutRes(), ms);
+    return await Promise.race([
+        p().finally(() => clearTimeout(timeout)),
+        timeoutPromise.then(() => {
+            throw new Error(`Timeout exceeded: ${ms}ms`);
+        }),
+    ]);
 }

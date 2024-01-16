@@ -1,9 +1,9 @@
 import "mocha";
 import * as events from "./events.test";
-import * as main from "./main.test";
+import * as gen4 from "./gen4.test";
 
 export const test = () =>
     describe("parser", function () {
         events.test();
-        main.test();
+        gen4.test();
     });

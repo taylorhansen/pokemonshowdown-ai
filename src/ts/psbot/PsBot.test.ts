@@ -1,3 +1,5 @@
+import {Protocol} from "@pkmn/protocol";
+import {ID} from "@pkmn/types";
 import {expect} from "chai";
 import "mocha";
 import {IUtf8Message} from "websocket";
@@ -42,8 +44,13 @@ export const test = () =>
             });
 
             it(`Should accept ${format} challenges`, async function () {
-                server.sendToClient(`|updatechallenges|\
-{"challengesFrom":{"${username}":"${format}"},"challengeTo":null}`);
+                const challenges = {
+                    challengesFrom: {[username as ID]: format},
+                    challengeTo: null,
+                } as Protocol.Challenges;
+                server.sendToClient(
+                    `|updatechallenges|${JSON.stringify(challenges)}`,
+                );
 
                 const msg = await server.nextMessage();
                 expect(msg.type).to.equal("utf8");
@@ -53,8 +60,13 @@ export const test = () =>
             });
 
             it(`Should not accept unsupported challenges`, async function () {
-                server.sendToClient(`|updatechallenges|\
-{"challengesFrom":{"${username}":"notarealformat"},"challengeTo":null}`);
+                const challenges = {
+                    challengesFrom: {[username as ID]: "notarealformat"},
+                    challengeTo: null,
+                } as Protocol.Challenges;
+                server.sendToClient(
+                    `|updatechallenges|${JSON.stringify(challenges)}`,
+                );
 
                 const msg = await server.nextMessage();
                 expect(msg.type).to.equal("utf8");

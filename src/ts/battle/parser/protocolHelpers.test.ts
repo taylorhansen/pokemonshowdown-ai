@@ -1,4 +1,3 @@
-/** @file Helpers for unit testing BattleParsers. */
 import {Protocol} from "@pkmn/protocol";
 import {
     FieldCondition,
@@ -8,62 +7,9 @@ import {
     TypeName,
     Weather,
 } from "@pkmn/types";
-import {BattleAgent} from "../agent";
 import * as dex from "../dex";
 import {toIdName} from "../helpers";
 import {smeargle} from "../state/switchOptions.test";
-import {BattleParser} from "./BattleParser";
-import {ParserContext} from "./Context.test";
-import {startBattleParser, StartBattleParserArgs} from "./parsing";
-
-/**
- * Starts a {@link BattleParser}.
- *
- * @param startArgs Arguments for starting the BattleParser.
- * @param parser Parser to call immediately, just after constructing the
- * BattleState and BattleIterators.
- * @returns An appropriate {@link ParserContext} for the constructed
- * BattleParser.
- */
-export function initParser<
-    TArgs extends unknown[] = unknown[],
-    TResult = unknown,
->(
-    startArgs: StartBattleParserArgs,
-    parser: BattleParser<BattleAgent, TArgs, TResult>,
-    ...args: TArgs
-): ParserContext<TResult> {
-    const {iter, finish} = startBattleParser(startArgs, parser, ...args);
-    return {battleIt: iter, finish};
-}
-
-/**
- * Returns a function that calls the {@link BattleParser} within a
- * self-contained {@link BattleParserContext} and returns the associated
- * {@link ParserContext}. Can be called multiple times with different args to
- * start a new ParserContext. This function is a curried version of
- * {@link initParser} with deferred arguments and {@link BattleState}
- * construction.
- *
- * @param startArgs Initial arguments for starting the BattleParser.
- * @param stateCtor Function to get the initial battle state that the parser
- * will use when the returned function is called.
- * @param parser Parser to call when the returned function is called.
- * @returns A function that takes the rest of the BattleParser's custom `TArgs`
- * before calling `initParser()`.
- */
-export function setupBattleParser<
-    TArgs extends unknown[] = unknown[],
-    TResult = unknown,
->(
-    startArgs: StartBattleParserArgs,
-    parser: BattleParser<BattleAgent, TArgs, TResult>,
-): (...args: TArgs) => ParserContext<TResult> {
-    return (...args: TArgs): ParserContext<TResult> =>
-        initParser(startArgs, parser, ...args);
-}
-
-//#region Protocol helpers.
 
 // Match with protocol type names.
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -232,5 +178,3 @@ export function toNickname(name: string): Protocol.Nickname {
 }
 
 /* eslint-enable @typescript-eslint/naming-convention */
-
-//#endregion

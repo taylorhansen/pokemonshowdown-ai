@@ -2,53 +2,36 @@
 import {Protocol} from "@pkmn/protocol";
 import {BoostID, SideID, StatID} from "@pkmn/types";
 import {Event} from "../../protocol/Event";
-import {BattleAgent, Action} from "../agent";
+import {Mutable} from "../../utils/types";
+import {Action} from "../agent";
 import * as dex from "../dex";
 import {toIdName} from "../helpers";
 import {Move} from "../state/Move";
 import {Pokemon, ReadonlyPokemon} from "../state/Pokemon";
 import {SwitchOptions, TeamRevealOptions} from "../state/Team";
 import {BattleParserContext, ExecutorResult} from "./BattleParser";
-import {consume, dispatcher, EventHandlerMap, verify} from "./parsing";
+import {
+    EventHandlerMap,
+    defaultParser,
+    eventParser,
+    unsupportedParser,
+} from "./utils";
 
-/** Private mapped type for {@link handlersImpl}. */
-type HandlersImpl<T> = {
-    -readonly [U in keyof T]: T[U] | "default" | "unsupported";
-};
-
-/** Private mapped type for {@link handlersImpl} and {@link handlers}. */
-type HandlerMap = EventHandlerMap<BattleAgent, [], void>;
-
-/**
- * BattleParser handlers for each event type. Larger handler functions or
- * parsers that take additional args are moved to a separate file.
- *
- * If an entry is specified but set to `"default"`, a default handler will be
- * assigned to it, making it an event that shouldn't be ignored but has no
- * special behavior implemented by its handler. Alternatively, setting it to
- * `"unsupported"` will be replaced by a parser that always throws.
- */
-const handlersImpl: HandlersImpl<HandlerMap> = {};
-handlersImpl["|init|"] = async function (ctx) {
-    const event = await verify(ctx, "|init|");
-    // istanbul ignore if: Should never happen.
+const handlersImpl: Mutable<EventHandlerMap> = {};
+handlersImpl["|init|"] = eventParser("|init|", (ctx, event) => {
     if (event.args[1] !== "battle") {
         ctx.logger.error(
             `Expected |init|battle but got |init|${event.args[1]}`,
         );
     }
-    await consume(ctx);
-};
-handlersImpl["|player|"] = async function (ctx) {
-    const event = await verify(ctx, "|player|");
+});
+handlersImpl["|player|"] = eventParser("|player|", (ctx, event) => {
     const [, side, username] = event.args;
     if (ctx.state.username === username) {
         ctx.state.ourSide = side;
     }
-    await consume(ctx);
-};
-handlersImpl["|teamsize|"] = async function (ctx) {
-    const event = await verify(ctx, "|teamsize|");
+});
+handlersImpl["|teamsize|"] = eventParser("|teamsize|", (ctx, event) => {
     const [, side, sizeStr] = event.args;
     if (!ctx.state.ourSide) {
         throw new Error(
@@ -60,54 +43,44 @@ handlersImpl["|teamsize|"] = async function (ctx) {
     if (ctx.state.ourSide !== side) {
         ctx.state.getTeam(side).size = Number(sizeStr);
     }
-    await consume(ctx);
-};
-handlersImpl["|gametype|"] = async function (ctx) {
-    const event = await verify(ctx, "|gametype|");
-    // istanbul ignore if: Should never happen.
+});
+handlersImpl["|gametype|"] = eventParser("|gametype|", (ctx, event) => {
     if (event.args[1] !== "singles") {
         ctx.logger.error(
             "Expected |gametype|singles but got " +
                 `|gametype|${event.args[1]}`,
         );
     }
-    await consume(ctx);
-};
-handlersImpl["|gen|"] = async function (ctx) {
-    const event = await verify(ctx, "|gen|");
-    // istanbul ignore if: Should never happen.
+});
+handlersImpl["|gen|"] = eventParser("|gen|", (ctx, event) => {
     if (event.args[1] !== 4) {
         ctx.logger.error(`Expected |gen|4 but got |gen|${event.args[1]}`);
     }
-    await consume(ctx);
-};
-handlersImpl["|tier|"] = "default";
-handlersImpl["|rated|"] = "default";
-handlersImpl["|seed|"] = "default";
-handlersImpl["|rule|"] = "default";
+});
+handlersImpl["|tier|"] = defaultParser("|tier|");
+handlersImpl["|rated|"] = defaultParser("|rated|");
+handlersImpl["|seed|"] = defaultParser("|seed|");
+handlersImpl["|rule|"] = defaultParser("|rule|");
 // TODO: Support team preview.
-handlersImpl["|clearpoke|"] = "unsupported";
-handlersImpl["|poke|"] = "unsupported";
-handlersImpl["|teampreview|"] = "unsupported";
-handlersImpl["|updatepoke|"] = "unsupported";
-handlersImpl["|start|"] = async function (ctx) {
-    await verify(ctx, "|start|");
+handlersImpl["|clearpoke|"] = unsupportedParser("|clearpoke|");
+handlersImpl["|poke|"] = unsupportedParser("|poke|");
+handlersImpl["|teampreview|"] = unsupportedParser("|teampreview|");
+handlersImpl["|updatepoke|"] = unsupportedParser("|updatepoke|");
+handlersImpl["|start|"] = eventParser("|start|", ctx => {
     if (!ctx.state.ourSide) {
         throw new Error(
             "Expected |player| event for client before |start event",
         );
     }
     ctx.state.started = true;
-    await consume(ctx);
-};
-handlersImpl["|request|"] = async function (ctx) {
+});
+handlersImpl["|request|"] = eventParser("|request|", async (ctx, event) => {
     // Note: Usually the |request| event is displayed before the game events
     // that lead up to the state described by the |request| JSON object, but
     // some logic in the parent BattleHandler reverses that so that the
     // |request| happens after all the game events.
     // This allows us to treat |request| as an actual request for a decision
     // after having parsed all the relevant game events.
-    const event = await verify(ctx, "|request|");
     const [, json] = event.args;
     const req = Protocol.parseRequest(json);
     ctx.logger.debug(
@@ -130,7 +103,7 @@ handlersImpl["|request|"] = async function (ctx) {
                 // Sanitize variable-type moves.
                 let {id}: {id: string} = moveData;
                 ({id} = sanitizeMoveId(id));
-                if (id === "struggle") {
+                if (["struggle", "recharge"].includes(id)) {
                     continue;
                 }
                 // Note: Can have missing pp/maxpp values, e.g. due to a rampage
@@ -172,9 +145,7 @@ handlersImpl["|request|"] = async function (ctx) {
             );
         }
     }
-
-    await consume(ctx);
-};
+});
 function initRequest(ctx: BattleParserContext, req: Protocol.Request) {
     // istanbul ignore if: Should never happen.
     if (!req.side) {
@@ -332,8 +303,8 @@ function getChoices(req: Protocol.Request): Action[] {
         }
         for (let i = 0; i < moves.length; ++i) {
             const move = moves[i];
-            // Struggle can always be selected.
-            if (move.id !== "struggle") {
+            // Struggle/recharge can always be selected.
+            if (!["struggle", "recharge"].includes(move.id)) {
                 // Depleted moves can no longer be selected.
                 if (move.pp <= 0) {
                     continue;
@@ -374,11 +345,10 @@ async function sendFinalChoice(
     action: Action,
 ): Promise<void> {
     const res = await ctx.executor(action);
-    if (!res) {
-        return;
+    if (res) {
+        ctx.logger.debug(`Action '${action}' was rejected as '${res}'`);
+        throw new Error(`Final choice '${action}' was rejected as '${res}'`);
     }
-    ctx.logger.debug(`Action '${action}' was rejected as '${res}'`);
-    throw new Error(`Final choice '${action}' was rejected as '${res}'`);
 }
 /**
  * Calls the BattleAgent to evaluate the available choices and decide what to
@@ -425,7 +395,8 @@ async function evaluateChoices(
         }
 
         // Make sure we haven't fallen back to the base case in decide().
-        // istanbul ignore if: Should never happen.
+        // istanbul ignore if: Should never happen (should instead be thrown by
+        // sendFinalChoice).
         if (choices.length <= 0) {
             throw new Error(
                 `Final choice '${lastAction}' rejected as '${result}'`,
@@ -437,21 +408,15 @@ async function evaluateChoices(
         }
     }
 }
-handlersImpl["|upkeep|"] = async function (ctx) {
-    await verify(ctx, "|upkeep|");
+handlersImpl["|upkeep|"] = eventParser("|upkeep|", ctx => {
     ctx.state.postTurn();
-    await consume(ctx);
-};
-handlersImpl["|turn|"] = async function (ctx) {
-    const event = await verify(ctx, "|turn|");
+});
+handlersImpl["|turn|"] = eventParser("|turn|", (ctx, event) => {
     ctx.logger.info(`Turn ${event.args[1]}`);
-    await consume(ctx);
-};
-// Note: Win/tie are handled by the top-level main.ts parser to end the game.
-handlersImpl["|win|"] = async () => await Promise.resolve();
-handlersImpl["|tie|"] = async () => await Promise.resolve();
-handlersImpl["|move|"] = async function (ctx) {
-    const event = await verify(ctx, "|move|");
+});
+handlersImpl["|win|"] = defaultParser("|win|");
+handlersImpl["|tie|"] = defaultParser("|tie|");
+handlersImpl["|move|"] = eventParser("|move|", (ctx, event) => {
     const [, identStr, moveStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const moveId = toIdName(moveStr);
@@ -571,9 +536,7 @@ handlersImpl["|move|"] = async function (ctx) {
                 break;
         }
     }
-
-    await consume(ctx);
-};
+});
 function moveTargetsOpponent(
     move: dex.MoveData,
     user: ReadonlyPokemon,
@@ -608,14 +571,12 @@ function moveTargetsOpponent(
         }
     }
 }
-handlersImpl["|switch|"] = async function (ctx) {
-    await switchEvent(ctx);
-};
-handlersImpl["|drag|"] = async function (ctx) {
-    await switchEvent(ctx);
-};
-async function switchEvent(ctx: BattleParserContext): Promise<void> {
-    const event = await verify(ctx, "|switch|", "|drag|");
+handlersImpl["|switch|"] = eventParser("|switch|", handleSwitch);
+handlersImpl["|drag|"] = eventParser("|drag|", handleSwitch);
+function handleSwitch(
+    ctx: BattleParserContext,
+    event: Event<"|switch|" | "|drag|">,
+): void {
     const [, identStr, detailsStr, healthStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const data = Protocol.parseDetails(ident.name, identStr, detailsStr);
@@ -637,24 +598,21 @@ async function switchEvent(ctx: BattleParserContext): Promise<void> {
                 `Team '${ident.player}' is full (size=${team.size})`,
         );
     }
-
-    await consume(ctx);
 }
-handlersImpl["|detailschange|"] = async function (ctx) {
-    const event = await verify(ctx, "|detailschange|");
-    const [, identStr, detailsStr] = event.args;
-    const ident = Protocol.parsePokemonIdent(identStr);
-    const details = Protocol.parseDetails(ident.name, identStr, detailsStr);
+handlersImpl["|detailschange|"] = eventParser(
+    "|detailschange|",
+    (ctx, event) => {
+        const [, identStr, detailsStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        const details = Protocol.parseDetails(ident.name, identStr, detailsStr);
 
-    const formeId = toIdName(details.speciesForme);
-    const mon = ctx.state.getTeam(ident.player).active;
-    mon.formChange(formeId, details.level, true /*perm*/);
-    mon.gender = details.gender ?? "N";
-
-    await consume(ctx);
-};
-handlersImpl["|cant|"] = async function (ctx) {
-    const event = await verify(ctx, "|cant|");
+        const formeId = toIdName(details.speciesForme);
+        const mon = ctx.state.getTeam(ident.player).active;
+        mon.formChange(formeId, details.level, true /*perm*/);
+        mon.gender = details.gender ?? "N";
+    },
+);
+handlersImpl["|cant|"] = eventParser("|cant|", (ctx, event) => {
     const [, identStr, reasonStr, moveStr] = event.args;
 
     const reason = Protocol.parseEffect(reasonStr, toIdName);
@@ -722,17 +680,13 @@ handlersImpl["|cant|"] = async function (ctx) {
         mon.moveset.reveal(moveName);
     }
     mon.inactive();
-    await consume(ctx);
-};
-handlersImpl["|faint|"] = async function (ctx) {
-    const event = await verify(ctx, "|faint|");
+});
+handlersImpl["|faint|"] = eventParser("|faint|", (ctx, event) => {
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     ctx.state.getTeam(ident.player).active.hp.set(0);
-    await consume(ctx);
-};
-handlersImpl["|-formechange|"] = async function (ctx) {
-    const event = await verify(ctx, "|-formechange|");
+});
+handlersImpl["|-formechange|"] = eventParser("|-formechange|", (ctx, event) => {
     const [, identStr, speciesForme] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const formeId = toIdName(speciesForme);
@@ -747,10 +701,8 @@ handlersImpl["|-formechange|"] = async function (ctx) {
     }
 
     mon.formChange(formeId, mon.stats.level);
-    await consume(ctx);
-};
-handlersImpl["|-fail|"] = async function (ctx) {
-    const event = await verify(ctx, "|-fail|");
+});
+handlersImpl["|-fail|"] = eventParser("|-fail|", (ctx, event) => {
     if (event.kwArgs.from) {
         const [, identStr] = event.args;
         const ident = Protocol.parsePokemonIdent(identStr);
@@ -768,19 +720,21 @@ handlersImpl["|-fail|"] = async function (ctx) {
             mon.revealAbility(from.name);
         }
     }
-    await consume(ctx);
-};
-handlersImpl["|-block|"] = "unsupported";
-handlersImpl["|-notarget|"] = "default";
-handlersImpl["|-miss|"] = "default";
-handlersImpl["|-damage|"] = async function (ctx) {
-    await handleDamage(ctx);
-};
-handlersImpl["|-heal|"] = async function (ctx) {
-    await handleDamage(ctx, true /*heal*/);
-};
-async function handleDamage(ctx: BattleParserContext, heal?: boolean) {
-    const event = await verify(ctx, heal ? "|-heal|" : "|-damage|");
+});
+handlersImpl["|-block|"] = unsupportedParser("|-block|");
+handlersImpl["|-notarget|"] = defaultParser("|-notarget|");
+handlersImpl["|-miss|"] = defaultParser("|-miss|");
+handlersImpl["|-damage|"] = eventParser("|-damage|", (ctx, event) =>
+    handleDamage(ctx, event),
+);
+handlersImpl["|-heal|"] = eventParser("|-heal|", (ctx, event) =>
+    handleDamage(ctx, event, true /*heal*/),
+);
+function handleDamage(
+    ctx: BattleParserContext,
+    event: Event<"|-damage|" | "|-heal|">,
+    heal?: boolean,
+): void {
     const [, identStr, healthStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const health = Protocol.parseHealth(healthStr);
@@ -822,10 +776,8 @@ async function handleDamage(ctx: BattleParserContext, heal?: boolean) {
     }
 
     mon.hp.set(health?.hp ?? 0, health?.maxhp ?? 0);
-    await consume(ctx);
 }
-handlersImpl["|-sethp|"] = async function (ctx) {
-    const event = await verify(ctx, "|-sethp|");
+handlersImpl["|-sethp|"] = eventParser("|-sethp|", (ctx, event) => {
     const [, identStr1, healthStr1, identStr2, healthNumStr2] = event.args;
 
     const ident1 = Protocol.parsePokemonIdent(identStr1);
@@ -854,11 +806,8 @@ handlersImpl["|-sethp|"] = async function (ctx) {
         }
         mon2.hp.set(healthNum2);
     }
-
-    await consume(ctx);
-};
-handlersImpl["|-status|"] = async function (ctx) {
-    const event = await verify(ctx, "|-status|");
+});
+handlersImpl["|-status|"] = eventParser("|-status|", (ctx, event) => {
     const [, identStr, statusName] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const mon = ctx.state.getTeam(ident.player).active;
@@ -883,15 +832,12 @@ handlersImpl["|-status|"] = async function (ctx) {
         }
     }
     mon.majorStatus.afflict(statusName);
-    await consume(ctx);
-};
-handlersImpl["|-curestatus|"] = async function (ctx) {
-    const event = await verify(ctx, "|-curestatus|");
+});
+handlersImpl["|-curestatus|"] = eventParser("|-curestatus|", (ctx, event) => {
     const [, identStr, statusName] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     if (!ident.position) {
         ctx.logger.debug("Ignoring bench cure");
-        await consume(ctx);
         return;
     }
     const mon = ctx.state.getTeam(ident.player).active;
@@ -910,23 +856,23 @@ handlersImpl["|-curestatus|"] = async function (ctx) {
         );
     }
     mon.majorStatus.cure();
-    await consume(ctx);
-};
-handlersImpl["|-cureteam|"] = async function (ctx) {
-    const event = await verify(ctx, "|-cureteam|");
+});
+handlersImpl["|-cureteam|"] = eventParser("|-cureteam|", (ctx, event) => {
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     ctx.state.getTeam(ident.player).cure();
-    await consume(ctx);
-};
-handlersImpl["|-boost|"] = async function (ctx) {
-    await handleBoost(ctx);
-};
-handlersImpl["|-unboost|"] = async function (ctx) {
-    await handleBoost(ctx, true /*flip*/);
-};
-async function handleBoost(ctx: BattleParserContext, flip?: boolean) {
-    const event = await verify(ctx, flip ? "|-unboost|" : "|-boost|");
+});
+handlersImpl["|-boost|"] = eventParser("|-boost|", (ctx, event) =>
+    handleBoost(ctx, event),
+);
+handlersImpl["|-unboost|"] = eventParser("|-unboost|", (ctx, event) =>
+    handleBoost(ctx, event, true /*flip*/),
+);
+function handleBoost(
+    ctx: BattleParserContext,
+    event: Event<"|-boost|" | "|-unboost|">,
+    flip?: boolean,
+): void {
     const [, identStr, stat, numStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const num = Number(numStr);
@@ -938,10 +884,8 @@ async function handleBoost(ctx: BattleParserContext, flip?: boolean) {
     const newBoost = oldBoost + (flip ? -num : num);
     // Boost is capped at 6.
     mon.volatile.boosts[stat] = Math.max(-6, Math.min(newBoost, 6));
-    await consume(ctx);
 }
-handlersImpl["|-setboost|"] = async function (ctx) {
-    const event = await verify(ctx, "|-setboost|");
+handlersImpl["|-setboost|"] = eventParser("|-setboost|", (ctx, event) => {
     const [, identStr, stat, numStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const num = Number(numStr);
@@ -949,10 +893,8 @@ handlersImpl["|-setboost|"] = async function (ctx) {
         throw new Error(`Invalid setboost num '${numStr}'`);
     }
     ctx.state.getTeam(ident.player).active.volatile.boosts[stat] = num;
-    await consume(ctx);
-};
-handlersImpl["|-swapboost|"] = async function (ctx) {
-    const event = await verify(ctx, "|-swapboost|");
+});
+handlersImpl["|-swapboost|"] = eventParser("|-swapboost|", (ctx, event) => {
     const [, identStr1, identStr2, statsStr] = event.args;
     const ident1 = Protocol.parsePokemonIdent(identStr1);
     const ident2 = Protocol.parsePokemonIdent(identStr2);
@@ -964,11 +906,8 @@ handlersImpl["|-swapboost|"] = async function (ctx) {
     for (const stat of stats) {
         [boosts1[stat], boosts2[stat]] = [boosts2[stat], boosts1[stat]];
     }
-
-    await consume(ctx);
-};
-handlersImpl["|-invertboost|"] = async function (ctx) {
-    const event = await verify(ctx, "|-invertboost|");
+});
+handlersImpl["|-invertboost|"] = eventParser("|-invertboost|", (ctx, event) => {
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
 
@@ -976,11 +915,8 @@ handlersImpl["|-invertboost|"] = async function (ctx) {
     for (const stat of dex.boostKeys) {
         boosts[stat] = -boosts[stat];
     }
-
-    await consume(ctx);
-};
-handlersImpl["|-clearboost|"] = async function (ctx) {
-    const event = await verify(ctx, "|-clearboost|");
+});
+handlersImpl["|-clearboost|"] = eventParser("|-clearboost|", (ctx, event) => {
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
 
@@ -988,12 +924,8 @@ handlersImpl["|-clearboost|"] = async function (ctx) {
     for (const stat of dex.boostKeys) {
         boosts[stat] = 0;
     }
-
-    await consume(ctx);
-};
-handlersImpl["|-clearallboost|"] = async function (ctx) {
-    await verify(ctx, "|-clearallboost|");
-
+});
+handlersImpl["|-clearallboost|"] = eventParser("|-clearallboost|", ctx => {
     for (const sideId in ctx.state.teams) {
         // istanbul ignore if
         if (!Object.hasOwnProperty.call(ctx.state.teams, sideId)) {
@@ -1009,39 +941,36 @@ handlersImpl["|-clearallboost|"] = async function (ctx) {
             boosts[stat] = 0;
         }
     }
+});
+handlersImpl["|-clearpositiveboost|"] = eventParser(
+    "|-clearpositiveboost|",
+    (ctx, event) => {
+        const [, identStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
 
-    await consume(ctx);
-};
-handlersImpl["|-clearpositiveboost|"] = async function (ctx) {
-    const event = await verify(ctx, "|-clearpositiveboost|");
-    const [, identStr] = event.args;
-    const ident = Protocol.parsePokemonIdent(identStr);
-
-    const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
-    for (const stat of dex.boostKeys) {
-        if (boosts[stat] > 0) {
-            boosts[stat] = 0;
+        const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
+        for (const stat of dex.boostKeys) {
+            if (boosts[stat] > 0) {
+                boosts[stat] = 0;
+            }
         }
-    }
+    },
+);
+handlersImpl["|-clearnegativeboost|"] = eventParser(
+    "|-clearnegativeboost|",
+    (ctx, event) => {
+        const [, identStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
 
-    await consume(ctx);
-};
-handlersImpl["|-clearnegativeboost|"] = async function (ctx) {
-    const event = await verify(ctx, "|-clearnegativeboost|");
-    const [, identStr] = event.args;
-    const ident = Protocol.parsePokemonIdent(identStr);
-
-    const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
-    for (const stat of dex.boostKeys) {
-        if (boosts[stat] < 0) {
-            boosts[stat] = 0;
+        const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
+        for (const stat of dex.boostKeys) {
+            if (boosts[stat] < 0) {
+                boosts[stat] = 0;
+            }
         }
-    }
-
-    await consume(ctx);
-};
-handlersImpl["|-copyboost|"] = async function (ctx) {
-    const event = await verify(ctx, "|-copyboost|");
+    },
+);
+handlersImpl["|-copyboost|"] = eventParser("|-copyboost|", (ctx, event) => {
     const [, identStr1, identStr2, statsStr] = event.args;
     const ident1 = Protocol.parsePokemonIdent(identStr1);
     const ident2 = Protocol.parsePokemonIdent(identStr2);
@@ -1052,11 +981,8 @@ handlersImpl["|-copyboost|"] = async function (ctx) {
     for (const stat of stats) {
         boosts2[stat] = boosts1[stat];
     }
-
-    await consume(ctx);
-};
-handlersImpl["|-weather|"] = async function (ctx) {
-    const event = await verify(ctx, "|-weather|");
+});
+handlersImpl["|-weather|"] = eventParser("|-weather|", (ctx, event) => {
     const [, weatherStr] = event.args;
     if (event.kwArgs.upkeep) {
         // istanbul ignore if: Should never happen.
@@ -1084,16 +1010,18 @@ handlersImpl["|-weather|"] = async function (ctx) {
         }
         ctx.state.status.weather.start(weatherStr as dex.WeatherType, infinite);
     }
-    await consume(ctx);
-};
-handlersImpl["|-fieldstart|"] = async function (ctx) {
-    await updateFieldEffect(ctx, true /*start*/);
-};
-handlersImpl["|-fieldend|"] = async function (ctx) {
-    await updateFieldEffect(ctx, false /*start*/);
-};
-async function updateFieldEffect(ctx: BattleParserContext, start: boolean) {
-    const event = await verify(ctx, start ? "|-fieldstart|" : "|-fieldend|");
+});
+handlersImpl["|-fieldstart|"] = eventParser("|-fieldstart|", (ctx, event) =>
+    handleFieldCondition(ctx, event, true /*start*/),
+);
+handlersImpl["|-fieldend|"] = eventParser("|-fieldend|", (ctx, event) =>
+    handleFieldCondition(ctx, event, false /*start*/),
+);
+function handleFieldCondition(
+    ctx: BattleParserContext,
+    event: Event<"|-fieldstart|" | "|-fieldend|">,
+    start: boolean,
+): void {
     const [, effectStr] = event.args;
     const effect = Protocol.parseEffect(effectStr, toIdName);
     switch (effect.name) {
@@ -1104,18 +1032,19 @@ async function updateFieldEffect(ctx: BattleParserContext, start: boolean) {
             ctx.state.status.trickroom[start ? "start" : "end"]();
             break;
     }
-    await consume(ctx);
 }
-handlersImpl["|-sidestart|"] = async function (ctx) {
-    await handleSideCondition(ctx, true /*start*/);
-};
-handlersImpl["|-sideend|"] = async function (ctx) {
-    await handleSideCondition(ctx, false /*start*/);
-};
-async function handleSideCondition(ctx: BattleParserContext, start: boolean) {
-    const event = await verify(ctx, start ? "|-sidestart|" : "|-sideend|");
+handlersImpl["|-sidestart|"] = eventParser("|-sidestart|", (ctx, event) =>
+    handleSideCondition(ctx, event, true /*start*/),
+);
+handlersImpl["|-sideend|"] = eventParser("|-sideend|", (ctx, event) =>
+    handleSideCondition(ctx, event, false /*start*/),
+);
+function handleSideCondition(
+    ctx: BattleParserContext,
+    event: Event<"|-sidestart|" | "|-sideend|">,
+    start: boolean,
+): void {
     const [, sideStr, effectStr] = event.args;
-    // Note: parsePokemonIdent() supports side identifiers.
     const side = Protocol.parsePokemonIdent(
         sideStr as unknown as Protocol.PokemonIdent,
     ).player;
@@ -1152,11 +1081,11 @@ async function handleSideCondition(ctx: BattleParserContext, start: boolean) {
             }
             break;
     }
-    await consume(ctx);
 }
-handlersImpl["|-swapsideconditions|"] = "unsupported";
-handlersImpl["|-start|"] = async function (ctx) {
-    const event = await verify(ctx, "|-start|");
+handlersImpl["|-swapsideconditions|"] = unsupportedParser(
+    "|-swapsideconditions|",
+);
+handlersImpl["|-start|"] = eventParser("|-start|", (ctx, event) => {
     const [, identStr, effectStr, other] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const effect = Protocol.parseEffect(effectStr, toIdName);
@@ -1221,10 +1150,8 @@ handlersImpl["|-start|"] = async function (ctx) {
                 );
             }
     }
-    await consume(ctx);
-};
-handlersImpl["|-end|"] = async function (ctx) {
-    const event = await verify(ctx, "|-end|");
+});
+handlersImpl["|-end|"] = eventParser("|-end|", (ctx, event) => {
     const [, identStr, effectStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const effect = Protocol.parseEffect(effectStr, toIdName);
@@ -1236,15 +1163,14 @@ handlersImpl["|-end|"] = async function (ctx) {
         default:
             handleStartEndTrivial(ctx, event, ident.player, effect.name);
     }
-    await consume(ctx);
-};
+});
 function handleStartEndTrivial(
     ctx: BattleParserContext,
     event: Event<"|-start|" | "|-end|">,
     side: SideID,
     effectId: string,
     other?: string,
-) {
+): void {
     const team = ctx.state.getTeam(side);
     const mon = team.active;
     const v = mon.volatile;
@@ -1336,11 +1262,10 @@ function handleStartEndTrivial(
             }
     }
 }
-handlersImpl["|-crit|"] = "default";
-handlersImpl["|-supereffective|"] = "default";
-handlersImpl["|-resisted|"] = "default";
-handlersImpl["|-immune|"] = async function (ctx) {
-    const event = await verify(ctx, "|-immune|");
+handlersImpl["|-crit|"] = defaultParser("|-crit|");
+handlersImpl["|-supereffective|"] = defaultParser("|-supereffective|");
+handlersImpl["|-resisted|"] = defaultParser("|-resisted|");
+handlersImpl["|-immune|"] = eventParser("|-immune|", (ctx, event) => {
     if (event.kwArgs.from) {
         const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
         if (from.type === "ability") {
@@ -1350,10 +1275,8 @@ handlersImpl["|-immune|"] = async function (ctx) {
             mon.revealAbility(from.name);
         }
     }
-    await consume(ctx);
-};
-handlersImpl["|-item|"] = async function (ctx) {
-    const event = await verify(ctx, "|-item|");
+});
+handlersImpl["|-item|"] = eventParser("|-item|", (ctx, event) => {
     const [, identStr, itemName] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const itemId = toIdName(itemName);
@@ -1382,15 +1305,11 @@ handlersImpl["|-item|"] = async function (ctx) {
         // Most other unsupported effects are handled as if the item was gained.
         mon.setItem(itemId);
     }
-    await consume(ctx);
-};
-handlersImpl["|-enditem|"] = async function (ctx) {
-    const event = await verify(ctx, "|-enditem|");
-
+});
+handlersImpl["|-enditem|"] = eventParser("|-enditem|", (ctx, event) => {
     // Resist berry effect should already be handled by previous
     // |-enditem|...|[eat] event.
     if (event.kwArgs.weaken) {
-        await consume(ctx);
         return;
     }
 
@@ -1414,15 +1333,12 @@ handlersImpl["|-enditem|"] = async function (ctx) {
     // Must be consuming the status, not the actual berry.
     if (itemId === "micleberry" && !event.kwArgs.eat && consumed) {
         mon.volatile.micleberry = false;
-        await consume(ctx);
         return;
     }
 
     mon.removeItem(consumed);
-    await consume(ctx);
-};
-handlersImpl["|-ability|"] = async function (ctx) {
-    const event = await verify(ctx, "|-ability|");
+});
+handlersImpl["|-ability|"] = eventParser("|-ability|", (ctx, event) => {
     const [, identStr, abilityStr] = event.args;
     const abilityId = toIdName(abilityStr);
     const ident = Protocol.parsePokemonIdent(identStr);
@@ -1456,11 +1372,8 @@ handlersImpl["|-ability|"] = async function (ctx) {
         // Assume ability activation without context.
         holder.revealAbility(abilityId);
     }
-
-    await consume(ctx);
-};
-handlersImpl["|-endability|"] = async function (ctx) {
-    const event = await verify(ctx, "|-endability|");
+});
+handlersImpl["|-endability|"] = eventParser("|-endability|", (ctx, event) => {
     const [, identStr, abilityName] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const mon = ctx.state.getTeam(ident.player).active;
@@ -1484,35 +1397,29 @@ handlersImpl["|-endability|"] = async function (ctx) {
             }
             // Other effects which cause this event usually override the ability
             // with a separate event right after this.
-            await consume(ctx);
             return;
         }
         mon.revealAbility(abilityId);
     }
     // Assume gastroacid move effect without context.
     mon.volatile.suppressAbility = true;
-    await consume(ctx);
-};
-handlersImpl["|-transform|"] = async function (ctx) {
-    const event = await verify(ctx, "|-transform|");
+});
+handlersImpl["|-transform|"] = eventParser("|-transform|", (ctx, event) => {
     const [, identSourceStr, identTargetStr] = event.args;
     const identSource = Protocol.parsePokemonIdent(identSourceStr);
     const identTarget = Protocol.parsePokemonIdent(identTargetStr);
     ctx.state
         .getTeam(identSource.player)
         .active.transform(ctx.state.getTeam(identTarget.player).active);
-    await consume(ctx);
-};
-handlersImpl["|-mega|"] = "unsupported";
-handlersImpl["|-primal|"] = "unsupported";
-handlersImpl["|-burst|"] = "unsupported";
-handlersImpl["|-zpower|"] = "unsupported";
-handlersImpl["|-zbroken|"] = "unsupported";
-handlersImpl["|-activate|"] = async function (ctx) {
-    const event = await verify(ctx, "|-activate|");
+});
+handlersImpl["|-mega|"] = unsupportedParser("|-mega|");
+handlersImpl["|-primal|"] = unsupportedParser("|-primal|");
+handlersImpl["|-burst|"] = unsupportedParser("|-burst|");
+handlersImpl["|-zpower|"] = unsupportedParser("|-zpower|");
+handlersImpl["|-zbroken|"] = unsupportedParser("|-zbroken|");
+handlersImpl["|-activate|"] = eventParser("|-activate|", (ctx, event) => {
     const [, identStr, effectStr, other1, other2] = event.args;
     if (!identStr) {
-        await consume(ctx);
         return;
     }
     const ident = Protocol.parsePokemonIdent(identStr);
@@ -1672,8 +1579,7 @@ handlersImpl["|-activate|"] = async function (ctx) {
         default:
             ctx.logger.debug(`Ignoring activate '${effect.name}'`);
     }
-    await consume(ctx);
-};
+});
 function getForewarnPower(move: string): number {
     const data = dex.moves[move];
     // OHKO moves.
@@ -1691,12 +1597,11 @@ function getForewarnPower(move: string): number {
     // Regular base power, eruption/waterspout, and status moves.
     return data.basePower;
 }
-handlersImpl["|-fieldactivate|"] = "default";
-handlersImpl["|-center|"] = "unsupported";
-handlersImpl["|-combine|"] = "unsupported";
-handlersImpl["|-waiting|"] = "unsupported";
-handlersImpl["|-prepare|"] = async function (ctx) {
-    const event = await verify(ctx, "|-prepare|");
+handlersImpl["|-fieldactivate|"] = defaultParser("|-fieldactivate|");
+handlersImpl["|-center|"] = unsupportedParser("|-center|");
+handlersImpl["|-combine|"] = unsupportedParser("|-combine|");
+handlersImpl["|-waiting|"] = unsupportedParser("|-waiting|");
+handlersImpl["|-prepare|"] = eventParser("|-prepare|", (ctx, event) => {
     const [, identStr, moveName] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const moveId = toIdName(moveName);
@@ -1705,18 +1610,17 @@ handlersImpl["|-prepare|"] = async function (ctx) {
     } else {
         ctx.state.getTeam(ident.player).active.volatile.twoTurn.start(moveId);
     }
-    await consume(ctx);
-};
-handlersImpl["|-mustrecharge|"] = async function (ctx) {
-    const event = await verify(ctx, "|-mustrecharge|");
-    const [, identStr] = event.args;
-    const ident = Protocol.parsePokemonIdent(identStr);
-    ctx.state.getTeam(ident.player).active.volatile.mustRecharge = true;
-    await consume(ctx);
-};
-handlersImpl["|-hitcount|"] = "default";
-handlersImpl["|-singlemove|"] = async function (ctx) {
-    const event = await verify(ctx, "|-singlemove|");
+});
+handlersImpl["|-mustrecharge|"] = eventParser(
+    "|-mustrecharge|",
+    (ctx, event) => {
+        const [, identStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        ctx.state.getTeam(ident.player).active.volatile.mustRecharge = true;
+    },
+);
+handlersImpl["|-hitcount|"] = defaultParser("|-hitcount|");
+handlersImpl["|-singlemove|"] = eventParser("|-singlemove|", (ctx, event) => {
     const [, identStr, moveName] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const v = ctx.state.getTeam(ident.player).active.volatile;
@@ -1731,10 +1635,8 @@ handlersImpl["|-singlemove|"] = async function (ctx) {
             v.rage = true;
             break;
     }
-    await consume(ctx);
-};
-handlersImpl["|-singleturn|"] = async function (ctx) {
-    const event = await verify(ctx, "|-singleturn|");
+});
+handlersImpl["|-singleturn|"] = eventParser("|-singleturn|", (ctx, event) => {
     const [, identStr, effectStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const effect = Protocol.parseEffect(effectStr, toIdName);
@@ -1757,56 +1659,9 @@ handlersImpl["|-singleturn|"] = async function (ctx) {
             v.snatch = true;
             break;
     }
-    await consume(ctx);
-};
-handlersImpl["|-candynamax|"] = "unsupported";
-handlersImpl["|-terastallize|"] = "unsupported";
+});
+handlersImpl["|-candynamax|"] = unsupportedParser("|-candynamax|");
+handlersImpl["|-terastallize|"] = unsupportedParser("|-terastallize|");
 
-/** Handlers for all {@link Protocol.ArgName event types}. */
-export const handlers =
-    // This Object.assign expression is so that the function names appear as if
-    // they were defined directly as properties of this object so that stack
-    // traces make more sense.
-    Object.assign(
-        {},
-        handlersImpl,
-        // Fill in unimplemented handlers.
-        ...(Object.keys(Protocol.ARGS) as Protocol.ArgName[]).map(key =>
-            !Object.hasOwnProperty.call(handlersImpl, key) ||
-            handlersImpl[key] === "default"
-                ? {
-                      // Default parser just consumes the event.
-                      // Note: This is used even if the key was never mentioned
-                      // in this file.
-                      async [key](ctx: BattleParserContext) {
-                          await defaultParser(ctx, key);
-                      },
-                  }
-                : handlersImpl[key] === "unsupported"
-                  ? {
-                        // Unsupported parser throws an error.
-                        async [key](ctx: BattleParserContext) {
-                            await unsupportedParser(ctx, key);
-                        },
-                    }
-                  : // Handler already implemented, don't override it.
-                    undefined,
-        ),
-    ) as Required<HandlerMap>;
-
-async function defaultParser(ctx: BattleParserContext, key: Protocol.ArgName) {
-    await verify(ctx, key);
-    await consume(ctx);
-}
-
-async function unsupportedParser(
-    ctx: BattleParserContext,
-    key: Protocol.ArgName,
-) {
-    await verify(ctx, key);
-    ctx.logger.error(`Unsupported event type: ${key}`);
-    await consume(ctx);
-}
-
-/** Dispatches base event handler. */
-export const dispatch = dispatcher(handlers);
+/** Default handlers for battle events. */
+export const handlers: EventHandlerMap = handlersImpl;

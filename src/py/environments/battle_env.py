@@ -338,16 +338,25 @@ class BattleEnv(Environment):
         num_pending = 0
         all_reqs: AgentDict[Union[AgentRequest, AgentFinalRequest]] = {}
         while (
-            self.config.batch_limit <= 0
-            or num_pending < self.config.batch_limit
-        ) and await self.battle_pool.agent_poll(
-            timeout=0 if len(all_reqs) > 0 else None
+            (
+                self.config.batch_limit <= 0
+                or num_pending < self.config.batch_limit
+            )
+            and (
+                len(self.active_battles) > 0
+                or (self.queue_task is not None and not self.queue_task.done())
+            )
+            and await self.battle_pool.agent_poll(
+                timeout=0
+                if len(all_reqs) > 0
+                else self.config.pool.worker_timeout_ms
+            )
         ):
             key, req, state = await self.battle_pool.agent_recv(
                 flags=zmq.DONTWAIT
             )
             assert all_reqs.get(key, None) is None, (
-                f"Received duplicate agent request for {key}: "
+                f"Received too many agent requests for {key}: "
                 f"{(req)}, previous {all_reqs[key]}"
             )
             all_reqs[key] = req

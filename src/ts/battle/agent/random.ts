@@ -1,6 +1,12 @@
+import {Logger} from "../../utils/logging/Logger";
 import {Rng, shuffle} from "../../utils/random";
 import {ReadonlyBattleState} from "../state";
 import {Action} from "./Action";
+import {BattleAgent} from "./BattleAgent";
+
+// Enforce type compatibility.
+const _: BattleAgent = randomAgent;
+void _;
 
 /**
  * BattleAgent that chooses actions randomly.
@@ -11,6 +17,7 @@ import {Action} from "./Action";
 export async function randomAgent(
     state: ReadonlyBattleState,
     choices: Action[],
+    logger?: Logger,
     moveOnly?: boolean,
     random?: Rng,
 ): Promise<void> {

@@ -6,4 +6,6 @@ export interface RoomHandler {
     readonly handle: (event: Event) => void | Promise<void>;
     /** Handles a halt signal after parsing a block of events. */
     readonly halt: () => void | Promise<void>;
+    /** Final cleanup step. */
+    readonly finish: () => void | Promise<void>;
 }
